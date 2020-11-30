@@ -324,6 +324,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     :param invert: if True then values above the threshold will be set to 0, otherwise values below are set to 0
     :param showResult: show output volume in slice viewers
     """
+    #My first commit to this github project from VS Code
 
     if not inputVolume or not outputVolume:
       raise ValueError("Input or output volume is invalid")
