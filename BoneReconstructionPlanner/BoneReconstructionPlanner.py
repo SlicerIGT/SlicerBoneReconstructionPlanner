@@ -314,38 +314,104 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("Invert"):
       parameterNode.SetParameter("Invert", "false")
 
-  def process(self, inputVolume, outputVolume, imageThreshold, invert=False, showResult=True):
-    """
-    Run the processing algorithm.
-    Can be used without GUI widget.
-    :param inputVolume: volume to be thresholded
-    :param outputVolume: thresholding result
-    :param imageThreshold: values above/below this threshold will be set to 0
-    :param invert: if True then values above the threshold will be set to 0, otherwise values below are set to 0
-    :param showResult: show output volume in slice viewers
-    """
-    #My first commit to this github project from VS Code
+  def process(self):
+"""
+This is a short test script to create two new planes over the fibula line 
+with the same distance and angle between them as the original planes had
+"""
+#plane1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "MandibulePlane1")
+#plane1.SetNormal([0,1,0])
+#plane2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "MandibulePlane2")
+#plane2.SetNormal([0,1,0])
+#plane2.SetOrigin([0,-15,0])
 
-    if not inputVolume or not outputVolume:
-      raise ValueError("Input or output volume is invalid")
 
-    import time
-    startTime = time.time()
-    logging.info('Processing started')
+#Line and planes are created with the markups module by the user
+fibulaLine = slicer.util.getNode('FibulaLine')
+plane1 = slicer.util.getNode('MandibulePlane1')
+plane2 = slicer.util.getNode('MandibulePlane2')
+plane1Normal = [0,0,0]
+plane1.GetNormal(plane1Normal)
+plane2Normal = [0,0,0]
+plane2.GetNormal(plane2Normal)
 
-    # Compute the thresholded output volume using the "Threshold Scalar Volume" CLI module
-    cliParams = {
-      'InputVolume': inputVolume.GetID(),
-      'OutputVolume': outputVolume.GetID(),
-      'ThresholdValue' : imageThreshold,
-      'ThresholdType' : 'Above' if invert else 'Below'
-      }
-    cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True, update_display=showResult)
-    # We don't need the CLI module node anymore, remove it to not clutter the scene with it
-    slicer.mrmlScene.RemoveNode(cliNode)
+lineStartPos = np.zeros(3)
+lineEndPos = np.zeros(3)
+fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
+fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+lineDirectionVector = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
 
-    stopTime = time.time()
-    logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
+newPlane1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane1")
+newPlane1.SetNormal(plane1Normal)
+newPlane1.SetOrigin(lineStartPos)
+newPlane2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane2")
+newPlane2.SetNormal(plane2Normal)
+newPlane2.SetOrigin(lineStartPos)
+
+
+rotAxis = [0,0,0]
+vtk.vtkMath.Cross(plane1Normal, lineDirectionVector, rotAxis)
+rotAxis = rotAxis/np.linalg.norm(rotAxis)
+angleRad = vtk.vtkMath.AngleBetweenVectors(plane1Normal, lineDirectionVector)
+rA = rotAxis
+cosAR = math.cos(angleRad)
+sinAR = math.sin(angleRad)
+
+#formula from here: https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+rotMatrix = vtk.vtkMatrix4x4()
+rotMatrix.DeepCopy((
+              cosAR + rA[0]*rA[0]*(1-cosAR), rA[0]*rA[1]*(1-cosAR)-rA[2]*sinAR, rA[0]*rA[2]*(1-cosAR)+rA[1]*sinAR, 0,
+              rA[1]*rA[0]*(1-cosAR)+rA[2]*sinAR, cosAR + rA[1]*rA[1]*(1-cosAR), rA[1]*rA[2]*(1-cosAR)-rA[0]*sinAR, 0,
+              rA[2]*rA[0]*(1-cosAR)-rA[1]*sinAR, rA[2]*rA[1]*(1-cosAR)+rA[0]*sinAR, cosAR + rA[2]*rA[2]*(1-cosAR), 0,
+              0, 0, 0, 1
+              ))
+
+
+transformFid1 = slicer.vtkMRMLLinearTransformNode()
+transformFid1.SetName("Mandible2Fibula Transform1")
+slicer.mrmlScene.AddNode(transformFid1)
+transformFid2 = slicer.vtkMRMLLinearTransformNode()
+transformFid2.SetName("Mandible2Fibula Transform2")
+slicer.mrmlScene.AddNode(transformFid2)
+
+
+finalTransform1 = vtk.vtkTransform()
+finalTransform1.Translate(lineStartPos)
+finalTransform1.Concatenate(rotMatrix)
+finalTransform1.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
+
+transformFid1.SetMatrixTransformToParent(finalTransform1.GetMatrix())
+transformFid1.UpdateScene(slicer.mrmlScene)
+
+
+or1 = [0,0,0]
+or2 = [0,0,0]
+plane1.GetOrigin(or1)
+plane2.GetOrigin(or2)
+d = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(or1,or2))
+
+finalTransform2 = vtk.vtkTransform()
+#finalTransform2.PostMultiply()
+finalTransform2.Translate(lineStartPos)
+finalTransform2.Concatenate(rotMatrix)
+finalTransform2.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
+#I don't know why this doesn't make FibulaPlane2 be over the line
+finalTransform2.Translate(-d*lineDirectionVector)
+
+transformFid2.SetMatrixTransformToParent(finalTransform2.GetMatrix())
+
+transformFid2.UpdateScene(slicer.mrmlScene)
+
+newPlane1.SetAndObserveTransformNodeID(transformFid1.GetID())
+newPlane2.SetAndObserveTransformNodeID(transformFid2.GetID())
+
+    
+    
+    
+
+
+
+
 
 #
 # BoneReconstructionPlannerTest
