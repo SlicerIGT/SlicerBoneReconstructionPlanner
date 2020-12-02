@@ -391,12 +391,11 @@ plane2.GetOrigin(or2)
 d = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(or1,or2))
 
 finalTransform2 = vtk.vtkTransform()
-#finalTransform2.PostMultiply()
-finalTransform2.Translate(lineStartPos)
-finalTransform2.Concatenate(rotMatrix)
+finalTransform2.PostMultiply()
 finalTransform2.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
-#I don't know why this doesn't make FibulaPlane2 be over the line
-finalTransform2.Translate(-d*lineDirectionVector)
+finalTransform2.Concatenate(rotMatrix)
+finalTransform2.Translate(lineStartPos)
+finalTransform2.Translate(d*lineDirectionVector)
 
 transformFid2.SetMatrixTransformToParent(finalTransform2.GetMatrix())
 
