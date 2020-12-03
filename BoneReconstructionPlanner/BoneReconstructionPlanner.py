@@ -120,18 +120,18 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # "setMRMLScene(vtkMRMLScene*)" slot.
     uiWidget.setMRMLScene(slicer.mrmlScene)
     self.ui.fibulaLineSelector.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibulePlane1Selector.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibulePlane2Selector.setMRMLScene(slicer.mrmlScene)
+    self.ui.mandibularPlane1Selector.setMRMLScene(slicer.mrmlScene)
+    self.ui.mandibularPlane2Selector.setMRMLScene(slicer.mrmlScene)
 
-    #Setup the mandibule curve widget
+    #Setup the mandibular curve widget
     slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode","mandibuleCurve")
     curveNode = slicer.mrmlScene.GetFirstNodeByName("mandibuleCurve")
-    self.ui.mandibuleCurvePlaceWidget.setButtonsVisible(False)
-    self.ui.mandibuleCurvePlaceWidget.placeButton().show()
-    self.ui.mandibuleCurvePlaceWidget.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibuleCurvePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
-    self.ui.mandibuleCurvePlaceWidget.setCurrentNode(curveNode)
-    #self.ui.mandibuleCurvePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
+    self.ui.mandibularCurvePlaceWidget.setButtonsVisible(False)
+    self.ui.mandibularCurvePlaceWidget.placeButton().show()
+    self.ui.mandibularCurvePlaceWidget.setMRMLScene(slicer.mrmlScene)
+    self.ui.mandibularCurvePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    self.ui.mandibularCurvePlaceWidget.setCurrentNode(curveNode)
+    #self.ui.mandibularCurvePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
     #Setup the fibula line widget
     slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode","fibulaLine")
     lineNode = slicer.mrmlScene.GetFirstNodeByName("fibulaLine")
@@ -141,16 +141,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaLinePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
     self.ui.fibulaLinePlaceWidget.setCurrentNode(lineNode)
     #self.ui.fibulaLinePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
-    #Setup the mandibule planes widget
-    slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode","mandibulePlane")
-    planeNode = slicer.mrmlScene.GetFirstNodeByName("mandibulePlane")
-    self.ui.mandibulePlanesPlaceWidget.setButtonsVisible(False)
-    self.ui.mandibulePlanesPlaceWidget.placeButton().show()
-    self.ui.mandibulePlanesPlaceWidget.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibulePlanesPlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
-    self.ui.mandibulePlanesPlaceWidget.setCurrentNode(planeNode)
-    #self.ui.mandibulePlanesPlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
-    
+    #Setup the mandibular planes widget
+    slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode","mandibularPlane")
+    planeNode = slicer.mrmlScene.GetFirstNodeByName("mandibularPlane")
+    self.ui.mandibularPlanesPlaceWidget.setButtonsVisible(False)
+    self.ui.mandibularPlanesPlaceWidget.placeButton().show()
+    self.ui.mandibularPlanesPlaceWidget.setMRMLScene(slicer.mrmlScene)
+    self.ui.mandibularPlanesPlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    self.ui.mandibularPlanesPlaceWidget.setCurrentNode(planeNode)
+    #self.ui.mandibularPlanesPlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
+
 
 
     # Create logic class. Logic implements all computations that should be possible to run
@@ -166,8 +166,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
     self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.mandibulePlane1Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.mandibulePlane2Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.mandibularPlane1Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.mandibularPlane2Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
 
 
     # Buttons
@@ -261,15 +261,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     # Update node selectors and sliders
     self.ui.fibulaLineSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaLine"))
-    self.ui.mandibulePlane1Selector.setCurrentNode(self._parameterNode.GetNodeReference("mandibulePlane1"))
-    self.ui.mandibulePlane2Selector.setCurrentNode(self._parameterNode.GetNodeReference("mandibulePlane2"))
+    self.ui.mandibularPlane1Selector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularPlane1"))
+    self.ui.mandibularPlane2Selector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularPlane2"))
 
     # Update buttons states and tooltips
-    if self._parameterNode.GetNodeReference("fibulaLine") and self._parameterNode.GetNodeReference("mandibulePlane1") and self._parameterNode.GetNodeReference("mandibulePlane2"):
-      self.ui.createPlanesButton.toolTip = "Create fibula planes from mandibule planes"
+    if self._parameterNode.GetNodeReference("fibulaLine") and self._parameterNode.GetNodeReference("mandibularPlane1") and self._parameterNode.GetNodeReference("mandibularPlane2"):
+      self.ui.createPlanesButton.toolTip = "Create fibula planes from mandibular planes"
       self.ui.createPlanesButton.enabled = True
     else:
-      self.ui.createPlanesButton.toolTip = "Select fibula line and mandibule planes"
+      self.ui.createPlanesButton.toolTip = "Select fibula line and mandibular planes"
       self.ui.createPlanesButton.enabled = False
 
     # All the GUI updates are done
@@ -287,8 +287,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
 
     self._parameterNode.SetNodeReferenceID("fibulaLine", self.ui.fibulaLineSelector.currentNodeID)
-    self._parameterNode.SetNodeReferenceID("mandibulePlane1", self.ui.mandibulePlane1Selector.currentNodeID)
-    self._parameterNode.SetNodeReferenceID("mandibulePlane2", self.ui.mandibulePlane2Selector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("mandibularPlane1", self.ui.mandibularPlane1Selector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("mandibularPlane2", self.ui.mandibularPlane2Selector.currentNodeID)
 
     self._parameterNode.EndModify(wasModified)
 
@@ -299,8 +299,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     try:
 
       # Compute output
-      self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibulePlane1Selector.currentNode(),
-        self.ui.mandibulePlane2Selector.currentNode())
+      self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibularPlane1Selector.currentNode(),
+        self.ui.mandibularPlane2Selector.currentNode())
 
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -339,7 +339,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def process(self,fibulaLine,plane1,plane2):
     """
-    This is a short test script to create two new planes over the fibula line 
+    This is a short test script to create two new planes over the fibula line
     with the same distance and angle between them as the original planes had
     """
     plane1Normal = [0,0,0]
@@ -406,9 +406,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     newPlane1.SetAndObserveTransformNodeID(transformFid1.GetID())
     newPlane2.SetAndObserveTransformNodeID(transformFid2.GetID())
 
-    
-    
-    
+
+
+
 
 
 

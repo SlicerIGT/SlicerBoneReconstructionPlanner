@@ -22,7 +22,7 @@
      <item row="0" column="0">
       <widget class="QLabel" name="label_6">
        <property name="text">
-        <string>Place mandibule curve</string>
+        <string>Place mandibular curve</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -30,7 +30,7 @@
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="qSlicerMarkupsPlaceWidget" name="mandibuleCurvePlaceWidget"/>
+      <widget class="qSlicerMarkupsPlaceWidget" name="mandibularCurvePlaceWidget"/>
      </item>
      <item row="1" column="0">
       <widget class="QLabel" name="label_7">
@@ -48,29 +48,29 @@
      <item row="2" column="0">
       <widget class="QLabel" name="label_8">
        <property name="text">
-        <string>Place mandibule planes</string>
+        <string>Place mandibular planes</string>
        </property>
       </widget>
      </item>
      <item row="2" column="1">
-      <widget class="qSlicerMarkupsPlaceWidget" name="mandibulePlanesPlaceWidget"/>
+      <widget class="qSlicerMarkupsPlaceWidget" name="mandibularPlanesPlaceWidget"/>
      </item>
      <item row="4" column="0">
       <widget class="QLabel" name="label_9">
        <property name="text">
-        <string>Select mandibule plane 1</string>
+        <string>Select mandibular plane 1</string>
        </property>
       </widget>
      </item>
      <item row="5" column="0">
       <widget class="QLabel" name="label_10">
        <property name="text">
-        <string>Select mandibule plane 2</string>
+        <string>Select mandibular plane 2</string>
        </property>
       </widget>
      </item>
      <item row="4" column="1">
-      <widget class="qMRMLNodeComboBox" name="mandibulePlane1Selector">
+      <widget class="qMRMLNodeComboBox" name="mandibularPlane1Selector">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -88,7 +88,7 @@
       </widget>
      </item>
      <item row="5" column="1">
-      <widget class="qMRMLNodeComboBox" name="mandibulePlane2Selector">
+      <widget class="qMRMLNodeComboBox" name="mandibularPlane2Selector">
        <property name="enabled">
         <bool>true</bool>
        </property>
