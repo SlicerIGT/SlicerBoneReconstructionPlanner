@@ -1,7 +1,8 @@
 import os
 import unittest
 import logging
-import vtk, qt, ctk, slicer
+import vtk, qt, ctk, slicer, math
+import numpy as np
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 
@@ -118,6 +119,39 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # "mrmlSceneChanged(vtkMRMLScene*)" signal in is connected to each MRML widget's.
     # "setMRMLScene(vtkMRMLScene*)" slot.
     uiWidget.setMRMLScene(slicer.mrmlScene)
+    self.ui.fibulaLineSelector.setMRMLScene(slicer.mrmlScene)
+    self.ui.mandibulePlane1Selector.setMRMLScene(slicer.mrmlScene)
+    self.ui.mandibulePlane2Selector.setMRMLScene(slicer.mrmlScene)
+
+    #Setup the mandibule curve widget
+    slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode","mandibuleCurve")
+    curveNode = slicer.mrmlScene.GetFirstNodeByName("mandibuleCurve")
+    self.ui.mandibuleCurvePlaceWidget.setButtonsVisible(False)
+    self.ui.mandibuleCurvePlaceWidget.placeButton().show()
+    self.ui.mandibuleCurvePlaceWidget.setMRMLScene(slicer.mrmlScene)
+    self.ui.mandibuleCurvePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    self.ui.mandibuleCurvePlaceWidget.setCurrentNode(curveNode)
+    #self.ui.mandibuleCurvePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
+    #Setup the fibula line widget
+    slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode","fibulaLine")
+    lineNode = slicer.mrmlScene.GetFirstNodeByName("fibulaLine")
+    self.ui.fibulaLinePlaceWidget.setButtonsVisible(False)
+    self.ui.fibulaLinePlaceWidget.placeButton().show()
+    self.ui.fibulaLinePlaceWidget.setMRMLScene(slicer.mrmlScene)
+    self.ui.fibulaLinePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    self.ui.fibulaLinePlaceWidget.setCurrentNode(lineNode)
+    #self.ui.fibulaLinePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
+    #Setup the mandibule planes widget
+    slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode","mandibulePlane")
+    planeNode = slicer.mrmlScene.GetFirstNodeByName("mandibulePlane")
+    self.ui.mandibulePlanesPlaceWidget.setButtonsVisible(False)
+    self.ui.mandibulePlanesPlaceWidget.placeButton().show()
+    self.ui.mandibulePlanesPlaceWidget.setMRMLScene(slicer.mrmlScene)
+    self.ui.mandibulePlanesPlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    self.ui.mandibulePlanesPlaceWidget.setCurrentNode(planeNode)
+    #self.ui.mandibulePlanesPlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
+    
+
 
     # Create logic class. Logic implements all computations that should be possible to run
     # in batch mode, without a graphical user interface.
@@ -131,14 +165,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
-    self.ui.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.outputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.imageThresholdSliderWidget.connect("valueChanged(double)", self.updateParameterNodeFromGUI)
-    self.ui.invertOutputCheckBox.connect("toggled(bool)", self.updateParameterNodeFromGUI)
-    self.ui.invertedOutputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.mandibulePlane1Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.mandibulePlane2Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+
 
     # Buttons
-    self.ui.applyButton.connect('clicked(bool)', self.onApplyButton)
+    self.ui.createPlanesButton.connect('clicked(bool)', self.onCreatePlanesButton)
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -227,19 +260,17 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._updatingGUIFromParameterNode = True
 
     # Update node selectors and sliders
-    self.ui.inputSelector.setCurrentNode(self._parameterNode.GetNodeReference("InputVolume"))
-    self.ui.outputSelector.setCurrentNode(self._parameterNode.GetNodeReference("OutputVolume"))
-    self.ui.invertedOutputSelector.setCurrentNode(self._parameterNode.GetNodeReference("OutputVolumeInverse"))
-    self.ui.imageThresholdSliderWidget.value = float(self._parameterNode.GetParameter("Threshold"))
-    self.ui.invertOutputCheckBox.checked = (self._parameterNode.GetParameter("Invert") == "true")
+    self.ui.fibulaLineSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaLine"))
+    self.ui.mandibulePlane1Selector.setCurrentNode(self._parameterNode.GetNodeReference("mandibulePlane1"))
+    self.ui.mandibulePlane2Selector.setCurrentNode(self._parameterNode.GetNodeReference("mandibulePlane2"))
 
     # Update buttons states and tooltips
-    if self._parameterNode.GetNodeReference("InputVolume") and self._parameterNode.GetNodeReference("OutputVolume"):
-      self.ui.applyButton.toolTip = "Compute output volume"
-      self.ui.applyButton.enabled = True
+    if self._parameterNode.GetNodeReference("fibulaLine") and self._parameterNode.GetNodeReference("mandibulePlane1") and self._parameterNode.GetNodeReference("mandibulePlane2"):
+      self.ui.createPlanesButton.toolTip = "Create fibula planes from mandibule planes"
+      self.ui.createPlanesButton.enabled = True
     else:
-      self.ui.applyButton.toolTip = "Select input and output volume nodes"
-      self.ui.applyButton.enabled = False
+      self.ui.createPlanesButton.toolTip = "Select fibula line and mandibule planes"
+      self.ui.createPlanesButton.enabled = False
 
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
@@ -255,29 +286,21 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
 
-    self._parameterNode.SetNodeReferenceID("InputVolume", self.ui.inputSelector.currentNodeID)
-    self._parameterNode.SetNodeReferenceID("OutputVolume", self.ui.outputSelector.currentNodeID)
-    self._parameterNode.SetParameter("Threshold", str(self.ui.imageThresholdSliderWidget.value))
-    self._parameterNode.SetParameter("Invert", "true" if self.ui.invertOutputCheckBox.checked else "false")
-    self._parameterNode.SetNodeReferenceID("OutputVolumeInverse", self.ui.invertedOutputSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("fibulaLine", self.ui.fibulaLineSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("mandibulePlane1", self.ui.mandibulePlane1Selector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("mandibulePlane2", self.ui.mandibulePlane2Selector.currentNodeID)
 
     self._parameterNode.EndModify(wasModified)
 
-  def onApplyButton(self):
+  def onCreatePlanesButton(self):
     """
     Run processing when user clicks "Apply" button.
     """
     try:
 
       # Compute output
-      self.logic.process(self.ui.inputSelector.currentNode(), self.ui.outputSelector.currentNode(),
-        self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
-
-      # Compute inverted output (if needed)
-      if self.ui.invertedOutputSelector.currentNode():
-        # If additional output volume is selected then result with inverted threshold is written there
-        self.logic.process(self.ui.inputSelector.currentNode(), self.ui.invertedOutputSelector.currentNode(),
-          self.ui.imageThresholdSliderWidget.value, not self.ui.invertOutputCheckBox.checked, showResult=False)
+      self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibulePlane1Selector.currentNode(),
+        self.ui.mandibulePlane2Selector.currentNode())
 
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -314,95 +337,74 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("Invert"):
       parameterNode.SetParameter("Invert", "false")
 
-  def process(self):
-"""
-This is a short test script to create two new planes over the fibula line 
-with the same distance and angle between them as the original planes had
-"""
-#plane1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "MandibulePlane1")
-#plane1.SetNormal([0,1,0])
-#plane2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "MandibulePlane2")
-#plane2.SetNormal([0,1,0])
-#plane2.SetOrigin([0,-15,0])
+  def process(self,fibulaLine,plane1,plane2):
+    """
+    This is a short test script to create two new planes over the fibula line 
+    with the same distance and angle between them as the original planes had
+    """
+    plane1Normal = [0,0,0]
+    plane1.GetNormal(plane1Normal)
+    plane2Normal = [0,0,0]
+    plane2.GetNormal(plane2Normal)
+
+    lineStartPos = np.zeros(3)
+    lineEndPos = np.zeros(3)
+    fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
+    fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+    lineDirectionVector = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+
+    newPlane1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane1")
+    newPlane1.SetNormal(plane1Normal)
+    newPlane1.SetOrigin(lineStartPos)
+    newPlane2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane2")
+    newPlane2.SetNormal(plane2Normal)
+    newPlane2.SetOrigin(lineStartPos)
 
 
-#Line and planes are created with the markups module by the user
-fibulaLine = slicer.util.getNode('FibulaLine')
-plane1 = slicer.util.getNode('MandibulePlane1')
-plane2 = slicer.util.getNode('MandibulePlane2')
-plane1Normal = [0,0,0]
-plane1.GetNormal(plane1Normal)
-plane2Normal = [0,0,0]
-plane2.GetNormal(plane2Normal)
-
-lineStartPos = np.zeros(3)
-lineEndPos = np.zeros(3)
-fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
-fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
-lineDirectionVector = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
-
-newPlane1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane1")
-newPlane1.SetNormal(plane1Normal)
-newPlane1.SetOrigin(lineStartPos)
-newPlane2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane2")
-newPlane2.SetNormal(plane2Normal)
-newPlane2.SetOrigin(lineStartPos)
+    rotAxis = [0,0,0]
+    vtk.vtkMath.Cross(plane1Normal, lineDirectionVector, rotAxis)
+    rotAxis = rotAxis/np.linalg.norm(rotAxis)
+    angleRad = vtk.vtkMath.AngleBetweenVectors(plane1Normal, lineDirectionVector)
+    angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
 
 
-rotAxis = [0,0,0]
-vtk.vtkMath.Cross(plane1Normal, lineDirectionVector, rotAxis)
-rotAxis = rotAxis/np.linalg.norm(rotAxis)
-angleRad = vtk.vtkMath.AngleBetweenVectors(plane1Normal, lineDirectionVector)
-rA = rotAxis
-cosAR = math.cos(angleRad)
-sinAR = math.sin(angleRad)
-
-#formula from here: https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
-rotMatrix = vtk.vtkMatrix4x4()
-rotMatrix.DeepCopy((
-              cosAR + rA[0]*rA[0]*(1-cosAR), rA[0]*rA[1]*(1-cosAR)-rA[2]*sinAR, rA[0]*rA[2]*(1-cosAR)+rA[1]*sinAR, 0,
-              rA[1]*rA[0]*(1-cosAR)+rA[2]*sinAR, cosAR + rA[1]*rA[1]*(1-cosAR), rA[1]*rA[2]*(1-cosAR)-rA[0]*sinAR, 0,
-              rA[2]*rA[0]*(1-cosAR)-rA[1]*sinAR, rA[2]*rA[1]*(1-cosAR)+rA[0]*sinAR, cosAR + rA[2]*rA[2]*(1-cosAR), 0,
-              0, 0, 0, 1
-              ))
+    transformFid1 = slicer.vtkMRMLLinearTransformNode()
+    transformFid1.SetName("Mandible2Fibula Transform1")
+    slicer.mrmlScene.AddNode(transformFid1)
+    transformFid2 = slicer.vtkMRMLLinearTransformNode()
+    transformFid2.SetName("Mandible2Fibula Transform2")
+    slicer.mrmlScene.AddNode(transformFid2)
 
 
-transformFid1 = slicer.vtkMRMLLinearTransformNode()
-transformFid1.SetName("Mandible2Fibula Transform1")
-slicer.mrmlScene.AddNode(transformFid1)
-transformFid2 = slicer.vtkMRMLLinearTransformNode()
-transformFid2.SetName("Mandible2Fibula Transform2")
-slicer.mrmlScene.AddNode(transformFid2)
+    finalTransform1 = vtk.vtkTransform()
+    finalTransform1.PostMultiply()
+    finalTransform1.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
+    finalTransform1.RotateWXYZ(angleDeg,rotAxis)
+    finalTransform1.Translate(lineStartPos)
+
+    transformFid1.SetMatrixTransformToParent(finalTransform1.GetMatrix())
+    transformFid1.UpdateScene(slicer.mrmlScene)
 
 
-finalTransform1 = vtk.vtkTransform()
-finalTransform1.Translate(lineStartPos)
-finalTransform1.Concatenate(rotMatrix)
-finalTransform1.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
+    or1 = [0,0,0]
+    or2 = [0,0,0]
+    plane1.GetOrigin(or1)
+    plane2.GetOrigin(or2)
+    d = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(or1,or2))
 
-transformFid1.SetMatrixTransformToParent(finalTransform1.GetMatrix())
-transformFid1.UpdateScene(slicer.mrmlScene)
+    finalTransform2 = vtk.vtkTransform()
+    finalTransform2.PostMultiply()
+    finalTransform2.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
+    finalTransform2.RotateWXYZ(angleDeg,rotAxis)
+    finalTransform2.Translate(lineStartPos)
+    finalTransform2.Translate(d*lineDirectionVector)
 
+    transformFid2.SetMatrixTransformToParent(finalTransform2.GetMatrix())
 
-or1 = [0,0,0]
-or2 = [0,0,0]
-plane1.GetOrigin(or1)
-plane2.GetOrigin(or2)
-d = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(or1,or2))
+    transformFid2.UpdateScene(slicer.mrmlScene)
 
-finalTransform2 = vtk.vtkTransform()
-finalTransform2.PostMultiply()
-finalTransform2.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
-finalTransform2.Concatenate(rotMatrix)
-finalTransform2.Translate(lineStartPos)
-finalTransform2.Translate(d*lineDirectionVector)
-
-transformFid2.SetMatrixTransformToParent(finalTransform2.GetMatrix())
-
-transformFid2.UpdateScene(slicer.mrmlScene)
-
-newPlane1.SetAndObserveTransformNodeID(transformFid1.GetID())
-newPlane2.SetAndObserveTransformNodeID(transformFid2.GetID())
+    newPlane1.SetAndObserveTransformNodeID(transformFid1.GetID())
+    newPlane2.SetAndObserveTransformNodeID(transformFid2.GetID())
 
     
     
