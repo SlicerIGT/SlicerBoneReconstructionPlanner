@@ -144,6 +144,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     #Setup the mandibular planes widget
     slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode","mandibularPlane")
     planeNode = slicer.mrmlScene.GetFirstNodeByName("mandibularPlane")
+    displayNode = planeNode.GetDisplayNode()
+    displayNode.SetGlyphScale(2.5)
+    displayNode.HandlesInteractiveOn()
+    slicer.modules.markups.logic().SetDisplayDefaultsFromNode(displayNode)
     self.ui.mandibularPlanesPlaceWidget.setButtonsVisible(False)
     self.ui.mandibularPlanesPlaceWidget.placeButton().show()
     self.ui.mandibularPlanesPlaceWidget.setMRMLScene(slicer.mrmlScene)
