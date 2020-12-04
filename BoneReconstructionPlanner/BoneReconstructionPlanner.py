@@ -124,8 +124,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibularPlane2Selector.setMRMLScene(slicer.mrmlScene)
 
     #Setup the mandibular curve widget
-    slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode","mandibuleCurve")
-    curveNode = slicer.mrmlScene.GetFirstNodeByName("mandibuleCurve")
+    curveNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode","mandibuleCurve")
     self.ui.mandibularCurvePlaceWidget.setButtonsVisible(False)
     self.ui.mandibularCurvePlaceWidget.placeButton().show()
     self.ui.mandibularCurvePlaceWidget.setMRMLScene(slicer.mrmlScene)
@@ -133,8 +132,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibularCurvePlaceWidget.setCurrentNode(curveNode)
     #self.ui.mandibularCurvePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
     #Setup the fibula line widget
-    slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode","fibulaLine")
-    lineNode = slicer.mrmlScene.GetFirstNodeByName("fibulaLine")
+    lineNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode","fibulaLine")
     self.ui.fibulaLinePlaceWidget.setButtonsVisible(False)
     self.ui.fibulaLinePlaceWidget.placeButton().show()
     self.ui.fibulaLinePlaceWidget.setMRMLScene(slicer.mrmlScene)
@@ -142,8 +140,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaLinePlaceWidget.setCurrentNode(lineNode)
     #self.ui.fibulaLinePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
     #Setup the mandibular planes widget
-    slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode","mandibularPlane")
-    planeNode = slicer.mrmlScene.GetFirstNodeByName("mandibularPlane")
+    planeNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode","mandibularPlane")
     displayNode = planeNode.GetDisplayNode()
     displayNode.SetGlyphScale(2.5)
     displayNode.HandlesInteractiveOn()
