@@ -122,6 +122,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaLineSelector.setMRMLScene(slicer.mrmlScene)
     self.ui.mandibularPlane1Selector.setMRMLScene(slicer.mrmlScene)
     self.ui.mandibularPlane2Selector.setMRMLScene(slicer.mrmlScene)
+    self.ui.scalarVolumeSelector.setMRMLScene(slicer.mrmlScene)
+    self.ui.mandibularSegmentationSelector.setMRMLScene(slicer.mrmlScene)
+    self.ui.fibulaSegmentationSelector.setMRMLScene(slicer.mrmlScene)
 
     #Setup the mandibular curve widget
     curveNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode","mandibuleCurve")
@@ -169,6 +172,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibularPlane1Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibularPlane2Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
 
 
     # Buttons
@@ -307,6 +311,17 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
       import traceback
       traceback.print_exc()
+
+  def onScalarVolumeChanged(self):
+    scalarVolume = self.ui.scalarVolumeSelector.currentNode()
+    scalarVolumeID = scalarVolume.GetID()
+    redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
+    redSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+    greenSliceLogic = slicer.app.layoutManager().sliceWidget('Green').sliceLogic()
+    greenSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+    yellowSliceLogic = slicer.app.layoutManager().sliceWidget('Yellow').sliceLogic()
+    yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+    
 
 
 #

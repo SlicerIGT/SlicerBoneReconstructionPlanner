@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>254</width>
-    <height>251</height>
+    <width>288</width>
+    <height>289</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -19,7 +19,7 @@
      <property name="topMargin">
       <number>0</number>
      </property>
-     <item row="0" column="0">
+     <item row="3" column="0">
       <widget class="QLabel" name="label_6">
        <property name="text">
         <string>Place mandibular curve</string>
@@ -29,10 +29,10 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
+     <item row="3" column="1">
       <widget class="qSlicerMarkupsPlaceWidget" name="mandibularCurvePlaceWidget"/>
      </item>
-     <item row="1" column="0">
+     <item row="4" column="0">
       <widget class="QLabel" name="label_7">
        <property name="text">
         <string>Place fibula line</string>
@@ -42,34 +42,34 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="1">
+     <item row="4" column="1">
       <widget class="qSlicerMarkupsPlaceWidget" name="fibulaLinePlaceWidget"/>
      </item>
-     <item row="2" column="0">
+     <item row="5" column="0">
       <widget class="QLabel" name="label_8">
        <property name="text">
         <string>Place mandibular planes</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
+     <item row="5" column="1">
       <widget class="qSlicerMarkupsPlaceWidget" name="mandibularPlanesPlaceWidget"/>
      </item>
-     <item row="4" column="0">
+     <item row="7" column="0">
       <widget class="QLabel" name="label_9">
        <property name="text">
         <string>Select mandibular plane 1</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="0">
+     <item row="8" column="0">
       <widget class="QLabel" name="label_10">
        <property name="text">
         <string>Select mandibular plane 2</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="1">
+     <item row="7" column="1">
       <widget class="qMRMLNodeComboBox" name="mandibularPlane1Selector">
        <property name="enabled">
         <bool>true</bool>
@@ -87,7 +87,7 @@
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
+     <item row="8" column="1">
       <widget class="qMRMLNodeComboBox" name="mandibularPlane2Selector">
        <property name="enabled">
         <bool>true</bool>
@@ -105,14 +105,14 @@
        </property>
       </widget>
      </item>
-     <item row="3" column="0">
+     <item row="6" column="0">
       <widget class="QLabel" name="label_11">
        <property name="text">
         <string>Select fibula line</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
+     <item row="6" column="1">
       <widget class="qMRMLNodeComboBox" name="fibulaLineSelector">
        <property name="enabled">
         <bool>true</bool>
@@ -120,6 +120,81 @@
        <property name="nodeTypes">
         <stringlist>
          <string>vtkMRMLMarkupsLineNode</string>
+        </stringlist>
+       </property>
+       <property name="addEnabled">
+        <bool>false</bool>
+       </property>
+       <property name="removeEnabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Current Scalar Volume</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Select mandibular segmentation</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Select fibula segmentation</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="qMRMLNodeComboBox" name="scalarVolumeSelector">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="nodeTypes">
+        <stringlist>
+         <string>vtkMRMLScalarVolumeNode</string>
+        </stringlist>
+       </property>
+       <property name="addEnabled">
+        <bool>false</bool>
+       </property>
+       <property name="removeEnabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="qMRMLNodeComboBox" name="mandibularSegmentationSelector">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="nodeTypes">
+        <stringlist>
+         <string>vtkMRMLSegmentationNode</string>
+        </stringlist>
+       </property>
+       <property name="addEnabled">
+        <bool>false</bool>
+       </property>
+       <property name="removeEnabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="qMRMLNodeComboBox" name="fibulaSegmentationSelector">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="nodeTypes">
+        <stringlist>
+         <string>vtkMRMLSegmentationNode</string>
         </stringlist>
        </property>
        <property name="addEnabled">
