@@ -128,7 +128,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibularCurvePlaceWidget.setButtonsVisible(False)
     self.ui.mandibularCurvePlaceWidget.placeButton().show()
     self.ui.mandibularCurvePlaceWidget.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibularCurvePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    self.ui.mandibularCurvePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
     self.ui.mandibularCurvePlaceWidget.setCurrentNode(curveNode)
     #self.ui.mandibularCurvePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
     #Setup the fibula line widget
@@ -136,7 +136,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaLinePlaceWidget.setButtonsVisible(False)
     self.ui.fibulaLinePlaceWidget.placeButton().show()
     self.ui.fibulaLinePlaceWidget.setMRMLScene(slicer.mrmlScene)
-    self.ui.fibulaLinePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    self.ui.fibulaLinePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
     self.ui.fibulaLinePlaceWidget.setCurrentNode(lineNode)
     #self.ui.fibulaLinePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
     #Setup the mandibular planes widget
@@ -148,7 +148,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibularPlanesPlaceWidget.setButtonsVisible(False)
     self.ui.mandibularPlanesPlaceWidget.placeButton().show()
     self.ui.mandibularPlanesPlaceWidget.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibularPlanesPlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    self.ui.mandibularPlanesPlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
     self.ui.mandibularPlanesPlaceWidget.setCurrentNode(planeNode)
     #self.ui.mandibularPlanesPlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
 
