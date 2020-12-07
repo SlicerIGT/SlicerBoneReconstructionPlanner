@@ -125,6 +125,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.scalarVolumeSelector.setMRMLScene(slicer.mrmlScene)
     self.ui.mandibularSegmentationSelector.setMRMLScene(slicer.mrmlScene)
     self.ui.fibulaSegmentationSelector.setMRMLScene(slicer.mrmlScene)
+    self.ui.planesTreeView.setMRMLScene(slicer.mrmlScene)
+    
 
     #Setup the mandibular curve widget
     curveNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode","mandibuleCurve")
