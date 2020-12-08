@@ -102,6 +102,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic = None
     self._parameterNode = None
     self._updatingGUIFromParameterNode = False
+    self.mandibularPlanesList = []
 
   def setup(self):
     """
@@ -144,20 +145,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaLinePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
     self.ui.fibulaLinePlaceWidget.setCurrentNode(lineNode)
     #self.ui.fibulaLinePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
-    #Setup the mandibular planes widget
-    planeNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode","mandibularPlane")
-    displayNode = planeNode.GetDisplayNode()
-    displayNode.SetGlyphScale(2.5)
-    displayNode.HandlesInteractiveOn()
-    slicer.modules.markups.logic().SetDisplayDefaultsFromNode(displayNode)
-    self.ui.mandibularPlanesPlaceWidget.setButtonsVisible(False)
-    self.ui.mandibularPlanesPlaceWidget.placeButton().show()
-    self.ui.mandibularPlanesPlaceWidget.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibularPlanesPlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    self.ui.mandibularPlanesPlaceWidget.setCurrentNode(planeNode)
-    #self.ui.mandibularPlanesPlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
 
-
+    #Setup subject hierarchy tree widget
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    sceneItemID = shNode.GetSceneItemID() #My parent
+    self.mandibularFolder = shNode.CreateFolderItem(sceneItemID,"Mandibular planes")
 
     # Create logic class. Logic implements all computations that should be possible to run
     # in batch mode, without a graphical user interface.
@@ -175,6 +167,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibularPlane1Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibularPlane2Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
+    self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
 
 
     # Buttons
@@ -324,6 +317,36 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     yellowSliceLogic = slicer.app.layoutManager().sliceWidget('Yellow').sliceLogic()
     yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
     
+  def onAddCutPlaneButton(self):
+    planeNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsPlaneNode")
+    planeNode.SetName("mandibularPlane_%d" % len(self.mandibularPlanesList))
+    slicer.mrmlScene.AddNode(planeNode)
+    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeNode)
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    shNode.CreateItem(self.mandibularFolder,planeNode)
+    self.mandibularPlanesList.append(planeNode)
+
+    #display node of the plane
+    displayNode = planeNode.GetDisplayNode()
+    displayNode.SetGlyphScale(2.5)
+
+    #conections
+    planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
+
+    #setup placement
+    slicer.modules.markups.logic().SetActiveListID(planeNode)
+    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+    interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place);
+
+
+  def onPlanePointAdded(self,sourceNode,event):
+    lastPlaneIndex = len(self.mandibularPlanesList)-1
+    nControlPoints = self.mandibularPlanesList[lastPlaneIndex].GetNumberOfControlPoints()
+    if nControlPoints ==3:
+      displayNode = self.mandibularPlanesList[lastPlaneIndex].GetDisplayNode()
+      displayNode.HandlesInteractiveOn()
+      for i in range(nControlPoints):
+        self.mandibularPlanesList[len(self.mandibularPlanesList)-1].SetNthControlPointVisibility(i,False)
 
 
 #
