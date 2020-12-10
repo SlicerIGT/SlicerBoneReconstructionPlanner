@@ -433,7 +433,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       rotAxis = [0,0,0]
       vtk.vtkMath.Cross(plane1Normal, lineDirectionVersor, rotAxis)
       rotAxis = rotAxis/np.linalg.norm(rotAxis)
-      angleRad = vtk.vtkMath.AngleBetweenVectors(plane1Normal, lineDirectionVersor)
+      angleRad = (vtk.vtkMath.AngleBetweenVectors(plane1Normal, lineDirectionVersor) + vtk.vtkMath.AngleBetweenVectors(plane2Normal, lineDirectionVersor))/2
       angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
 
       transformFidA = slicer.vtkMRMLLinearTransformNode()
