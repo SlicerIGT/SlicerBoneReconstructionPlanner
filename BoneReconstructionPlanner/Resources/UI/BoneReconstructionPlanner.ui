@@ -19,6 +19,81 @@
      <property name="topMargin">
       <number>0</number>
      </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Current Scalar Volume</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="qMRMLNodeComboBox" name="scalarVolumeSelector">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="nodeTypes">
+        <stringlist>
+         <string>vtkMRMLScalarVolumeNode</string>
+        </stringlist>
+       </property>
+       <property name="addEnabled">
+        <bool>false</bool>
+       </property>
+       <property name="removeEnabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Select mandibular segmentation</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="qMRMLNodeComboBox" name="mandibularSegmentationSelector">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="nodeTypes">
+        <stringlist>
+         <string>vtkMRMLSegmentationNode</string>
+        </stringlist>
+       </property>
+       <property name="addEnabled">
+        <bool>false</bool>
+       </property>
+       <property name="removeEnabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Select fibula segmentation</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="qMRMLNodeComboBox" name="fibulaSegmentationSelector">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="nodeTypes">
+        <stringlist>
+         <string>vtkMRMLSegmentationNode</string>
+        </stringlist>
+       </property>
+       <property name="addEnabled">
+        <bool>false</bool>
+       </property>
+       <property name="removeEnabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
      <item row="3" column="0">
       <widget class="QLabel" name="label_6">
        <property name="text">
@@ -52,64 +127,41 @@
        </property>
       </widget>
      </item>
-     <item row="7" column="0">
-      <widget class="QLabel" name="label_9">
+     <item row="5" column="1">
+      <widget class="QPushButton" name="addCutPlaneButton">
        <property name="text">
-        <string>Select mandibular plane 1</string>
-       </property>
-      </widget>
-     </item>
-     <item row="8" column="0">
-      <widget class="QLabel" name="label_10">
-       <property name="text">
-        <string>Select mandibular plane 2</string>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="1">
-      <widget class="qMRMLNodeComboBox" name="mandibularPlane1Selector">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="nodeTypes">
-        <stringlist>
-         <string>vtkMRMLMarkupsPlaneNode</string>
-        </stringlist>
-       </property>
-       <property name="addEnabled">
-        <bool>false</bool>
-       </property>
-       <property name="removeEnabled">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="8" column="1">
-      <widget class="qMRMLNodeComboBox" name="mandibularPlane2Selector">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="nodeTypes">
-        <stringlist>
-         <string>vtkMRMLMarkupsPlaneNode</string>
-        </stringlist>
-       </property>
-       <property name="addEnabled">
-        <bool>false</bool>
-       </property>
-       <property name="removeEnabled">
-        <bool>false</bool>
+        <string>Add cut plane</string>
        </property>
       </widget>
      </item>
      <item row="6" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Initial space (mm)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="QLineEdit" name="initialLineEdit"/>
+     </item>
+     <item row="7" column="0">
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string>Between space (mm)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QLineEdit" name="betweenLineEdit"/>
+     </item>
+     <item row="8" column="0">
       <widget class="QLabel" name="label_11">
        <property name="text">
         <string>Select fibula line</string>
        </property>
       </widget>
      </item>
-     <item row="6" column="1">
+     <item row="8" column="1">
       <widget class="qMRMLNodeComboBox" name="fibulaLineSelector">
        <property name="enabled">
         <bool>true</bool>
@@ -127,89 +179,14 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Current Scalar Volume</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Select mandibular segmentation</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Select fibula segmentation</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="qMRMLNodeComboBox" name="scalarVolumeSelector">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="nodeTypes">
-        <stringlist>
-         <string>vtkMRMLScalarVolumeNode</string>
-        </stringlist>
-       </property>
-       <property name="addEnabled">
-        <bool>false</bool>
-       </property>
-       <property name="removeEnabled">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="qMRMLNodeComboBox" name="mandibularSegmentationSelector">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="nodeTypes">
-        <stringlist>
-         <string>vtkMRMLSegmentationNode</string>
-        </stringlist>
-       </property>
-       <property name="addEnabled">
-        <bool>false</bool>
-       </property>
-       <property name="removeEnabled">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="qMRMLNodeComboBox" name="fibulaSegmentationSelector">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="nodeTypes">
-        <stringlist>
-         <string>vtkMRMLSegmentationNode</string>
-        </stringlist>
-       </property>
-       <property name="addEnabled">
-        <bool>false</bool>
-       </property>
-       <property name="removeEnabled">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="1">
-      <widget class="QPushButton" name="addCutPlaneButton">
-       <property name="text">
-        <string>Add cut plane</string>
-       </property>
-      </widget>
-     </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QPushButton" name="createListButton">
+     <property name="text">
+      <string>Create List and Print it</string>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QPushButton" name="createPlanesButton">

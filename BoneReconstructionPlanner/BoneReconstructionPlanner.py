@@ -103,6 +103,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode = None
     self._updatingGUIFromParameterNode = False
     self.mandibularPlanesList = []
+    self.initialSpace = 0
+    self.betweenSpace = 0
 
   def setup(self):
     """
@@ -121,8 +123,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # "setMRMLScene(vtkMRMLScene*)" slot.
     uiWidget.setMRMLScene(slicer.mrmlScene)
     self.ui.fibulaLineSelector.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibularPlane1Selector.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibularPlane2Selector.setMRMLScene(slicer.mrmlScene)
+    #self.ui.mandibularPlane1Selector.setMRMLScene(slicer.mrmlScene)
+    #self.ui.mandibularPlane2Selector.setMRMLScene(slicer.mrmlScene)
     self.ui.scalarVolumeSelector.setMRMLScene(slicer.mrmlScene)
     self.ui.mandibularSegmentationSelector.setMRMLScene(slicer.mrmlScene)
     self.ui.fibulaSegmentationSelector.setMRMLScene(slicer.mrmlScene)
@@ -164,10 +166,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
     self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.mandibularPlane1Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.mandibularPlane2Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    #self.ui.mandibularPlane1Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    #self.ui.mandibularPlane2Selector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
+    self.ui.initialLineEdit.textEdited.connect(self.onInitialLineEdit)
+    self.ui.betweenLineEdit.textEdited.connect(self.onBetweenLineEdit)
+    self.ui.createListButton.connect('clicked(bool)',self.onCreateListButton)
 
 
     # Buttons
@@ -261,8 +266,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     # Update node selectors and sliders
     self.ui.fibulaLineSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaLine"))
-    self.ui.mandibularPlane1Selector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularPlane1"))
-    self.ui.mandibularPlane2Selector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularPlane2"))
+    #self.ui.mandibularPlane1Selector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularPlane1"))
+    #self.ui.mandibularPlane2Selector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularPlane2"))
 
     # Update buttons states and tooltips
     if self._parameterNode.GetNodeReference("fibulaLine") and self._parameterNode.GetNodeReference("mandibularPlane1") and self._parameterNode.GetNodeReference("mandibularPlane2"):
@@ -287,8 +292,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
 
     self._parameterNode.SetNodeReferenceID("fibulaLine", self.ui.fibulaLineSelector.currentNodeID)
-    self._parameterNode.SetNodeReferenceID("mandibularPlane1", self.ui.mandibularPlane1Selector.currentNodeID)
-    self._parameterNode.SetNodeReferenceID("mandibularPlane2", self.ui.mandibularPlane2Selector.currentNodeID)
+    #self._parameterNode.SetNodeReferenceID("mandibularPlane1", self.ui.mandibularPlane1Selector.currentNodeID)
+    #self._parameterNode.SetNodeReferenceID("mandibularPlane2", self.ui.mandibularPlane2Selector.currentNodeID)
 
     self._parameterNode.EndModify(wasModified)
 
@@ -296,11 +301,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Run processing when user clicks "Apply" button.
     """
+    self.createMandibularPlanesList()
+    
     try:
 
       # Compute output
-      self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibularPlane1Selector.currentNode(),
-        self.ui.mandibularPlane2Selector.currentNode())
+      self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.mandibularPlanesList)
 
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -319,12 +325,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     
   def onAddCutPlaneButton(self):
     planeNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsPlaneNode")
-    planeNode.SetName("mandibularPlane_%d" % len(self.mandibularPlanesList))
+    planeNode.SetName("temp")
     slicer.mrmlScene.AddNode(planeNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeNode)
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     shNode.CreateItem(self.mandibularFolder,planeNode)
-    self.mandibularPlanesList.append(planeNode)
+    planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
 
     #display node of the plane
     displayNode = planeNode.GetDisplayNode()
@@ -340,13 +346,31 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
 
   def onPlanePointAdded(self,sourceNode,event):
-    lastPlaneIndex = len(self.mandibularPlanesList)-1
-    nControlPoints = self.mandibularPlanesList[lastPlaneIndex].GetNumberOfControlPoints()
+    nControlPoints = sourceNode.GetNumberOfControlPoints()
     if nControlPoints ==3:
-      displayNode = self.mandibularPlanesList[lastPlaneIndex].GetDisplayNode()
+      displayNode = sourceNode.GetDisplayNode()
       displayNode.HandlesInteractiveOn()
       for i in range(nControlPoints):
-        self.mandibularPlanesList[len(self.mandibularPlanesList)-1].SetNthControlPointVisibility(i,False)
+        sourceNode.SetNthControlPointVisibility(i,False)
+
+  def onInitialLineEdit(self,text):
+    self.initialSpace = float(text)
+  
+  def onBetweenLineEdit(self,text):
+    self.betweenSpace = float(text)
+  
+  def createMandibularPlanesList(self):
+    self.mandibularPlanesList = []
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    myList = vtk.vtkIdList()
+    shNode.GetItemChildren(self.mandibularFolder,myList)
+    for i in range(myList.GetNumberOfIds()):
+      self.mandibularPlanesList.append(shNode.GetItemDataNode(myList.GetId(i)))
+
+  def numberOfPlanes(self):
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    return shNode.GetNumberOfItemChildren(self.mandibularFolder)
+    
 
 
 #
