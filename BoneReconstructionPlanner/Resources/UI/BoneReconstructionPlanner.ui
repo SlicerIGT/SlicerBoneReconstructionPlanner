@@ -182,13 +182,6 @@
     </layout>
    </item>
    <item>
-    <widget class="QPushButton" name="createListButton">
-     <property name="text">
-      <string>Create List and Print it</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QPushButton" name="createPlanesButton">
      <property name="text">
       <string>Create fibula planes over fibula line</string>
