@@ -476,12 +476,41 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       newPlane2.SetNthControlPointPositionFromArray(2,on2+yd1*ynpv2)
 
 
-
+      #Start transformations
       rotAxis = [0,0,0]
       vtk.vtkMath.Cross(plane1Normal, lineDirectionVersor, rotAxis)
       rotAxis = rotAxis/np.linalg.norm(rotAxis)
       angleRad = vtk.vtkMath.AngleBetweenVectors(plane1Normal, lineDirectionVersor)
       angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
+
+      v1l = [0,0,0]
+      q = [angleRad,rotAxis[0],rotAxis[1],rotAxis[2]]
+      vtk.vtkMath.RotateVectorByWXYZ(plane1Normal,q,v1l)
+
+      difference = np.linalg.norm(lineDirectionVersor-v1l)
+      if (difference>0.01):
+        rotAxis = [-rotAxis[0],-rotAxis[1],-rotAxis[2]]
+        q = [angleRad,rotAxis[0],rotAxis[1],rotAxis[2]]
+        vtk.vtkMath.RotateVectorByWXYZ(plane1Normal,q,v1l)
+      
+      v2l = [0,0,0]
+      vtk.vtkMath.RotateVectorByWXYZ(plane2Normal,q,v2l)
+
+      rotAxis2 = [0,0,0]
+      vtk.vtkMath.Cross(v1l, v2l, rotAxis2)
+      rotAxis = rotAxis/np.linalg.norm(rotAxis)
+      angleRad2 = vtk.vtkMath.AngleBetweenVectors(v1l, v2l)/2
+      angleDeg2 = vtk.vtkMath.DegreesFromRadians(angleRad2)
+
+      v2r = [0,0,0]
+      q2 = [angleRad2,rotAxis2[0],rotAxis2[1],rotAxis2[2]]
+      vtk.vtkMath.RotateVectorByWXYZ(v2l,q2,v2r)
+      angleRad3 = vtk.vtkMath.AngleBetweenVectors(v1l, v2r)
+      difference = abs(angleRad3 - angleRad2)
+      if (difference>0.01):
+        rotAxis2 = [-rotAxis2[0],-rotAxis2[1],-rotAxis2[2]]
+
+
 
       transformFidA = slicer.vtkMRMLLinearTransformNode()
       transformFidA.SetName("Mandible2Fibula Transform%d_A" % i)
@@ -507,6 +536,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransformA.PostMultiply()
       finalTransformA.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
       finalTransformA.RotateWXYZ(angleDeg,rotAxis)
+      finalTransformA.RotateWXYZ(angleDeg2,rotAxis2)
       finalTransformA.Translate(lineStartPos)
       finalTransformA.Translate(planesPositionA[i])
 
@@ -518,6 +548,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransformB.PostMultiply()
       finalTransformB.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
       finalTransformB.RotateWXYZ(angleDeg,rotAxis)
+      finalTransformB.RotateWXYZ(angleDeg2,rotAxis2)
       finalTransformB.Translate(lineStartPos)
       finalTransformB.Translate(planesPositionB[i])
 
