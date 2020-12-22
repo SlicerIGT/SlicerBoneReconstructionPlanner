@@ -360,10 +360,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       
 
   def onInitialLineEdit(self,text):
-    self.initialSpace = float(text)
+    if text!= '':
+      self.initialSpace = float(text)
   
   def onBetweenLineEdit(self,text):
-    self.betweenSpace = float(text)
+    if text!= '':
+      self.betweenSpace = float(text)
   
   def createMandibularPlanesList(self):
     self.mandibularPlanesList = []
