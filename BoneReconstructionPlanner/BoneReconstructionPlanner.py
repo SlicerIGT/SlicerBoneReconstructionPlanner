@@ -343,6 +343,21 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.HandlesInteractiveOn()
       for i in range(nControlPoints):
         sourceNode.SetNthControlPointVisibility(i,False)
+      planeNodeObserver = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModified)
+  
+  def onPlaneModified(self,sourceNode,event):
+    if self.ui.fibulaLineSelector.currentNodeID != '':
+      self.createMandibularPlanesList()
+
+      try:
+        # Compute output
+        self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.mandibularPlanesList, self.initialSpace, self.betweenSpace)
+
+      except Exception as e:
+        slicer.util.errorDisplay("Failed to compute results: "+str(e))
+        import traceback
+        traceback.print_exc()
+      
 
   def onInitialLineEdit(self,text):
     self.initialSpace = float(text)
@@ -383,6 +398,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     Called when the logic class is instantiated. Can be used for initializing member variables.
     """
     ScriptedLoadableModuleLogic.__init__(self)
+    self.fibulaFolder = ''
 
   def setDefaultParameters(self, parameterNode):
     """
@@ -395,7 +411,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def process(self,fibulaLine,planeList,initialSpace,betweenSpace):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    sceneItemID = shNode.GetSceneItemID() #My parent
+    sceneItemID = shNode.GetSceneItemID() #My 
+    if self.fibulaFolder:
+      shNode.RemoveItem(self.fibulaFolder)
+      self.fibulaFolder = ''
     self.fibulaFolder = shNode.CreateFolderItem(sceneItemID,"Fibula planes")
 
     #Create line versor
