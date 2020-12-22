@@ -145,7 +145,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaLinePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
     self.ui.fibulaLinePlaceWidget.setCurrentNode(lineNode)
     #self.ui.fibulaLinePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
-
+    
     #Setup subject hierarchy tree widget
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     sceneItemID = shNode.GetSceneItemID() #My parent
@@ -320,12 +320,27 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     slicer.mrmlScene.AddNode(planeNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeNode)
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    if shNode.GetItemName(self.mandibularFolder) == '':
+      sceneItemID = shNode.GetSceneItemID() #My parent
+      self.mandibularFolder = shNode.CreateFolderItem(sceneItemID,"Mandibular planes")
     shNode.CreateItem(self.mandibularFolder,planeNode)
     planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
+
+    aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+    colorTable = aux.GetLookupTable()
+    name = planeNode.GetName()
+    if len(name.split('_'))==1:
+      ind = 0
+    else:
+      ind = int(name.split('_')[1])%8
+    #ind = shNode.GetNumberOfItemChildren(self.mandibularFolder)-1
+    colorwithalpha = colorTable.GetTableValue(ind)
+    color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
 
     #display node of the plane
     displayNode = planeNode.GetDisplayNode()
     displayNode.SetGlyphScale(2.5)
+    displayNode.SetSelectedColor(color)
 
     #conections
     planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
@@ -401,6 +416,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     """
     ScriptedLoadableModuleLogic.__init__(self)
     self.fibulaFolder = ''
+    self.fibulaPlanesList = []
 
   def setDefaultParameters(self, parameterNode):
     """
@@ -413,11 +429,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def process(self,fibulaLine,planeList,initialSpace,betweenSpace):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    sceneItemID = shNode.GetSceneItemID() #My 
+    sceneItemID = shNode.GetSceneItemID()
     if self.fibulaFolder:
       shNode.RemoveItem(self.fibulaFolder)
       shNode.RemoveItem(self.transformsFolder)
       self.fibulaFolder = ''
+      self.fibulaPlanesList = []
 
     self.fibulaFolder = shNode.CreateFolderItem(sceneItemID,"Fibula planes")
     self.transformsFolder = shNode.CreateFolderItem(sceneItemID,"Mandible2Fibula transforms")
@@ -448,12 +465,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.CreateItem(self.fibulaFolder,newPlane1)
       newPlane1.SetNormal(plane1Normal)
       newPlane1.SetOrigin(lineStartPos)
+      self.fibulaPlanesList.append(newPlane1)
 
       newPlane2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(newPlane2)
       shNode.CreateItem(self.fibulaFolder,newPlane2)
       newPlane2.SetNormal(plane2Normal)
       newPlane2.SetOrigin(lineStartPos)
+      self.fibulaPlanesList.append(newPlane2)
 
 
       #Set new planes size
@@ -569,82 +588,29 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.CreateItem(self.transformsFolder,transformFidA)
       shNode.CreateItem(self.transformsFolder,transformFidB)
 
+    for i in range(len(planeList)):
+      if i == 0:
+        oldDisplayNode = planeList[i].GetDisplayNode()
+        color = oldDisplayNode.GetSelectedColor()
 
-      '''
-      fibulaModel = 0
-      fibulaSegment.GetClosedSurfaceRepresentation(segmentName???,fibulaModel)
+        displayNode = self.fibulaPlanesList[0].GetDisplayNode()
+        displayNode.SetSelectedColor(color)
+      else:
+        if i == len(planeList)-1:
+          oldDisplayNode = planeList[i].GetDisplayNode()
+          color = oldDisplayNode.GetSelectedColor()
 
-      cutter1 = vtk.vtkCutter()
-      cutter1->SetInputData(fibulaSegment.GetPolyData());
-      cutter1->SetCutFunction(plane);
-      cutter1->Update();
-      createNewModel(cutter1->GetOutput(),myNewModel1) ???
+          displayNode = self.fibulaPlanesList[len(self.fibulaPlanesList)-1].GetDisplayNode()
+          displayNode.SetSelectedColor(color)
+        else:
+          if ((i-1)%2)==0:
+            oldDisplayNode = planeList[i].GetDisplayNode()
+            color = oldDisplayNode.GetSelectedColor()
 
-      cutter2 = vtk.vtkCutter()
-      cutter2->SetInputData(fibulaSegment.GetPolyData());
-      cutter2->SetCutFunction(plane);
-      cutter2->Update();
-      createNewModel(cutter2->GetOutput(),myNewModel2) ???
-
-      lineDirectionVersor = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
-
-      rotAxis = [0,0,0]
-      z = [0,0,1]
-      vtk.vtkMath.Cross(z, lineDirectionVersor, rotAxis)
-      angleRad = vtk.vtkMath.AngleBetweenVectors(z, lineDirectionVersor)
-      angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
-
-      #this versor is created to check if rotAxis is okey or should be opposite
-      v1l = [0,0,0]
-      q = [angleRad,rotAxis[0],rotAxis[1],rotAxis[2]]
-      vtk.vtkMath.RotateVectorByWXYZ(lineDirectionVersor,q,v1l)
-
-      difference = np.linalg.norm(z-v1l)
-      if (difference>0.01):
-        rotAxis = [-rotAxis[0],-rotAxis[1],-rotAxis[2]]
-
-      center1 = [0,0,0]
-      myNewModel1.getCenter(center1) ???
-      center2 = [0,0,0]
-      myNewModel2.getCenter(center2) ???
-
-      transformFid1 = slicer.vtkMRMLLinearTransformNode()
-      transformFid1.SetName("My Transform1")
-      slicer.mrmlScene.AddNode(transformFid1)
-
-      finalTransform1 = vtk.vtkTransform()
-      finalTransform1.PostMultiply()
-      finalTransform1.Translate(-center1[0], -center1[1], -center1[2]) ???
-      finalTransform1.RotateWXYZ(angleDeg,rotAxis)
-
-      transformFid1.SetMatrixTransformToParent(finalTransform1.GetMatrix())
-      transformFid1.UpdateScene(slicer.mrmlScene)
-
-      transformFid2 = slicer.vtkMRMLLinearTransformNode()
-      transformFid2.SetName("My Transform2")
-      slicer.mrmlScene.AddNode(transformFid1)
-
-      finalTransform2 = vtk.vtkTransform()
-      finalTransform2.PostMultiply()
-      finalTransform2.Translate(-center2[0], -center2[1], -center2[2]) ???
-      finalTransform2.RotateWXYZ(angleDeg,rotAxis)
-
-      transformFid2.SetMatrixTransformToParent(finalTransform2.GetMatrix())
-      transformFid2.UpdateScene(slicer.mrmlScene)
-
-      myNewModel1.ApplyTransform(transformFid1)
-      myNewModel2.ApplyTransform(transformFid1)
-
-      bounds1 = myNewModel1.GetPolyData().GetBounds()
-      bounds2 = myNewModel2.GetPolyData().GetBounds()
-      z1Sup = bounds1[5]
-      z2Inf = bounds[4]
-      deltaz = z2Inf - z1Sup ???
-
-      betweenSpace[i] = deltaz
-      '''
-
-
+            displayNode1 = self.fibulaPlanesList[i].GetDisplayNode()
+            displayNode1.SetSelectedColor(color)
+            displayNode2 = self.fibulaPlanesList[i+1].GetDisplayNode()
+            displayNode2.SetSelectedColor(color)
 
 
 
