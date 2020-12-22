@@ -405,11 +405,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
     lineDirectionVersor = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
 
-    #NewPlanes position
+    #NewPlanes position and distance
     planesPositionA = []
     planesPositionB = []
     d = []
 
+    #process planes 2 at a time
     for i in range(len(planeList)-1):
       plane1 = planeList[i]
       plane2 = planeList[i+1]
@@ -431,49 +432,29 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       newPlane2.SetOrigin(lineStartPos)
 
 
-      #Set plane size
-      #For new plane 1
-      o1 = np.zeros(3)
-      x1 = np.zeros(3)
-      y1 = np.zeros(3)
-      plane1.GetNthControlPointPosition(0,o1)
-      plane1.GetNthControlPointPosition(1,x1)
-      plane1.GetNthControlPointPosition(2,y1)
-      xd1 = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(o1,x1)) 
-      yd1 = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(o1,y1)) 
+      #Set new planes size
+      oldPlanes = [plane1,plane2]
+      newPlanes = [newPlane1,newPlane2]
+      for j in range(2):
+        o1 = np.zeros(3)
+        x1 = np.zeros(3)
+        y1 = np.zeros(3)
+        oldPlanes[j].GetNthControlPointPosition(0,o1)
+        oldPlanes[j].GetNthControlPointPosition(1,x1)
+        oldPlanes[j].GetNthControlPointPosition(2,y1)
+        xd1 = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(o1,x1)) 
+        yd1 = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(o1,y1)) 
 
-      on1 = np.zeros(3)
-      xn1 = np.zeros(3)
-      yn1 = np.zeros(3)
-      newPlane1.GetNthControlPointPosition(0,on1)
-      newPlane1.GetNthControlPointPosition(1,xn1)
-      newPlane1.GetNthControlPointPosition(2,yn1)
-      xnpv1 = (xn1-on1)/np.linalg.norm(xn1-on1)
-      ynpv1 = (yn1-on1)/np.linalg.norm(yn1-on1)
-      newPlane1.SetNthControlPointPositionFromArray(1,on1+xd1*xnpv1)
-      newPlane1.SetNthControlPointPositionFromArray(2,on1+yd1*ynpv1)
-
-      #Set plane size
-      #For new plane 2
-      o2 = np.zeros(3)
-      x2 = np.zeros(3)
-      y2 = np.zeros(3)
-      plane2.GetNthControlPointPosition(0,o2)
-      plane2.GetNthControlPointPosition(1,x2)
-      plane2.GetNthControlPointPosition(2,y2)
-      xd2 = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(o2,x2)) 
-      yd2 = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(o2,y2)) 
-
-      on2 = np.zeros(3)
-      xn2 = np.zeros(3)
-      yn2 = np.zeros(3)
-      newPlane2.GetNthControlPointPosition(0,on2)
-      newPlane2.GetNthControlPointPosition(1,xn2)
-      newPlane2.GetNthControlPointPosition(2,yn2)
-      xnpv2 = (xn2-on2)/np.linalg.norm(xn2-on2)
-      ynpv2 = (yn2-on2)/np.linalg.norm(yn2-on2)
-      newPlane2.SetNthControlPointPositionFromArray(1,on2+xd2*xnpv2)
-      newPlane2.SetNthControlPointPositionFromArray(2,on2+yd1*ynpv2)
+        on1 = np.zeros(3)
+        xn1 = np.zeros(3)
+        yn1 = np.zeros(3)
+        newPlanes[j].GetNthControlPointPosition(0,on1)
+        newPlanes[j].GetNthControlPointPosition(1,xn1)
+        newPlanes[j].GetNthControlPointPosition(2,yn1)
+        xnpv1 = (xn1-on1)/np.linalg.norm(xn1-on1)
+        ynpv1 = (yn1-on1)/np.linalg.norm(yn1-on1)
+        newPlanes[j].SetNthControlPointPositionFromArray(1,on1+xd1*xnpv1)
+        newPlanes[j].SetNthControlPointPositionFromArray(2,on1+yd1*ynpv1)
 
 
       #Start transformations
@@ -483,6 +464,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       angleRad = vtk.vtkMath.AngleBetweenVectors(plane1Normal, lineDirectionVersor)
       angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
 
+      #this versor is created to check if rotAxis is okey or should be opposite
       v1l = [0,0,0]
       q = [angleRad,rotAxis[0],rotAxis[1],rotAxis[2]]
       vtk.vtkMath.RotateVectorByWXYZ(plane1Normal,q,v1l)
@@ -498,10 +480,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       rotAxis2 = [0,0,0]
       vtk.vtkMath.Cross(v1l, v2l, rotAxis2)
-      rotAxis = rotAxis/np.linalg.norm(rotAxis)
+      rotAxis2 = rotAxis2/np.linalg.norm(rotAxis2)
       angleRad2 = vtk.vtkMath.AngleBetweenVectors(v1l, v2l)/2
       angleDeg2 = vtk.vtkMath.DegreesFromRadians(angleRad2)
 
+      #this versor is created to check if rotAxis2 is okey or should be opposite
       v2r = [0,0,0]
       q2 = [angleRad2,rotAxis2[0],rotAxis2[1],rotAxis2[2]]
       vtk.vtkMath.RotateVectorByWXYZ(v2l,q2,v2r)
