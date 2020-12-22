@@ -414,8 +414,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     sceneItemID = shNode.GetSceneItemID() #My 
     if self.fibulaFolder:
       shNode.RemoveItem(self.fibulaFolder)
+      shNode.RemoveItem(self.transformsFolder)
       self.fibulaFolder = ''
+      
     self.fibulaFolder = shNode.CreateFolderItem(sceneItemID,"Fibula planes")
+    self.transformsFolder = shNode.CreateFolderItem(sceneItemID,"Mandible2Fibula transforms")
 
     #Create line versor
     lineStartPos = np.zeros(3)
@@ -560,6 +563,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       newPlane1.SetAndObserveTransformNodeID(transformFidA.GetID())
       newPlane2.SetAndObserveTransformNodeID(transformFidB.GetID())
+
+      shNode.CreateItem(self.transformsFolder,transformFidA)
+      shNode.CreateItem(self.transformsFolder,transformFidB)
 
 
 
