@@ -105,7 +105,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.mandibularPlanesList = []
     self.initialSpace = 0
     self.betweenSpace = 0
-    self.mandibularFolder = -1
+    self.mandibularFolder = 0
 
   def setup(self):
     """
@@ -162,6 +162,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
+    self.ui.fibulaModelButton.connect('clicked(bool)',self.onFibulaModelButton)
     self.ui.initialLineEdit.textEdited.connect(self.onInitialLineEdit)
     self.ui.betweenLineEdit.textEdited.connect(self.onBetweenLineEdit)
 
@@ -346,6 +347,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
     interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place);
 
+  def onFibulaModelButton(self):
+    self.logic.process2(self.ui.fibulaSegmentationSelector.currentNode())
 
   def onPlanePointAdded(self,sourceNode,event):
     nControlPoints = sourceNode.GetNumberOfControlPoints()
@@ -411,8 +414,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     Called when the logic class is instantiated. Can be used for initializing member variables.
     """
     ScriptedLoadableModuleLogic.__init__(self)
-    self.fibulaFolder = -1
-    self.transformsFolder = -1
+    self.fibulaFolder = 0
+    self.transformsFolder = 0
     self.fibulaPlanesList = []
     self.dynamicModelersList = []
 
@@ -629,11 +632,31 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       modelNode.SetName("Fibula Segment {0}A-{1}B".format(i//2,i//2))
       slicer.mrmlScene.AddNode(modelNode)
 
-      
+      dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
+      dynamicModelerNode.SetToolName("Plane cut")
+      dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", inputmodelNode.GetID())
+      dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputPlane", inputPlaneNode.GetID())
+      dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputPositiveModel", outputModel.GetID())
+      slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
 
 
       self.dynamicModelersList.append()
-    '''
+      '''
+    
+  def process2(self,fibulaSegmentation):
+    seg = fibulaSegmentation
+    seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
+    #segmentID = seg.GetSegmentation().GetSegmentIdBySegmentName('fibulasegment')
+    segmentID = seg.GetSegmentation().GetNthSegmentID(0)
+    segment = seg.GetSegmentation().GetSegment(segmentID)
+
+    self.fibulaModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+    self.fibulaModelNode.SetName("fibula")
+    slicer.mrmlScene.AddNode(self.fibulaModelNode)
+    self.fibulaModelNode.CreateDefaultDisplayNodes()
+
+    logic = slicer.modules.segmentations.logic()
+    logic.ExportSegmentToRepresentationNode(segment, self.fibulaModelNode)
 
 
 
