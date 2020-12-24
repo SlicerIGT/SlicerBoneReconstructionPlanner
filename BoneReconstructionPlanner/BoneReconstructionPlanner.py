@@ -416,8 +416,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     ScriptedLoadableModuleLogic.__init__(self)
     self.fibulaFolder = 0
     self.transformsFolder = 0
+    self.planeCutsFolder = 0
+    self.fibulaPiecesFolder = 0
     self.fibulaPlanesList = []
-    self.dynamicModelersList = []
+    self.planeCutsList = []
 
   def setDefaultParameters(self, parameterNode):
     """
@@ -626,22 +628,40 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.CreateItem(self.transformsFolder,transformFidB)
 
     
-    '''
-    for i in range(0,len(self.fibulaPlanesList),2):
-      modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-      modelNode.SetName("Fibula Segment {0}A-{1}B".format(i//2,i//2))
-      slicer.mrmlScene.AddNode(modelNode)
+    if shNode.GetItemName(self.planeCutsFolder) == '':
+      if shNode.GetItemName(self.fibulaPiecesFolder) != '':
+        shNode.RemoveItem(self.fibulaPiecesFolder)
+        self.planeCutsList = []
+      self.planeCutsFolder = shNode.CreateFolderItem(sceneItemID,"Plane Cuts")
+      self.fibulaPiecesFolder = shNode.CreateFolderItem(sceneItemID,"Fibula Pieces")
 
-      dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
-      dynamicModelerNode.SetToolName("Plane cut")
-      dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", inputmodelNode.GetID())
-      dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputPlane", inputPlaneNode.GetID())
-      dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputPositiveModel", outputModel.GetID())
-      slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
+      for i in range(0,len(self.fibulaPlanesList),2):
+        modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+        modelNode.SetName("Fibula Segment {0}A-{1}B".format(i//2,i//2))
+        slicer.mrmlScene.AddNode(modelNode)
+        modelNode.CreateDefaultDisplayNodes()
+        modelDisplay = modelNode.GetDisplayNode()
+        #Set color of the model
+        aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+        colorTable = aux.GetLookupTable()
+        ind = 7
+        colorwithalpha = colorTable.GetTableValue(ind)
+        color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
+        modelDisplay.SetColor(color)
 
-
-      self.dynamicModelersList.append()
-      '''
+        dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
+        dynamicModelerNode.SetToolName("Plane cut")
+        dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", self.fibulaModelNode.GetID())
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i+1].GetID())
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i].GetID())
+        dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
+        dynamicModelerNode.SetAttribute("OperationType", "Difference")
+        dynamicModelerNode.SetContinuousUpdate(True)
+        slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
+        
+        shNode.CreateItem(self.planeCutsFolder,dynamicModelerNode)
+        shNode.CreateItem(self.fibulaPiecesFolder,modelNode)
+      
     
   def process2(self,fibulaSegmentation):
     seg = fibulaSegmentation
