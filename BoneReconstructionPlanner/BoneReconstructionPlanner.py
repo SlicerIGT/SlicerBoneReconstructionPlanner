@@ -56,32 +56,32 @@ def registerSampleData():
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
     # Category and sample name displayed in Sample Data module
     category='BoneReconstructionPlanner',
-    sampleName='BoneReconstructionPlanner1',
+    sampleName='FibulaCropped',
     # Thumbnail should have size of approximately 260x280 pixels and stored in Resources/Icons folder.
     # It can be created by Screen Capture module, "Capture all views" option enabled, "Number of images" set to "Single".
-    thumbnailFileName=os.path.join(iconsPath, 'BoneReconstructionPlanner1.png'),
+    thumbnailFileName=os.path.join(iconsPath, 'iconFibulaCropped.png'),
     # Download URL and target file name
-    uris="https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/998cb522173839c78657f4bc0ea907cea09fd04e44601f17c82ea27927937b95",
-    fileNames='BoneReconstructionPlanner1.nrrd',
+    uris="https://github.com/lassoan/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaCropped.nrrd",
+    fileNames='FibulaCropped.nrrd',
     # Checksum to ensure file integrity. Can be computed by this command:
     #  import hashlib; print(hashlib.sha256(open(filename, "rb").read()).hexdigest())
-    checksums = 'SHA256:998cb522173839c78657f4bc0ea907cea09fd04e44601f17c82ea27927937b95',
+    checksums = 'SHA256:5febc47a8fba6b43440be2b475f9defadffe9b47b1316d04217208b4497a4f72',
     # This node name will be used when the data set is loaded
-    nodeNames='BoneReconstructionPlanner1'
+    nodeNames='FibulaCropped'
   )
 
   # BoneReconstructionPlanner2
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
     # Category and sample name displayed in Sample Data module
     category='BoneReconstructionPlanner',
-    sampleName='BoneReconstructionPlanner2',
-    thumbnailFileName=os.path.join(iconsPath, 'BoneReconstructionPlanner2.png'),
+    sampleName='ResectedMandible',
+    thumbnailFileName=os.path.join(iconsPath, 'iconResectedMandible.png'),
     # Download URL and target file name
-    uris="https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/1a64f3f422eb3d1c9b093d1a18da354b13bcf307907c66317e2463ee530b7a97",
-    fileNames='BoneReconstructionPlanner2.nrrd',
-    checksums = 'SHA256:1a64f3f422eb3d1c9b093d1a18da354b13bcf307907c66317e2463ee530b7a97',
+    uris="https://github.com/lassoan/SlicerBoneReconstructionPlanner/releases/download/TestingData/ResectedMandible.nrrd",
+    fileNames='ResectedMandible.nrrd',
+    checksums = 'SHA256:352aefed1905bd2ad7373972a6bb115bd494e26e4fc438d2c8679384dcfd2654',
     # This node name will be used when the data set is loaded
-    nodeNames='BoneReconstructionPlanner2'
+    nodeNames='ResectedMandible'
   )
 
 #
