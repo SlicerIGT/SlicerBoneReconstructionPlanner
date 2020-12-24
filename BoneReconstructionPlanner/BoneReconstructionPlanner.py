@@ -162,7 +162,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
-    self.ui.fibulaModelButton.connect('clicked(bool)',self.onFibulaModelButton)
+    self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
+    self.ui.updateFibulaPiecesButton.connect('clicked(bool)',self.onUpdateFibulaPiecesButton)
     self.ui.initialLineEdit.textEdited.connect(self.onInitialLineEdit)
     self.ui.betweenLineEdit.textEdited.connect(self.onBetweenLineEdit)
 
@@ -262,10 +263,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Update buttons states and tooltips
     if self._parameterNode.GetNodeReference("fibulaLine"):
       self.ui.createPlanesButton.toolTip = "Create fibula planes from mandibular planes"
-      self.ui.createPlanesButton.enabled = True
+      #self.ui.createPlanesButton.enabled = True
     else:
       self.ui.createPlanesButton.toolTip = "Select fibula line and mandibular planes"
-      self.ui.createPlanesButton.enabled = False
+      #self.ui.createPlanesButton.enabled = False
 
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
@@ -295,11 +296,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
       # Compute output
       self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.mandibularPlanesList, self.initialSpace, self.betweenSpace)
-
+      
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
       import traceback
       traceback.print_exc()
+    
+    self.ui.updateFibulaPiecesButton.enabled = True
 
   def onScalarVolumeChanged(self):
     scalarVolume = self.ui.scalarVolumeSelector.currentNode()
@@ -347,8 +350,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
     interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place);
 
-  def onFibulaModelButton(self):
-    self.logic.process2(self.ui.fibulaSegmentationSelector.currentNode())
+  def onMakeModelsButton(self):
+    self.logic.process2(self.ui.fibulaSegmentationSelector.currentNode(),self.ui.mandibularSegmentationSelector.currentNode())
+    self.ui.createPlanesButton.enabled = True
+
+  def onUpdateFibulaPiecesButton(self):
+    self.logic.process3()
 
   def onPlanePointAdded(self,sourceNode,event):
     nControlPoints = sourceNode.GetNumberOfControlPoints()
@@ -360,7 +367,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       planeNodeObserver = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModified)
   
   def onPlaneModified(self,sourceNode,event):
-    if self.ui.fibulaLineSelector.currentNodeID != '':
+    if self.ui.fibulaLineSelector.currentNodeID != '' and self.ui.updateFibulaPiecesButton.enabled:
       self.createMandibularPlanesList()
 
       try:
@@ -417,7 +424,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.fibulaFolder = 0
     self.transformsFolder = 0
     self.planeCutsFolder = 0
-    self.fibulaPiecesFolder = 0
+    self.cuttedBonesFolder = 0
     self.fibulaPlanesList = []
     self.planeCutsList = []
 
@@ -538,6 +545,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       plane2.GetNormal(plane2Normal)
       newPlane1 = self.fibulaPlanesList[2*i]
       newPlane2 = self.fibulaPlanesList[2*i+1]
+      newPlane1.SetNormal(plane1Normal)
+      newPlane1.SetOrigin(lineStartPos)
+      newPlane2.SetNormal(plane2Normal)
+      newPlane2.SetOrigin(lineStartPos)
 
       #Start transformations
       rotAxis = [0,0,0]
@@ -629,11 +640,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     
     if shNode.GetItemName(self.planeCutsFolder) == '':
-      if shNode.GetItemName(self.fibulaPiecesFolder) != '':
-        shNode.RemoveItem(self.fibulaPiecesFolder)
+      if shNode.GetItemName(self.cuttedBonesFolder) != '':
+        shNode.RemoveItem(self.cuttedBonesFolder)
         self.planeCutsList = []
       self.planeCutsFolder = shNode.CreateFolderItem(sceneItemID,"Plane Cuts")
-      self.fibulaPiecesFolder = shNode.CreateFolderItem(sceneItemID,"Fibula Pieces")
+      self.cuttedBonesFolder = shNode.CreateFolderItem(sceneItemID,"Cutted Bones")
 
       for i in range(0,len(self.fibulaPlanesList),2):
         modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -656,27 +667,62 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i].GetID())
         dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
         dynamicModelerNode.SetAttribute("OperationType", "Difference")
-        dynamicModelerNode.SetContinuousUpdate(True)
-        slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
+        self.planeCutsList.append(dynamicModelerNode)
+        #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
         
         shNode.CreateItem(self.planeCutsFolder,dynamicModelerNode)
-        shNode.CreateItem(self.fibulaPiecesFolder,modelNode)
+        shNode.CreateItem(self.cuttedBonesFolder,modelNode)
+      
+      
+      modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+      modelNode.SetName("Cutted mandible")
+      slicer.mrmlScene.AddNode(modelNode)
+      modelNode.CreateDefaultDisplayNodes()
+      modelDisplay = modelNode.GetDisplayNode()
+      #Set color of the model
+      aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+      colorTable = aux.GetLookupTable()
+      ind = 6
+      colorwithalpha = colorTable.GetTableValue(ind)
+      color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
+      modelDisplay.SetColor(color)
+
+      dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
+      dynamicModelerNode.SetToolName("Plane cut")
+      dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", self.mandibleModelNode.GetID())
+      dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID())
+      dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
+      dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputPositiveModel", modelNode.GetID())
+      dynamicModelerNode.SetAttribute("OperationType", "Difference")
+      self.planeCutsList.append(dynamicModelerNode)
+
+      shNode.CreateItem(self.cuttedBonesFolder,modelNode)
+      
       
     
-  def process2(self,fibulaSegmentation):
-    seg = fibulaSegmentation
-    seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
-    #segmentID = seg.GetSegmentation().GetSegmentIdBySegmentName('fibulasegment')
-    segmentID = seg.GetSegmentation().GetNthSegmentID(0)
-    segment = seg.GetSegmentation().GetSegment(segmentID)
-
+  def process2(self,fibulaSegmentation,mandibleSegmentation):
     self.fibulaModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
     self.fibulaModelNode.SetName("fibula")
-    slicer.mrmlScene.AddNode(self.fibulaModelNode)
-    self.fibulaModelNode.CreateDefaultDisplayNodes()
+    self.mandibleModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+    self.mandibleModelNode.SetName("mandible")
+    segmentations = [fibulaSegmentation,mandibleSegmentation]
+    models = [self.fibulaModelNode,self.mandibleModelNode]
+    for i in range(2):
+      slicer.mrmlScene.AddNode(models[i])
+      models[i].CreateDefaultDisplayNodes()
 
-    logic = slicer.modules.segmentations.logic()
-    logic.ExportSegmentToRepresentationNode(segment, self.fibulaModelNode)
+      seg = segmentations[i]
+      seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
+      #segmentID = seg.GetSegmentation().GetSegmentIdBySegmentName('fibulasegment')
+      segmentID = seg.GetSegmentation().GetNthSegmentID(0)
+      segment = seg.GetSegmentation().GetSegment(segmentID)
+
+      logic = slicer.modules.segmentations.logic()
+      logic.ExportSegmentToRepresentationNode(segment, models[i])
+
+  def process3(self):
+    for i in range(len(self.planeCutsList)):
+      slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(self.planeCutsList[i])
 
 
 

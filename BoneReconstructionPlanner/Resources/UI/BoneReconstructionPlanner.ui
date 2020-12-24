@@ -182,9 +182,29 @@
     </layout>
    </item>
    <item>
+    <widget class="QPushButton" name="makeModelsButton">
+     <property name="text">
+      <string>Create bone models from segmentations</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="createPlanesButton">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="text">
       <string>Create fibula planes over fibula line</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="updateFibulaPiecesButton">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>Update fibula bone pieces with fibula planes</string>
      </property>
     </widget>
    </item>
@@ -194,13 +214,6 @@
       <stringlist>
        <string>vtkMRMLMarkupsPlaneNode</string>
       </stringlist>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QPushButton" name="fibulaModelButton">
-     <property name="text">
-      <string>Create fibula model from segmentation</string>
      </property>
     </widget>
    </item>
