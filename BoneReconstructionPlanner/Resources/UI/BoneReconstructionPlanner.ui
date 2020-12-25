@@ -209,6 +209,16 @@
     </widget>
    </item>
    <item>
+    <widget class="QPushButton" name="bonesToMandibleButton">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>Transform fibula bone pieces to mandible</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="qMRMLSubjectHierarchyTreeView" name="planesTreeView">
      <property name="nodeTypes">
       <stringlist>
