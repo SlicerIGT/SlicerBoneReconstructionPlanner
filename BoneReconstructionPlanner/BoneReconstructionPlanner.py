@@ -712,6 +712,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       logic.ExportSegmentToRepresentationNode(segment, models[i])
 
   def process3(self):
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    shNode.RemoveItem(self.boneTransformFolder)
     for i in range(len(self.planeCutsList)):
       slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(self.planeCutsList[i])
 
