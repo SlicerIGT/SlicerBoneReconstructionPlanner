@@ -154,14 +154,14 @@
      <item row="7" column="1">
       <widget class="QLineEdit" name="betweenLineEdit"/>
      </item>
-     <item row="8" column="0">
+     <item row="9" column="0">
       <widget class="QLabel" name="label_11">
        <property name="text">
         <string>Select fibula line</string>
        </property>
       </widget>
      </item>
-     <item row="8" column="1">
+     <item row="9" column="1">
       <widget class="qMRMLNodeComboBox" name="fibulaLineSelector">
        <property name="enabled">
         <bool>true</bool>
@@ -169,6 +169,31 @@
        <property name="nodeTypes">
         <stringlist>
          <string>vtkMRMLMarkupsLineNode</string>
+        </stringlist>
+       </property>
+       <property name="addEnabled">
+        <bool>false</bool>
+       </property>
+       <property name="removeEnabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="0">
+      <widget class="QLabel" name="label_9">
+       <property name="text">
+        <string>Select mandible curve</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="1">
+      <widget class="qMRMLNodeComboBox" name="mandibleCurveSelector">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="nodeTypes">
+        <stringlist>
+         <string>vtkMRMLMarkupsCurveNode</string>
         </stringlist>
        </property>
        <property name="addEnabled">

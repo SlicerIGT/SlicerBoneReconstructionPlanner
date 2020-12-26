@@ -128,23 +128,24 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibularSegmentationSelector.setMRMLScene(slicer.mrmlScene)
     self.ui.fibulaSegmentationSelector.setMRMLScene(slicer.mrmlScene)
     self.ui.planesTreeView.setMRMLScene(slicer.mrmlScene)
+    self.ui.mandibleCurveSelector.setMRMLScene(slicer.mrmlScene)
     
 
     #Setup the mandibular curve widget
-    curveNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode","mandibuleCurve")
+    mandibularCurve = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode","mandibuleCurve")
     self.ui.mandibularCurvePlaceWidget.setButtonsVisible(False)
     self.ui.mandibularCurvePlaceWidget.placeButton().show()
     self.ui.mandibularCurvePlaceWidget.setMRMLScene(slicer.mrmlScene)
     self.ui.mandibularCurvePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    self.ui.mandibularCurvePlaceWidget.setCurrentNode(curveNode)
+    self.ui.mandibularCurvePlaceWidget.setCurrentNode(mandibularCurve)
     #self.ui.mandibularCurvePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
     #Setup the fibula line widget
-    lineNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode","fibulaLine")
+    fibulaLine = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode","fibulaLine")
     self.ui.fibulaLinePlaceWidget.setButtonsVisible(False)
     self.ui.fibulaLinePlaceWidget.placeButton().show()
     self.ui.fibulaLinePlaceWidget.setMRMLScene(slicer.mrmlScene)
     self.ui.fibulaLinePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    self.ui.fibulaLinePlaceWidget.setCurrentNode(lineNode)
+    self.ui.fibulaLinePlaceWidget.setCurrentNode(fibulaLine)
     #self.ui.fibulaLinePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
 
     # Create logic class. Logic implements all computations that should be possible to run
@@ -160,6 +161,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
     self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.mandibleCurveSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
@@ -296,7 +298,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     try:
 
       # Compute output
-      self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.mandibularPlanesList, self.initialSpace, self.betweenSpace)
+      self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibleCurveSelector.currentNode(), self.mandibularPlanesList, self.initialSpace, self.betweenSpace)
       
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -344,7 +346,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     displayNode.SetSelectedColor(color)
 
     #conections
-    planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
+    self.planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
 
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(planeNode)
@@ -363,13 +365,30 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.process4(self.mandibularPlanesList)
 
   def onPlanePointAdded(self,sourceNode,event):
-    nControlPoints = sourceNode.GetNumberOfControlPoints()
-    if nControlPoints ==3:
-      displayNode = sourceNode.GetDisplayNode()
-      displayNode.HandlesInteractiveOn()
-      for i in range(nControlPoints):
-        sourceNode.SetNthControlPointVisibility(i,False)
-      planeNodeObserver = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModified)
+    mandibularCurve = self.ui.mandibleCurveSelector.currentNode()
+    planeOrigin = [0,0,0]
+    sourceNode.GetNthControlPointPosition(0,planeOrigin)
+    closestCurvePoint = [0,0,0]
+    closestCurvePointIndex = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOrigin,closestCurvePoint)
+    matrix = vtk.vtkMatrix4x4()
+    mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(closestCurvePointIndex,matrix)
+    position = np.array([matrix.GetElement(0,3),matrix.GetElement(1,3),matrix.GetElement(2,3)])
+    normal = np.array([matrix.GetElement(0,2),matrix.GetElement(1,2),matrix.GetElement(2,2)])
+    x1 = np.array([matrix.GetElement(0,0),matrix.GetElement(1,0),matrix.GetElement(2,0)])
+    y1 = np.array([matrix.GetElement(0,1),matrix.GetElement(1,1),matrix.GetElement(2,1)])
+    dx = 20
+    dy = 40
+    sourceNode.RemoveObserver(self.planeNodeObserver)
+    sourceNode.SetNormal(normal)
+    sourceNode.SetNthControlPointPositionFromArray(0,position)
+    sourceNode.SetNthControlPointPositionFromArray(1,position + x1*dx)
+    sourceNode.SetNthControlPointPositionFromArray(2,position + y1*dy)
+
+    displayNode = sourceNode.GetDisplayNode()
+    displayNode.HandlesInteractiveOn()
+    for i in range(3):
+      sourceNode.SetNthControlPointVisibility(i,False)
+    planeNodeObserver = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModified)
   
   def onPlaneModified(self,sourceNode,event):
     if self.ui.fibulaLineSelector.currentNodeID != '' and self.ui.updateFibulaPiecesButton.enabled:
@@ -377,7 +396,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
       try:
         # Compute output
-        self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.mandibularPlanesList, self.initialSpace, self.betweenSpace)
+        self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibleCurveSelector.currentNode(), self.mandibularPlanesList, self.initialSpace, self.betweenSpace)
 
       except Exception as e:
         slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -445,7 +464,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("Invert"):
       parameterNode.SetParameter("Invert", "false")
 
-  def process(self,fibulaLine,planeList,initialSpace,betweenSpace):
+  def process(self,fibulaLine,mandibularCurve,planeList,initialSpace,betweenSpace):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     sceneItemID = shNode.GetSceneItemID()
     if self.transformsFolder:
@@ -652,11 +671,25 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         modelDisplay.SetColor(color)
         self.cuttedBonesList.append(modelNode)
 
+        #Determinate plane creation direction and set up dynamic modeler
+        planeOriginStart = [0,0,0]
+        planeOriginEnd = [0,0,0]
+        planeList[0].GetNthControlPointPosition(0,planeOriginStart)
+        planeList[len(planeList)-1].GetNthControlPointPosition(0,planeOriginEnd)
+        closestCurvePointStart = [0,0,0]
+        closestCurvePointEnd = [0,0,0]
+        closestCurvePointIndexStart = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOriginStart,closestCurvePointStart)
+        closestCurvePointIndexEnd = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOriginEnd,closestCurvePointEnd)
+
         dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
         dynamicModelerNode.SetToolName("Plane cut")
         dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", self.fibulaModelNode.GetID())
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i].GetID())
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i+1].GetID())
+        if closestCurvePointIndexStart > closestCurvePointIndexEnd:
+          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i].GetID())
+          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i+1].GetID())
+        else:
+          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i+1].GetID())
+          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i].GetID()) 
         dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
         dynamicModelerNode.SetAttribute("OperationType", "Difference")
         self.planeCutsList.append(dynamicModelerNode)
