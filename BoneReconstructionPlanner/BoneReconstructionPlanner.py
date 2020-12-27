@@ -448,10 +448,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.fibulaPlanesFolder = 0
     self.mandible2FibulaTransformsFolder = 0
     self.planeCutsFolder = 0
-    self.cuttedBonesFolder = 0
+    self.cutBonesFolder = 0
     self.bonePiecesTransformFolder = 0
     self.segmentationModelsFolder = 0
-    self.cuttedBonesList = []
+    self.cutBonesList = []
     self.fibulaPlanesList = []
     self.planeCutsList = []
     self.rotTransformParameters = []
@@ -654,11 +654,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     
     if shNode.GetItemName(self.planeCutsFolder) == '':
-      shNode.RemoveItem(self.cuttedBonesFolder)
+      shNode.RemoveItem(self.cutBonesFolder)
       self.planeCutsList = []
-      self.cuttedBonesList = []
+      self.cutBonesList = []
       self.planeCutsFolder = shNode.CreateFolderItem(sceneItemID,"Plane Cuts")
-      self.cuttedBonesFolder = shNode.CreateFolderItem(sceneItemID,"Cutted Bones")
+      self.cutBonesFolder = shNode.CreateFolderItem(sceneItemID,"Cutted Bones")
 
       for i in range(0,len(self.fibulaPlanesList),2):
         modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -673,7 +673,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         colorwithalpha = colorTable.GetTableValue(ind)
         color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
         modelDisplay.SetColor(color)
-        self.cuttedBonesList.append(modelNode)
+        self.cutBonesList.append(modelNode)
 
         #Determinate plane creation direction and set up dynamic modeler
         planeOriginStart = [0,0,0]
@@ -700,7 +700,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
         
         shNode.CreateItem(self.planeCutsFolder,dynamicModelerNode)
-        shNode.CreateItem(self.cuttedBonesFolder,modelNode)
+        shNode.CreateItem(self.cutBonesFolder,modelNode)
       
       
       modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -730,7 +730,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.planeCutsList.append(dynamicModelerNode)
 
       shNode.CreateItem(self.planeCutsFolder,dynamicModelerNode)
-      shNode.CreateItem(self.cuttedBonesFolder,modelNode)
+      shNode.CreateItem(self.cutBonesFolder,modelNode)
     
   def process2(self,fibulaSegmentation,mandibleSegmentation):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
@@ -774,9 +774,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.RemoveItem(self.bonePiecesTransformFolder)
     self.bonePiecesTransformFolder = shNode.CreateFolderItem(sceneItemID,"Bone Pieces Transforms")
 
-    for i in range(len(self.cuttedBonesList)):
+    for i in range(len(self.cutBonesList)):
       bounds = [0,0,0,0,0,0]
-      self.cuttedBonesList[i].GetBounds(bounds)
+      self.cutBonesList[i].GetBounds(bounds)
       x1 = (bounds[1]+bounds[0])/2
       y1 = (bounds[3]+bounds[2])/2
       z1 = (bounds[5]+bounds[4])/2
@@ -806,7 +806,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformFid.SetMatrixTransformToParent(finalTransform.GetMatrix())
       transformFid.UpdateScene(slicer.mrmlScene)
 
-      self.cuttedBonesList[i].SetAndObserveTransformNodeID(transformFid.GetID())
+      self.cutBonesList[i].SetAndObserveTransformNodeID(transformFid.GetID())
 
       shNode.CreateItem(self.bonePiecesTransformFolder,transformFid)
 
