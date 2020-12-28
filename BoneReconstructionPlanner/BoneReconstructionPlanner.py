@@ -167,6 +167,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
     self.ui.updateFibulaPiecesButton.connect('clicked(bool)',self.onUpdateFibulaPiecesButton)
     self.ui.bonesToMandibleButton.connect('clicked(bool)',self.onBonesToMandibleButton)
+    self.ui.mandibularAutomaticPositioningButton.connect('clicked(bool)',self.onMandibularAutomaticPositioningButton)
     self.ui.initialLineEdit.textEdited.connect(self.onInitialLineEdit)
     self.ui.betweenLineEdit.textEdited.connect(self.onBetweenLineEdit)
 
@@ -363,6 +364,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onBonesToMandibleButton(self):
     self.logic.process4(self.mandibularPlanesList)
+
+  def onMandibularAutomaticPositioningButton(self):
+    self.createMandibularPlanesList()
+    self.logic.process5(self.ui.mandibleCurveSelector.currentNode(), self.mandibularPlanesList)
+      
 
   def onPlanePointAdded(self,sourceNode,event):
     mandibularCurve = self.ui.mandibleCurveSelector.currentNode()
@@ -810,7 +816,140 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       shNode.CreateItem(self.bonePiecesTransformFolder,transformFid)
 
+  def process5(self,mandibularCurve, planeList):
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    sceneItemID = shNode.GetSceneItemID()
+    mandiblePlaneTransformsFolder = shNode.CreateFolderItem(sceneItemID,"Mandible Planes Transforms")
 
+    '''
+    for i in range(0,len(planeList),len(planeList)-1):
+      or1 = np.zeros(3)
+      or2 = np.zeros(3)
+      if i==0:
+        planeList[i].GetOrigin(or1)
+        planeList[i+1].GetOrigin(or2)
+      else:
+        planeList[i-1].GetOrigin(or1)
+        planeList[i].GetOrigin(or2)
+      lineDirectionVersor = (or2-or1)/np.linalg.norm(or2-or1)
+
+      originPoint = [0,0,0]
+      if i==0:
+        originPointIndex = mandibularCurve.GetClosestPointPositionAlongCurveWorld(or1,originPoint)
+      else:
+        originPointIndex = mandibularCurve.GetClosestPointPositionAlongCurveWorld(or2,originPoint)
+      matrix = vtk.vtkMatrix4x4()
+      mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(originPointIndex,matrix)
+      position = np.array([matrix.GetElement(0,3),matrix.GetElement(1,3),matrix.GetElement(2,3)])
+      normal = np.array([matrix.GetElement(0,2),matrix.GetElement(1,2),matrix.GetElement(2,2)])
+      x1 = [matrix.GetElement(0,0),matrix.GetElement(1,0),matrix.GetElement(2,0)]
+      y1 = [matrix.GetElement(0,1),matrix.GetElement(1,1),matrix.GetElement(2,1)]
+
+      transformFid = slicer.vtkMRMLLinearTransformNode()
+      transformFid.SetName("temp%d" % i)
+      slicer.mrmlScene.AddNode(transformFid)
+
+      planeList[i].SetNormal(normal)
+
+      angleRadX = vtk.vtkMath.AngleBetweenVectors(x1, [0,0,1])
+      angleRadY = vtk.vtkMath.AngleBetweenVectors(y1, [0,0,1])
+      angleDegX = vtk.vtkMath.DegreesFromRadians(angleRadX)
+      angleDegY = vtk.vtkMath.DegreesFromRadians(angleRadY)
+      invertAngle = False
+      if (angleDegX <= 90) and (angleDegY <= 90):
+        if angleDegX < angleDegY:
+          rotAxis = x1
+        else:
+          rotAxis = y1
+      else:
+        if (angleDegX >= 90) and (angleDegY >= 90):
+          if angleDegX > angleDegY:
+            rotAxis = x1
+          else:
+            rotAxis = y1
+          invertAngle = True
+        else:
+          if (angleDegX-90) >= 0:
+            if (180-angleDegX) <= angleDegY:
+              rotAxis = x1
+              invertAngle = True
+            else:
+              rotAxis = y1
+          else:
+            if (180-angleDegY) <= angleDegX:
+              rotAxis = y1
+              invertAngle = True
+            else:
+              rotAxis = x1
+
+      if i==0:
+        angleDeg = -45
+        if invertAngle:
+          angleDeg = -angleDeg
+      else:
+        angleDeg = 45
+        if invertAngle:
+          angleDeg = -angleDeg
+
+      finalTransform = vtk.vtkTransform()
+      finalTransform.PostMultiply()
+      if i==0:
+        finalTransform.Translate(-or1[0], -or1[1], -or1[2])
+        finalTransform.RotateWXYZ(angleDeg,rotAxis)
+        finalTransform.Translate(or1)
+      else:
+        finalTransform.Translate(-or2[0], -or2[1], -or2[2])
+        finalTransform.RotateWXYZ(angleDeg,rotAxis)
+        finalTransform.Translate(or2)
+
+      transformFid.SetMatrixTransformToParent(finalTransform.GetMatrix())
+
+      transformFid.UpdateScene(slicer.mrmlScene)
+
+      planeList[i].SetAndObserveTransformNodeID(transformFid.GetID())
+      planeList[i].HardenTransform()
+      
+      shNode.CreateItem(mandiblePlaneTransformsFolder,transformFid)
+    '''
+    
+    for i in range(0,len(planeList)-2):
+      or1 = np.zeros(3)
+      or2 = np.zeros(3)
+      or3 = np.zeros(3)
+      planeList[i].GetOrigin(or1)
+      planeList[i+1].GetOrigin(or2)
+      planeList[i+2].GetOrigin(or3)
+      lineDirectionVersor1 = (or2-or1)/np.linalg.norm(or2-or1)
+      lineDirectionVersor2 = (or3-or2)/np.linalg.norm(or3-or2)
+      planeList[i+1].SetNormal(lineDirectionVersor1.tolist())
+
+      rotAxis = [0,0,0]
+      vtk.vtkMath.Cross(lineDirectionVersor1, lineDirectionVersor2, rotAxis)
+      rotAxis = rotAxis/np.linalg.norm(rotAxis)
+      angleRad = vtk.vtkMath.AngleBetweenVectors(lineDirectionVersor1, lineDirectionVersor2)/2
+      angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
+
+      transformFid = slicer.vtkMRMLLinearTransformNode()
+      transformFid.SetName("temp%d" % (i+1))
+      slicer.mrmlScene.AddNode(transformFid)
+
+      finalTransform = vtk.vtkTransform()
+      finalTransform.PostMultiply()
+      finalTransform.Translate(-or2[0], -or2[1], -or2[2])
+      finalTransform.RotateWXYZ(angleDeg,rotAxis)
+      finalTransform.Translate(or2)
+
+      transformFid.SetMatrixTransformToParent(finalTransform.GetMatrix())
+
+      transformFid.UpdateScene(slicer.mrmlScene)
+
+      planeList[i+1].SetAndObserveTransformNodeID(transformFid.GetID())
+      planeList[i+1].HardenTransform()
+      
+      shNode.CreateItem(mandiblePlaneTransformsFolder,transformFid)
+    
+    shNode.RemoveItem(mandiblePlaneTransformsFolder)
+      
 
 
 
