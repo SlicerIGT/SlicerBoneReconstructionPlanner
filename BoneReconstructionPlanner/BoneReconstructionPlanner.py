@@ -84,6 +84,15 @@ def registerSampleData():
     nodeNames='ResectedMandible'
   )
 
+def createListFromFolderID(folderID):
+  createdList = []
+  shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+  myList = vtk.vtkIdList()
+  shNode.GetItemChildren(folderID,myList)
+  for i in range(myList.GetNumberOfIds()):
+    createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
+  return createdList
+
 #
 # BoneReconstructionPlannerWidget
 #
@@ -102,10 +111,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic = None
     self._parameterNode = None
     self._updatingGUIFromParameterNode = False
-    self.mandibularPlanesList = []
     self.initialSpace = 0
     self.betweenSpace = 0
-    self.mandibularFolder = 0
 
   def setup(self):
     """
@@ -163,20 +170,54 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleCurveSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
+    self.ui.initialLineEdit.textEdited.connect(self.onInitialLineEdit)
+    self.ui.betweenLineEdit.textEdited.connect(self.onBetweenLineEdit)
+
+    # Buttons
+    self.ui.createPlanesButton.connect('clicked(bool)', self.onCreatePlanesButton)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
     self.ui.updateFibulaPiecesButton.connect('clicked(bool)',self.onUpdateFibulaPiecesButton)
     self.ui.bonesToMandibleButton.connect('clicked(bool)',self.onBonesToMandibleButton)
     self.ui.mandibularAutomaticPositioningButton.connect('clicked(bool)',self.onMandibularAutomaticPositioningButton)
-    self.ui.initialLineEdit.textEdited.connect(self.onInitialLineEdit)
-    self.ui.betweenLineEdit.textEdited.connect(self.onBetweenLineEdit)
-
-
-    # Buttons
-    self.ui.createPlanesButton.connect('clicked(bool)', self.onCreatePlanesButton)
+    
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
+
+    #self._parameterNode.SetHideFromEditors(False)
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    #shNode.RequestOwnerPluginSearch(self._parameterNode)
+    #self.ui.planesTreeView.setRootItem(shNode.GetItemByDataNode(self._parameterNode))
+    shNode.CreateItem(self.getParameterNodeSubjectHierarchyID(),mandibularCurve)
+    shNode.CreateItem(self.getParameterNodeSubjectHierarchyID(),fibulaLine)
+
+
+  '''
+  def getParameterNodeSubjectHierarchyID(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    return shNode.GetItemByDataNode(self._parameterNode)
+  '''
+  #In reality this function doesn't use the parameter node but a folder instead. It is leaved
+  #like this for future changes
+  def getParameterNodeSubjectHierarchyID(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    sceneItemID = shNode.GetSceneItemID()
+    folderSubjectHierarchyID = shNode.GetItemByName("BoneReconstructionPlanner")
+    if folderSubjectHierarchyID:
+      return folderSubjectHierarchyID
+    else:
+      return shNode.CreateFolderItem(sceneItemID,"BoneReconstructionPlanner")
+
+
+  def getMandiblePlanesFolderID(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    folderSubjectHierarchyID = shNode.GetItemByName("Mandibular planes")
+    if folderSubjectHierarchyID:
+      return folderSubjectHierarchyID
+    else:
+      return shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Mandibular planes")
+
 
   def cleanup(self):
     """
@@ -294,12 +335,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Run processing when user clicks "Apply" button.
     """
-    self.createMandibularPlanesList()
+    mandibularPlanesList = createListFromFolderID(self.getMandiblePlanesFolderID())
     
     try:
 
       # Compute output
-      self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibleCurveSelector.currentNode(), self.mandibularPlanesList, self.initialSpace, self.betweenSpace)
+      self.logic.generateFibulaPlanes(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibleCurveSelector.currentNode(), mandibularPlanesList, self.initialSpace, self.betweenSpace, self.ui.rightFibulaCheckBox.isChecked())
       
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -324,10 +365,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     slicer.mrmlScene.AddNode(planeNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeNode)
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    if shNode.GetItemName(self.mandibularFolder) == '':
-      sceneItemID = shNode.GetSceneItemID() #My parent
-      self.mandibularFolder = shNode.CreateFolderItem(sceneItemID,"Mandibular planes")
-    shNode.CreateItem(self.mandibularFolder,planeNode)
+    mandibularFolderID = self.getMandiblePlanesFolderID()
+    shNode.CreateItem(mandibularFolderID,planeNode)
     planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
 
     aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
@@ -337,7 +376,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       ind = 0
     else:
       ind = int(name.split('_')[1])%8
-    #ind = shNode.GetNumberOfItemChildren(self.mandibularFolder)-1
+    #ind = shNode.GetNumberOfItemChildren(mandibularFolderID)-1
     colorwithalpha = colorTable.GetTableValue(ind)
     color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
 
@@ -355,40 +394,27 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place);
 
   def onMakeModelsButton(self):
-    self.logic.process2(self.ui.fibulaSegmentationSelector.currentNode(),self.ui.mandibularSegmentationSelector.currentNode())
+    self.logic.makeModels(self.ui.fibulaSegmentationSelector.currentNode(),self.ui.mandibularSegmentationSelector.currentNode())
     self.ui.createPlanesButton.enabled = True
 
   def onUpdateFibulaPiecesButton(self):
-    self.logic.process3()
+    self.logic.updateFibulaPieces()
     self.ui.bonesToMandibleButton.enabled = True
 
   def onBonesToMandibleButton(self):
-    self.logic.process4(self.mandibularPlanesList)
+    mandibularPlanesList = createListFromFolderID(self.getMandiblePlanesFolderID())
+    self.logic.tranformBonePiecesToMandible(mandibularPlanesList)
 
   def onMandibularAutomaticPositioningButton(self):
-    self.createMandibularPlanesList()
-    self.logic.process5(self.ui.mandibleCurveSelector.currentNode(), self.mandibularPlanesList)
+    mandibularPlanesList = createListFromFolderID(self.getMandiblePlanesFolderID())
+    self.logic.mandiblePlanesPositioningForMaximumBoneContact(self.ui.mandibleCurveSelector.currentNode(), mandibularPlanesList)
       
 
   def onPlanePointAdded(self,sourceNode,event):
-    mandibularCurve = self.ui.mandibleCurveSelector.currentNode()
-    planeOrigin = [0,0,0]
-    sourceNode.GetNthControlPointPosition(0,planeOrigin)
-    closestCurvePoint = [0,0,0]
-    closestCurvePointIndex = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOrigin,closestCurvePoint)
-    matrix = vtk.vtkMatrix4x4()
-    mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(closestCurvePointIndex,matrix)
-    position = np.array([matrix.GetElement(0,3),matrix.GetElement(1,3),matrix.GetElement(2,3)])
-    normal = np.array([matrix.GetElement(0,2),matrix.GetElement(1,2),matrix.GetElement(2,2)])
-    x1 = np.array([matrix.GetElement(0,0),matrix.GetElement(1,0),matrix.GetElement(2,0)])
-    y1 = np.array([matrix.GetElement(0,1),matrix.GetElement(1,1),matrix.GetElement(2,1)])
-    dx = 25
-    dy = 25
-    sourceNode.RemoveObserver(self.planeNodeObserver)
-    sourceNode.SetNormal(normal)
-    sourceNode.SetNthControlPointPositionFromArray(0,position)
-    sourceNode.SetNthControlPointPositionFromArray(1,position + x1*dx)
-    sourceNode.SetNthControlPointPositionFromArray(2,position + y1*dy)
+    temporalOrigin = [0,0,0]
+    sourceNode.GetNthControlPointPosition(0,temporalOrigin)
+    
+    self.logic.setupMandiblePlaneStraightOverMandibleCurve(sourceNode,temporalOrigin, self.ui.mandibleCurveSelector.currentNode(), self.planeNodeObserver)
 
     displayNode = sourceNode.GetDisplayNode()
     displayNode.HandlesInteractiveOn()
@@ -398,11 +424,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   
   def onPlaneModified(self,sourceNode,event):
     if self.ui.fibulaLineSelector.currentNodeID != '' and self.ui.updateFibulaPiecesButton.enabled:
-      self.createMandibularPlanesList()
+      mandibularPlanesList = createListFromFolderID(self.getMandiblePlanesFolderID())
 
       try:
         # Compute output
-        self.logic.process(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibleCurveSelector.currentNode(), self.mandibularPlanesList, self.initialSpace, self.betweenSpace)
+        self.logic.generateFibulaPlanes(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibleCurveSelector.currentNode(), mandibularPlanesList, self.initialSpace, self.betweenSpace, self.ui.rightFibulaCheckBox.isChecked())
 
       except Exception as e:
         slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -417,18 +443,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onBetweenLineEdit(self,text):
     if text!= '':
       self.betweenSpace = float(text)
-  
-  def createMandibularPlanesList(self):
-    self.mandibularPlanesList = []
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    myList = vtk.vtkIdList()
-    shNode.GetItemChildren(self.mandibularFolder,myList)
-    for i in range(myList.GetNumberOfIds()):
-      self.mandibularPlanesList.append(shNode.GetItemDataNode(myList.GetId(i)))
-
-  def numberOfPlanes(self):
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    return shNode.GetNumberOfItemChildren(self.mandibularFolder)
     
 
 
@@ -451,14 +465,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     Called when the logic class is instantiated. Can be used for initializing member variables.
     """
     ScriptedLoadableModuleLogic.__init__(self)
-    self.fibulaPlanesFolder = 0
-    self.mandible2FibulaTransformsFolder = 0
     self.planeCutsFolder = 0
     self.cutBonesFolder = 0
     self.bonePiecesTransformFolder = 0
     self.segmentationModelsFolder = 0
     self.cutBonesList = []
-    self.fibulaPlanesList = []
     self.planeCutsList = []
     self.rotTransformParameters = []
 
@@ -471,32 +482,70 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("Invert"):
       parameterNode.SetParameter("Invert", "false")
 
-  def process(self,fibulaLine,mandibularCurve,planeList,initialSpace,betweenSpace):
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+  '''
+  def getParameterNodeSubjectHierarchyID(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    return shNode.GetItemByDataNode(self.getParameterNode())
+  '''
+  #In reality this function doesn't use the parameter node but a folder instead. It is leaved
+  #like this for future changes
+  def getParameterNodeSubjectHierarchyID(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     sceneItemID = shNode.GetSceneItemID()
-    if self.mandible2FibulaTransformsFolder:
-      shNode.RemoveItem(self.mandible2FibulaTransformsFolder)
-      self.mandible2FibulaTransformsFolder = ''
+    folderSubjectHierarchyID = shNode.GetItemByName("BoneReconstructionPlanner")
+    if folderSubjectHierarchyID:
+      return folderSubjectHierarchyID
+    else:
+      return shNode.CreateFolderItem(sceneItemID,"BoneReconstructionPlanner")
 
-    self.mandible2FibulaTransformsFolder = shNode.CreateFolderItem(sceneItemID,"Mandible2Fibula transforms")
+  def remakeMandible2FibulaTransformsFolderID(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    folderSubjectHierarchyID = shNode.GetItemByName("Mandible2Fibula transforms")
+    if folderSubjectHierarchyID:
+      shNode.RemoveItem(folderSubjectHierarchyID)
+      mandible2FibulaTransformsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Mandible2Fibula transforms")
+      return mandible2FibulaTransformsFolder
+    else:
+      return shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Mandible2Fibula transforms")
 
-    #Create line versor
+  
+
+  def generateFibulaPlanes(self,fibulaLine,mandibularCurve,planeList,initialSpace,betweenSpace,rightFibulaChecked):
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    mandible2FibulaTransformsFolder = self.remakeMandible2FibulaTransformsFolderID()
+
+    #Create fibula axis:
     lineStartPos = np.zeros(3)
     lineEndPos = np.zeros(3)
     fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
     fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
-    lineDirectionVersor = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+    fibulaOrigin = lineStartPos
+    fibulaZ = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+    fibulaX = [0,0,0]
+    fibulaY = [0,0,0]
+    anteriorDirection = [0,1,0]
+    posteriorDirection = [0,-1,0]
+    if rightFibulaChecked:
+      vtk.vtkMath.Cross(fibulaZ, anteriorDirection, fibulaX)
+      fibulaX = fibulaX/np.linalg.norm(fibulaX)
+    else:
+      vtk.vtkMath.Cross(fibulaZ, posteriorDirection, fibulaX)
+      fibulaX = fibulaX/np.linalg.norm(fibulaX)
+    vtk.vtkMath.Cross(fibulaZ, fibulaX, fibulaY)
+    fibulaY = fibulaY/np.linalg.norm(fibulaY)
 
     #NewPlanes position and distance
-    planesPositionA = []
-    planesPositionB = []
-    d = []
+    fibula2FibulaPlanesPositionA = []
+    fibula2FibulaPlanesPositionB = []
+    boneSegmentsDistance = []
     
-    #Create fibula planes and set their size
-    if shNode.GetItemName(self.fibulaPlanesFolder) == '':
-      self.fibulaPlanesFolder = shNode.CreateFolderItem(sceneItemID,"Fibula planes")
-      self.fibulaPlanesList = []
+    
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
 
+    #Create fibula planes and set their size
+    if fibulaPlanesFolder==0:
+      fibulaPlanesFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Fibula planes")
       for i in range(len(planeList)-1):
         plane1 = planeList[i]
         plane2 = planeList[i+1]
@@ -507,17 +556,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         newPlane1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
         slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(newPlane1)
-        shNode.CreateItem(self.fibulaPlanesFolder,newPlane1)
+        shNode.CreateItem(fibulaPlanesFolder,newPlane1)
         newPlane1.SetNormal(plane1Normal)
-        newPlane1.SetOrigin(lineStartPos)
-        self.fibulaPlanesList.append(newPlane1)
+        newPlane1.SetOrigin(fibulaOrigin)
+        fibulaPlanesList.append(newPlane1)
 
         newPlane2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
         slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(newPlane2)
-        shNode.CreateItem(self.fibulaPlanesFolder,newPlane2)
+        shNode.CreateItem(fibulaPlanesFolder,newPlane2)
         newPlane2.SetNormal(plane2Normal)
-        newPlane2.SetOrigin(lineStartPos)
-        self.fibulaPlanesList.append(newPlane2)
+        newPlane2.SetOrigin(fibulaOrigin)
+        fibulaPlanesList.append(newPlane2)
 
 
         #Set new planes size
@@ -553,25 +602,25 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           oldDisplayNode = planeList[i].GetDisplayNode()
           color = oldDisplayNode.GetSelectedColor()
 
-          displayNode = self.fibulaPlanesList[0].GetDisplayNode()
+          displayNode = fibulaPlanesList[0].GetDisplayNode()
           displayNode.SetSelectedColor(color)
         else:
           if i == len(planeList)-1:
             oldDisplayNode = planeList[i].GetDisplayNode()
             color = oldDisplayNode.GetSelectedColor()
 
-            displayNode = self.fibulaPlanesList[len(self.fibulaPlanesList)-1].GetDisplayNode()
+            displayNode = fibulaPlanesList[len(fibulaPlanesList)-1].GetDisplayNode()
             displayNode.SetSelectedColor(color)
           else:
             if ((i-1)%2)==0:
               oldDisplayNode = planeList[i].GetDisplayNode()
               color = oldDisplayNode.GetSelectedColor()
 
-              displayNode1 = self.fibulaPlanesList[i].GetDisplayNode()
+              displayNode1 = fibulaPlanesList[i].GetDisplayNode()
               displayNode1.SetSelectedColor(color)
-              displayNode2 = self.fibulaPlanesList[i+1].GetDisplayNode()
+              displayNode2 = fibulaPlanesList[i+1].GetDisplayNode()
               displayNode2.SetSelectedColor(color)
-    
+
     self.rotTransformParameters = []
 
     #Transform fibula planes to their final position-orientation
@@ -582,34 +631,34 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       plane1.GetNormal(plane1Normal)
       plane2Normal = [0,0,0]
       plane2.GetNormal(plane2Normal)
-      newPlane1 = self.fibulaPlanesList[2*i]
-      newPlane2 = self.fibulaPlanesList[2*i+1]
+      newPlane1 = fibulaPlanesList[2*i]
+      newPlane2 = fibulaPlanesList[2*i+1]
       newPlane1.SetNormal(plane1Normal)
-      newPlane1.SetOrigin(lineStartPos)
+      newPlane1.SetOrigin(fibulaOrigin)
       newPlane2.SetNormal(plane2Normal)
-      newPlane2.SetOrigin(lineStartPos)
+      newPlane2.SetOrigin(fibulaOrigin)
 
-      #Create origin1-origin2 versor
+      #Create origin1-origin2 vector
       or1 = np.zeros(3)
       or2 = np.zeros(3)
       plane1.GetOrigin(or1)
       plane2.GetOrigin(or2)
-      d.append(np.linalg.norm(or2-or1))
-      dVersor = (or2-or1)/np.linalg.norm(or2-or1)
+      boneSegmentsDistance.append(np.linalg.norm(or2-or1))
+      dVector = (or2-or1)/np.linalg.norm(or2-or1)
 
       #Start transformations
       rotAxis = [0,0,0]
-      vtk.vtkMath.Cross(dVersor, lineDirectionVersor, rotAxis)
+      vtk.vtkMath.Cross(dVector, fibulaZ, rotAxis)
       rotAxis = rotAxis/np.linalg.norm(rotAxis)
-      angleRad = vtk.vtkMath.AngleBetweenVectors(dVersor, lineDirectionVersor)
+      angleRad = vtk.vtkMath.AngleBetweenVectors(dVector, fibulaZ)
       angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
 
-      #this versor is created to check if rotAxis is okey or should be opposite
+      #this vector is created to check if rotAxis is okey or should be opposite
       v1l = [0,0,0]
       q = [angleRad,rotAxis[0],rotAxis[1],rotAxis[2]]
-      vtk.vtkMath.RotateVectorByWXYZ(dVersor,q,v1l)
+      vtk.vtkMath.RotateVectorByWXYZ(dVector,q,v1l)
 
-      difference = np.linalg.norm(lineDirectionVersor-v1l)
+      difference = np.linalg.norm(fibulaZ-v1l)
       if (difference>0.01):
         rotAxis = [-rotAxis[0],-rotAxis[1],-rotAxis[2]]
         q = [angleRad,rotAxis[0],rotAxis[1],rotAxis[2]]
@@ -624,18 +673,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(transformFidB)
 
       if i==0:
-        planesPositionA.append(lineDirectionVersor*initialSpace)
+        fibula2FibulaPlanesPositionA.append(fibulaZ*initialSpace)
       else:
-        planesPositionA.append(planesPositionB[i-1] + lineDirectionVersor*betweenSpace)
+        fibula2FibulaPlanesPositionA.append(fibula2FibulaPlanesPositionB[i-1] + fibulaZ*betweenSpace)
       
-      planesPositionB.append(planesPositionA[i] + d[i]*lineDirectionVersor)
+      fibula2FibulaPlanesPositionB.append(fibula2FibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
 
       finalTransformA = vtk.vtkTransform()
       finalTransformA.PostMultiply()
-      finalTransformA.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
+      finalTransformA.Translate(-fibulaOrigin[0], -fibulaOrigin[1], -fibulaOrigin[2])
       finalTransformA.RotateWXYZ(angleDeg,rotAxis)
-      finalTransformA.Translate(lineStartPos)
-      finalTransformA.Translate(planesPositionA[i])
+      finalTransformA.Translate(fibulaOrigin)
+      finalTransformA.Translate(fibula2FibulaPlanesPositionA[i])
 
       transformFidA.SetMatrixTransformToParent(finalTransformA.GetMatrix())
       transformFidA.UpdateScene(slicer.mrmlScene)
@@ -643,10 +692,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       finalTransformB = vtk.vtkTransform()
       finalTransformB.PostMultiply()
-      finalTransformB.Translate(-lineStartPos[0], -lineStartPos[1], -lineStartPos[2])
+      finalTransformB.Translate(-fibulaOrigin[0], -fibulaOrigin[1], -fibulaOrigin[2])
       finalTransformB.RotateWXYZ(angleDeg,rotAxis)
-      finalTransformB.Translate(lineStartPos)
-      finalTransformB.Translate(planesPositionB[i])
+      finalTransformB.Translate(fibulaOrigin)
+      finalTransformB.Translate(fibula2FibulaPlanesPositionB[i])
 
       transformFidB.SetMatrixTransformToParent(finalTransformB.GetMatrix())
 
@@ -655,18 +704,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       newPlane1.SetAndObserveTransformNodeID(transformFidA.GetID())
       newPlane2.SetAndObserveTransformNodeID(transformFidB.GetID())
 
-      shNode.CreateItem(self.mandible2FibulaTransformsFolder,transformFidA)
-      shNode.CreateItem(self.mandible2FibulaTransformsFolder,transformFidB)
+      shNode.CreateItem(mandible2FibulaTransformsFolder,transformFidA)
+      shNode.CreateItem(mandible2FibulaTransformsFolder,transformFidB)
 
     
     if shNode.GetItemName(self.planeCutsFolder) == '':
       shNode.RemoveItem(self.cutBonesFolder)
       self.planeCutsList = []
       self.cutBonesList = []
-      self.planeCutsFolder = shNode.CreateFolderItem(sceneItemID,"Plane Cuts")
-      self.cutBonesFolder = shNode.CreateFolderItem(sceneItemID,"Cutted Bones")
+      self.planeCutsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Plane Cuts")
+      self.cutBonesFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Cutted Bones")
 
-      for i in range(0,len(self.fibulaPlanesList),2):
+      for i in range(0,len(fibulaPlanesList),2):
         modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
         modelNode.SetName("Fibula Segment {0}A-{1}B".format(i//2,i//2))
         slicer.mrmlScene.AddNode(modelNode)
@@ -695,11 +744,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dynamicModelerNode.SetToolName("Plane cut")
         dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", self.fibulaModelNode.GetID())
         if closestCurvePointIndexStart > closestCurvePointIndexEnd:
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i].GetID())
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i+1].GetID())
+          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID())
+          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
         else:
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i+1].GetID())
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", self.fibulaPlanesList[i].GetID()) 
+          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
+          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
         dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
         dynamicModelerNode.SetAttribute("OperationType", "Difference")
         self.planeCutsList.append(dynamicModelerNode)
@@ -738,14 +787,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.CreateItem(self.planeCutsFolder,dynamicModelerNode)
       shNode.CreateItem(self.cutBonesFolder,modelNode)
     
-  def process2(self,fibulaSegmentation,mandibleSegmentation):
+  def makeModels(self,fibulaSegmentation,mandibleSegmentation):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    sceneItemID = shNode.GetSceneItemID()
     if shNode.GetItemName(self.segmentationModelsFolder) != '':
       shNode.RemoveItem(self.segmentationModelsFolder)
-      self.segmentationModelsFolder = shNode.CreateFolderItem(sceneItemID,"Segmentation Models")
+      self.segmentationModelsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Segmentation Models")
     else:
-      self.segmentationModelsFolder = shNode.CreateFolderItem(sceneItemID,"Segmentation Models")
+      self.segmentationModelsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Segmentation Models")
     self.fibulaModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
     self.fibulaModelNode.SetName("fibula")
     self.mandibleModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -767,18 +815,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       shNode.CreateItem(self.segmentationModelsFolder,models[i])
 
-  def process3(self):
+  def updateFibulaPieces(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     shNode.RemoveItem(self.bonePiecesTransformFolder)
     for i in range(len(self.planeCutsList)):
       slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(self.planeCutsList[i])
 
-  def process4(self,planeList):
+  def tranformBonePiecesToMandible(self,planeList):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    sceneItemID = shNode.GetSceneItemID()
     if shNode.GetItemName(self.bonePiecesTransformFolder) != '':
       shNode.RemoveItem(self.bonePiecesTransformFolder)
-    self.bonePiecesTransformFolder = shNode.CreateFolderItem(sceneItemID,"Bone Pieces Transforms")
+    self.bonePiecesTransformFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Bone Pieces Transforms")
 
     for i in range(len(self.cutBonesList)):
       bounds = [0,0,0,0,0,0]
@@ -816,10 +863,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       shNode.CreateItem(self.bonePiecesTransformFolder,transformFid)
 
-  def process5(self,mandibularCurve, planeList):
+  def mandiblePlanesPositioningForMaximumBoneContact(self,mandibularCurve, planeList):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    sceneItemID = shNode.GetSceneItemID()
-    mandiblePlaneTransformsFolder = shNode.CreateFolderItem(sceneItemID,"Mandible Planes Transforms")
+    mandiblePlaneTransformsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Mandible Planes Transforms")
 
     '''
     for i in range(0,len(planeList),len(planeList)-1):
@@ -831,7 +877,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         planeList[i-1].GetOrigin(or1)
         planeList[i].GetOrigin(or2)
-      lineDirectionVersor = (or2-or1)/np.linalg.norm(or2-or1)
+      lineDirectionVector = (or2-or1)/np.linalg.norm(or2-or1)
 
       originPoint = [0,0,0]
       if i==0:
@@ -919,14 +965,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       planeList[i].GetOrigin(or1)
       planeList[i+1].GetOrigin(or2)
       planeList[i+2].GetOrigin(or3)
-      lineDirectionVersor1 = (or2-or1)/np.linalg.norm(or2-or1)
-      lineDirectionVersor2 = (or3-or2)/np.linalg.norm(or3-or2)
-      planeList[i+1].SetNormal(lineDirectionVersor1.tolist())
+      lineDirectionVector1 = (or2-or1)/np.linalg.norm(or2-or1)
+      lineDirectionVector2 = (or3-or2)/np.linalg.norm(or3-or2)
+      planeList[i+1].SetNormal(lineDirectionVector1.tolist())
 
       rotAxis = [0,0,0]
-      vtk.vtkMath.Cross(lineDirectionVersor1, lineDirectionVersor2, rotAxis)
+      vtk.vtkMath.Cross(lineDirectionVector1, lineDirectionVector2, rotAxis)
       rotAxis = rotAxis/np.linalg.norm(rotAxis)
-      angleRad = vtk.vtkMath.AngleBetweenVectors(lineDirectionVersor1, lineDirectionVersor2)/2
+      angleRad = vtk.vtkMath.AngleBetweenVectors(lineDirectionVector1, lineDirectionVector2)/2
       angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
 
       transformFid = slicer.vtkMRMLLinearTransformNode()
@@ -950,6 +996,27 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     shNode.RemoveItem(mandiblePlaneTransformsFolder)
       
+  def setupMandiblePlaneStraightOverMandibleCurve(self,planeNode,temporalOrigin, mandibleCurve, planeNodeObserver):
+    closestCurvePoint = [0,0,0]
+    closestCurvePointIndex = mandibleCurve.GetClosestPointPositionAlongCurveWorld(temporalOrigin,closestCurvePoint)
+    matrix = vtk.vtkMatrix4x4()
+    mandibleCurve.GetCurvePointToWorldTransformAtPointIndex(closestCurvePointIndex,matrix)
+    mandiblePlaneStraightOrigin = np.array([matrix.GetElement(0,3),matrix.GetElement(1,3),matrix.GetElement(2,3)])
+    mandiblePlaneStraightZ = np.array([matrix.GetElement(0,2),matrix.GetElement(1,2),matrix.GetElement(2,2)])
+    mandiblePlaneStraightY = [0,0,0]
+    posterior = [0,-1,0]
+    vtk.vtkMath.Cross(mandiblePlaneStraightZ, posterior, mandiblePlaneStraightY)
+    mandiblePlaneStraightY = mandiblePlaneStraightY/np.linalg.norm(mandiblePlaneStraightY)
+    mandiblePlaneStraightX = [0,0,0]
+    vtk.vtkMath.Cross(mandiblePlaneStraightY, mandiblePlaneStraightZ, mandiblePlaneStraightX)
+    mandiblePlaneStraightX = mandiblePlaneStraightX/np.linalg.norm(mandiblePlaneStraightX)
+    dx = 25#Numbers choosen so the planes are visible enough
+    dy = 25
+    planeNode.RemoveObserver(planeNodeObserver)
+    planeNode.SetNormal(mandiblePlaneStraightZ)
+    planeNode.SetNthControlPointPositionFromArray(0,mandiblePlaneStraightOrigin)
+    planeNode.SetNthControlPointPositionFromArray(1,mandiblePlaneStraightOrigin + mandiblePlaneStraightX*dx)
+    planeNode.SetNthControlPointPositionFromArray(2,mandiblePlaneStraightOrigin + mandiblePlaneStraightY*dy)
 
 
 
