@@ -403,7 +403,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onBonesToMandibleButton(self):
     mandibularPlanesList = createListFromFolderID(self.getMandiblePlanesFolderID())
-    self.logic.tranformBonePiecesToMandible(mandibularPlanesList)
+    self.logic.tranformBonePiecesToMandible(mandibularPlanesList, self.ui.fibulaLineSelector.currentNode(), self.initialSpace, self.betweenSpace)
 
   def onMandibularAutomaticPositioningButton(self):
     mandibularPlanesList = createListFromFolderID(self.getMandiblePlanesFolderID())
@@ -821,27 +821,39 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(self.planeCutsList)):
       slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(self.planeCutsList[i])
 
-  def tranformBonePiecesToMandible(self,planeList):
+  def tranformBonePiecesToMandible(self,planeList,fibulaLine,initialSpace,betweenSpace):
+    from vtk.util.numpy_support import vtk_to_numpy
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     if shNode.GetItemName(self.bonePiecesTransformFolder) != '':
       shNode.RemoveItem(self.bonePiecesTransformFolder)
     self.bonePiecesTransformFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Bone Pieces Transforms")
 
+    lineStartPos = np.zeros(3)
+    lineEndPos = np.zeros(3)
+    fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
+    fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+    fibulaOrigin = lineStartPos
+    fibulaZ = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+
+    boneSegmentsDistance = []
+    fibula2FibulaPlanesPositionA = []
+    fibula2FibulaPlanesPositionB = []
     for i in range(len(self.cutBonesList)):
-      bounds = [0,0,0,0,0,0]
-      self.cutBonesList[i].GetBounds(bounds)
-      x1 = (bounds[1]+bounds[0])/2
-      y1 = (bounds[3]+bounds[2])/2
-      z1 = (bounds[5]+bounds[4])/2
 
-      or1 = [0,0,0]
+      or1 = np.zeros(3)
       planeList[i].GetOrigin(or1)
-      or2 = [0,0,0]
+      or2 = np.zeros(3)
       planeList[i+1].GetOrigin(or2)
-      origin = [(or1[0]+or2[0])/2,(or1[1]+or2[1])/2,(or1[2]+or2[2])/2]
+      origin = (or1+or2)/2
 
-      normal = [0,0,0]
-      planeList[i].GetNormal(normal)
+      boneSegmentsDistance.append(np.linalg.norm(or2-or1))
+
+      if i==0:
+        fibula2FibulaPlanesPositionA.append(fibulaZ*initialSpace)
+      else:
+        fibula2FibulaPlanesPositionA.append(fibula2FibulaPlanesPositionB[i-1] + fibulaZ*betweenSpace)
+      
+      fibula2FibulaPlanesPositionB.append(fibula2FibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
 
       rotAxis = self.rotTransformParameters[i][0]
       angleDeg = self.rotTransformParameters[i][1]
@@ -850,9 +862,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformFid.SetName("Fibula Segment {0} Transform".format(i))
       slicer.mrmlScene.AddNode(transformFid)
 
+      oldOrigin = fibulaOrigin + (fibula2FibulaPlanesPositionA[i] + fibula2FibulaPlanesPositionB[i])/2
+
       finalTransform = vtk.vtkTransform()
       finalTransform.PostMultiply()
-      finalTransform.Translate(-x1, -y1, -z1)
+      #finalTransform.Translate(-x1, -y1, -z1)
+      finalTransform.Translate(-oldOrigin[0],-oldOrigin[1],-oldOrigin[2])
       finalTransform.RotateWXYZ(-angleDeg,rotAxis)
       finalTransform.Translate(origin)
 
