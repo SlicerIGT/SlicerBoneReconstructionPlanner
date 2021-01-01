@@ -472,6 +472,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.cutBonesList = []
     self.planeCutsList = []
     self.rotTransformParameters = []
+    self.rotTransformParameters2 = []
 
   def setDefaultParameters(self, parameterNode):
     """
@@ -622,6 +623,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
               displayNode2.SetSelectedColor(color)
 
     self.rotTransformParameters = []
+    self.rotTransformParameters2 = []
 
     #Transform fibula planes to their final position-orientation
     for i in range(len(planeList)-1):
@@ -644,26 +646,61 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       plane1.GetOrigin(or1)
       plane2.GetOrigin(or2)
       boneSegmentsDistance.append(np.linalg.norm(or2-or1))
-      dVector = (or2-or1)/np.linalg.norm(or2-or1)
+      mandibleAxisZ = (or2-or1)/np.linalg.norm(or2-or1)
+      
+      #Get Y component of plane1
+      plane1matrix = vtk.vtkMatrix4x4()
+      plane1.GetPlaneToWorldMatrix(plane1matrix)
+      plane1Y = np.array([plane1matrix.GetElement(0,1),plane1matrix.GetElement(1,1),plane1matrix.GetElement(2,1)])
+      
+      mandibleAxisX = [0,0,0]
+      vtk.vtkMath.Cross(plane1Y, mandibleAxisZ, mandibleAxisX)
+      mandibleAxisX = mandibleAxisX/np.linalg.norm(mandibleAxisX)
+      mandibleAxisY = [0,0,0]
+      vtk.vtkMath.Cross(mandibleAxisZ, mandibleAxisX, mandibleAxisY)
+      mandibleAxisY = mandibleAxisY/np.linalg.norm(mandibleAxisY)
 
       #Start transformations
       rotAxis = [0,0,0]
-      vtk.vtkMath.Cross(dVector, fibulaZ, rotAxis)
+      vtk.vtkMath.Cross(mandibleAxisZ, fibulaZ, rotAxis)
       rotAxis = rotAxis/np.linalg.norm(rotAxis)
-      angleRad = vtk.vtkMath.AngleBetweenVectors(dVector, fibulaZ)
+      angleRad = vtk.vtkMath.AngleBetweenVectors(mandibleAxisZ, fibulaZ)
       angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
 
       #this vector is created to check if rotAxis is okey or should be opposite
-      v1l = [0,0,0]
-      q = [angleRad,rotAxis[0],rotAxis[1],rotAxis[2]]
-      vtk.vtkMath.RotateVectorByWXYZ(dVector,q,v1l)
+      rotatedMandibleAxisZ = [0,0,0]
+      rotation = [angleRad,rotAxis[0],rotAxis[1],rotAxis[2]]
+      vtk.vtkMath.RotateVectorByWXYZ(mandibleAxisZ,rotation,rotatedMandibleAxisZ)
 
-      difference = np.linalg.norm(fibulaZ-v1l)
+      rotatedMandibleAxisX = [0,0,0]
+      vtk.vtkMath.RotateVectorByWXYZ(mandibleAxisX,rotation,rotatedMandibleAxisX)
+
+      difference = np.linalg.norm(fibulaZ-rotatedMandibleAxisZ)
       if (difference>0.01):
         rotAxis = [-rotAxis[0],-rotAxis[1],-rotAxis[2]]
-        q = [angleRad,rotAxis[0],rotAxis[1],rotAxis[2]]
-        vtk.vtkMath.RotateVectorByWXYZ(plane1Normal,q,v1l)
+        rotation = [angleRad,rotAxis[0],rotAxis[1],rotAxis[2]]
+        vtk.vtkMath.RotateVectorByWXYZ(mandibleAxisZ,rotation,rotatedMandibleAxisZ)
+        vtk.vtkMath.RotateVectorByWXYZ(mandibleAxisX,rotation,rotatedMandibleAxisX)
       self.rotTransformParameters.append([rotAxis,angleDeg])
+
+      #Start transformations
+      rotAxis2 = fibulaZ
+      rotAxis2 = rotAxis2/np.linalg.norm(rotAxis2)
+      angleRad2 = vtk.vtkMath.AngleBetweenVectors(rotatedMandibleAxisX, fibulaX)
+      angleDeg2 = vtk.vtkMath.DegreesFromRadians(angleRad2)
+
+      #this vector is created to check if rotAxis is okey or should be opposite
+      doublyRotatedMandibleAxisX = [0,0,0]
+      rotation2 = [angleRad2,rotAxis2[0],rotAxis2[1],rotAxis2[2]]
+      vtk.vtkMath.RotateVectorByWXYZ(rotatedMandibleAxisX,rotation2,doublyRotatedMandibleAxisX)
+
+      difference = np.linalg.norm(fibulaX-doublyRotatedMandibleAxisX)
+      if (difference>0.01):
+        rotAxis2 = [-rotAxis2[0],-rotAxis2[1],-rotAxis2[2]]
+        rotation2 = [angleRad2,rotAxis2[0],rotAxis2[1],rotAxis2[2]]
+        vtk.vtkMath.RotateVectorByWXYZ(rotatedMandibleAxisX,rotation2,doublyRotatedMandibleAxisX)
+      self.rotTransformParameters2.append([rotAxis2,angleDeg2])
+      
 
       transformFidA = slicer.vtkMRMLLinearTransformNode()
       transformFidA.SetName("Mandible2Fibula Transform%d_A" % i)
@@ -683,6 +720,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransformA.PostMultiply()
       finalTransformA.Translate(-fibulaOrigin[0], -fibulaOrigin[1], -fibulaOrigin[2])
       finalTransformA.RotateWXYZ(angleDeg,rotAxis)
+      finalTransformA.RotateWXYZ(angleDeg2,rotAxis2)
       finalTransformA.Translate(fibulaOrigin)
       finalTransformA.Translate(fibula2FibulaPlanesPositionA[i])
 
@@ -694,6 +732,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransformB.PostMultiply()
       finalTransformB.Translate(-fibulaOrigin[0], -fibulaOrigin[1], -fibulaOrigin[2])
       finalTransformB.RotateWXYZ(angleDeg,rotAxis)
+      finalTransformB.RotateWXYZ(angleDeg2,rotAxis2)
       finalTransformB.Translate(fibulaOrigin)
       finalTransformB.Translate(fibula2FibulaPlanesPositionB[i])
 
@@ -857,6 +896,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       rotAxis = self.rotTransformParameters[i][0]
       angleDeg = self.rotTransformParameters[i][1]
+      rotAxis2 = self.rotTransformParameters2[i][0]
+      angleDeg2 = self.rotTransformParameters2[i][1]
 
       transformFid = slicer.vtkMRMLLinearTransformNode()
       transformFid.SetName("Fibula Segment {0} Transform".format(i))
@@ -868,6 +909,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransform.PostMultiply()
       #finalTransform.Translate(-x1, -y1, -z1)
       finalTransform.Translate(-oldOrigin[0],-oldOrigin[1],-oldOrigin[2])
+      finalTransform.RotateWXYZ(-angleDeg2,rotAxis2)
       finalTransform.RotateWXYZ(-angleDeg,rotAxis)
       finalTransform.Translate(origin)
 
