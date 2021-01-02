@@ -465,12 +465,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     Called when the logic class is instantiated. Can be used for initializing member variables.
     """
     ScriptedLoadableModuleLogic.__init__(self)
-    self.planeCutsFolder = 0
-    self.cutBonesFolder = 0
-    self.bonePiecesTransformFolder = 0
-    self.segmentationModelsFolder = 0
-    self.cutBonesList = []
-    self.planeCutsList = []
     self.rotTransformParameters = []
     self.rotTransformParameters2 = []
 
@@ -613,14 +607,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
             displayNode = fibulaPlanesList[len(fibulaPlanesList)-1].GetDisplayNode()
             displayNode.SetSelectedColor(color)
           else:
-            if ((i-1)%2)==0:
-              oldDisplayNode = planeList[i].GetDisplayNode()
-              color = oldDisplayNode.GetSelectedColor()
+            oldDisplayNode = planeList[i].GetDisplayNode()
+            color = oldDisplayNode.GetSelectedColor()
 
-              displayNode1 = fibulaPlanesList[i].GetDisplayNode()
-              displayNode1.SetSelectedColor(color)
-              displayNode2 = fibulaPlanesList[i+1].GetDisplayNode()
-              displayNode2.SetSelectedColor(color)
+            displayNode1 = fibulaPlanesList[2*i-1].GetDisplayNode()
+            displayNode1.SetSelectedColor(color)
+            displayNode2 = fibulaPlanesList[2*i].GetDisplayNode()
+            displayNode2.SetSelectedColor(color)
 
     self.rotTransformParameters = []
     self.rotTransformParameters2 = []
@@ -747,12 +740,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.CreateItem(mandible2FibulaTransformsFolder,transformFidB)
 
     
-    if shNode.GetItemName(self.planeCutsFolder) == '':
-      shNode.RemoveItem(self.cutBonesFolder)
-      self.planeCutsList = []
-      self.cutBonesList = []
-      self.planeCutsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Plane Cuts")
-      self.cutBonesFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Cutted Bones")
+    planeCutsFolder = shNode.GetItemByName("Plane Cuts")
+    if planeCutsFolder == 0:
+      cutBonesFolder = shNode.GetItemByName("Cut Bones")
+      shNode.RemoveItem(cutBonesFolder)
+      planeCutsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Plane Cuts")
+      cutBonesFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Cut Bones")
 
       for i in range(0,len(fibulaPlanesList),2):
         modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -763,11 +756,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         #Set color of the model
         aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
         colorTable = aux.GetLookupTable()
-        ind = 7
+        ind = int(7 - i/2)
         colorwithalpha = colorTable.GetTableValue(ind)
         color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
         modelDisplay.SetColor(color)
-        self.cutBonesList.append(modelNode)
 
         #Determinate plane creation direction and set up dynamic modeler
         planeOriginStart = [0,0,0]
@@ -790,22 +782,21 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
         dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
         dynamicModelerNode.SetAttribute("OperationType", "Difference")
-        self.planeCutsList.append(dynamicModelerNode)
         #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
         
-        shNode.CreateItem(self.planeCutsFolder,dynamicModelerNode)
-        shNode.CreateItem(self.cutBonesFolder,modelNode)
+        shNode.CreateItem(planeCutsFolder,dynamicModelerNode)
+        shNode.CreateItem(cutBonesFolder,modelNode)
       
       
       modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-      modelNode.SetName("Cutted mandible")
+      modelNode.SetName("Cut mandible")
       slicer.mrmlScene.AddNode(modelNode)
       modelNode.CreateDefaultDisplayNodes()
       modelDisplay = modelNode.GetDisplayNode()
       #Set color of the model
       aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
       colorTable = aux.GetLookupTable()
-      ind = 6
+      ind = int(7 - (len(fibulaPlanesList)-1)/2 -1)
       colorwithalpha = colorTable.GetTableValue(ind)
       color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
       modelDisplay.SetColor(color)
@@ -821,18 +812,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID()) 
       dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputPositiveModel", modelNode.GetID())
       dynamicModelerNode.SetAttribute("OperationType", "Difference")
-      self.planeCutsList.append(dynamicModelerNode)
 
-      shNode.CreateItem(self.planeCutsFolder,dynamicModelerNode)
-      shNode.CreateItem(self.cutBonesFolder,modelNode)
+      shNode.CreateItem(planeCutsFolder,dynamicModelerNode)
+      shNode.CreateItem(cutBonesFolder,modelNode)
     
   def makeModels(self,fibulaSegmentation,mandibleSegmentation):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    if shNode.GetItemName(self.segmentationModelsFolder) != '':
-      shNode.RemoveItem(self.segmentationModelsFolder)
-      self.segmentationModelsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Segmentation Models")
+    segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
+    if segmentationModelsFolder:
+      shNode.RemoveItem(segmentationModelsFolder)
+      segmentationModelsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Segmentation Models")
     else:
-      self.segmentationModelsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Segmentation Models")
+      segmentationModelsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Segmentation Models")
     self.fibulaModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
     self.fibulaModelNode.SetName("fibula")
     self.mandibleModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -852,20 +843,23 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       logic = slicer.modules.segmentations.logic()
       logic.ExportSegmentToRepresentationNode(segment, models[i])
 
-      shNode.CreateItem(self.segmentationModelsFolder,models[i])
+      shNode.CreateItem(segmentationModelsFolder,models[i])
 
   def updateFibulaPieces(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    shNode.RemoveItem(self.bonePiecesTransformFolder)
-    for i in range(len(self.planeCutsList)):
-      slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(self.planeCutsList[i])
+    bonePiecesTransformFolder = shNode.GetItemByName("Bone Pieces Transforms")
+    shNode.RemoveItem(bonePiecesTransformFolder)
+    planeCutsList = createListFromFolderID(shNode.GetItemByName("Plane Cuts"))
+    for i in range(len(planeCutsList)):
+      slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(planeCutsList[i])
 
   def tranformBonePiecesToMandible(self,planeList,fibulaLine,initialSpace,betweenSpace):
     from vtk.util.numpy_support import vtk_to_numpy
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    if shNode.GetItemName(self.bonePiecesTransformFolder) != '':
-      shNode.RemoveItem(self.bonePiecesTransformFolder)
-    self.bonePiecesTransformFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Bone Pieces Transforms")
+    bonePiecesTransformFolder = shNode.GetItemByName("Bone Pieces Transforms")
+    if bonePiecesTransformFolder:
+      shNode.RemoveItem(bonePiecesTransformFolder)
+    bonePiecesTransformFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Bone Pieces Transforms")
 
     lineStartPos = np.zeros(3)
     lineEndPos = np.zeros(3)
@@ -877,7 +871,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     boneSegmentsDistance = []
     fibula2FibulaPlanesPositionA = []
     fibula2FibulaPlanesPositionB = []
-    for i in range(len(self.cutBonesList)):
+    cutBonesList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
+    for i in range(len(cutBonesList)-1):
 
       or1 = np.zeros(3)
       planeList[i].GetOrigin(or1)
@@ -916,9 +911,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformFid.SetMatrixTransformToParent(finalTransform.GetMatrix())
       transformFid.UpdateScene(slicer.mrmlScene)
 
-      self.cutBonesList[i].SetAndObserveTransformNodeID(transformFid.GetID())
+      cutBonesList[i].SetAndObserveTransformNodeID(transformFid.GetID())
 
-      shNode.CreateItem(self.bonePiecesTransformFolder,transformFid)
+      shNode.CreateItem(bonePiecesTransformFolder,transformFid)
 
   def mandiblePlanesPositioningForMaximumBoneContact(self,mandibularCurve, planeList):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
