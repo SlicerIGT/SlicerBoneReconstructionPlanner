@@ -542,31 +542,31 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if fibulaPlanesFolder==0:
       fibulaPlanesFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Fibula planes")
       for i in range(len(planeList)-1):
-        plane1 = planeList[i]
-        plane2 = planeList[i+1]
-        plane1Normal = [0,0,0]
-        plane1.GetNormal(plane1Normal)
-        plane2Normal = [0,0,0]
-        plane2.GetNormal(plane2Normal)
+        mandiblePlane0 = planeList[i]
+        mandiblePlane1 = planeList[i+1]
+        mandiblePlane0Normal = [0,0,0]
+        mandiblePlane0.GetNormal(mandiblePlane0Normal)
+        mandiblePlane1Normal = [0,0,0]
+        mandiblePlane1.GetNormal(mandiblePlane1Normal)
 
-        newPlane1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
-        slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(newPlane1)
-        shNode.CreateItem(fibulaPlanesFolder,newPlane1)
-        newPlane1.SetNormal(plane1Normal)
-        newPlane1.SetOrigin(fibulaOrigin)
-        fibulaPlanesList.append(newPlane1)
+        fibulaPlaneA = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
+        slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
+        shNode.CreateItem(fibulaPlanesFolder,fibulaPlaneA)
+        fibulaPlaneA.SetNormal(mandiblePlane0Normal)
+        fibulaPlaneA.SetOrigin(fibulaOrigin)
+        fibulaPlanesList.append(fibulaPlaneA)
 
-        newPlane2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
-        slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(newPlane2)
-        shNode.CreateItem(fibulaPlanesFolder,newPlane2)
-        newPlane2.SetNormal(plane2Normal)
-        newPlane2.SetOrigin(fibulaOrigin)
-        fibulaPlanesList.append(newPlane2)
+        fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
+        slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneB)
+        shNode.CreateItem(fibulaPlanesFolder,fibulaPlaneB)
+        fibulaPlaneB.SetNormal(mandiblePlane1Normal)
+        fibulaPlaneB.SetOrigin(fibulaOrigin)
+        fibulaPlanesList.append(fibulaPlaneB)
 
 
         #Set new planes size
-        oldPlanes = [plane1,plane2]
-        newPlanes = [newPlane1,newPlane2]
+        oldPlanes = [mandiblePlane0,mandiblePlane1]
+        newPlanes = [fibulaPlaneA,fibulaPlaneB]
         for j in range(2):
           o1 = np.zeros(3)
           x1 = np.zeros(3)
@@ -620,34 +620,38 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #Transform fibula planes to their final position-orientation
     for i in range(len(planeList)-1):
-      plane1 = planeList[i]
-      plane2 = planeList[i+1]
-      plane1Normal = [0,0,0]
-      plane1.GetNormal(plane1Normal)
-      plane2Normal = [0,0,0]
-      plane2.GetNormal(plane2Normal)
-      newPlane1 = fibulaPlanesList[2*i]
-      newPlane2 = fibulaPlanesList[2*i+1]
-      newPlane1.SetNormal(plane1Normal)
-      newPlane1.SetOrigin(fibulaOrigin)
-      newPlane2.SetNormal(plane2Normal)
-      newPlane2.SetOrigin(fibulaOrigin)
+      mandiblePlane0 = planeList[i]
+      mandiblePlane1 = planeList[i+1]
+      mandiblePlane0Normal = [0,0,0]
+      mandiblePlane0.GetNormal(mandiblePlane0Normal)
+      mandiblePlane1Normal = [0,0,0]
+      mandiblePlane1.GetNormal(mandiblePlane1Normal)
+      mandiblePlane0Origin = [0,0,0]
+      mandiblePlane0.GetOrigin(mandiblePlane0Origin)
+      mandiblePlane1Origin = [0,0,0]
+      mandiblePlane1.GetOrigin(mandiblePlane1Origin)
+      fibulaPlaneA = fibulaPlanesList[2*i]
+      fibulaPlaneB = fibulaPlanesList[2*i+1]
+      fibulaPlaneA.SetNormal(mandiblePlane0Normal)
+      fibulaPlaneA.SetOrigin(mandiblePlane0Origin)
+      fibulaPlaneB.SetNormal(mandiblePlane1Normal)
+      fibulaPlaneB.SetOrigin(mandiblePlane1Origin)
 
       #Create origin1-origin2 vector
+      or0 = np.zeros(3)
       or1 = np.zeros(3)
-      or2 = np.zeros(3)
-      plane1.GetOrigin(or1)
-      plane2.GetOrigin(or2)
-      boneSegmentsDistance.append(np.linalg.norm(or2-or1))
-      mandibleAxisZ = (or2-or1)/np.linalg.norm(or2-or1)
+      mandiblePlane0.GetOrigin(or0)
+      mandiblePlane1.GetOrigin(or1)
+      boneSegmentsDistance.append(np.linalg.norm(or1-or0))
+      mandibleAxisZ = (or1-or0)/np.linalg.norm(or1-or0)
       
-      #Get Y component of plane1
-      plane1matrix = vtk.vtkMatrix4x4()
-      plane1.GetPlaneToWorldMatrix(plane1matrix)
-      plane1Y = np.array([plane1matrix.GetElement(0,1),plane1matrix.GetElement(1,1),plane1matrix.GetElement(2,1)])
+      #Get Y component of mandiblePlane0
+      mandiblePlane0matrix = vtk.vtkMatrix4x4()
+      mandiblePlane0.GetPlaneToWorldMatrix(mandiblePlane0matrix)
+      mandiblePlane0Y = np.array([mandiblePlane0matrix.GetElement(0,1),mandiblePlane0matrix.GetElement(1,1),mandiblePlane0matrix.GetElement(2,1)])
       
       mandibleAxisX = [0,0,0]
-      vtk.vtkMath.Cross(plane1Y, mandibleAxisZ, mandibleAxisX)
+      vtk.vtkMath.Cross(mandiblePlane0Y, mandibleAxisZ, mandibleAxisX)
       mandibleAxisX = mandibleAxisX/np.linalg.norm(mandibleAxisX)
       mandibleAxisY = [0,0,0]
       vtk.vtkMath.Cross(mandibleAxisZ, mandibleAxisX, mandibleAxisY)
@@ -695,12 +699,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.rotTransformParameters2.append([rotAxis2,angleDeg2])
       
 
-      transformFidA = slicer.vtkMRMLLinearTransformNode()
-      transformFidA.SetName("Mandible2Fibula Transform%d_A" % i)
-      slicer.mrmlScene.AddNode(transformFidA)
-      transformFidB = slicer.vtkMRMLLinearTransformNode()
-      transformFidB.SetName("Mandible2Fibula Transform%d_B" % i)
-      slicer.mrmlScene.AddNode(transformFidB)
+      mandiblePlane0ToFibulaPlaneATransformNode = slicer.vtkMRMLLinearTransformNode()
+      mandiblePlane0ToFibulaPlaneATransformNode.SetName("Mandible2Fibula Transform%d_A" % i)
+      slicer.mrmlScene.AddNode(mandiblePlane0ToFibulaPlaneATransformNode)
+      mandiblePlane1ToFibulaPlaneBTransformNode = slicer.vtkMRMLLinearTransformNode()
+      mandiblePlane1ToFibulaPlaneBTransformNode.SetName("Mandible2Fibula Transform%d_B" % i)
+      slicer.mrmlScene.AddNode(mandiblePlane1ToFibulaPlaneBTransformNode)
 
       if i==0:
         fibula2FibulaPlanesPositionA.append(fibulaZ*initialSpace)
@@ -709,35 +713,35 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       
       fibula2FibulaPlanesPositionB.append(fibula2FibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
 
-      finalTransformA = vtk.vtkTransform()
-      finalTransformA.PostMultiply()
-      finalTransformA.Translate(-fibulaOrigin[0], -fibulaOrigin[1], -fibulaOrigin[2])
-      finalTransformA.RotateWXYZ(angleDeg,rotAxis)
-      finalTransformA.RotateWXYZ(angleDeg2,rotAxis2)
-      finalTransformA.Translate(fibulaOrigin)
-      finalTransformA.Translate(fibula2FibulaPlanesPositionA[i])
+      mandiblePlane0ToFibulaPlaneATransform = vtk.vtkTransform()
+      mandiblePlane0ToFibulaPlaneATransform.PostMultiply()
+      mandiblePlane0ToFibulaPlaneATransform.Translate(-mandiblePlane0Origin[0], -mandiblePlane0Origin[1], -mandiblePlane0Origin[2])
+      mandiblePlane0ToFibulaPlaneATransform.RotateWXYZ(angleDeg,rotAxis)
+      mandiblePlane0ToFibulaPlaneATransform.RotateWXYZ(angleDeg2,rotAxis2)
+      mandiblePlane0ToFibulaPlaneATransform.Translate(fibulaOrigin)
+      mandiblePlane0ToFibulaPlaneATransform.Translate(fibula2FibulaPlanesPositionA[i])
 
-      transformFidA.SetMatrixTransformToParent(finalTransformA.GetMatrix())
-      transformFidA.UpdateScene(slicer.mrmlScene)
+      mandiblePlane0ToFibulaPlaneATransformNode.SetMatrixTransformToParent(mandiblePlane0ToFibulaPlaneATransform.GetMatrix())
+      mandiblePlane0ToFibulaPlaneATransformNode.UpdateScene(slicer.mrmlScene)
 
 
-      finalTransformB = vtk.vtkTransform()
-      finalTransformB.PostMultiply()
-      finalTransformB.Translate(-fibulaOrigin[0], -fibulaOrigin[1], -fibulaOrigin[2])
-      finalTransformB.RotateWXYZ(angleDeg,rotAxis)
-      finalTransformB.RotateWXYZ(angleDeg2,rotAxis2)
-      finalTransformB.Translate(fibulaOrigin)
-      finalTransformB.Translate(fibula2FibulaPlanesPositionB[i])
+      mandiblePlane1ToFibulaPlaneBTransform = vtk.vtkTransform()
+      mandiblePlane1ToFibulaPlaneBTransform.PostMultiply()
+      mandiblePlane1ToFibulaPlaneBTransform.Translate(-mandiblePlane1Origin[0], -mandiblePlane1Origin[1], -mandiblePlane1Origin[2])
+      mandiblePlane1ToFibulaPlaneBTransform.RotateWXYZ(angleDeg,rotAxis)
+      mandiblePlane1ToFibulaPlaneBTransform.RotateWXYZ(angleDeg2,rotAxis2)
+      mandiblePlane1ToFibulaPlaneBTransform.Translate(fibulaOrigin)
+      mandiblePlane1ToFibulaPlaneBTransform.Translate(fibula2FibulaPlanesPositionB[i])
 
-      transformFidB.SetMatrixTransformToParent(finalTransformB.GetMatrix())
+      mandiblePlane1ToFibulaPlaneBTransformNode.SetMatrixTransformToParent(mandiblePlane1ToFibulaPlaneBTransform.GetMatrix())
 
-      transformFidB.UpdateScene(slicer.mrmlScene)
+      mandiblePlane1ToFibulaPlaneBTransformNode.UpdateScene(slicer.mrmlScene)
 
-      newPlane1.SetAndObserveTransformNodeID(transformFidA.GetID())
-      newPlane2.SetAndObserveTransformNodeID(transformFidB.GetID())
+      fibulaPlaneA.SetAndObserveTransformNodeID(mandiblePlane0ToFibulaPlaneATransformNode.GetID())
+      fibulaPlaneB.SetAndObserveTransformNodeID(mandiblePlane1ToFibulaPlaneBTransformNode.GetID())
 
-      shNode.CreateItem(mandible2FibulaTransformsFolder,transformFidA)
-      shNode.CreateItem(mandible2FibulaTransformsFolder,transformFidB)
+      shNode.CreateItem(mandible2FibulaTransformsFolder,mandiblePlane0ToFibulaPlaneATransformNode)
+      shNode.CreateItem(mandible2FibulaTransformsFolder,mandiblePlane1ToFibulaPlaneBTransformNode)
 
     
     planeCutsFolder = shNode.GetItemByName("Plane Cuts")
@@ -854,7 +858,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(planeCutsList[i])
 
   def tranformBonePiecesToMandible(self,planeList,fibulaLine,initialSpace,betweenSpace):
-    from vtk.util.numpy_support import vtk_to_numpy
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     bonePiecesTransformFolder = shNode.GetItemByName("Bone Pieces Transforms")
     if bonePiecesTransformFolder:
@@ -874,13 +877,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     cutBonesList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
     for i in range(len(cutBonesList)-1):
 
+      or0 = np.zeros(3)
+      planeList[i].GetOrigin(or0)
       or1 = np.zeros(3)
-      planeList[i].GetOrigin(or1)
-      or2 = np.zeros(3)
-      planeList[i+1].GetOrigin(or2)
-      origin = (or1+or2)/2
+      planeList[i+1].GetOrigin(or1)
+      origin = (or0+or1)/2
 
-      boneSegmentsDistance.append(np.linalg.norm(or2-or1))
+      boneSegmentsDistance.append(np.linalg.norm(or1-or0))
 
       if i==0:
         fibula2FibulaPlanesPositionA.append(fibulaZ*initialSpace)
@@ -894,137 +897,46 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       rotAxis2 = self.rotTransformParameters2[i][0]
       angleDeg2 = self.rotTransformParameters2[i][1]
 
-      transformFid = slicer.vtkMRMLLinearTransformNode()
-      transformFid.SetName("Fibula Segment {0} Transform".format(i))
-      slicer.mrmlScene.AddNode(transformFid)
+      fibulaPieceToMandibleAxisTransformNode = slicer.vtkMRMLLinearTransformNode()
+      fibulaPieceToMandibleAxisTransformNode.SetName("Fibula Segment {0} Transform".format(i))
+      slicer.mrmlScene.AddNode(fibulaPieceToMandibleAxisTransformNode)
 
       oldOrigin = fibulaOrigin + (fibula2FibulaPlanesPositionA[i] + fibula2FibulaPlanesPositionB[i])/2
 
-      finalTransform = vtk.vtkTransform()
-      finalTransform.PostMultiply()
-      #finalTransform.Translate(-x1, -y1, -z1)
-      finalTransform.Translate(-oldOrigin[0],-oldOrigin[1],-oldOrigin[2])
-      finalTransform.RotateWXYZ(-angleDeg2,rotAxis2)
-      finalTransform.RotateWXYZ(-angleDeg,rotAxis)
-      finalTransform.Translate(origin)
+      fibulaPieceToMandibleAxisTransform = vtk.vtkTransform()
+      fibulaPieceToMandibleAxisTransform.PostMultiply()
+      #fibulaPieceToMandibleAxisTransform.Translate(-x1, -y1, -z1)
+      fibulaPieceToMandibleAxisTransform.Translate(-oldOrigin[0],-oldOrigin[1],-oldOrigin[2])
+      fibulaPieceToMandibleAxisTransform.RotateWXYZ(-angleDeg2,rotAxis2)
+      fibulaPieceToMandibleAxisTransform.RotateWXYZ(-angleDeg,rotAxis)
+      fibulaPieceToMandibleAxisTransform.Translate(origin)
 
-      transformFid.SetMatrixTransformToParent(finalTransform.GetMatrix())
-      transformFid.UpdateScene(slicer.mrmlScene)
+      fibulaPieceToMandibleAxisTransformNode.SetMatrixTransformToParent(fibulaPieceToMandibleAxisTransform.GetMatrix())
+      fibulaPieceToMandibleAxisTransformNode.UpdateScene(slicer.mrmlScene)
 
-      cutBonesList[i].SetAndObserveTransformNodeID(transformFid.GetID())
+      cutBonesList[i].SetAndObserveTransformNodeID(fibulaPieceToMandibleAxisTransformNode.GetID())
 
-      shNode.CreateItem(bonePiecesTransformFolder,transformFid)
+      shNode.CreateItem(bonePiecesTransformFolder,fibulaPieceToMandibleAxisTransformNode)
 
   def mandiblePlanesPositioningForMaximumBoneContact(self,mandibularCurve, planeList):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandiblePlaneTransformsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Mandible Planes Transforms")
-
-    '''
-    for i in range(0,len(planeList),len(planeList)-1):
-      or1 = np.zeros(3)
-      or2 = np.zeros(3)
-      if i==0:
-        planeList[i].GetOrigin(or1)
-        planeList[i+1].GetOrigin(or2)
-      else:
-        planeList[i-1].GetOrigin(or1)
-        planeList[i].GetOrigin(or2)
-      lineDirectionVector = (or2-or1)/np.linalg.norm(or2-or1)
-
-      originPoint = [0,0,0]
-      if i==0:
-        originPointIndex = mandibularCurve.GetClosestPointPositionAlongCurveWorld(or1,originPoint)
-      else:
-        originPointIndex = mandibularCurve.GetClosestPointPositionAlongCurveWorld(or2,originPoint)
-      matrix = vtk.vtkMatrix4x4()
-      mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(originPointIndex,matrix)
-      position = np.array([matrix.GetElement(0,3),matrix.GetElement(1,3),matrix.GetElement(2,3)])
-      normal = np.array([matrix.GetElement(0,2),matrix.GetElement(1,2),matrix.GetElement(2,2)])
-      x1 = [matrix.GetElement(0,0),matrix.GetElement(1,0),matrix.GetElement(2,0)]
-      y1 = [matrix.GetElement(0,1),matrix.GetElement(1,1),matrix.GetElement(2,1)]
-
-      transformFid = slicer.vtkMRMLLinearTransformNode()
-      transformFid.SetName("temp%d" % i)
-      slicer.mrmlScene.AddNode(transformFid)
-
-      planeList[i].SetNormal(normal)
-
-      angleRadX = vtk.vtkMath.AngleBetweenVectors(x1, [0,0,1])
-      angleRadY = vtk.vtkMath.AngleBetweenVectors(y1, [0,0,1])
-      angleDegX = vtk.vtkMath.DegreesFromRadians(angleRadX)
-      angleDegY = vtk.vtkMath.DegreesFromRadians(angleRadY)
-      invertAngle = False
-      if (angleDegX <= 90) and (angleDegY <= 90):
-        if angleDegX < angleDegY:
-          rotAxis = x1
-        else:
-          rotAxis = y1
-      else:
-        if (angleDegX >= 90) and (angleDegY >= 90):
-          if angleDegX > angleDegY:
-            rotAxis = x1
-          else:
-            rotAxis = y1
-          invertAngle = True
-        else:
-          if (angleDegX-90) >= 0:
-            if (180-angleDegX) <= angleDegY:
-              rotAxis = x1
-              invertAngle = True
-            else:
-              rotAxis = y1
-          else:
-            if (180-angleDegY) <= angleDegX:
-              rotAxis = y1
-              invertAngle = True
-            else:
-              rotAxis = x1
-
-      if i==0:
-        angleDeg = -45
-        if invertAngle:
-          angleDeg = -angleDeg
-      else:
-        angleDeg = 45
-        if invertAngle:
-          angleDeg = -angleDeg
-
-      finalTransform = vtk.vtkTransform()
-      finalTransform.PostMultiply()
-      if i==0:
-        finalTransform.Translate(-or1[0], -or1[1], -or1[2])
-        finalTransform.RotateWXYZ(angleDeg,rotAxis)
-        finalTransform.Translate(or1)
-      else:
-        finalTransform.Translate(-or2[0], -or2[1], -or2[2])
-        finalTransform.RotateWXYZ(angleDeg,rotAxis)
-        finalTransform.Translate(or2)
-
-      transformFid.SetMatrixTransformToParent(finalTransform.GetMatrix())
-
-      transformFid.UpdateScene(slicer.mrmlScene)
-
-      planeList[i].SetAndObserveTransformNodeID(transformFid.GetID())
-      planeList[i].HardenTransform()
-      
-      shNode.CreateItem(mandiblePlaneTransformsFolder,transformFid)
-    '''
     
     for i in range(0,len(planeList)-2):
+      or0 = np.zeros(3)
       or1 = np.zeros(3)
       or2 = np.zeros(3)
-      or3 = np.zeros(3)
-      planeList[i].GetOrigin(or1)
-      planeList[i+1].GetOrigin(or2)
-      planeList[i+2].GetOrigin(or3)
+      planeList[i].GetOrigin(or0)
+      planeList[i+1].GetOrigin(or1)
+      planeList[i+2].GetOrigin(or2)
+      lineDirectionVector0 = (or1-or0)/np.linalg.norm(or1-or0)
       lineDirectionVector1 = (or2-or1)/np.linalg.norm(or2-or1)
-      lineDirectionVector2 = (or3-or2)/np.linalg.norm(or3-or2)
-      planeList[i+1].SetNormal(lineDirectionVector1.tolist())
+      planeList[i+1].SetNormal(lineDirectionVector0.tolist())
 
       rotAxis = [0,0,0]
-      vtk.vtkMath.Cross(lineDirectionVector1, lineDirectionVector2, rotAxis)
+      vtk.vtkMath.Cross(lineDirectionVector0, lineDirectionVector1, rotAxis)
       rotAxis = rotAxis/np.linalg.norm(rotAxis)
-      angleRad = vtk.vtkMath.AngleBetweenVectors(lineDirectionVector1, lineDirectionVector2)/2
+      angleRad = vtk.vtkMath.AngleBetweenVectors(lineDirectionVector0, lineDirectionVector1)/2
       angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
 
       transformFid = slicer.vtkMRMLLinearTransformNode()
@@ -1033,9 +945,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       finalTransform = vtk.vtkTransform()
       finalTransform.PostMultiply()
-      finalTransform.Translate(-or2[0], -or2[1], -or2[2])
+      finalTransform.Translate(-or1[0], -or1[1], -or1[2])
       finalTransform.RotateWXYZ(angleDeg,rotAxis)
-      finalTransform.Translate(or2)
+      finalTransform.Translate(or1)
 
       transformFid.SetMatrixTransformToParent(finalTransform.GetMatrix())
 
