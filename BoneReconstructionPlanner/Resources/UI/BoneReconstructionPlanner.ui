@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>379</width>
-    <height>502</height>
+    <height>532</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -240,7 +240,7 @@
       <bool>false</bool>
      </property>
      <property name="text">
-      <string>Create fibula planes over fibula line</string>
+      <string>Update fibula planes over fibula line</string>
      </property>
     </widget>
    </item>
