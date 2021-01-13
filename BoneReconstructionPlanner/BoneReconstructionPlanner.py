@@ -84,15 +84,6 @@ def registerSampleData():
     nodeNames='ResectedMandible'
   )
 
-def createListFromFolderID(folderID):
-  createdList = []
-  shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-  myList = vtk.vtkIdList()
-  shNode.GetItemChildren(folderID,myList)
-  for i in range(myList.GetNumberOfIds()):
-    createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
-  return createdList
-
 #
 # BoneReconstructionPlannerWidget
 #
@@ -189,18 +180,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     #shNode.RequestOwnerPluginSearch(self._parameterNode)
     #self.ui.planesTreeView.setRootItem(shNode.GetItemByDataNode(self._parameterNode))
-    shNode.CreateItem(self.getParameterNodeSubjectHierarchyID(),mandibularCurve)
-    shNode.CreateItem(self.getParameterNodeSubjectHierarchyID(),fibulaLine)
+    mandibularCurveItemID = shNode.GetItemByDataNode(mandibularCurve)
+    shNode.SetItemParent(mandibularCurveItemID, self.logic.getParentFolderItemID())
+    fibulaLineItemID = shNode.GetItemByDataNode(fibulaLine)
+    shNode.SetItemParent(fibulaLineItemID, self.logic.getParentFolderItemID())
 
 
-  '''
-  def getParameterNodeSubjectHierarchyID(self):
-    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
-    return shNode.GetItemByDataNode(self._parameterNode)
-  '''
-  #In reality this function doesn't use the parameter node but a folder instead. It is leaved
-  #like this for future changes
-  def getParameterNodeSubjectHierarchyID(self):
+  def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     sceneItemID = shNode.GetSceneItemID()
     folderSubjectHierarchyID = shNode.GetItemByName("BoneReconstructionPlanner")
@@ -208,16 +194,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       return folderSubjectHierarchyID
     else:
       return shNode.CreateFolderItem(sceneItemID,"BoneReconstructionPlanner")
-
-
-  def getMandiblePlanesFolderID(self):
-    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
-    folderSubjectHierarchyID = shNode.GetItemByName("Mandibular planes")
-    if folderSubjectHierarchyID:
-      return folderSubjectHierarchyID
-    else:
-      return shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Mandibular planes")
-
 
   def cleanup(self):
     """
@@ -335,7 +311,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Run processing when user clicks "Apply" button.
     """
-    mandibularPlanesList = createListFromFolderID(self.getMandiblePlanesFolderID())
+    mandibularPlanesList = createListFromFolderID(self.logic.getMandiblePlanesFolderItemID())
     
     try:
 
@@ -365,8 +341,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     slicer.mrmlScene.AddNode(planeNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeNode)
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    mandibularFolderID = self.getMandiblePlanesFolderID()
-    shNode.CreateItem(mandibularFolderID,planeNode)
+    mandibularFolderID = self.logic.getMandiblePlanesFolderItemID()
+    planeNodeItemID = shNode.GetItemByDataNode(planeNode)
+    shNode.SetItemParent(planeNodeItemID, mandibularFolderID)
     planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
 
     aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
@@ -402,11 +379,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.bonesToMandibleButton.enabled = True
 
   def onBonesToMandibleButton(self):
-    mandibularPlanesList = createListFromFolderID(self.getMandiblePlanesFolderID())
+    mandibularPlanesList = createListFromFolderID(self.logic.getMandiblePlanesFolderItemID())
     self.logic.tranformBonePiecesToMandible(mandibularPlanesList, self.ui.fibulaLineSelector.currentNode(), self.initialSpace, self.betweenSpace)
 
   def onMandibularAutomaticPositioningButton(self):
-    mandibularPlanesList = createListFromFolderID(self.getMandiblePlanesFolderID())
+    mandibularPlanesList = createListFromFolderID(self.logic.getMandiblePlanesFolderItemID())
     self.logic.mandiblePlanesPositioningForMaximumBoneContact(self.ui.mandibleCurveSelector.currentNode(), mandibularPlanesList)
       
 
@@ -424,7 +401,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   
   def onPlaneModified(self,sourceNode,event):
     if self.ui.fibulaLineSelector.currentNodeID != '' and self.ui.updateFibulaPiecesButton.enabled:
-      mandibularPlanesList = createListFromFolderID(self.getMandiblePlanesFolderID())
+      mandibularPlanesList = createListFromFolderID(self.logic.getMandiblePlanesFolderItemID())
 
       try:
         # Compute output
@@ -477,14 +454,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("Invert"):
       parameterNode.SetParameter("Invert", "false")
 
-  '''
-  def getParameterNodeSubjectHierarchyID(self):
-    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
-    return shNode.GetItemByDataNode(self.getParameterNode())
-  '''
-  #In reality this function doesn't use the parameter node but a folder instead. It is leaved
-  #like this for future changes
-  def getParameterNodeSubjectHierarchyID(self):
+  def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     sceneItemID = shNode.GetSceneItemID()
     folderSubjectHierarchyID = shNode.GetItemByName("BoneReconstructionPlanner")
@@ -493,15 +463,23 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     else:
       return shNode.CreateFolderItem(sceneItemID,"BoneReconstructionPlanner")
 
+  def getMandiblePlanesFolderItemID(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    folderSubjectHierarchyID = shNode.GetItemByName("Mandibular planes")
+    if folderSubjectHierarchyID:
+      return folderSubjectHierarchyID
+    else:
+      return shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandibular planes")
+
   def remakeMandible2FibulaTransformsFolderID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     folderSubjectHierarchyID = shNode.GetItemByName("Mandible2Fibula transforms")
     if folderSubjectHierarchyID:
       shNode.RemoveItem(folderSubjectHierarchyID)
-      mandible2FibulaTransformsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Mandible2Fibula transforms")
+      mandible2FibulaTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandible2Fibula transforms")
       return mandible2FibulaTransformsFolder
     else:
-      return shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Mandible2Fibula transforms")
+      return shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandible2Fibula transforms")
 
   
 
@@ -540,7 +518,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #Create fibula planes and set their size
     if fibulaPlanesFolder==0:
-      fibulaPlanesFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Fibula planes")
+      fibulaPlanesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula planes")
       for i in range(len(planeList)-1):
         mandiblePlane0 = planeList[i]
         mandiblePlane1 = planeList[i+1]
@@ -551,14 +529,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         fibulaPlaneA = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
         slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
-        shNode.CreateItem(fibulaPlanesFolder,fibulaPlaneA)
+        fibulaPlaneAItemID = shNode.GetItemByDataNode(fibulaPlaneA)
+        shNode.SetItemParent(fibulaPlaneAItemID, fibulaPlanesFolder)
         fibulaPlaneA.SetNormal(mandiblePlane0Normal)
         fibulaPlaneA.SetOrigin(fibulaOrigin)
         fibulaPlanesList.append(fibulaPlaneA)
 
         fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
         slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneB)
-        shNode.CreateItem(fibulaPlanesFolder,fibulaPlaneB)
+        fibulaPlaneBItemID = shNode.GetItemByDataNode(fibulaPlaneB)
+        shNode.SetItemParent(fibulaPlaneBItemID, fibulaPlanesFolder)
         fibulaPlaneB.SetNormal(mandiblePlane1Normal)
         fibulaPlaneB.SetOrigin(fibulaOrigin)
         fibulaPlanesList.append(fibulaPlaneB)
@@ -740,16 +720,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneA.SetAndObserveTransformNodeID(mandiblePlane0ToFibulaPlaneATransformNode.GetID())
       fibulaPlaneB.SetAndObserveTransformNodeID(mandiblePlane1ToFibulaPlaneBTransformNode.GetID())
 
-      shNode.CreateItem(mandible2FibulaTransformsFolder,mandiblePlane0ToFibulaPlaneATransformNode)
-      shNode.CreateItem(mandible2FibulaTransformsFolder,mandiblePlane1ToFibulaPlaneBTransformNode)
+      mandiblePlane0ToFibulaPlaneATransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane0ToFibulaPlaneATransformNode)
+      shNode.SetItemParent(mandiblePlane0ToFibulaPlaneATransformNodeItemID, mandible2FibulaTransformsFolder)
+      mandiblePlane1ToFibulaPlaneBTransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane1ToFibulaPlaneBTransformNode)
+      shNode.SetItemParent(mandiblePlane1ToFibulaPlaneBTransformNodeItemID, mandible2FibulaTransformsFolder)
 
     
     planeCutsFolder = shNode.GetItemByName("Plane Cuts")
     if planeCutsFolder == 0:
       cutBonesFolder = shNode.GetItemByName("Cut Bones")
       shNode.RemoveItem(cutBonesFolder)
-      planeCutsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Plane Cuts")
-      cutBonesFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Cut Bones")
+      planeCutsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Plane Cuts")
+      cutBonesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Cut Bones")
 
       for i in range(0,len(fibulaPlanesList),2):
         modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -788,8 +770,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dynamicModelerNode.SetAttribute("OperationType", "Difference")
         #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
         
-        shNode.CreateItem(planeCutsFolder,dynamicModelerNode)
-        shNode.CreateItem(cutBonesFolder,modelNode)
+        dynamicModelerNodeItemID = shNode.GetItemByDataNode(dynamicModelerNode)
+        shNode.SetItemParent(dynamicModelerNodeItemID, planeCutsFolder)
+        modelNodeItemID = shNode.GetItemByDataNode(modelNode)
+        shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
       
       
       modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -817,17 +801,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputPositiveModel", modelNode.GetID())
       dynamicModelerNode.SetAttribute("OperationType", "Difference")
 
-      shNode.CreateItem(planeCutsFolder,dynamicModelerNode)
-      shNode.CreateItem(cutBonesFolder,modelNode)
+      dynamicModelerNodeItemID = shNode.GetItemByDataNode(dynamicModelerNode)
+      shNode.SetItemParent(dynamicModelerNodeItemID, planeCutsFolder)
+      modelNodeItemID = shNode.GetItemByDataNode(modelNode)
+      shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
     
   def makeModels(self,fibulaSegmentation,mandibleSegmentation):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
     if segmentationModelsFolder:
       shNode.RemoveItem(segmentationModelsFolder)
-      segmentationModelsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Segmentation Models")
+      segmentationModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Segmentation Models")
     else:
-      segmentationModelsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Segmentation Models")
+      segmentationModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Segmentation Models")
     self.fibulaModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
     self.fibulaModelNode.SetName("fibula")
     self.mandibleModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -847,7 +833,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       logic = slicer.modules.segmentations.logic()
       logic.ExportSegmentToRepresentationNode(segment, models[i])
 
-      shNode.CreateItem(segmentationModelsFolder,models[i])
+      modelNodeItemID = shNode.GetItemByDataNode(models[i])
+      shNode.SetItemParent(modelNodeItemID, segmentationModelsFolder)
 
   def updateFibulaPieces(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
@@ -862,7 +849,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     bonePiecesTransformFolder = shNode.GetItemByName("Bone Pieces Transforms")
     if bonePiecesTransformFolder:
       shNode.RemoveItem(bonePiecesTransformFolder)
-    bonePiecesTransformFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Bone Pieces Transforms")
+    bonePiecesTransformFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Bone Pieces Transforms")
 
     lineStartPos = np.zeros(3)
     lineEndPos = np.zeros(3)
@@ -916,11 +903,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       cutBonesList[i].SetAndObserveTransformNodeID(fibulaPieceToMandibleAxisTransformNode.GetID())
 
-      shNode.CreateItem(bonePiecesTransformFolder,fibulaPieceToMandibleAxisTransformNode)
+      fibulaPieceToMandibleAxisTransformNodeItemID = shNode.GetItemByDataNode(fibulaPieceToMandibleAxisTransformNode)
+      shNode.SetItemParent(fibulaPieceToMandibleAxisTransformNodeItemID, bonePiecesTransformFolder)
 
   def mandiblePlanesPositioningForMaximumBoneContact(self,mandibularCurve, planeList):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    mandiblePlaneTransformsFolder = shNode.CreateFolderItem(self.getParameterNodeSubjectHierarchyID(),"Mandible Planes Transforms")
+    mandiblePlaneTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandible Planes Transforms")
     
     for i in range(0,len(planeList)-2):
       or0 = np.zeros(3)
@@ -939,9 +927,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       angleRad = vtk.vtkMath.AngleBetweenVectors(lineDirectionVector0, lineDirectionVector1)/2
       angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
 
-      transformFid = slicer.vtkMRMLLinearTransformNode()
-      transformFid.SetName("temp%d" % (i+1))
-      slicer.mrmlScene.AddNode(transformFid)
+      transformNode = slicer.vtkMRMLLinearTransformNode()
+      transformNode.SetName("temp%d" % (i+1))
+      slicer.mrmlScene.AddNode(transformNode)
 
       finalTransform = vtk.vtkTransform()
       finalTransform.PostMultiply()
@@ -949,14 +937,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransform.RotateWXYZ(angleDeg,rotAxis)
       finalTransform.Translate(or1)
 
-      transformFid.SetMatrixTransformToParent(finalTransform.GetMatrix())
+      transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
 
-      transformFid.UpdateScene(slicer.mrmlScene)
+      transformNode.UpdateScene(slicer.mrmlScene)
 
-      planeList[i+1].SetAndObserveTransformNodeID(transformFid.GetID())
+      planeList[i+1].SetAndObserveTransformNodeID(transformNode.GetID())
       planeList[i+1].HardenTransform()
       
-      shNode.CreateItem(mandiblePlaneTransformsFolder,transformFid)
+      transformNodeItemID = shNode.GetItemByDataNode(transformNode)
+      shNode.SetItemParent(transformNodeItemID, mandiblePlaneTransformsFolder)
     
     shNode.RemoveItem(mandiblePlaneTransformsFolder)
       
@@ -1052,3 +1041,13 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.assertEqual(outputScalarRange[1], inputScalarRange[1])
 
     self.delayDisplay('Test passed')
+
+
+def createListFromFolderID(folderID):
+  createdList = []
+  shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+  myList = vtk.vtkIdList()
+  shNode.GetItemChildren(folderID,myList)
+  for i in range(myList.GetNumberOfIds()):
+    createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
+  return createdList
