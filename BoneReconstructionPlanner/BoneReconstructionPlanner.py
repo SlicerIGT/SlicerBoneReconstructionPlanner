@@ -18,18 +18,18 @@ class BoneReconstructionPlanner(ScriptedLoadableModule):
   def __init__(self, parent):
     ScriptedLoadableModule.__init__(self, parent)
     self.parent.title = "BoneReconstructionPlanner"  # TODO: make this more human readable by adding spaces
-    self.parent.categories = ["Examples"]  # TODO: set categories (folders where the module shows up in the module selector)
+    self.parent.categories = ["Planning"]  # TODO: set categories (folders where the module shows up in the module selector)
     self.parent.dependencies = []  # TODO: add here list of module names that this module requires
-    self.parent.contributors = ["John Doe (AnyWare Corp.)"]  # TODO: replace with "Firstname Lastname (Organization)"
+    self.parent.contributors = ["Mauro I. Dominguez, Andras Lasso, Manjula Herath"]  # TODO: replace with "Firstname Lastname (Organization)"
     # TODO: update with short description of the module and a link to online module documentation
     self.parent.helpText = """
-This is an example of scripted loadable module bundled in an extension.
-See more information in <a href="https://github.com/organization/projectname#BoneReconstructionPlanner">module documentation</a>.
+This is a module for surgical planning of mandibular reconstruction with free fibula flap.
+See the whole project in <a href="https://github.com/lassoan/SlicerBoneReconstructionPlanner">this link</a>.
 """
     # TODO: replace with organization, grant and thanks
     self.parent.acknowledgementText = """
-This file was originally developed by Jean-Christophe Fillion-Robin, Kitware Inc., Andras Lasso, PerkLab,
-and Steve Pieper, Isomics, Inc. and was partially funded by NIH grant 3P41RR013218-12S1.
+This file is developed by Mauro I. Dominguez with the supervision and advice of Eng. Andras Lasso, PerkLab,
+and the useful inputs of Dr. Manjula Herath and it is made as a final project of engineering of Mauro.
 """
 
     # Additional initialization step after application startup is complete
@@ -121,13 +121,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # "mrmlSceneChanged(vtkMRMLScene*)" signal in is connected to each MRML widget's.
     # "setMRMLScene(vtkMRMLScene*)" slot.
     uiWidget.setMRMLScene(slicer.mrmlScene)
-    self.ui.fibulaLineSelector.setMRMLScene(slicer.mrmlScene)
-    self.ui.scalarVolumeSelector.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibularSegmentationSelector.setMRMLScene(slicer.mrmlScene)
-    self.ui.fibulaSegmentationSelector.setMRMLScene(slicer.mrmlScene)
-    self.ui.planesTreeView.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibleCurveSelector.setMRMLScene(slicer.mrmlScene)
-    
 
     #Setup the mandibular curve widget
     mandibularCurve = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode","mandibuleCurve")
