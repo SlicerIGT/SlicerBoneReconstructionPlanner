@@ -334,7 +334,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.addCutPlane()
 
   def onMakeModelsButton(self):
-    self.logic.makeModels(self.ui.fibulaSegmentationSelector.currentNode(),self.ui.mandibularSegmentationSelector.currentNode())
+    self.logic.makeModels()
     self.ui.createPlanesButton.enabled = True
 
   def onUpdateFibulaPiecesButton(self):
@@ -342,12 +342,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.bonesToMandibleButton.enabled = True
 
   def onBonesToMandibleButton(self):
-    mandibularPlanesList = createListFromFolderID(self.logic.getMandiblePlanesFolderItemID())
-    self.logic.tranformBonePiecesToMandible(mandibularPlanesList, self.ui.fibulaLineSelector.currentNode(), float(self.ui.initialLineEdit.text), float(self.ui.betweenLineEdit.text))
+    self.logic.tranformBonePiecesToMandible()
 
   def onMandibularAutomaticPositioningButton(self):
-    mandibularPlanesList = createListFromFolderID(self.logic.getMandiblePlanesFolderItemID())
-    self.logic.mandiblePlanesPositioningForMaximumBoneContact(self.ui.mandibleCurveSelector.currentNode(), mandibularPlanesList)
+    self.logic.mandiblePlanesPositioningForMaximumBoneContact()
 
 #
 # BoneReconstructionPlannerLogic
@@ -832,7 +830,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       modelNodeItemID = shNode.GetItemByDataNode(modelNode)
       shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
     
-  def makeModels(self,fibulaSegmentation,mandibleSegmentation):
+  def makeModels(self):
+    parameterNode = self.getParameterNode()
+    fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
+    mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
+
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
     if segmentationModelsFolder:
@@ -844,7 +846,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.fibulaModelNode.SetName("fibula")
     self.mandibleModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
     self.mandibleModelNode.SetName("mandible")
-    segmentations = [fibulaSegmentation,mandibleSegmentation]
+    segmentations = [fibulaSegmentation,mandibularSegmentation]
     models = [self.fibulaModelNode,self.mandibleModelNode]
     for i in range(2):
       slicer.mrmlScene.AddNode(models[i])
@@ -870,7 +872,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(planeCutsList)):
       slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(planeCutsList[i])
 
-  def tranformBonePiecesToMandible(self,planeList,fibulaLine,initialSpace,betweenSpace):
+  def tranformBonePiecesToMandible(self):
+    parameterNode = self.getParameterNode()
+    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    initialSpace = float(parameterNode.GetParameter("initialSpace"))
+    betweenSpace = float(parameterNode.GetParameter("betweenSpace"))
+    planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
+
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     bonePiecesTransformFolder = shNode.GetItemByName("Bone Pieces Transforms")
     if bonePiecesTransformFolder:
@@ -932,7 +940,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPieceToMandibleAxisTransformNodeItemID = shNode.GetItemByDataNode(fibulaPieceToMandibleAxisTransformNode)
       shNode.SetItemParent(fibulaPieceToMandibleAxisTransformNodeItemID, bonePiecesTransformFolder)
 
-  def mandiblePlanesPositioningForMaximumBoneContact(self,mandibularCurve, planeList):
+  def mandiblePlanesPositioningForMaximumBoneContact(self):
+    parameterNode = self.getParameterNode()
+    mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
+    planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
+
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandiblePlaneTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandible Planes Transforms")
     
