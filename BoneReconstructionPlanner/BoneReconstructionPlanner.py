@@ -122,23 +122,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # "setMRMLScene(vtkMRMLScene*)" slot.
     uiWidget.setMRMLScene(slicer.mrmlScene)
 
-    #Setup the mandibular curve widget
-    mandibularCurve = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode","mandibuleCurve")
-    self.ui.mandibularCurvePlaceWidget.setButtonsVisible(False)
-    self.ui.mandibularCurvePlaceWidget.placeButton().show()
-    self.ui.mandibularCurvePlaceWidget.setMRMLScene(slicer.mrmlScene)
-    self.ui.mandibularCurvePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    self.ui.mandibularCurvePlaceWidget.setCurrentNode(mandibularCurve)
-    #self.ui.mandibularCurvePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
-    #Setup the fibula line widget
-    fibulaLine = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode","fibulaLine")
-    self.ui.fibulaLinePlaceWidget.setButtonsVisible(False)
-    self.ui.fibulaLinePlaceWidget.placeButton().show()
-    self.ui.fibulaLinePlaceWidget.setMRMLScene(slicer.mrmlScene)
-    self.ui.fibulaLinePlaceWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    self.ui.fibulaLinePlaceWidget.setCurrentNode(fibulaLine)
-    #self.ui.fibulaLinePlaceWidget.connect('activeMarkupsFiducialPlaceModeChanged(bool)', self.addFiducials)
-
     # Create logic class. Logic implements all computations that should be possible to run
     # in batch mode, without a graphical user interface.
     self.logic = BoneReconstructionPlannerLogic()
@@ -160,6 +143,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Buttons
     self.ui.createPlanesButton.connect('clicked(bool)', self.onCreatePlanesButton)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
+    self.ui.addMandibularCurveButton.connect('clicked(bool)',self.onAddMandibularCurveButton)
+    self.ui.addFibulaLineButton.connect('clicked(bool)',self.onAddFibulaLineButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
     self.ui.updateFibulaPiecesButton.connect('clicked(bool)',self.onUpdateFibulaPiecesButton)
     self.ui.bonesToMandibleButton.connect('clicked(bool)',self.onBonesToMandibleButton)
@@ -168,16 +153,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
-
-    #self._parameterNode.SetHideFromEditors(False)
-    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
-    #shNode.RequestOwnerPluginSearch(self._parameterNode)
-    #self.ui.planesTreeView.setRootItem(shNode.GetItemByDataNode(self._parameterNode))
-    mandibularCurveItemID = shNode.GetItemByDataNode(mandibularCurve)
-    shNode.SetItemParent(mandibularCurveItemID, self.logic.getParentFolderItemID())
-    fibulaLineItemID = shNode.GetItemByDataNode(fibulaLine)
-    shNode.SetItemParent(fibulaLineItemID, self.logic.getParentFolderItemID())
-
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -318,6 +293,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     
     self.ui.updateFibulaPiecesButton.enabled = True
 
+  def onAddMandibularCurveButton(self):
+    self.logic.addMandibularCurve()
+
+  def onAddFibulaLineButton(self):
+    self.logic.addFibulaLine()
+
   def onScalarVolumeChanged(self):
     scalarVolume = self.ui.scalarVolumeSelector.currentNode()
     scalarVolumeID = scalarVolume.GetID()
@@ -361,7 +342,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(planeNode)
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-    interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place);
+    interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
 
   def onMakeModelsButton(self):
     self.logic.makeModels(self.ui.fibulaSegmentationSelector.currentNode(),self.ui.mandibularSegmentationSelector.currentNode())
@@ -463,6 +444,36 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       return folderSubjectHierarchyID
     else:
       return shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandibular planes")
+
+  def addMandibularCurve(self):
+    curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
+    curveNode.SetName("temp")
+    slicer.mrmlScene.AddNode(curveNode)
+    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(curveNode)
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    curveNodeItemID = shNode.GetItemByDataNode(curveNode)
+    shNode.SetItemParent(curveNodeItemID, self.getParentFolderItemID())
+    curveNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularCurve"))
+
+    #setup placement
+    slicer.modules.markups.logic().SetActiveListID(curveNode)
+    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+    interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
+
+  def addFibulaLine(self):
+    lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+    lineNode.SetName("temp")
+    slicer.mrmlScene.AddNode(lineNode)
+    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(lineNode)
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    lineNodeItemID = shNode.GetItemByDataNode(lineNode)
+    shNode.SetItemParent(lineNodeItemID, self.getParentFolderItemID())
+    lineNode.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaLine"))
+
+    #setup placement
+    slicer.modules.markups.logic().SetActiveListID(lineNode)
+    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+    interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
 
   def remakeMandible2FibulaTransformsFolderID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
