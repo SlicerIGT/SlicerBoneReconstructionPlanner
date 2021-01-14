@@ -104,9 +104,6 @@
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
-      <widget class="qSlicerMarkupsPlaceWidget" name="mandibularCurvePlaceWidget"/>
-     </item>
      <item row="6" column="0">
       <widget class="QLabel" name="label_7">
        <property name="text">
@@ -116,9 +113,6 @@
         <set>Qt::AlignCenter</set>
        </property>
       </widget>
-     </item>
-     <item row="6" column="1">
-      <widget class="qSlicerMarkupsPlaceWidget" name="fibulaLinePlaceWidget"/>
      </item>
      <item row="7" column="0">
       <widget class="QLabel" name="label_8">
@@ -218,6 +212,20 @@
        </property>
       </widget>
      </item>
+     <item row="5" column="1">
+      <widget class="QPushButton" name="addMandibularCurveButton">
+       <property name="text">
+        <string>Add mandibular curve</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="QPushButton" name="addFibulaLineButton">
+       <property name="text">
+        <string>Add fibula line</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
@@ -299,17 +307,6 @@
    <extends>QWidget</extends>
    <header>qMRMLWidget.h</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>qSlicerWidget</class>
-   <extends>QWidget</extends>
-   <header>qSlicerWidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>qSlicerMarkupsPlaceWidget</class>
-   <extends>qSlicerWidget</extends>
-   <header>qSlicerMarkupsPlaceWidget.h</header>
   </customwidget>
   <customwidget>
    <class>qMRMLSubjectHierarchyTreeView</class>
