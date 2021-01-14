@@ -766,7 +766,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         #Set color of the model
         aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
         colorTable = aux.GetLookupTable()
-        ind = int(7 - i/2)
+        nColors = colorTable.GetNumberOfColors()
+        ind = int((nColors-1) - i/2)
         colorwithalpha = colorTable.GetTableValue(ind)
         color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
         modelDisplay.SetColor(color)
@@ -808,7 +809,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       #Set color of the model
       aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
       colorTable = aux.GetLookupTable()
-      ind = int(7 - (len(fibulaPlanesList)-1)/2 -1)
+      nColors = colorTable.GetNumberOfColors()
+      ind = int((nColors-1) - (len(fibulaPlanesList)-1)/2 -1)
       colorwithalpha = colorTable.GetTableValue(ind)
       color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
       modelDisplay.SetColor(color)
