@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>379</width>
-    <height>532</height>
+    <height>534</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -136,7 +136,11 @@
       </widget>
      </item>
      <item row="8" column="1">
-      <widget class="QLineEdit" name="initialLineEdit"/>
+      <widget class="QLineEdit" name="initialLineEdit">
+       <property name="text">
+        <string>0</string>
+       </property>
+      </widget>
      </item>
      <item row="9" column="0">
       <widget class="QLabel" name="label_5">
@@ -146,7 +150,11 @@
       </widget>
      </item>
      <item row="9" column="1">
-      <widget class="QLineEdit" name="betweenLineEdit"/>
+      <widget class="QLineEdit" name="betweenLineEdit">
+       <property name="text">
+        <string>0</string>
+       </property>
+      </widget>
      </item>
      <item row="10" column="0">
       <widget class="QLabel" name="label_9">
@@ -208,7 +216,10 @@
      <item row="2" column="1">
       <widget class="QCheckBox" name="rightFibulaCheckBox">
        <property name="text">
-        <string>(tick if fibula is the right one)</string>
+        <string>(tick if fibula is the one from the right side)</string>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
        </property>
       </widget>
      </item>

@@ -102,8 +102,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic = None
     self._parameterNode = None
     self._updatingGUIFromParameterNode = False
-    self.initialSpace = 0
-    self.betweenSpace = 0
 
   def setup(self):
     """
@@ -136,11 +134,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # (in the selected parameter node).
     self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleCurveSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.mandibularSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.fibulaSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
-    self.ui.initialLineEdit.textEdited.connect(self.onInitialLineEdit)
-    self.ui.betweenLineEdit.textEdited.connect(self.onBetweenLineEdit)
+    self.ui.initialLineEdit.textEdited.connect(self.updateParameterNodeFromGUI)
+    self.ui.betweenLineEdit.textEdited.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
+    self.ui.rightFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.createPlanesButton.connect('clicked(bool)', self.onCreatePlanesButton)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.addMandibularCurveButton.connect('clicked(bool)',self.onAddMandibularCurveButton)
@@ -207,12 +208,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self.setParameterNode(self.logic.getParameterNode())
 
-    # Select default input nodes if nothing is selected yet to save a few clicks for the user
-    if not self._parameterNode.GetNodeReference("InputVolume"):
-      firstVolumeNode = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLScalarVolumeNode")
-      if firstVolumeNode:
-        self._parameterNode.SetNodeReferenceID("InputVolume", firstVolumeNode.GetID())
-
   def setParameterNode(self, inputParameterNode):
     """
     Set and observe parameter node.
@@ -248,14 +243,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     # Update node selectors and sliders
     self.ui.fibulaLineSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaLine"))
+    self.ui.mandibleCurveSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleCurve"))
+    self.ui.mandibularSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularSegmentation"))
+    self.ui.fibulaSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSegmentation"))
     
-    # Update buttons states and tooltips
-    if self._parameterNode.GetNodeReference("fibulaLine"):
-      self.ui.createPlanesButton.toolTip = "Create fibula planes from mandibular planes"
-      #self.ui.createPlanesButton.enabled = True
-    else:
-      self.ui.createPlanesButton.toolTip = "Select fibula line and mandibular planes"
-      #self.ui.createPlanesButton.enabled = False
+    self.ui.initialLineEdit.text = self._parameterNode.GetParameter("initialSpace")
+    self.ui.betweenLineEdit.text = self._parameterNode.GetParameter("betweenSpace")
+
+    self.ui.rightFibulaCheckBox.checked = bool(self._parameterNode.GetParameter("rightFibula"))
+
 
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
@@ -272,19 +268,44 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
 
     self._parameterNode.SetNodeReferenceID("fibulaLine", self.ui.fibulaLineSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("mandibleCurve", self.ui.mandibleCurveSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("mandibularSegmentation", self.ui.mandibularSegmentationSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("fibulaSegmentation", self.ui.fibulaSegmentationSelector.currentNodeID)
     
+    #Check if text in the lineEdit belongs to a float number, if not set zero
+    aux = self.ui.initialLineEdit.text.split(".")
+    if len(aux)<=2:
+      if("".join(aux).isdigit()):
+        self._parameterNode.SetParameter("initialSpace",self.ui.initialLineEdit.text)
+      else:
+        self._parameterNode.SetParameter("initialSpace","0")
+    else:
+        self._parameterNode.SetParameter("initialSpace","0")
+    
+    aux = self.ui.betweenLineEdit.text.split(".")
+    if len(aux)<=2:
+      if("".join(aux).isdigit()):
+        self._parameterNode.SetParameter("betweenSpace",self.ui.betweenLineEdit.text)
+      else:
+        self._parameterNode.SetParameter("betweenSpace","0")
+    else:
+        self._parameterNode.SetParameter("betweenSpace","0")
+
+    if self.ui.rightFibulaCheckBox.checked:
+      self._parameterNode.SetParameter("rightFibula","True")
+    else:
+      self._parameterNode.SetParameter("rightFibula","False")
+
     self._parameterNode.EndModify(wasModified)
 
   def onCreatePlanesButton(self):
     """
     Run processing when user clicks "Apply" button.
     """
-    mandibularPlanesList = createListFromFolderID(self.logic.getMandiblePlanesFolderItemID())
-    
     try:
 
       # Compute output
-      self.logic.generateFibulaPlanes(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibleCurveSelector.currentNode(), mandibularPlanesList, self.initialSpace, self.betweenSpace, self.ui.rightFibulaCheckBox.isChecked())
+      self.logic.generateFibulaPlanes()
       
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -310,39 +331,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
     
   def onAddCutPlaneButton(self):
-    planeNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsPlaneNode")
-    planeNode.SetName("temp")
-    slicer.mrmlScene.AddNode(planeNode)
-    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeNode)
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    mandibularFolderID = self.logic.getMandiblePlanesFolderItemID()
-    planeNodeItemID = shNode.GetItemByDataNode(planeNode)
-    shNode.SetItemParent(planeNodeItemID, mandibularFolderID)
-    planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
-
-    aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
-    colorTable = aux.GetLookupTable()
-    name = planeNode.GetName()
-    if len(name.split('_'))==1:
-      ind = 0
-    else:
-      ind = int(name.split('_')[1])%8
-    #ind = shNode.GetNumberOfItemChildren(mandibularFolderID)-1
-    colorwithalpha = colorTable.GetTableValue(ind)
-    color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
-
-    #display node of the plane
-    displayNode = planeNode.GetDisplayNode()
-    displayNode.SetGlyphScale(2.5)
-    displayNode.SetSelectedColor(color)
-
-    #conections
-    self.planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
-
-    #setup placement
-    slicer.modules.markups.logic().SetActiveListID(planeNode)
-    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-    interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
+    self.logic.addCutPlane()
 
   def onMakeModelsButton(self):
     self.logic.makeModels(self.ui.fibulaSegmentationSelector.currentNode(),self.ui.mandibularSegmentationSelector.currentNode())
@@ -354,48 +343,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onBonesToMandibleButton(self):
     mandibularPlanesList = createListFromFolderID(self.logic.getMandiblePlanesFolderItemID())
-    self.logic.tranformBonePiecesToMandible(mandibularPlanesList, self.ui.fibulaLineSelector.currentNode(), self.initialSpace, self.betweenSpace)
+    self.logic.tranformBonePiecesToMandible(mandibularPlanesList, self.ui.fibulaLineSelector.currentNode(), float(self.ui.initialLineEdit.text), float(self.ui.betweenLineEdit.text))
 
   def onMandibularAutomaticPositioningButton(self):
     mandibularPlanesList = createListFromFolderID(self.logic.getMandiblePlanesFolderItemID())
     self.logic.mandiblePlanesPositioningForMaximumBoneContact(self.ui.mandibleCurveSelector.currentNode(), mandibularPlanesList)
-      
-
-  def onPlanePointAdded(self,sourceNode,event):
-    temporalOrigin = [0,0,0]
-    sourceNode.GetNthControlPointPosition(0,temporalOrigin)
-    
-    self.logic.setupMandiblePlaneStraightOverMandibleCurve(sourceNode,temporalOrigin, self.ui.mandibleCurveSelector.currentNode(), self.planeNodeObserver)
-
-    displayNode = sourceNode.GetDisplayNode()
-    displayNode.HandlesInteractiveOn()
-    for i in range(3):
-      sourceNode.SetNthControlPointVisibility(i,False)
-    planeNodeObserver = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModified)
-  
-  def onPlaneModified(self,sourceNode,event):
-    if self.ui.fibulaLineSelector.currentNodeID != '' and self.ui.updateFibulaPiecesButton.enabled:
-      mandibularPlanesList = createListFromFolderID(self.logic.getMandiblePlanesFolderItemID())
-
-      try:
-        # Compute output
-        self.logic.generateFibulaPlanes(self.ui.fibulaLineSelector.currentNode(), self.ui.mandibleCurveSelector.currentNode(), mandibularPlanesList, self.initialSpace, self.betweenSpace, self.ui.rightFibulaCheckBox.isChecked())
-
-      except Exception as e:
-        slicer.util.errorDisplay("Failed to compute results: "+str(e))
-        import traceback
-        traceback.print_exc()
-      
-
-  def onInitialLineEdit(self,text):
-    if text!= '':
-      self.initialSpace = float(text)
-  
-  def onBetweenLineEdit(self,text):
-    if text!= '':
-      self.betweenSpace = float(text)
-    
-
 
 #
 # BoneReconstructionPlannerLogic
@@ -475,6 +427,70 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
     interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
 
+  def addCutPlane(self):
+    planeNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsPlaneNode")
+    planeNode.SetName("temp")
+    slicer.mrmlScene.AddNode(planeNode)
+    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeNode)
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    mandibularFolderID = self.getMandiblePlanesFolderItemID()
+    planeNodeItemID = shNode.GetItemByDataNode(planeNode)
+    shNode.SetItemParent(planeNodeItemID, mandibularFolderID)
+    planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
+
+    aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+    colorTable = aux.GetLookupTable()
+    name = planeNode.GetName()
+    if len(name.split('_'))==1:
+      ind = 0
+    else:
+      ind = int(name.split('_')[1])%8
+    #ind = shNode.GetNumberOfItemChildren(mandibularFolderID)-1
+    colorwithalpha = colorTable.GetTableValue(ind)
+    color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
+
+    #display node of the plane
+    displayNode = planeNode.GetDisplayNode()
+    displayNode.SetGlyphScale(2.5)
+    displayNode.SetSelectedColor(color)
+
+    #conections
+    self.planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
+
+    #setup placement
+    slicer.modules.markups.logic().SetActiveListID(planeNode)
+    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+    interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
+
+  def onPlanePointAdded(self,sourceNode,event):
+    parameterNode = self.getParameterNode()
+    mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
+
+    temporalOrigin = [0,0,0]
+    sourceNode.GetNthControlPointPosition(0,temporalOrigin)
+    
+    self.setupMandiblePlaneStraightOverMandibleCurve(sourceNode,temporalOrigin, mandibleCurve, self.planeNodeObserver)
+
+    displayNode = sourceNode.GetDisplayNode()
+    displayNode.HandlesInteractiveOn()
+    for i in range(3):
+      sourceNode.SetNthControlPointVisibility(i,False)
+    planeNodeObserver = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModified)
+  
+  def onPlaneModified(self,sourceNode,event):
+    parameterNode = self.getParameterNode()
+    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+
+    if fibulaLine != None:
+      try:
+        # Compute output
+        self.generateFibulaPlanes()
+
+      except Exception as e:
+        slicer.util.errorDisplay("Failed to compute results: "+str(e))
+        import traceback
+        traceback.print_exc()  
+
   def remakeMandible2FibulaTransformsFolderID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     folderSubjectHierarchyID = shNode.GetItemByName("Mandible2Fibula transforms")
@@ -485,9 +501,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     else:
       return shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandible2Fibula transforms")
 
-  
-
-  def generateFibulaPlanes(self,fibulaLine,mandibularCurve,planeList,initialSpace,betweenSpace,rightFibulaChecked):
+  def generateFibulaPlanes(self):
+    parameterNode = self.getParameterNode()
+    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
+    initialSpace = float(parameterNode.GetParameter("initialSpace"))
+    betweenSpace = float(parameterNode.GetParameter("betweenSpace"))
+    rightFibulaChecked = bool(parameterNode.GetParameter("rightFibula"))
+    planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
+    
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandible2FibulaTransformsFolder = self.remakeMandible2FibulaTransformsFolderID()
 
