@@ -250,7 +250,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.initialLineEdit.text = self._parameterNode.GetParameter("initialSpace")
     self.ui.betweenLineEdit.text = self._parameterNode.GetParameter("betweenSpace")
 
-    self.ui.rightFibulaCheckBox.checked = bool(self._parameterNode.GetParameter("rightFibula"))
+    self.ui.rightFibulaCheckBox.checked = self._parameterNode.GetParameter("rightFibula") == "True"
 
 
     # All the GUI updates are done
@@ -507,7 +507,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
     initialSpace = float(parameterNode.GetParameter("initialSpace"))
     betweenSpace = float(parameterNode.GetParameter("betweenSpace"))
-    rightFibulaChecked = bool(parameterNode.GetParameter("rightFibula"))
+    rightFibulaChecked = parameterNode.GetParameter("rightFibula") == "True"
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
