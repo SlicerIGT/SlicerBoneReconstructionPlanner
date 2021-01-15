@@ -426,6 +426,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
 
   def addCutPlane(self):
+    parameterNode = self.getParameterNode()
+    colorIndexStr = parameterNode.GetParameter("colorIndex")
+    if colorIndexStr != "":
+      colorIndex = int(colorIndexStr) + 1
+      parameterNode.SetParameter("colorIndex", str(colorIndex))
+    else:
+      colorIndex = 0
+      parameterNode.SetParameter("colorIndex", str(colorIndex))
+
     planeNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsPlaneNode")
     planeNode.SetName("temp")
     slicer.mrmlScene.AddNode(planeNode)
@@ -438,12 +447,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
     colorTable = aux.GetLookupTable()
-    name = planeNode.GetName()
-    if len(name.split('_'))==1:
-      ind = 0
-    else:
-      ind = int(name.split('_')[1])%8
-    #ind = shNode.GetNumberOfItemChildren(mandibularFolderID)-1
+    ind = colorIndex%8
     colorwithalpha = colorTable.GetTableValue(ind)
     color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
 
