@@ -805,9 +805,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         projection = [0,0,0]
         vtk.vtkMath.ProjectVector(axis2[i],axis1[j],projection)
         if vtk.vtkMath.Dot(projection,axis1[j]) >= 0:
-          rotationMatrix.SetElement(i,j,vtk.vtkMath.Norm(projection))
+          rotationMatrix.SetElement(j,i,vtk.vtkMath.Norm(projection))
         else:
-          rotationMatrix.SetElement(i,j,-vtk.vtkMath.Norm(projection))
+          rotationMatrix.SetElement(j,i,-vtk.vtkMath.Norm(projection))
     
     return rotationMatrix
 
