@@ -663,7 +663,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       vtk.vtkMath.Cross(mandibleAxisZ, mandibleAxisX, mandibleAxisY)
       mandibleAxisY = mandibleAxisY/np.linalg.norm(mandibleAxisY)
 
-      rotationMatrix = self.getRotationMatrixFromAxis1ToAxis2([mandibleAxisX, mandibleAxisY, mandibleAxisZ], [fibulaX, fibulaY, fibulaZ])
+      mandibleAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandibleAxisX, mandibleAxisY, mandibleAxisZ)
+      fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
+
+      rotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
       self.rotationMatrixesList.append(rotationMatrix)
 
       mandiblePlane0ToFibulaPlaneATransformNode = slicer.vtkMRMLLinearTransformNode()
@@ -793,23 +796,33 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       modelNodeItemID = shNode.GetItemByDataNode(modelNode)
       shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
   
-  def getRotationMatrixFromAxis1ToAxis2(self,axis1,axis2):
+  def getAxes1ToWorldRotationMatrix(self,axis1X,axis1Y,axis1Z):
     rotationMatrix = vtk.vtkMatrix4x4()
     rotationMatrix.DeepCopy((1, 0, 0, 0,
                              0, 1, 0, 0,
                              0, 0, 1, 0,
                              0, 0, 0, 1))
-    #range(3) because rotation matrix is 3x3, the forth colomn and forth row are unchanged
-    for i in range(3):
-      for j in range(3):
-        projection = [0,0,0]
-        vtk.vtkMath.ProjectVector(axis2[i],axis1[j],projection)
-        if vtk.vtkMath.Dot(projection,axis1[j]) >= 0:
-          rotationMatrix.SetElement(j,i,vtk.vtkMath.Norm(projection))
-        else:
-          rotationMatrix.SetElement(j,i,-vtk.vtkMath.Norm(projection))
-    
+    rotationMatrix.SetElement(0,0,axis1X[0])
+    rotationMatrix.SetElement(0,1,axis1X[1])
+    rotationMatrix.SetElement(0,2,axis1X[2])
+    rotationMatrix.SetElement(1,0,axis1Y[0])
+    rotationMatrix.SetElement(1,1,axis1Y[1])
+    rotationMatrix.SetElement(1,2,axis1Y[2])
+    rotationMatrix.SetElement(2,0,axis1Z[0])
+    rotationMatrix.SetElement(2,1,axis1Z[1])
+    rotationMatrix.SetElement(2,2,axis1Z[2])
+
     return rotationMatrix
+  
+  def getAxes1ToAxes2RotationMatrix(self,axes1ToWorldRotationMatrix,axes2ToWorldRotationMatrix):
+    worldToAxes2RotationMatrix = vtk.vtkMatrix4x4()
+    worldToAxes2RotationMatrix.DeepCopy(axes2ToWorldRotationMatrix)
+    worldToAxes2RotationMatrix.Invert()
+    
+    resultMatrix = vtk.vtkMatrix4x4()
+    vtk.vtkMatrix4x4.Multiply4x4(worldToAxes2RotationMatrix, axes1ToWorldRotationMatrix, resultMatrix)
+
+    return resultMatrix
 
   def makeModels(self):
     parameterNode = self.getParameterNode()
