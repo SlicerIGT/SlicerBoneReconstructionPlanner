@@ -1082,3 +1082,78 @@ def createListFromFolderID(folderID):
   for i in range(myList.GetNumberOfIds()):
     createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
   return createdList
+
+
+'''
+import numpy as np
+
+def getAxes1ToWorldRotationMatrix(axis1X,axis1Y,axis1Z):
+  axes1ToWorldRotationMatrix = vtk.vtkMatrix4x4()
+  axes1ToWorldRotationMatrix.DeepCopy((1, 0, 0, 0,
+                                        0, 1, 0, 0,
+                                        0, 0, 1, 0,
+                                        0, 0, 0, 1))
+  axes1ToWorldRotationMatrix.SetElement(0,0,axis1X[0])
+  axes1ToWorldRotationMatrix.SetElement(0,1,axis1X[1])
+  axes1ToWorldRotationMatrix.SetElement(0,2,axis1X[2])
+  axes1ToWorldRotationMatrix.SetElement(1,0,axis1Y[0])
+  axes1ToWorldRotationMatrix.SetElement(1,1,axis1Y[1])
+  axes1ToWorldRotationMatrix.SetElement(1,2,axis1Y[2])
+  axes1ToWorldRotationMatrix.SetElement(2,0,axis1Z[0])
+  axes1ToWorldRotationMatrix.SetElement(2,1,axis1Z[1])
+  axes1ToWorldRotationMatrix.SetElement(2,2,axis1Z[2])
+  return axes1ToWorldRotationMatrix
+
+def getAxes1ToAxes2RotationMatrix(axes1ToWorldRotationMatrix,axes2ToWorldRotationMatrix):
+  worldToAxes2RotationMatrix = vtk.vtkMatrix4x4()
+  worldToAxes2RotationMatrix.DeepCopy(axes2ToWorldRotationMatrix)
+  worldToAxes2RotationMatrix.Invert()
+  axes1ToAxes2RotationMatrix = vtk.vtkMatrix4x4()
+  vtk.vtkMatrix4x4.Multiply4x4(worldToAxes2RotationMatrix, axes1ToWorldRotationMatrix, axes1ToAxes2RotationMatrix)
+  return axes1ToAxes2RotationMatrix
+
+plane0 = getNode("MarkupsPlane")
+plane1 = getNode("MarkupsPlane_1")
+
+plane0matrix = vtk.vtkMatrix4x4()
+plane0.GetPlaneToWorldMatrix(plane0matrix)
+plane0X = np.array([plane0matrix.GetElement(0,0),plane0matrix.GetElement(1,0),plane0matrix.GetElement(2,0)])
+plane0Y = np.array([plane0matrix.GetElement(0,1),plane0matrix.GetElement(1,1),plane0matrix.GetElement(2,1)])
+plane0Z = np.array([plane0matrix.GetElement(0,2),plane0matrix.GetElement(1,2),plane0matrix.GetElement(2,2)])
+plane0Origin = np.array([plane0matrix.GetElement(0,3),plane0matrix.GetElement(1,3),plane0matrix.GetElement(2,3)])
+plane0matrix.SetElement(0,3,0)
+plane0matrix.SetElement(1,3,0)
+plane0matrix.SetElement(2,3,0)
+
+plane1matrix = vtk.vtkMatrix4x4()
+plane1.GetPlaneToWorldMatrix(plane1matrix)
+plane1X = np.array([plane1matrix.GetElement(0,0),plane1matrix.GetElement(1,0),plane1matrix.GetElement(2,0)])
+plane1Y = np.array([plane1matrix.GetElement(0,1),plane1matrix.GetElement(1,1),plane1matrix.GetElement(2,1)])
+plane1Z = np.array([plane1matrix.GetElement(0,2),plane1matrix.GetElement(1,2),plane1matrix.GetElement(2,2)])
+plane1matrix.SetElement(0,3,0)
+plane1matrix.SetElement(1,3,0)
+plane1matrix.SetElement(2,3,0)
+
+#Change the comments to observe what works
+#plane0ToWorldRotationMatrix = getAxes1ToWorldRotationMatrix(plane0X, plane0Y, plane0Z)
+#plane1ToWorldRotationMatrix = getAxes1ToWorldRotationMatrix(plane1X, plane1Y, plane1Z)
+plane0ToWorldRotationMatrix = plane0matrix
+plane1ToWorldRotationMatrix = plane1matrix
+
+plane0ToPlane1RotationMatrix = getAxes1ToAxes2RotationMatrix(plane0ToWorldRotationMatrix, plane1ToWorldRotationMatrix)
+
+plane0ToPlane1RotationTransformNode = slicer.vtkMRMLLinearTransformNode()
+plane0ToPlane1RotationTransformNode.SetName("RotationTrasformFromPlane0ToPlane1_3")
+slicer.mrmlScene.AddNode(plane0ToPlane1RotationTransformNode)
+
+plane0ToPlane1RotationTransform = vtk.vtkTransform()
+plane0ToPlane1RotationTransform.PostMultiply()
+plane0ToPlane1RotationTransform.Translate(-plane0Origin)
+plane0ToPlane1RotationTransform.Concatenate(plane0ToPlane1RotationMatrix)
+plane0ToPlane1RotationTransform.Translate(plane0Origin)
+
+plane0ToPlane1RotationTransformNode.SetMatrixTransformToParent(plane0ToPlane1RotationTransform.GetMatrix())
+plane0ToPlane1RotationTransformNode.UpdateScene(slicer.mrmlScene)
+
+plane0.SetAndObserveTransformNodeID(plane0ToPlane1RotationTransformNode.GetID())
+'''
