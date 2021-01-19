@@ -623,7 +623,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
             displayNode2 = fibulaPlanesList[2*i].GetDisplayNode()
             displayNode2.SetSelectedColor(color)
 
-    self.rotationMatrixesList = []
+    self.mandibleAxisToFibulaRotationMatrixesList = []
     #Transform fibula planes to their final position-orientation
     for i in range(len(planeList)-1):
       mandiblePlane0 = planeList[i]
@@ -666,8 +666,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandibleAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandibleAxisX, mandibleAxisY, mandibleAxisZ)
       fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
 
-      rotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
-      self.rotationMatrixesList.append(rotationMatrix)
+      mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
+      self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
 
       mandiblePlane0ToFibulaPlaneATransformNode = slicer.vtkMRMLLinearTransformNode()
       mandiblePlane0ToFibulaPlaneATransformNode.SetName("Mandible2Fibula Transform%d_A" % i)
@@ -686,7 +686,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandiblePlane0ToFibulaPlaneATransform = vtk.vtkTransform()
       mandiblePlane0ToFibulaPlaneATransform.PostMultiply()
       mandiblePlane0ToFibulaPlaneATransform.Translate(-mandiblePlane0Origin[0], -mandiblePlane0Origin[1], -mandiblePlane0Origin[2])
-      mandiblePlane0ToFibulaPlaneATransform.Concatenate(rotationMatrix)
+      mandiblePlane0ToFibulaPlaneATransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
       mandiblePlane0ToFibulaPlaneATransform.Translate(fibulaOrigin)
       mandiblePlane0ToFibulaPlaneATransform.Translate(fibula2FibulaPlanesPositionA[i])
 
@@ -697,7 +697,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandiblePlane1ToFibulaPlaneBTransform = vtk.vtkTransform()
       mandiblePlane1ToFibulaPlaneBTransform.PostMultiply()
       mandiblePlane1ToFibulaPlaneBTransform.Translate(-mandiblePlane1Origin[0], -mandiblePlane1Origin[1], -mandiblePlane1Origin[2])
-      mandiblePlane1ToFibulaPlaneBTransform.Concatenate(rotationMatrix)
+      mandiblePlane1ToFibulaPlaneBTransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
       mandiblePlane1ToFibulaPlaneBTransform.Translate(fibulaOrigin)
       mandiblePlane1ToFibulaPlaneBTransform.Translate(fibula2FibulaPlanesPositionB[i])
 
@@ -797,32 +797,33 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
   
   def getAxes1ToWorldRotationMatrix(self,axis1X,axis1Y,axis1Z):
-    rotationMatrix = vtk.vtkMatrix4x4()
-    rotationMatrix.DeepCopy((1, 0, 0, 0,
-                             0, 1, 0, 0,
-                             0, 0, 1, 0,
-                             0, 0, 0, 1))
-    rotationMatrix.SetElement(0,0,axis1X[0])
-    rotationMatrix.SetElement(0,1,axis1X[1])
-    rotationMatrix.SetElement(0,2,axis1X[2])
-    rotationMatrix.SetElement(1,0,axis1Y[0])
-    rotationMatrix.SetElement(1,1,axis1Y[1])
-    rotationMatrix.SetElement(1,2,axis1Y[2])
-    rotationMatrix.SetElement(2,0,axis1Z[0])
-    rotationMatrix.SetElement(2,1,axis1Z[1])
-    rotationMatrix.SetElement(2,2,axis1Z[2])
+    axes1ToWorldRotationMatrix = vtk.vtkMatrix4x4()
+    axes1ToWorldRotationMatrix.DeepCopy((1, 0, 0, 0,
+                                         0, 1, 0, 0,
+                                         0, 0, 1, 0,
+                                         0, 0, 0, 1))
+    
+    axes1ToWorldRotationMatrix.SetElement(0,0,axis1X[0])
+    axes1ToWorldRotationMatrix.SetElement(0,1,axis1X[1])
+    axes1ToWorldRotationMatrix.SetElement(0,2,axis1X[2])
+    axes1ToWorldRotationMatrix.SetElement(1,0,axis1Y[0])
+    axes1ToWorldRotationMatrix.SetElement(1,1,axis1Y[1])
+    axes1ToWorldRotationMatrix.SetElement(1,2,axis1Y[2])
+    axes1ToWorldRotationMatrix.SetElement(2,0,axis1Z[0])
+    axes1ToWorldRotationMatrix.SetElement(2,1,axis1Z[1])
+    axes1ToWorldRotationMatrix.SetElement(2,2,axis1Z[2])
 
-    return rotationMatrix
+    return axes1ToWorldRotationMatrix
   
   def getAxes1ToAxes2RotationMatrix(self,axes1ToWorldRotationMatrix,axes2ToWorldRotationMatrix):
     worldToAxes2RotationMatrix = vtk.vtkMatrix4x4()
     worldToAxes2RotationMatrix.DeepCopy(axes2ToWorldRotationMatrix)
     worldToAxes2RotationMatrix.Invert()
     
-    resultMatrix = vtk.vtkMatrix4x4()
-    vtk.vtkMatrix4x4.Multiply4x4(worldToAxes2RotationMatrix, axes1ToWorldRotationMatrix, resultMatrix)
+    axes1ToAxes2RotationMatrix = vtk.vtkMatrix4x4()
+    vtk.vtkMatrix4x4.Multiply4x4(worldToAxes2RotationMatrix, axes1ToWorldRotationMatrix, axes1ToAxes2RotationMatrix)
 
-    return resultMatrix
+    return axes1ToAxes2RotationMatrix
 
   def makeModels(self):
     parameterNode = self.getParameterNode()
@@ -908,7 +909,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibula2FibulaPlanesPositionB.append(fibula2FibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
 
       inverseRotationMatrix = vtk.vtkMatrix4x4()
-      inverseRotationMatrix.DeepCopy(self.rotationMatrixesList[i])
+      inverseRotationMatrix.DeepCopy(self.mandibleAxisToFibulaRotationMatrixesList[i])
       inverseRotationMatrix.Invert()
 
       fibulaPieceToMandibleAxisTransformNode = slicer.vtkMRMLLinearTransformNode()
@@ -964,7 +965,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransform = vtk.vtkTransform()
       finalTransform.PostMultiply()
       finalTransform.Translate(-or1[0], -or1[1], -or1[2])
-      finalTransform.RotateWXYZ(angleDeg,rotAxis)
+      finalTransform.Concatenate(mandiblePlane0ToMiddleAxisRotationMatrix)
       finalTransform.Translate(or1)
 
       transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
