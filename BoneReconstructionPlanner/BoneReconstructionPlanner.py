@@ -950,13 +950,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       planeList[i+2].GetOrigin(or2)
       lineDirectionVector0 = (or1-or0)/np.linalg.norm(or1-or0)
       lineDirectionVector1 = (or2-or1)/np.linalg.norm(or2-or1)
-      planeList[i+1].SetNormal(lineDirectionVector0.tolist())
 
-      rotAxis = [0,0,0]
-      vtk.vtkMath.Cross(lineDirectionVector0, lineDirectionVector1, rotAxis)
-      rotAxis = rotAxis/np.linalg.norm(rotAxis)
-      angleRad = vtk.vtkMath.AngleBetweenVectors(lineDirectionVector0, lineDirectionVector1)/2
-      angleDeg = vtk.vtkMath.DegreesFromRadians(angleRad)
+      #Get X, Y, Z components of mandiblePlane1
+      mandiblePlane1matrix = vtk.vtkMatrix4x4()
+      planeList[i+1].GetPlaneToWorldMatrix(mandiblePlane1matrix)
+      mandiblePlane1X = np.array([mandiblePlane1matrix.GetElement(0,0),mandiblePlane1matrix.GetElement(1,0),mandiblePlane1matrix.GetElement(2,0)])
+      mandiblePlane1Y = np.array([mandiblePlane1matrix.GetElement(0,1),mandiblePlane1matrix.GetElement(1,1),mandiblePlane1matrix.GetElement(2,1)])
+      mandiblePlane1Z = np.array([mandiblePlane1matrix.GetElement(0,2),mandiblePlane1matrix.GetElement(1,2),mandiblePlane1matrix.GetElement(2,2)])
+
+      middleAxisZ = (lineDirectionVector0+lineDirectionVector1)/np.linalg.norm(lineDirectionVector0+lineDirectionVector1)
+      middleAxisX = [0,0,0]
+      middleAxisY = [0,0,0]
+      vtk.vtkMath.Cross(mandiblePlane1Y, middleAxisZ, middleAxisX)
+      middleAxisX = middleAxisX/np.linalg.norm(middleAxisX)
+      vtk.vtkMath.Cross(middleAxisZ, middleAxisX, middleAxisY)
+      middleAxisY = middleAxisY/np.linalg.norm(middleAxisY)
+
+      mandibleAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandiblePlane1X, mandiblePlane1Y, mandiblePlane1Z)
+      middleAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(middleAxisX, middleAxisY, middleAxisZ)
+
+      mandiblePlane0ToMiddleAxisRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, middleAxisToWorldRotationMatrix)
 
       transformNode = slicer.vtkMRMLLinearTransformNode()
       transformNode.SetName("temp%d" % (i+1))
