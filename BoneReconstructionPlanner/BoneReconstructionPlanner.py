@@ -1170,3 +1170,5 @@ plane0ToPlane1RotationTransformNode.UpdateScene(slicer.mrmlScene)
 
 plane0.SetAndObserveTransformNodeID(plane0ToPlane1RotationTransformNode.GetID())
 '''
+
+#This is commit is to test if everything keeps working well after the merge
