@@ -642,7 +642,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     intersectionsTransformNode.SetMatrixTransformToParent(intersectionsTransform.GetMatrix())
     intersectionsTransformNode.UpdateScene(slicer.mrmlScene)
 
-    shNode.CreateItem(intersectionsFolder,intersectionsTransformNode)
+    intersectionsTransformNodeItemID = shNode.GetItemByDataNode(intersectionsTransformNode)
+    shNode.SetItemParent(intersectionsTransformNodeItemID, intersectionsFolder)
 
     intersectionsList = []
     betweenSpace = []
@@ -712,7 +713,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         self.getIntersectionBetweenModelAnd1TransformedPlane(self.fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
         intersectionsList.append(intersectionModelB)
         intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
-        shNode.CreateItem(intersectionsFolder,intersectionModelB)
+        
+        intersectionModelBItemID = shNode.GetItemByDataNode(intersectionModelB)
+        shNode.SetItemParent(intersectionModelBItemID, intersectionsFolder)
+
       else:
         bounds0 = [0,0,0,0,0,0]
         bounds1 = [0,0,0,0,0,0]
@@ -721,13 +725,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           intersectionModelA.CreateDefaultDisplayNodes()
           self.getIntersectionBetweenModelAnd1TransformedPlane(self.fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
           intersectionsList.append(intersectionModelA)
-          shNode.CreateItem(intersectionsFolder,intersectionModelA)
+          intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
+          shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
           j=j+1
           intersectionModelB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % i)
           intersectionModelB.CreateDefaultDisplayNodes()
           self.getIntersectionBetweenModelAnd1TransformedPlane(self.fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
           intersectionsList.append(intersectionModelB)
-          shNode.CreateItem(intersectionsFolder,intersectionModelB)
+          intersectionModelBItemID = shNode.GetItemByDataNode(intersectionModelB)
+          shNode.SetItemParent(intersectionModelBItemID, intersectionsFolder)
           j=j+1
           intersectionsList[j-1].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
           intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
@@ -738,7 +744,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           intersectionModelA.CreateDefaultDisplayNodes()
           self.getIntersectionBetweenModelAnd1TransformedPlane(self.fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
           intersectionsList.append(intersectionModelA)
-          shNode.CreateItem(intersectionsFolder,intersectionModelA)
+          intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
+          shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
           j=j+1
           intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
           intersectionsList[j-1].GetRASBounds(bounds0)
@@ -1062,14 +1069,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     plane = vtk.vtkPlane()
     origin = [0,0,0]
     normal = [0,0,0]
-    origin2 = [0,0,0]
-    normal2 = [0,0,0]
+    transformedOrigin = [0,0,0]
+    transformedNormal = [0,0,0]
     planeNode.GetOrigin(origin)
     planeNode.GetNormal(normal)
-    transform.TransformPoint(origin,origin2)
-    transform.TransformNormal(normal,normal2)
-    plane.SetOrigin(origin2)
-    plane.SetNormal(normal2)
+    transform.TransformPoint(origin,transformedOrigin)
+    transform.TransformNormal(normal,transformedNormal)
+    plane.SetOrigin(transformedOrigin)
+    plane.SetNormal(transformedNormal)
 
     cutter = vtk.vtkCutter()
     cutter.SetInputData(modelNode.GetPolyData())
