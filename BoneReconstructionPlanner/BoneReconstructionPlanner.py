@@ -512,7 +512,23 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     rightFibulaChecked = parameterNode.GetParameter("rightFibula") == "True"
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
+    if len(planeList) <= 1:
+      return
+
+
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    if fibulaPlanesFolder:
+      fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
+      #delete all the folders that are not updated
+      if ( len(fibulaPlanesList) != (2*len(planeList) - 2) ):
+        shNode.RemoveItem(fibulaPlanesFolder)
+        planeCutsFolder = shNode.GetItemByName("Plane Cuts")
+        shNode.RemoveItem(planeCutsFolder)
+        cutBonesFolder = shNode.GetItemByName("Cut Bones")
+        shNode.RemoveItem(cutBonesFolder)
+
     mandible2FibulaTransformsFolder = self.remakeMandible2FibulaTransformsFolderID()
 
     #Create fibula axis:
