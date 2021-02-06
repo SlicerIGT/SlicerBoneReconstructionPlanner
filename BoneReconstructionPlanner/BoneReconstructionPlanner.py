@@ -136,6 +136,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibleCurveSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibularSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.fiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.surgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
     self.ui.initialLineEdit.textEdited.connect(self.updateParameterNodeFromGUI)
     self.ui.intersectionLineEdit.textEdited.connect(self.updateParameterNodeFromGUI)
@@ -150,6 +152,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.updateFibulaPiecesButton.connect('clicked(bool)',self.onUpdateFibulaPiecesButton)
     self.ui.bonesToMandibleButton.connect('clicked(bool)',self.onBonesToMandibleButton)
     self.ui.mandibularAutomaticPositioningButton.connect('clicked(bool)',self.onMandibularAutomaticPositioningButton)
+    self.ui.createSawBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateSawBoxesFromFibulaPlanesButton)
+    self.ui.createFiducialListButton.connect('clicked(bool)',self.onCreateFiducialListButton)
+    self.ui.createCylindersFromFiducialListAndSurgicalGuideBaseButton.connect('clicked(bool)',self.onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton)
     
 
     # Make sure parameter node is initialized (needed for module reload)
@@ -246,6 +251,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibleCurveSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleCurve"))
     self.ui.mandibularSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularSegmentation"))
     self.ui.fibulaSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSegmentation"))
+    self.ui.fiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("fiducialList"))
+    self.ui.surgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("surgicalGuideBaseModel"))
     
     self.ui.initialLineEdit.text = self._parameterNode.GetParameter("initialSpace")
     self.ui.intersectionLineEdit.text = self._parameterNode.GetParameter("intersectionPlace")
@@ -271,6 +278,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetNodeReferenceID("mandibleCurve", self.ui.mandibleCurveSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibularSegmentation", self.ui.mandibularSegmentationSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fibulaSegmentation", self.ui.fibulaSegmentationSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("fiducialList", self.ui.fiducialListSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("surgicalGuideBaseModel", self.ui.surgicalGuideBaseSelector.currentNodeID)
     
     #Check if text in the lineEdit belongs to a float number, if not set zero
     aux = self.ui.initialLineEdit.text.split(".")
@@ -346,6 +355,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onMandibularAutomaticPositioningButton(self):
     self.logic.mandiblePlanesPositioningForMaximumBoneContact()
+
+  def onCreateSawBoxesFromFibulaPlanesButton(self):
+    self.logic.createSawBoxesFromFibulaPlanes()
+
+  def onCreateFiducialListButton(self):
+    self.logic.createFiducialList()
+    self.ui.createCylindersFromFiducialListAndSurgicalGuideBaseButton.enabled = True
+
+  def onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton(self):
+    self.logic.createCylindersFromFiducialListAndSurgicalGuideBase()
 
 #
 # BoneReconstructionPlannerLogic
@@ -1123,6 +1142,102 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeNode.SetNthControlPointPositionFromArray(1,mandiblePlaneStraightOrigin + mandiblePlaneStraightX*dx)
     planeNode.SetNthControlPointPositionFromArray(2,mandiblePlaneStraightOrigin + mandiblePlaneStraightY*dy)
 
+  def createSawBoxesFromFibulaPlanes(self):
+    pass
+
+  def createFiducialList(self):
+    fiducialListNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")
+    fiducialListNode.SetName("temp")
+    slicer.mrmlScene.AddNode(fiducialListNode)
+    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fiducialListNode)
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    fiducialListNodeItemID = shNode.GetItemByDataNode(fiducialListNode)
+    shNode.SetItemParent(fiducialListNodeItemID, self.getParentFolderItemID())
+    fiducialListNode.SetName(slicer.mrmlScene.GetUniqueNameByString("fiducialList"))
+
+    #setup placement
+    slicer.modules.markups.logic().SetActiveListID(fiducialListNode)
+    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+    #interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
+    interactionNode.SwitchToPersistentPlaceMode()
+
+  def createCylindersFromFiducialListAndSurgicalGuideBase(self):
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    cylindersModelsFolder = shNode.GetItemByName("Cylinders Models")
+    shNode.RemoveItem(cylindersModelsFolder)
+    cylindersModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Cylinders Models")
+    cylindersTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Cylinders Transforms")
+    
+    parameterNode = self.getParameterNode()
+    fiducialList = parameterNode.GetNodeReference("fiducialList")
+    surgicalGuideBaseModel = parameterNode.GetNodeReference("surgicalGuideBaseModel")
+
+    normalsOfSurgicalGuideBaseModel = slicer.util.arrayFromModelPointData(surgicalGuideBaseModel, 'Normals')
+    
+    surgicalGuideBaseMesh = surgicalGuideBaseModel.GetMesh()
+
+    for i in range(fiducialList.GetNumberOfFiducials()):
+      pos = [0,0,0]
+      fiducialList.GetNthFiducialPosition(i,pos)
+
+      pointID = surgicalGuideBaseMesh.FindPoint(pos)
+
+      normalAtPointID = normalsOfSurgicalGuideBaseModel[pointID]
+
+      transformedCylinderAxisX = [0,0,0]
+      transformedCylinderAxisY = [0,0,0]
+      transformedCylinderAxisZ = normalAtPointID
+      vtk.vtkMath.Perpendiculars(transformedCylinderAxisZ,transformedCylinderAxisX,transformedCylinderAxisY,0)
+
+      cylinderModel = self.createCylinder("cylinder%d" % i)
+      cylinderModelItemID = shNode.GetItemByDataNode(cylinderModel)
+      shNode.SetItemParent(cylinderModelItemID, cylindersModelsFolder)
+      
+      cylinderAxisX = [0,0,1]
+      cylinderAxisY = [1,0,0]
+      cylinderAxisZ = [0,1,0]
+
+      cylinderAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(cylinderAxisX, cylinderAxisY, cylinderAxisZ)
+      transformedCylinderAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(transformedCylinderAxisX, transformedCylinderAxisY, transformedCylinderAxisZ)
+
+      cylinderAxisToTransformedCylinderAxisRotationMatrix = self.getAxes1ToAxes2RotationMatrix(cylinderAxisToWorldRotationMatrix, transformedCylinderAxisToWorldRotationMatrix)
+
+      transformNode = slicer.vtkMRMLLinearTransformNode()
+      transformNode.SetName("temp%d" % i)
+      slicer.mrmlScene.AddNode(transformNode)
+
+      finalTransform = vtk.vtkTransform()
+      finalTransform.PostMultiply()
+      finalTransform.Concatenate(cylinderAxisToTransformedCylinderAxisRotationMatrix)
+      finalTransform.Translate(pos)
+
+      transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
+
+      transformNode.UpdateScene(slicer.mrmlScene)
+
+      cylinderModel.SetAndObserveTransformNodeID(transformNode.GetID())
+      cylinderModel.HardenTransform()
+      
+      transformNodeItemID = shNode.GetItemByDataNode(transformNode)
+      shNode.SetItemParent(transformNodeItemID, cylindersTransformsFolder)
+    
+    shNode.RemoveItem(cylindersTransformsFolder)
+      
+
+  
+  def createCylinder(self,name):
+    cylinder = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+    cylinder.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
+    slicer.mrmlScene.AddNode(cylinder)
+    cylinder.CreateDefaultDisplayNodes()
+    cylinderSource = vtk.vtkCylinderSource()
+    cylinderSource.SetCenter(0,0,0)
+    cylinderSource.SetRadius(1.5)
+    cylinderSource.SetHeight(50)
+    cylinderSource.SetResolution(100)
+    cylinderSource.Update()
+    cylinder.SetAndObservePolyData(cylinderSource.GetOutput())
+    return cylinder
 
 
 
