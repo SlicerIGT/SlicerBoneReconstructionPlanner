@@ -427,7 +427,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(curveNode)
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-    interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
+    interactionNode.SwitchToSinglePlaceMode()
 
   def addFibulaLine(self):
     lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
@@ -442,7 +442,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(lineNode)
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-    interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
+    interactionNode.SwitchToSinglePlaceMode()
 
   def addCutPlane(self):
     parameterNode = self.getParameterNode()
@@ -481,7 +481,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(planeNode)
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-    interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
+    interactionNode.SwitchToSinglePlaceMode()
 
   def onPlanePointAdded(self,sourceNode,event):
     parameterNode = self.getParameterNode()
@@ -1158,7 +1158,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(fiducialListNode)
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-    #interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode().Place)
     interactionNode.SwitchToPersistentPlaceMode()
 
   def createCylindersFromFiducialListAndSurgicalGuideBase(self):
