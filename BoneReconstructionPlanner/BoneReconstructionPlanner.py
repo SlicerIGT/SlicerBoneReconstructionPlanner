@@ -578,86 +578,86 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
-    fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
+    shNode.RemoveItem(fibulaPlanesFolder)
+    fibulaPlanesList = []
 
     #Create fibula planes and set their size
-    if fibulaPlanesFolder==0:
-      fibulaPlanesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula planes")
-      for i in range(len(planeList)-1):
-        mandiblePlane0 = planeList[i]
-        mandiblePlane1 = planeList[i+1]
-        mandiblePlane0Normal = [0,0,0]
-        mandiblePlane0.GetNormal(mandiblePlane0Normal)
-        mandiblePlane1Normal = [0,0,0]
-        mandiblePlane1.GetNormal(mandiblePlane1Normal)
+    fibulaPlanesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula planes")
+    for i in range(len(planeList)-1):
+      mandiblePlane0 = planeList[i]
+      mandiblePlane1 = planeList[i+1]
+      mandiblePlane0Normal = [0,0,0]
+      mandiblePlane0.GetNormal(mandiblePlane0Normal)
+      mandiblePlane1Normal = [0,0,0]
+      mandiblePlane1.GetNormal(mandiblePlane1Normal)
 
-        fibulaPlaneA = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
-        slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
-        fibulaPlaneAItemID = shNode.GetItemByDataNode(fibulaPlaneA)
-        shNode.SetItemParent(fibulaPlaneAItemID, fibulaPlanesFolder)
-        fibulaPlaneA.SetNormal(mandiblePlane0Normal)
-        fibulaPlaneA.SetOrigin(fibulaOrigin)
-        fibulaPlanesList.append(fibulaPlaneA)
+      fibulaPlaneA = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
+      fibulaPlaneAItemID = shNode.GetItemByDataNode(fibulaPlaneA)
+      shNode.SetItemParent(fibulaPlaneAItemID, fibulaPlanesFolder)
+      fibulaPlaneA.SetNormal(mandiblePlane0Normal)
+      fibulaPlaneA.SetOrigin(fibulaOrigin)
+      fibulaPlanesList.append(fibulaPlaneA)
 
-        fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
-        slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneB)
-        fibulaPlaneBItemID = shNode.GetItemByDataNode(fibulaPlaneB)
-        shNode.SetItemParent(fibulaPlaneBItemID, fibulaPlanesFolder)
-        fibulaPlaneB.SetNormal(mandiblePlane1Normal)
-        fibulaPlaneB.SetOrigin(fibulaOrigin)
-        fibulaPlanesList.append(fibulaPlaneB)
+      fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneB)
+      fibulaPlaneBItemID = shNode.GetItemByDataNode(fibulaPlaneB)
+      shNode.SetItemParent(fibulaPlaneBItemID, fibulaPlanesFolder)
+      fibulaPlaneB.SetNormal(mandiblePlane1Normal)
+      fibulaPlaneB.SetOrigin(fibulaOrigin)
+      fibulaPlanesList.append(fibulaPlaneB)
 
 
-        #Set new planes size
-        oldPlanes = [mandiblePlane0,mandiblePlane1]
-        newPlanes = [fibulaPlaneA,fibulaPlaneB]
-        for j in range(2):
-          o1 = np.zeros(3)
-          x1 = np.zeros(3)
-          y1 = np.zeros(3)
-          oldPlanes[j].GetNthControlPointPosition(0,o1)
-          oldPlanes[j].GetNthControlPointPosition(1,x1)
-          oldPlanes[j].GetNthControlPointPosition(2,y1)
-          xd1 = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(o1,x1)) 
-          yd1 = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(o1,y1)) 
+      #Set new planes size
+      oldPlanes = [mandiblePlane0,mandiblePlane1]
+      newPlanes = [fibulaPlaneA,fibulaPlaneB]
+      for j in range(2):
+        o1 = np.zeros(3)
+        x1 = np.zeros(3)
+        y1 = np.zeros(3)
+        oldPlanes[j].GetNthControlPointPosition(0,o1)
+        oldPlanes[j].GetNthControlPointPosition(1,x1)
+        oldPlanes[j].GetNthControlPointPosition(2,y1)
+        xd1 = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(o1,x1)) 
+        yd1 = np.sqrt(vtk.vtkMath.Distance2BetweenPoints(o1,y1)) 
 
-          on1 = np.zeros(3)
-          xn1 = np.zeros(3)
-          yn1 = np.zeros(3)
-          newPlanes[j].GetNthControlPointPosition(0,on1)
-          newPlanes[j].GetNthControlPointPosition(1,xn1)
-          newPlanes[j].GetNthControlPointPosition(2,yn1)
-          xnpv1 = (xn1-on1)/np.linalg.norm(xn1-on1)
-          ynpv1 = (yn1-on1)/np.linalg.norm(yn1-on1)
-          newPlanes[j].SetNthControlPointPositionFromArray(1,on1+xd1*xnpv1)
-          newPlanes[j].SetNthControlPointPositionFromArray(2,on1+yd1*ynpv1)
+        on1 = np.zeros(3)
+        xn1 = np.zeros(3)
+        yn1 = np.zeros(3)
+        newPlanes[j].GetNthControlPointPosition(0,on1)
+        newPlanes[j].GetNthControlPointPosition(1,xn1)
+        newPlanes[j].GetNthControlPointPosition(2,yn1)
+        xnpv1 = (xn1-on1)/np.linalg.norm(xn1-on1)
+        ynpv1 = (yn1-on1)/np.linalg.norm(yn1-on1)
+        newPlanes[j].SetNthControlPointPositionFromArray(1,on1+xd1*xnpv1)
+        newPlanes[j].SetNthControlPointPositionFromArray(2,on1+yd1*ynpv1)
 
-          for i in range(3):
-            newPlanes[j].SetNthControlPointVisibility(i,False)
+        for i in range(3):
+          newPlanes[j].SetNthControlPointVisibility(i,False)
 
-      #Set up color for fibula planes
-      for i in range(len(planeList)):
-        if i == 0:
+    #Set up color for fibula planes
+    for i in range(len(planeList)):
+      if i == 0:
+        oldDisplayNode = planeList[i].GetDisplayNode()
+        color = oldDisplayNode.GetSelectedColor()
+
+        displayNode = fibulaPlanesList[0].GetDisplayNode()
+        displayNode.SetSelectedColor(color)
+      else:
+        if i == len(planeList)-1:
           oldDisplayNode = planeList[i].GetDisplayNode()
           color = oldDisplayNode.GetSelectedColor()
 
-          displayNode = fibulaPlanesList[0].GetDisplayNode()
+          displayNode = fibulaPlanesList[len(fibulaPlanesList)-1].GetDisplayNode()
           displayNode.SetSelectedColor(color)
         else:
-          if i == len(planeList)-1:
-            oldDisplayNode = planeList[i].GetDisplayNode()
-            color = oldDisplayNode.GetSelectedColor()
+          oldDisplayNode = planeList[i].GetDisplayNode()
+          color = oldDisplayNode.GetSelectedColor()
 
-            displayNode = fibulaPlanesList[len(fibulaPlanesList)-1].GetDisplayNode()
-            displayNode.SetSelectedColor(color)
-          else:
-            oldDisplayNode = planeList[i].GetDisplayNode()
-            color = oldDisplayNode.GetSelectedColor()
-
-            displayNode1 = fibulaPlanesList[2*i-1].GetDisplayNode()
-            displayNode1.SetSelectedColor(color)
-            displayNode2 = fibulaPlanesList[2*i].GetDisplayNode()
-            displayNode2.SetSelectedColor(color)
+          displayNode1 = fibulaPlanesList[2*i-1].GetDisplayNode()
+          displayNode1.SetSelectedColor(color)
+          displayNode2 = fibulaPlanesList[2*i].GetDisplayNode()
+          displayNode2.SetSelectedColor(color)
 
     #Set up transform for intersections to measure betweenSpace
     intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
@@ -827,6 +827,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       fibulaPlaneA.SetAndObserveTransformNodeID(mandiblePlane0ToFibulaPlaneATransformNode.GetID())
       fibulaPlaneB.SetAndObserveTransformNodeID(mandiblePlane1ToFibulaPlaneBTransformNode.GetID())
+      fibulaPlaneA.HardenTransform()
+      fibulaPlaneB.HardenTransform()
 
       mandiblePlane0ToFibulaPlaneATransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane0ToFibulaPlaneATransformNode)
       shNode.SetItemParent(mandiblePlane0ToFibulaPlaneATransformNodeItemID, mandible2FibulaTransformsFolder)
@@ -1143,7 +1145,98 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeNode.SetNthControlPointPositionFromArray(2,mandiblePlaneStraightOrigin + mandiblePlaneStraightY*dy)
 
   def createSawBoxesFromFibulaPlanes(self):
-    pass
+    parameterNode = self.getParameterNode()
+    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    rightFibulaChecked = parameterNode.GetParameter("rightFibula") == "True"
+
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
+    sawBoxesModelsFolder = shNode.GetItemByName("sawBoxes Models")
+    shNode.RemoveItem(sawBoxesModelsFolder)
+    sawBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"sawBoxes Models")
+    sawBoxesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"sawBoxes Transforms")
+    
+    #Create fibula axis:
+    lineStartPos = np.zeros(3)
+    lineEndPos = np.zeros(3)
+    fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
+    fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+    fibulaOrigin = lineStartPos
+    fibulaZLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
+    fibulaZ = (lineEndPos-lineStartPos)/fibulaZLineNorm
+    fibulaX = [0,0,0]
+    fibulaY = [0,0,0]
+    anteriorDirection = [0,1,0]
+    posteriorDirection = [0,-1,0]
+    if rightFibulaChecked:
+      vtk.vtkMath.Cross(fibulaZ, anteriorDirection, fibulaX)
+      fibulaX = fibulaX/np.linalg.norm(fibulaX)
+    else:
+      vtk.vtkMath.Cross(fibulaZ, posteriorDirection, fibulaX)
+      fibulaX = fibulaX/np.linalg.norm(fibulaX)
+    vtk.vtkMath.Cross(fibulaZ, fibulaX, fibulaY)
+    fibulaY = fibulaY/np.linalg.norm(fibulaY)
+
+    for i in range(len(fibulaPlanesList)):
+      #sawBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
+      sawBoxModel = self.createSawBox(8,50,1,"sawBox%d" % i)
+      sawBoxModelItemID = shNode.GetItemByDataNode(sawBoxModel)
+      shNode.SetItemParent(sawBoxModelItemID, sawBoxesModelsFolder)
+
+      fibulaPlanematrix = vtk.vtkMatrix4x4()
+      fibulaPlanesList[i].GetPlaneToWorldMatrix(fibulaPlanematrix)
+      fibulaPlaneZ = np.array([fibulaPlanematrix.GetElement(0,2),fibulaPlanematrix.GetElement(1,2),fibulaPlanematrix.GetElement(2,2)])
+      fibulaPlaneOrigin = np.array([fibulaPlanematrix.GetElement(0,3),fibulaPlanematrix.GetElement(1,3),fibulaPlanematrix.GetElement(2,3)])
+
+      sawBoxAxisX = [0,0,0]
+      sawBoxAxisY =  [0,0,0]
+      sawBoxAxisZ = fibulaPlaneZ
+      vtk.vtkMath.Cross(fibulaX, sawBoxAxisZ, sawBoxAxisX)#medial cross normal
+      sawBoxAxisX = sawBoxAxisX/np.linalg.norm(sawBoxAxisX)
+      vtk.vtkMath.Cross(sawBoxAxisZ, sawBoxAxisX, sawBoxAxisY)# approximately medial
+      sawBoxAxisY = sawBoxAxisY/np.linalg.norm(sawBoxAxisY)
+
+      sawBoxAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(sawBoxAxisX, sawBoxAxisY, sawBoxAxisZ)
+      WorldToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix([1,0,0], [0,1,0], [0,0,1])
+
+      WorldToSawBoxAxisRotationMatrix = self.getAxes1ToAxes2RotationMatrix(WorldToWorldRotationMatrix, sawBoxAxisToWorldRotationMatrix)
+
+      transformNode = slicer.vtkMRMLLinearTransformNode()
+      transformNode.SetName("temp%d" % i)
+      slicer.mrmlScene.AddNode(transformNode)
+
+      finalTransform = vtk.vtkTransform()
+      finalTransform.PostMultiply()
+      finalTransform.Concatenate(WorldToSawBoxAxisRotationMatrix)
+      finalTransform.Translate(fibulaPlaneOrigin)
+
+      transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
+
+      transformNode.UpdateScene(slicer.mrmlScene)
+
+      sawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
+      sawBoxModel.HardenTransform()
+      
+      transformNodeItemID = shNode.GetItemByDataNode(transformNode)
+      shNode.SetItemParent(transformNodeItemID, sawBoxesTransformsFolder)
+    
+    shNode.RemoveItem(sawBoxesTransformsFolder)
+
+  
+  def createSawBox(self, X, Y, Z, name):
+    sawBox = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+    sawBox.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
+    slicer.mrmlScene.AddNode(sawBox)
+    sawBox.CreateDefaultDisplayNodes()
+    sawBoxSource = vtk.vtkCubeSource()
+    sawBoxSource.SetXLength(X)
+    sawBoxSource.SetYLength(Y)
+    sawBoxSource.SetZLength(Z)
+    sawBoxSource.Update()
+    sawBox.SetAndObservePolyData(sawBoxSource.GetOutput())
+    return sawBox
+
 
   def createFiducialList(self):
     fiducialListNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")

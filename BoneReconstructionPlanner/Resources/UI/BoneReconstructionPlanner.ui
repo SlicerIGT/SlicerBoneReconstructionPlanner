@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>416</width>
+    <width>434</width>
     <height>716</height>
    </rect>
   </property>
@@ -311,9 +311,30 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
+       <layout class="QFormLayout" name="formLayout_3">
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_16">
+          <property name="text">
+           <string>Slit size</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_17">
+          <property name="text">
+           <string>1mm</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
        <widget class="QPushButton" name="createSawBoxesFromFibulaPlanesButton">
         <property name="text">
-         <string>Create saw boxes from fibula planes (on development)</string>
+         <string>Create saw boxes from fibula planes</string>
         </property>
        </widget>
       </item>
