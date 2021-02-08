@@ -838,58 +838,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(intersectionsFolder)
 
     planeCutsFolder = shNode.GetItemByName("Plane Cuts")
-    if planeCutsFolder == 0:
-      cutBonesFolder = shNode.GetItemByName("Cut Bones")
-      shNode.RemoveItem(cutBonesFolder)
-      planeCutsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Plane Cuts")
-      cutBonesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Cut Bones")
+    shNode.RemoveItem(planeCutsFolder)
+    cutBonesFolder = shNode.GetItemByName("Cut Bones")
+    shNode.RemoveItem(cutBonesFolder)
+    planeCutsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Plane Cuts")
+    cutBonesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Cut Bones")
 
-      for i in range(0,len(fibulaPlanesList),2):
-        modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-        modelNode.SetName("Fibula Segment {0}A-{1}B".format(i//2,i//2))
-        slicer.mrmlScene.AddNode(modelNode)
-        modelNode.CreateDefaultDisplayNodes()
-        modelDisplay = modelNode.GetDisplayNode()
-        #Set color of the model
-        aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
-        colorTable = aux.GetLookupTable()
-        nColors = colorTable.GetNumberOfColors()
-        ind = int((nColors-1) - i/2)
-        colorwithalpha = colorTable.GetTableValue(ind)
-        color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
-        modelDisplay.SetColor(color)
-
-        #Determinate plane creation direction and set up dynamic modeler
-        planeOriginStart = [0,0,0]
-        planeOriginEnd = [0,0,0]
-        planeList[0].GetNthControlPointPosition(0,planeOriginStart)
-        planeList[len(planeList)-1].GetNthControlPointPosition(0,planeOriginEnd)
-        closestCurvePointStart = [0,0,0]
-        closestCurvePointEnd = [0,0,0]
-        closestCurvePointIndexStart = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOriginStart,closestCurvePointStart)
-        closestCurvePointIndexEnd = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOriginEnd,closestCurvePointEnd)
-
-        dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
-        dynamicModelerNode.SetToolName("Plane cut")
-        dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", self.fibulaModelNode.GetID())
-        if closestCurvePointIndexStart > closestCurvePointIndexEnd:
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID())
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
-        else:
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
-        dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
-        dynamicModelerNode.SetAttribute("OperationType", "Difference")
-        #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
-        
-        dynamicModelerNodeItemID = shNode.GetItemByDataNode(dynamicModelerNode)
-        shNode.SetItemParent(dynamicModelerNodeItemID, planeCutsFolder)
-        modelNodeItemID = shNode.GetItemByDataNode(modelNode)
-        shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
-      
-      
+    for i in range(0,len(fibulaPlanesList),2):
       modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-      modelNode.SetName("Cut mandible")
+      modelNode.SetName("Fibula Segment {0}A-{1}B".format(i//2,i//2))
       slicer.mrmlScene.AddNode(modelNode)
       modelNode.CreateDefaultDisplayNodes()
       modelDisplay = modelNode.GetDisplayNode()
@@ -897,27 +854,70 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
       colorTable = aux.GetLookupTable()
       nColors = colorTable.GetNumberOfColors()
-      ind = int((nColors-1) - (len(fibulaPlanesList)-1)/2 -1)
+      ind = int((nColors-1) - i/2)
       colorwithalpha = colorTable.GetTableValue(ind)
       color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
       modelDisplay.SetColor(color)
 
+      #Determinate plane creation direction and set up dynamic modeler
+      planeOriginStart = [0,0,0]
+      planeOriginEnd = [0,0,0]
+      planeList[0].GetNthControlPointPosition(0,planeOriginStart)
+      planeList[len(planeList)-1].GetNthControlPointPosition(0,planeOriginEnd)
+      closestCurvePointStart = [0,0,0]
+      closestCurvePointEnd = [0,0,0]
+      closestCurvePointIndexStart = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOriginStart,closestCurvePointStart)
+      closestCurvePointIndexEnd = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOriginEnd,closestCurvePointEnd)
+
       dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
       dynamicModelerNode.SetToolName("Plane cut")
-      dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", self.mandibleModelNode.GetID())
+      dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", self.fibulaModelNode.GetID())
       if closestCurvePointIndexStart > closestCurvePointIndexEnd:
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID())
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID())
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
       else:
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID()) 
-      dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputPositiveModel", modelNode.GetID())
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
+      dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
       dynamicModelerNode.SetAttribute("OperationType", "Difference")
-
+      #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
+      
       dynamicModelerNodeItemID = shNode.GetItemByDataNode(dynamicModelerNode)
       shNode.SetItemParent(dynamicModelerNodeItemID, planeCutsFolder)
       modelNodeItemID = shNode.GetItemByDataNode(modelNode)
       shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
+    
+    
+    modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+    modelNode.SetName("Cut mandible")
+    slicer.mrmlScene.AddNode(modelNode)
+    modelNode.CreateDefaultDisplayNodes()
+    modelDisplay = modelNode.GetDisplayNode()
+    #Set color of the model
+    aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+    colorTable = aux.GetLookupTable()
+    nColors = colorTable.GetNumberOfColors()
+    ind = int((nColors-1) - (len(fibulaPlanesList)-1)/2 -1)
+    colorwithalpha = colorTable.GetTableValue(ind)
+    color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
+    modelDisplay.SetColor(color)
+
+    dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
+    dynamicModelerNode.SetToolName("Plane cut")
+    dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", self.mandibleModelNode.GetID())
+    if closestCurvePointIndexStart > closestCurvePointIndexEnd:
+      dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID())
+      dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
+    else:
+      dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
+      dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID()) 
+    dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputPositiveModel", modelNode.GetID())
+    dynamicModelerNode.SetAttribute("OperationType", "Difference")
+
+    dynamicModelerNodeItemID = shNode.GetItemByDataNode(dynamicModelerNode)
+    shNode.SetItemParent(dynamicModelerNodeItemID, planeCutsFolder)
+    modelNodeItemID = shNode.GetItemByDataNode(modelNode)
+    shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
   
   def getAxes1ToWorldRotationMatrix(self,axis1X,axis1Y,axis1Z):
     axes1ToWorldRotationMatrix = vtk.vtkMatrix4x4()
