@@ -262,7 +262,7 @@
            <number>1</number>
           </property>
           <property name="value">
-           <double>1.000000000000000</double>
+           <double>3.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -458,6 +458,14 @@
         </property>
         <property name="text">
          <string>Create cylinders from fiducial list and surgical guide base</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="makeBooleanDifferenceToSurgicalGuideBaseButton">
+        <property name="text">
+         <string>Make boolean difference to surgical guide base with
+ screwHolesCylinders and miterBoxes</string>
         </property>
        </widget>
       </item>

@@ -159,7 +159,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.createSawBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateSawBoxesFromFibulaPlanesButton)
     self.ui.createFiducialListButton.connect('clicked(bool)',self.onCreateFiducialListButton)
     self.ui.createCylindersFromFiducialListAndSurgicalGuideBaseButton.connect('clicked(bool)',self.onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton)
-    
+    self.ui.makeBooleanDifferenceToSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanDifferenceToSurgicalGuideBaseButton)
+
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -367,6 +368,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton(self):
     self.logic.createCylindersFromFiducialListAndSurgicalGuideBase()
+
+  def onMakeBooleanDifferenceToSurgicalGuideBaseButton(self):
+    self.logic.makeBooleanDifferenceToSurgicalGuideBase()
 
 #
 # BoneReconstructionPlannerLogic
@@ -1333,8 +1337,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     shNode.RemoveItem(cylindersTransformsFolder)
       
-
-  
   def createCylinder(self,name):
     cylinder = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
     cylinder.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
@@ -1352,7 +1354,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     cylinder.SetAndObservePolyData(tubeFilter.GetOutput())
     return cylinder
 
+  def makeBooleanDifferenceToSurgicalGuideBase(self):
+    parameterNode = self.getParameterNode()
+    surgicalGuideBaseModel = parameterNode.GetNodeReference("surgicalGuideBaseModel")
 
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    cylindersModelsFolder = shNode.GetItemByName("Cylinders Models")
+    cylindersModelsList = createListFromFolderID(cylindersModelsFolder)
+    sawBoxesModelsFolder = shNode.GetItemByName("sawBoxes Models")
+    sawBoxesModelsList = createListFromFolderID(sawBoxesModelsFolder)
+
+    combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
+
+    surgicalGuideModel = slicer.modules.models.logic().AddModel(surgicalGuideBaseModel.GetPolyData())
+    surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('Fibular Surgical Guide'))
+
+    for i in range(len(cylindersModelsList)):
+      combineModelsLogic.process(surgicalGuideModel, cylindersModelsList[i], surgicalGuideModel, 'difference')
+
+    for i in range(len(sawBoxesModelsList)):
+      combineModelsLogic.process(surgicalGuideModel, sawBoxesModelsList[i], surgicalGuideModel, 'difference')
 
 #
 # BoneReconstructionPlannerTest
