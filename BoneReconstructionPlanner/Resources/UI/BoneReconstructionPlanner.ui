@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>434</width>
-    <height>716</height>
+    <height>900</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -172,13 +172,6 @@
           </property>
          </widget>
         </item>
-        <item row="8" column="1">
-         <widget class="QLineEdit" name="initialLineEdit">
-          <property name="text">
-           <string>0</string>
-          </property>
-         </widget>
-        </item>
         <item row="9" column="0">
          <widget class="QLabel" name="label_5">
           <property name="text">
@@ -186,21 +179,14 @@
           </property>
          </widget>
         </item>
-        <item row="9" column="1">
-         <widget class="QLineEdit" name="intersectionLineEdit">
-          <property name="text">
-           <string>0.25</string>
-          </property>
-         </widget>
-        </item>
-        <item row="10" column="0">
+        <item row="11" column="0">
          <widget class="QLabel" name="label_9">
           <property name="text">
            <string>Select mandible curve</string>
           </property>
          </widget>
         </item>
-        <item row="10" column="1">
+        <item row="11" column="1">
          <widget class="qMRMLNodeComboBox" name="mandibleCurveSelector">
           <property name="enabled">
            <bool>true</bool>
@@ -218,14 +204,14 @@
           </property>
          </widget>
         </item>
-        <item row="11" column="0">
+        <item row="12" column="0">
          <widget class="QLabel" name="label_11">
           <property name="text">
            <string>Select fibula line</string>
           </property>
          </widget>
         </item>
-        <item row="11" column="1">
+        <item row="12" column="1">
          <widget class="qMRMLNodeComboBox" name="fibulaLineSelector">
           <property name="enabled">
            <bool>true</bool>
@@ -240,6 +226,43 @@
           </property>
           <property name="removeEnabled">
            <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="1">
+         <widget class="ctkDoubleSpinBox" name="initialSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="1">
+         <widget class="ctkDoubleSpinBox" name="intersectionSpinBox">
+          <property name="maximum">
+           <double>0.990000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.010000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.250000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="0">
+         <widget class="QLabel" name="label_18">
+          <property name="text">
+           <string>Between space (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="1">
+         <widget class="ctkDoubleSpinBox" name="betweenSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="value">
+           <double>1.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -318,14 +341,23 @@
         <item row="0" column="0">
          <widget class="QLabel" name="label_16">
           <property name="text">
-           <string>Slit size</string>
+           <string>Slot width (mm)</string>
           </property>
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLabel" name="label_17">
-          <property name="text">
-           <string>1mm</string>
+         <widget class="ctkDoubleSpinBox" name="slotWidthSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>5.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>1.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -397,14 +429,23 @@
         <item row="2" column="0">
          <widget class="QLabel" name="label_14">
           <property name="text">
-           <string>Cylinder radius</string>
+           <string>Screw holes cylinders radius (mm)</string>
           </property>
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QLabel" name="label_15">
-          <property name="text">
-           <string>1.5mm</string>
+         <widget class="ctkDoubleSpinBox" name="cylinderRadiusSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>5.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>1.500000000000000</double>
           </property>
          </widget>
         </item>
@@ -423,6 +464,45 @@
      </layout>
     </widget>
    </item>
+   <item>
+    <widget class="ctkCollapsibleButton" name="CollapsibleButton_3">
+     <property name="text">
+      <string>Settings</string>
+     </property>
+     <property name="collapsed">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <layout class="QFormLayout" name="formLayout_4">
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_15">
+          <property name="text">
+           <string>Clearance (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="ctkDoubleSpinBox" name="clearanceSpinBox">
+          <property name="maximum">
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.010000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.200000000000000</double>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -431,6 +511,11 @@
    <extends>QWidget</extends>
    <header>ctkCollapsibleButton.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ctkDoubleSpinBox</class>
+   <extends>QWidget</extends>
+   <header>ctkDoubleSpinBox.h</header>
   </customwidget>
   <customwidget>
    <class>qMRMLNodeComboBox</class>

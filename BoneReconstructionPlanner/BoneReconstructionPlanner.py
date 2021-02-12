@@ -139,8 +139,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.surgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
-    self.ui.initialLineEdit.textEdited.connect(self.updateParameterNodeFromGUI)
-    self.ui.intersectionLineEdit.textEdited.connect(self.updateParameterNodeFromGUI)
+    self.ui.initialSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.intersectionSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.betweenSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.slotWidthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.cylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.clearanceSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
     self.ui.rightFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -254,8 +258,18 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("fiducialList"))
     self.ui.surgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("surgicalGuideBaseModel"))
     
-    self.ui.initialLineEdit.text = self._parameterNode.GetParameter("initialSpace")
-    self.ui.intersectionLineEdit.text = self._parameterNode.GetParameter("intersectionPlace")
+    if self._parameterNode.GetParameter("initialSpace") != '':
+      self.ui.initialSpinBox.setValue(float(self._parameterNode.GetParameter("initialSpace")))
+    if self._parameterNode.GetParameter("intersectionPlace") != '':
+      self.ui.intersectionSpinBox.setValue(float(self._parameterNode.GetParameter("intersectionPlace")))
+    if self._parameterNode.GetParameter("betweenSpace") != '':
+      self.ui.betweenSpinBox.setValue(float(self._parameterNode.GetParameter("betweenSpace")))
+    if self._parameterNode.GetParameter("slotWidth") != '':
+      self.ui.slotWidthSpinBox.setValue(float(self._parameterNode.GetParameter("slotWidth")))
+    if self._parameterNode.GetParameter("cylinderRadius") != '':
+      self.ui.cylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("cylinderRadius")))
+    if self._parameterNode.GetParameter("clearance") != '':
+      self.ui.clearanceSpinBox.setValue(float(self._parameterNode.GetParameter("clearance")))
 
     self.ui.rightFibulaCheckBox.checked = self._parameterNode.GetParameter("rightFibula") == "True"
 
@@ -281,24 +295,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetNodeReferenceID("fiducialList", self.ui.fiducialListSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("surgicalGuideBaseModel", self.ui.surgicalGuideBaseSelector.currentNodeID)
     
-    #Check if text in the lineEdit belongs to a float number, if not set zero
-    aux = self.ui.initialLineEdit.text.split(".")
-    if len(aux)<=2:
-      if("".join(aux).isdigit()):
-        self._parameterNode.SetParameter("initialSpace",self.ui.initialLineEdit.text)
-      else:
-        self._parameterNode.SetParameter("initialSpace","0")
-    else:
-        self._parameterNode.SetParameter("initialSpace","0")
-    
-    aux = self.ui.intersectionLineEdit.text.split(".")
-    if len(aux)<=2:
-      if("".join(aux).isdigit()):
-        self._parameterNode.SetParameter("intersectionPlace",self.ui.intersectionLineEdit.text)
-      else:
-        self._parameterNode.SetParameter("intersectionPlace","0.25")
-    else:
-        self._parameterNode.SetParameter("intersectionPlace","0.25")
+    self._parameterNode.SetParameter("initialSpace", str(self.ui.initialSpinBox.value))
+    self._parameterNode.SetParameter("intersectionPlace", str(self.ui.intersectionSpinBox.value))
+    self._parameterNode.SetParameter("betweenSpace", str(self.ui.betweenSpinBox.value))
+    self._parameterNode.SetParameter("slotWidth", str(self.ui.slotWidthSpinBox.value))
+    self._parameterNode.SetParameter("cylinderRadius", str(self.ui.cylinderRadiusSpinBox.value))
+    self._parameterNode.SetParameter("clearance", str(self.ui.clearanceSpinBox.value))
 
     if self.ui.rightFibulaCheckBox.checked:
       self._parameterNode.SetParameter("rightFibula","True")
@@ -528,6 +530,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
     initialSpace = float(parameterNode.GetParameter("initialSpace"))
     intersectionPlace = float(parameterNode.GetParameter("intersectionPlace"))
+    betweenSpaceAddition = float(parameterNode.GetParameter("betweenSpace"))
     rightFibulaChecked = parameterNode.GetParameter("rightFibula") == "True"
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
@@ -796,7 +799,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         betweenSpace.append(deltaz)
 
-        self.fibula2FibulaPlanesPositionA.append(self.fibula2FibulaPlanesPositionB[i-1] + fibulaZ*betweenSpace[i-1])
+        self.fibula2FibulaPlanesPositionA.append(self.fibula2FibulaPlanesPositionB[i-1] + fibulaZ*(betweenSpace[i-1]+betweenSpaceAddition))
 
       self.fibula2FibulaPlanesPositionB.append(self.fibula2FibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
 
@@ -1151,6 +1154,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def createSawBoxesFromFibulaPlanes(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    slotWidth = float(parameterNode.GetParameter("slotWidth"))
+    clearance = float(parameterNode.GetParameter("clearance"))
     rightFibulaChecked = parameterNode.GetParameter("rightFibula") == "True"
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
@@ -1184,7 +1189,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for i in range(len(fibulaPlanesList)):
       #sawBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
-      sawBoxModel = self.createSawBox(8,50,1,"sawBox%d" % i)
+      if i%2 == 0:
+        sawBoxName = "sawBox%d_A" % (i//2)
+      else:
+        sawBoxName = "sawBox%d_B" % (i//2)
+      sawBoxModel = self.createSawBox(8,50,slotWidth+clearance,sawBoxName)
       sawBoxModelItemID = shNode.GetItemByDataNode(sawBoxModel)
       shNode.SetItemParent(sawBoxModelItemID, sawBoxesModelsFolder)
 
@@ -1213,7 +1222,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransform = vtk.vtkTransform()
       finalTransform.PostMultiply()
       finalTransform.Concatenate(WorldToSawBoxAxisRotationMatrix)
-      finalTransform.Translate(fibulaPlaneOrigin)
+      if i%2 == 0:
+        finalTransform.Translate(fibulaPlaneOrigin-sawBoxAxisZ*slotWidth/2)
+      else:
+        finalTransform.Translate(fibulaPlaneOrigin+sawBoxAxisZ*slotWidth/2)
 
       transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
 
