@@ -1237,8 +1237,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     sawBoxSource.SetXLength(X)
     sawBoxSource.SetYLength(Y)
     sawBoxSource.SetZLength(Z)
-    sawBoxSource.Update()
-    sawBox.SetAndObservePolyData(sawBoxSource.GetOutput())
+    triangleFilter = vtk.vtkTriangleFilter()
+    triangleFilter.SetInputConnection(sawBoxSource.GetOutputPort())
+    triangleFilter.Update()
+    sawBox.SetAndObservePolyData(triangleFilter.GetOutput())
     return sawBox
 
 
@@ -1289,9 +1291,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       cylinderModelItemID = shNode.GetItemByDataNode(cylinderModel)
       shNode.SetItemParent(cylinderModelItemID, cylindersModelsFolder)
       
-      cylinderAxisX = [0,0,1]
-      cylinderAxisY = [1,0,0]
-      cylinderAxisZ = [0,1,0]
+      cylinderAxisX = [1,0,0]
+      cylinderAxisY = [0,1,0]
+      cylinderAxisZ = [0,0,1]
 
       cylinderAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(cylinderAxisX, cylinderAxisY, cylinderAxisZ)
       transformedCylinderAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(transformedCylinderAxisX, transformedCylinderAxisY, transformedCylinderAxisZ)
@@ -1326,13 +1328,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     cylinder.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
     slicer.mrmlScene.AddNode(cylinder)
     cylinder.CreateDefaultDisplayNodes()
-    cylinderSource = vtk.vtkCylinderSource()
-    cylinderSource.SetCenter(0,0,0)
-    cylinderSource.SetRadius(1.5)
-    cylinderSource.SetHeight(50)
-    cylinderSource.SetResolution(100)
-    cylinderSource.Update()
-    cylinder.SetAndObservePolyData(cylinderSource.GetOutput())
+    lineSource = vtk.vtkLineSource()
+    lineSource.SetPoint1(0, 0, 25)
+    lineSource.SetPoint2(0, 0, -25)
+    tubeFilter = vtk.vtkTubeFilter()
+    tubeFilter.SetInputConnection(lineSource.GetOutputPort())
+    tubeFilter.SetRadius(1.5)
+    tubeFilter.SetNumberOfSides(50)
+    tubeFilter.CappingOn()
+    tubeFilter.Update()
+    cylinder.SetAndObservePolyData(tubeFilter.GetOutput())
     return cylinder
 
 
