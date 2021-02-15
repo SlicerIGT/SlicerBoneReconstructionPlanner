@@ -143,6 +143,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.intersectionSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.betweenSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.slotWidthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.slotLengthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.slotHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.slotWallSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.cylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.clearanceSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
 
@@ -159,7 +162,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.createSawBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateSawBoxesFromFibulaPlanesButton)
     self.ui.createFiducialListButton.connect('clicked(bool)',self.onCreateFiducialListButton)
     self.ui.createCylindersFromFiducialListAndSurgicalGuideBaseButton.connect('clicked(bool)',self.onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton)
-    self.ui.makeBooleanDifferenceToSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanDifferenceToSurgicalGuideBaseButton)
+    self.ui.makeBooleanOperationsToSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToSurgicalGuideBaseButton)
 
 
     # Make sure parameter node is initialized (needed for module reload)
@@ -267,6 +270,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.betweenSpinBox.setValue(float(self._parameterNode.GetParameter("betweenSpace")))
     if self._parameterNode.GetParameter("slotWidth") != '':
       self.ui.slotWidthSpinBox.setValue(float(self._parameterNode.GetParameter("slotWidth")))
+    if self._parameterNode.GetParameter("slotLength") != '':
+      self.ui.slotLengthSpinBox.setValue(float(self._parameterNode.GetParameter("slotLength")))
+    if self._parameterNode.GetParameter("slotHeight") != '':
+      self.ui.slotHeightSpinBox.setValue(float(self._parameterNode.GetParameter("slotHeight")))
+    if self._parameterNode.GetParameter("slotWall") != '':
+      self.ui.slotWallSpinBox.setValue(float(self._parameterNode.GetParameter("slotWall")))
     if self._parameterNode.GetParameter("cylinderRadius") != '':
       self.ui.cylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("cylinderRadius")))
     if self._parameterNode.GetParameter("clearance") != '':
@@ -300,6 +309,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("intersectionPlace", str(self.ui.intersectionSpinBox.value))
     self._parameterNode.SetParameter("betweenSpace", str(self.ui.betweenSpinBox.value))
     self._parameterNode.SetParameter("slotWidth", str(self.ui.slotWidthSpinBox.value))
+    self._parameterNode.SetParameter("slotLength", str(self.ui.slotLengthSpinBox.value))
+    self._parameterNode.SetParameter("slotHeight", str(self.ui.slotHeightSpinBox.value))
+    self._parameterNode.SetParameter("slotWall", str(self.ui.slotWallSpinBox.value))
     self._parameterNode.SetParameter("cylinderRadius", str(self.ui.cylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("clearance", str(self.ui.clearanceSpinBox.value))
 
@@ -369,8 +381,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton(self):
     self.logic.createCylindersFromFiducialListAndSurgicalGuideBase()
 
-  def onMakeBooleanDifferenceToSurgicalGuideBaseButton(self):
-    self.logic.makeBooleanDifferenceToSurgicalGuideBase()
+  def onMakeBooleanOperationsToSurgicalGuideBaseButton(self):
+    self.logic.makeBooleanOperationsToSurgicalGuideBase()
 
 #
 # BoneReconstructionPlannerLogic
@@ -1133,6 +1145,34 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     intersectionModel.SetAndObservePolyData(cutter.GetOutput())
 
+  def getIntersectionBetweenModelAnd1Plane(self,modelNode,planeNode,intersectionModel):
+    plane = vtk.vtkPlane()
+    origin = [0,0,0]
+    normal = [0,0,0]
+    planeNode.GetOrigin(origin)
+    planeNode.GetNormal(normal)
+    plane.SetOrigin(origin)
+    plane.SetNormal(normal)
+
+    cutter = vtk.vtkCutter()
+    cutter.SetInputData(modelNode.GetPolyData())
+    cutter.SetCutFunction(plane)
+    cutter.Update()
+
+    intersectionModel.SetAndObservePolyData(cutter.GetOutput())
+
+  def getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(self,modelNode,normal,origin,intersectionModel):
+    plane = vtk.vtkPlane()
+    plane.SetOrigin(origin)
+    plane.SetNormal(normal)
+
+    clipper = vtk.vtkClipPolyData()
+    clipper.SetInputData(modelNode.GetPolyData())
+    clipper.SetClipFunction(plane)
+    clipper.Update()
+
+    intersectionModel.SetAndObservePolyData(clipper.GetOutput())
+
   def setupMandiblePlaneStraightOverMandibleCurve(self,planeNode,temporalOrigin, mandibleCurve, planeNodeObserver):
     closestCurvePoint = [0,0,0]
     closestCurvePointIndex = mandibleCurve.GetClosestPointPositionAlongCurveWorld(temporalOrigin,closestCurvePoint)
@@ -1155,10 +1195,38 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeNode.SetNthControlPointPositionFromArray(1,mandiblePlaneStraightOrigin + mandiblePlaneStraightX*dx)
     planeNode.SetNthControlPointPositionFromArray(2,mandiblePlaneStraightOrigin + mandiblePlaneStraightY*dy)
 
+  def getAverageNormalFromModelWithSemiIntersectionModel(self,model,semiIntersectionModel):
+    pointsOfSemiIntersectionModel = slicer.util.arrayFromModelPoints(semiIntersectionModel)
+
+    normalsOfModel = slicer.util.arrayFromModelPointData(model, 'Normals')
+    
+    modelMesh = model.GetMesh()
+
+    averageNormal = np.array([0,0,0])
+    for i in range(len(pointsOfSemiIntersectionModel)):
+      pointID = modelMesh.FindPoint(pointsOfSemiIntersectionModel[i])
+
+      normalAtPointID = normalsOfModel[pointID]
+
+      averageNormal = averageNormal + normalAtPointID
+    
+    averageNormal = averageNormal/len(pointsOfSemiIntersectionModel)
+
+    return averageNormal
+
+  def getCentroid(self,model):
+    pd = model.GetPolyData().GetPoints().GetData()
+    from vtk.util.numpy_support import vtk_to_numpy
+    return np.average(vtk_to_numpy(pd), axis=0)
+  
   def createSawBoxesFromFibulaPlanes(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    fibulaModel = parameterNode.GetNodeReference("fibulaModel")
     slotWidth = float(parameterNode.GetParameter("slotWidth"))
+    slotLength = float(parameterNode.GetParameter("slotLength"))
+    slotHeight = float(parameterNode.GetParameter("slotHeight"))
+    slotWall = float(parameterNode.GetParameter("slotWall"))
     clearance = float(parameterNode.GetParameter("clearance"))
     rightFibulaChecked = parameterNode.GetParameter("rightFibula") == "True"
 
@@ -1167,9 +1235,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
     sawBoxesModelsFolder = shNode.GetItemByName("sawBoxes Models")
     shNode.RemoveItem(sawBoxesModelsFolder)
+    biggerSawBoxesModelsFolder = shNode.GetItemByName("biggerSawBoxes Models")
+    shNode.RemoveItem(biggerSawBoxesModelsFolder)
     sawBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"sawBoxes Models")
+    biggerSawBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"biggerSawBoxes Models")
     sawBoxesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"sawBoxes Transforms")
-    
+    intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
+    semiIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"SemiIntersections")
+
     #Create fibula axis:
     lineStartPos = np.zeros(3)
     lineEndPos = np.zeros(3)
@@ -1195,21 +1268,50 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       #sawBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
       if i%2 == 0:
         sawBoxName = "sawBox%d_A" % (i//2)
+        biggerSawBoxName = "biggerSawBox%d_A" % (i//2)
       else:
         sawBoxName = "sawBox%d_B" % (i//2)
-      sawBoxModel = self.createSawBox(8,50,slotWidth+clearance,sawBoxName)
+        biggerSawBoxName = "biggerSawBox%d_B" % (i//2)
+      sawBoxModel = self.createSawBox(slotLength,50,slotWidth+2*clearance,sawBoxName)
       sawBoxModelItemID = shNode.GetItemByDataNode(sawBoxModel)
       shNode.SetItemParent(sawBoxModelItemID, sawBoxesModelsFolder)
 
-      fibulaPlanematrix = vtk.vtkMatrix4x4()
-      fibulaPlanesList[i].GetPlaneToWorldMatrix(fibulaPlanematrix)
-      fibulaPlaneZ = np.array([fibulaPlanematrix.GetElement(0,2),fibulaPlanematrix.GetElement(1,2),fibulaPlanematrix.GetElement(2,2)])
-      fibulaPlaneOrigin = np.array([fibulaPlanematrix.GetElement(0,3),fibulaPlanematrix.GetElement(1,3),fibulaPlanematrix.GetElement(2,3)])
+      biggerSawBoxModel = self.createSawBox(slotLength+2*slotWall,2*slotHeight,slotWidth+2*clearance+2*slotWall,biggerSawBoxName)
+      biggerSawBoxModelItemID = shNode.GetItemByDataNode(biggerSawBoxModel)
+      shNode.SetItemParent(biggerSawBoxModelItemID, biggerSawBoxesModelsFolder)
 
+      fibulaPlaneMatrix = vtk.vtkMatrix4x4()
+      fibulaPlanesList[i].GetPlaneToWorldMatrix(fibulaPlaneMatrix)
+      fibulaPlaneZ = np.array([fibulaPlaneMatrix.GetElement(0,2),fibulaPlaneMatrix.GetElement(1,2),fibulaPlaneMatrix.GetElement(2,2)])
+      fibulaPlaneOrigin = np.array([fibulaPlaneMatrix.GetElement(0,3),fibulaPlaneMatrix.GetElement(1,3),fibulaPlaneMatrix.GetElement(2,3)])
+
+      if i%2 == 0:
+        intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % (i//2))
+        intersectionModel.CreateDefaultDisplayNodes()
+        self.getIntersectionBetweenModelAnd1Plane(self.fibulaModelNode,fibulaPlanesList[i],intersectionModel)
+        semiIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','semiIntersection%d_A' % (i//2))
+        semiIntersectionModel.CreateDefaultDisplayNodes()
+        intersectionModelCentroid = self.getCentroid(intersectionModel)
+        self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(intersectionModel,-fibulaZ,intersectionModelCentroid,semiIntersectionModel)
+      else:
+        intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % (i//2))
+        intersectionModel.CreateDefaultDisplayNodes()
+        self.getIntersectionBetweenModelAnd1Plane(self.fibulaModelNode,fibulaPlanesList[i],intersectionModel)
+        semiIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','semiIntersection%d_B' % (i//2))
+        semiIntersectionModel.CreateDefaultDisplayNodes()
+        intersectionModelCentroid = self.getCentroid(intersectionModel)
+        self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(intersectionModel,fibulaZ,intersectionModelCentroid,semiIntersectionModel)
+      intersectionModelItemID = shNode.GetItemByDataNode(intersectionModel)
+      shNode.SetItemParent(intersectionModelItemID, intersectionsFolder)
+      semiIntersectionModelItemID = shNode.GetItemByDataNode(semiIntersectionModel)
+      shNode.SetItemParent(semiIntersectionModelItemID, semiIntersectionsFolder)
+
+      averageNormalY = self.getAverageNormalFromModelWithSemiIntersectionModel(self.fibulaModelNode,semiIntersectionModel)
+      
       sawBoxAxisX = [0,0,0]
       sawBoxAxisY =  [0,0,0]
       sawBoxAxisZ = fibulaPlaneZ
-      vtk.vtkMath.Cross(fibulaX, sawBoxAxisZ, sawBoxAxisX)#medial cross normal
+      vtk.vtkMath.Cross(averageNormalY, sawBoxAxisZ, sawBoxAxisX)#medial cross normal
       sawBoxAxisX = sawBoxAxisX/np.linalg.norm(sawBoxAxisX)
       vtk.vtkMath.Cross(sawBoxAxisZ, sawBoxAxisX, sawBoxAxisY)# approximately medial
       sawBoxAxisY = sawBoxAxisY/np.linalg.norm(sawBoxAxisY)
@@ -1227,9 +1329,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransform.PostMultiply()
       finalTransform.Concatenate(WorldToSawBoxAxisRotationMatrix)
       if i%2 == 0:
-        finalTransform.Translate(fibulaPlaneOrigin-sawBoxAxisZ*slotWidth/2)
+        finalTransform.Translate(intersectionModelCentroid-sawBoxAxisZ*slotWidth/2)
       else:
-        finalTransform.Translate(fibulaPlaneOrigin+sawBoxAxisZ*slotWidth/2)
+        finalTransform.Translate(intersectionModelCentroid+sawBoxAxisZ*slotWidth/2)
 
       transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
 
@@ -1237,11 +1339,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       sawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
       sawBoxModel.HardenTransform()
+      biggerSawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
+      biggerSawBoxModel.HardenTransform()
       
       transformNodeItemID = shNode.GetItemByDataNode(transformNode)
       shNode.SetItemParent(transformNodeItemID, sawBoxesTransformsFolder)
     
     shNode.RemoveItem(sawBoxesTransformsFolder)
+    shNode.RemoveItem(intersectionsFolder)
+    shNode.RemoveItem(semiIntersectionsFolder)
 
   
   def createSawBox(self, X, Y, Z, name):
@@ -1354,7 +1460,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     cylinder.SetAndObservePolyData(tubeFilter.GetOutput())
     return cylinder
 
-  def makeBooleanDifferenceToSurgicalGuideBase(self):
+  def makeBooleanOperationsToSurgicalGuideBase(self):
     parameterNode = self.getParameterNode()
     surgicalGuideBaseModel = parameterNode.GetNodeReference("surgicalGuideBaseModel")
 
@@ -1363,17 +1469,24 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     cylindersModelsList = createListFromFolderID(cylindersModelsFolder)
     sawBoxesModelsFolder = shNode.GetItemByName("sawBoxes Models")
     sawBoxesModelsList = createListFromFolderID(sawBoxesModelsFolder)
+    biggerSawBoxesModelsFolder = shNode.GetItemByName("biggerSawBoxes Models")
+    biggerSawBoxesModelsList = createListFromFolderID(biggerSawBoxesModelsFolder)
 
     combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(surgicalGuideBaseModel.GetPolyData())
-    surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('Fibular Surgical Guide'))
+    surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibularSurgicalGuidePrototype'))
+
+    for i in range(len(biggerSawBoxesModelsList)):
+      combineModelsLogic.process(surgicalGuideModel, biggerSawBoxesModelsList[i], surgicalGuideModel, 'union')
 
     for i in range(len(cylindersModelsList)):
       combineModelsLogic.process(surgicalGuideModel, cylindersModelsList[i], surgicalGuideModel, 'difference')
 
     for i in range(len(sawBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, sawBoxesModelsList[i], surgicalGuideModel, 'difference')
+
+    #combineModelsLogic.process(surgicalGuideModel, self.fibulaModelNode, surgicalGuideModel, 'difference')
 
 #
 # BoneReconstructionPlannerTest
