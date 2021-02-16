@@ -346,7 +346,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="ctkDoubleSpinBox" name="slotWidthSpinBox">
+         <widget class="ctkDoubleSpinBox" name="miterBoxSlotWidthSpinBox">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -369,7 +369,7 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="ctkDoubleSpinBox" name="slotLengthSpinBox">
+         <widget class="ctkDoubleSpinBox" name="miterBoxSlotLengthSpinBox">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -412,7 +412,7 @@
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="ctkDoubleSpinBox" name="slotHeightSpinBox">
+         <widget class="ctkDoubleSpinBox" name="miterBoxSlotHeightSpinBox">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -497,7 +497,7 @@
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="ctkDoubleSpinBox" name="cylinderRadiusSpinBox">
+         <widget class="ctkDoubleSpinBox" name="screwHoleCylinderRadiusSpinBox">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -557,7 +557,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="ctkDoubleSpinBox" name="clearanceSpinBox">
+         <widget class="ctkDoubleSpinBox" name="clearanceFitPrintingToleranceSpinBox">
           <property name="maximum">
            <double>1.000000000000000</double>
           </property>
