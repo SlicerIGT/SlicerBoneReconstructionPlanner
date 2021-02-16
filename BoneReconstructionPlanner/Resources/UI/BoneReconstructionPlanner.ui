@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>434</width>
-    <height>900</height>
+    <height>994</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -525,9 +525,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="makeBooleanDifferenceToSurgicalGuideBaseButton">
+       <widget class="QPushButton" name="makeBooleanOperationsToSurgicalGuideBaseButton">
         <property name="text">
-         <string>Make boolean difference to surgical guide base with
+         <string>Make boolean operations to surgical guide base with
  screwHolesCylinders and miterBoxes</string>
         </property>
        </widget>
