@@ -427,9 +427,9 @@
        </layout>
       </item>
       <item>
-       <widget class="QPushButton" name="createSawBoxesFromFibulaPlanesButton">
+       <widget class="QPushButton" name="createMiterBoxesFromFibulaPlanesButton">
         <property name="text">
-         <string>Create saw boxes from fibula planes</string>
+         <string>Create miter boxes from fibula planes</string>
         </property>
        </widget>
       </item>

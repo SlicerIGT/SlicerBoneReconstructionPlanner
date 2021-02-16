@@ -159,7 +159,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.updateFibulaPiecesButton.connect('clicked(bool)',self.onUpdateFibulaPiecesButton)
     self.ui.bonesToMandibleButton.connect('clicked(bool)',self.onBonesToMandibleButton)
     self.ui.mandibularAutomaticPositioningButton.connect('clicked(bool)',self.onMandibularAutomaticPositioningButton)
-    self.ui.createSawBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateSawBoxesFromFibulaPlanesButton)
+    self.ui.createMiterBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateMiterBoxesFromFibulaPlanesButton)
     self.ui.createFiducialListButton.connect('clicked(bool)',self.onCreateFiducialListButton)
     self.ui.createCylindersFromFiducialListAndSurgicalGuideBaseButton.connect('clicked(bool)',self.onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton)
     self.ui.makeBooleanOperationsToSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToSurgicalGuideBaseButton)
@@ -371,8 +371,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onMandibularAutomaticPositioningButton(self):
     self.logic.mandiblePlanesPositioningForMaximumBoneContact()
 
-  def onCreateSawBoxesFromFibulaPlanesButton(self):
-    self.logic.createSawBoxesFromFibulaPlanes()
+  def onCreateMiterBoxesFromFibulaPlanesButton(self):
+    self.logic.createMiterBoxesFromFibulaPlanes()
 
   def onCreateFiducialListButton(self):
     self.logic.createFiducialList()
@@ -1219,7 +1219,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     from vtk.util.numpy_support import vtk_to_numpy
     return np.average(vtk_to_numpy(pd), axis=0)
   
-  def createSawBoxesFromFibulaPlanes(self):
+  def createMiterBoxesFromFibulaPlanes(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     fibulaModel = parameterNode.GetNodeReference("fibulaModel")
@@ -1233,13 +1233,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
     fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
-    sawBoxesModelsFolder = shNode.GetItemByName("sawBoxes Models")
-    shNode.RemoveItem(sawBoxesModelsFolder)
-    biggerSawBoxesModelsFolder = shNode.GetItemByName("biggerSawBoxes Models")
-    shNode.RemoveItem(biggerSawBoxesModelsFolder)
-    sawBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"sawBoxes Models")
-    biggerSawBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"biggerSawBoxes Models")
-    sawBoxesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"sawBoxes Transforms")
+    miterBoxesModelsFolder = shNode.GetItemByName("miterBoxes Models")
+    shNode.RemoveItem(miterBoxesModelsFolder)
+    biggerMiterBoxesModelsFolder = shNode.GetItemByName("biggerMiterBoxes Models")
+    shNode.RemoveItem(biggerMiterBoxesModelsFolder)
+    miterBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"miterBoxes Models")
+    biggerMiterBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"biggerMiterBoxes Models")
+    miterBoxesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"miterBoxes Transforms")
     intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
     semiIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"SemiIntersections")
 
@@ -1265,20 +1265,20 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaY = fibulaY/np.linalg.norm(fibulaY)
 
     for i in range(len(fibulaPlanesList)):
-      #sawBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
+      #miterBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
       if i%2 == 0:
-        sawBoxName = "sawBox%d_A" % (i//2)
-        biggerSawBoxName = "biggerSawBox%d_A" % (i//2)
+        miterBoxName = "miterBox%d_A" % (i//2)
+        biggerMiterBoxName = "biggerMiterBox%d_A" % (i//2)
       else:
-        sawBoxName = "sawBox%d_B" % (i//2)
-        biggerSawBoxName = "biggerSawBox%d_B" % (i//2)
-      sawBoxModel = self.createSawBox(slotLength,50,slotWidth+2*clearance,sawBoxName)
-      sawBoxModelItemID = shNode.GetItemByDataNode(sawBoxModel)
-      shNode.SetItemParent(sawBoxModelItemID, sawBoxesModelsFolder)
+        miterBoxName = "miterBox%d_B" % (i//2)
+        biggerMiterBoxName = "biggerMiterBox%d_B" % (i//2)
+      miterBoxModel = self.createMiterBox(slotLength,50,slotWidth+2*clearance,miterBoxName)
+      miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
+      shNode.SetItemParent(miterBoxModelItemID, miterBoxesModelsFolder)
 
-      biggerSawBoxModel = self.createSawBox(slotLength+2*slotWall,2*slotHeight,slotWidth+2*clearance+2*slotWall,biggerSawBoxName)
-      biggerSawBoxModelItemID = shNode.GetItemByDataNode(biggerSawBoxModel)
-      shNode.SetItemParent(biggerSawBoxModelItemID, biggerSawBoxesModelsFolder)
+      biggerMiterBoxModel = self.createMiterBox(slotLength+2*slotWall,2*slotHeight,slotWidth+2*clearance+2*slotWall,biggerMiterBoxName)
+      biggerMiterBoxModelItemID = shNode.GetItemByDataNode(biggerMiterBoxModel)
+      shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
 
       fibulaPlaneMatrix = vtk.vtkMatrix4x4()
       fibulaPlanesList[i].GetPlaneToWorldMatrix(fibulaPlaneMatrix)
@@ -1308,18 +1308,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       averageNormalY = self.getAverageNormalFromModelWithSemiIntersectionModel(self.fibulaModelNode,semiIntersectionModel)
       
-      sawBoxAxisX = [0,0,0]
-      sawBoxAxisY =  [0,0,0]
-      sawBoxAxisZ = fibulaPlaneZ
-      vtk.vtkMath.Cross(averageNormalY, sawBoxAxisZ, sawBoxAxisX)#medial cross normal
-      sawBoxAxisX = sawBoxAxisX/np.linalg.norm(sawBoxAxisX)
-      vtk.vtkMath.Cross(sawBoxAxisZ, sawBoxAxisX, sawBoxAxisY)# approximately medial
-      sawBoxAxisY = sawBoxAxisY/np.linalg.norm(sawBoxAxisY)
+      miterBoxAxisX = [0,0,0]
+      miterBoxAxisY =  [0,0,0]
+      miterBoxAxisZ = fibulaPlaneZ
+      vtk.vtkMath.Cross(averageNormalY, miterBoxAxisZ, miterBoxAxisX)#medial cross normal
+      miterBoxAxisX = miterBoxAxisX/np.linalg.norm(miterBoxAxisX)
+      vtk.vtkMath.Cross(miterBoxAxisZ, miterBoxAxisX, miterBoxAxisY)# approximately medial
+      miterBoxAxisY = miterBoxAxisY/np.linalg.norm(miterBoxAxisY)
 
-      sawBoxAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(sawBoxAxisX, sawBoxAxisY, sawBoxAxisZ)
+      miterBoxAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(miterBoxAxisX, miterBoxAxisY, miterBoxAxisZ)
       WorldToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix([1,0,0], [0,1,0], [0,0,1])
 
-      WorldToSawBoxAxisRotationMatrix = self.getAxes1ToAxes2RotationMatrix(WorldToWorldRotationMatrix, sawBoxAxisToWorldRotationMatrix)
+      WorldToMiterBoxAxisRotationMatrix = self.getAxes1ToAxes2RotationMatrix(WorldToWorldRotationMatrix, miterBoxAxisToWorldRotationMatrix)
 
       transformNode = slicer.vtkMRMLLinearTransformNode()
       transformNode.SetName("temp%d" % i)
@@ -1327,43 +1327,43 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       finalTransform = vtk.vtkTransform()
       finalTransform.PostMultiply()
-      finalTransform.Concatenate(WorldToSawBoxAxisRotationMatrix)
+      finalTransform.Concatenate(WorldToMiterBoxAxisRotationMatrix)
       if i%2 == 0:
-        finalTransform.Translate(intersectionModelCentroid-sawBoxAxisZ*slotWidth/2)
+        finalTransform.Translate(intersectionModelCentroid-miterBoxAxisZ*slotWidth/2)
       else:
-        finalTransform.Translate(intersectionModelCentroid+sawBoxAxisZ*slotWidth/2)
+        finalTransform.Translate(intersectionModelCentroid+miterBoxAxisZ*slotWidth/2)
 
       transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
 
       transformNode.UpdateScene(slicer.mrmlScene)
 
-      sawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
-      sawBoxModel.HardenTransform()
-      biggerSawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
-      biggerSawBoxModel.HardenTransform()
+      miterBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
+      miterBoxModel.HardenTransform()
+      biggerMiterBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
+      biggerMiterBoxModel.HardenTransform()
       
       transformNodeItemID = shNode.GetItemByDataNode(transformNode)
-      shNode.SetItemParent(transformNodeItemID, sawBoxesTransformsFolder)
+      shNode.SetItemParent(transformNodeItemID, miterBoxesTransformsFolder)
     
-    shNode.RemoveItem(sawBoxesTransformsFolder)
+    shNode.RemoveItem(miterBoxesTransformsFolder)
     shNode.RemoveItem(intersectionsFolder)
     shNode.RemoveItem(semiIntersectionsFolder)
 
   
-  def createSawBox(self, X, Y, Z, name):
-    sawBox = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
-    sawBox.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
-    slicer.mrmlScene.AddNode(sawBox)
-    sawBox.CreateDefaultDisplayNodes()
-    sawBoxSource = vtk.vtkCubeSource()
-    sawBoxSource.SetXLength(X)
-    sawBoxSource.SetYLength(Y)
-    sawBoxSource.SetZLength(Z)
+  def createMiterBox(self, X, Y, Z, name):
+    miterBox = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+    miterBox.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
+    slicer.mrmlScene.AddNode(miterBox)
+    miterBox.CreateDefaultDisplayNodes()
+    miterBoxSource = vtk.vtkCubeSource()
+    miterBoxSource.SetXLength(X)
+    miterBoxSource.SetYLength(Y)
+    miterBoxSource.SetZLength(Z)
     triangleFilter = vtk.vtkTriangleFilter()
-    triangleFilter.SetInputConnection(sawBoxSource.GetOutputPort())
+    triangleFilter.SetInputConnection(miterBoxSource.GetOutputPort())
     triangleFilter.Update()
-    sawBox.SetAndObservePolyData(triangleFilter.GetOutput())
-    return sawBox
+    miterBox.SetAndObservePolyData(triangleFilter.GetOutput())
+    return miterBox
 
 
   def createFiducialList(self):
@@ -1467,24 +1467,24 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     cylindersModelsFolder = shNode.GetItemByName("Cylinders Models")
     cylindersModelsList = createListFromFolderID(cylindersModelsFolder)
-    sawBoxesModelsFolder = shNode.GetItemByName("sawBoxes Models")
-    sawBoxesModelsList = createListFromFolderID(sawBoxesModelsFolder)
-    biggerSawBoxesModelsFolder = shNode.GetItemByName("biggerSawBoxes Models")
-    biggerSawBoxesModelsList = createListFromFolderID(biggerSawBoxesModelsFolder)
+    miterBoxesModelsFolder = shNode.GetItemByName("miterBoxes Models")
+    miterBoxesModelsList = createListFromFolderID(miterBoxesModelsFolder)
+    biggerMiterBoxesModelsFolder = shNode.GetItemByName("biggerMiterBoxes Models")
+    biggerMiterBoxesModelsList = createListFromFolderID(biggerMiterBoxesModelsFolder)
 
     combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(surgicalGuideBaseModel.GetPolyData())
     surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibularSurgicalGuidePrototype'))
 
-    for i in range(len(biggerSawBoxesModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, biggerSawBoxesModelsList[i], surgicalGuideModel, 'union')
+    for i in range(len(biggerMiterBoxesModelsList)):
+      combineModelsLogic.process(surgicalGuideModel, biggerMiterBoxesModelsList[i], surgicalGuideModel, 'union')
 
     for i in range(len(cylindersModelsList)):
       combineModelsLogic.process(surgicalGuideModel, cylindersModelsList[i], surgicalGuideModel, 'difference')
 
-    for i in range(len(sawBoxesModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, sawBoxesModelsList[i], surgicalGuideModel, 'difference')
+    for i in range(len(miterBoxesModelsList)):
+      combineModelsLogic.process(surgicalGuideModel, miterBoxesModelsList[i], surgicalGuideModel, 'difference')
 
     #combineModelsLogic.process(surgicalGuideModel, self.fibulaModelNode, surgicalGuideModel, 'difference')
 
