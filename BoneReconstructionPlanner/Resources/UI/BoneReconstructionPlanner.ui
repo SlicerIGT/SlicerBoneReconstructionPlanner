@@ -424,6 +424,54 @@
           </property>
          </widget>
         </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="label_21">
+          <property name="text">
+           <string>Bigger miter box distance to fibula (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="ctkDoubleSpinBox" name="biggerMiterBoxDistanceToFibulaSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>50.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>3.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="label_22">
+          <property name="text">
+           <string>Miter box direction line</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="qMRMLNodeComboBox" name="miterBoxDirectionLineSelector">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="nodeTypes">
+           <stringlist>
+            <string>vtkMRMLMarkupsLineNode</string>
+           </stringlist>
+          </property>
+          <property name="addEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="removeEnabled">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
       <item>
@@ -732,6 +780,22 @@
     <hint type="destinationlabel">
      <x>297</x>
      <y>634</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>miterBoxDirectionLineSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>216</x>
+     <y>496</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>314</x>
+     <y>712</y>
     </hint>
    </hints>
   </connection>

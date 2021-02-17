@@ -138,6 +138,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.surgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.miterBoxDirectionLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
     self.ui.initialSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.intersectionSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -148,6 +149,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.slotWallSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.screwHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.clearanceFitPrintingToleranceSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.biggerMiterBoxDistanceToFibulaSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
     self.ui.rightFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -261,7 +263,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSegmentation"))
     self.ui.fiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("fiducialList"))
     self.ui.surgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("surgicalGuideBaseModel"))
-    
+    self.ui.miterBoxDirectionLineSelector.setCurrentNode(self._parameterNode.GetNodeReference("miterBoxDirectionLine"))
+
     if self._parameterNode.GetParameter("initialSpace") != '':
       self.ui.initialSpinBox.setValue(float(self._parameterNode.GetParameter("initialSpace")))
     if self._parameterNode.GetParameter("intersectionPlaceOfFibulaPlanes") != '':
@@ -280,6 +283,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.screwHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("screwHoleCylinderRadius")))
     if self._parameterNode.GetParameter("clearanceFitPrintingTolerance") != '':
       self.ui.clearanceFitPrintingToleranceSpinBox.setValue(float(self._parameterNode.GetParameter("clearanceFitPrintingTolerance")))
+    if self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula") != '':
+      self.ui.biggerMiterBoxDistanceToFibulaSpinBox.setValue(float(self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula")))
 
     self.ui.rightFibulaCheckBox.checked = self._parameterNode.GetParameter("rightFibula") == "True"
 
@@ -304,7 +309,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetNodeReferenceID("fibulaSegmentation", self.ui.fibulaSegmentationSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fiducialList", self.ui.fiducialListSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("surgicalGuideBaseModel", self.ui.surgicalGuideBaseSelector.currentNodeID)
-    
+    self._parameterNode.SetNodeReferenceID("miterBoxDirectionLine", self.ui.miterBoxDirectionLineSelector.currentNodeID)
+
     self._parameterNode.SetParameter("initialSpace", str(self.ui.initialSpinBox.value))
     self._parameterNode.SetParameter("intersectionPlaceOfFibulaPlanes", str(self.ui.intersectionSpinBox.value))
     self._parameterNode.SetParameter("additionalBetweenSpaceOfFibulaPlanes", str(self.ui.betweenSpinBox.value))
@@ -314,6 +320,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("slotWall", str(self.ui.slotWallSpinBox.value))
     self._parameterNode.SetParameter("screwHoleCylinderRadius", str(self.ui.screwHoleCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("clearanceFitPrintingTolerance", str(self.ui.clearanceFitPrintingToleranceSpinBox.value))
+    self._parameterNode.SetParameter("biggerMiterBoxDistanceToFibula", str(self.ui.biggerMiterBoxDistanceToFibulaSpinBox.value))
 
     if self.ui.rightFibulaCheckBox.checked:
       self._parameterNode.SetParameter("rightFibula","True")
@@ -1161,6 +1168,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     intersectionModel.SetAndObservePolyData(cutter.GetOutput())
 
+  def getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(self,modelNode,normal,origin,intersectionModel):
+    plane = vtk.vtkPlane()
+    plane.SetOrigin(origin)
+    plane.SetNormal(normal)
+
+    cutter = vtk.vtkCutter()
+    cutter.SetInputData(modelNode.GetPolyData())
+    cutter.SetCutFunction(plane)
+    cutter.Update()
+
+    intersectionModel.SetAndObservePolyData(cutter.GetOutput())
+
   def getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(self,modelNode,normal,origin,intersectionModel):
     plane = vtk.vtkPlane()
     plane.SetOrigin(origin)
@@ -1222,12 +1241,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def createMiterBoxesFromFibulaPlanes(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
-    fibulaModel = parameterNode.GetNodeReference("fibulaModel")
+    miterBoxDirectionLine = parameterNode.GetNodeReference("miterBoxDirectionLine")
     miterBoxSlotWidth = float(parameterNode.GetParameter("miterBoxSlotWidth"))
     miterBoxSlotLength = float(parameterNode.GetParameter("miterBoxSlotLength"))
     miterBoxSlotHeight = float(parameterNode.GetParameter("miterBoxSlotHeight"))
     slotWall = float(parameterNode.GetParameter("slotWall"))
     clearanceFitPrintingTolerance = float(parameterNode.GetParameter("clearanceFitPrintingTolerance"))
+    biggerMiterBoxDistanceToFibula = float(parameterNode.GetParameter("biggerMiterBoxDistanceToFibula"))
     rightFibulaChecked = parameterNode.GetParameter("rightFibula") == "True"
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
@@ -1242,6 +1262,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     miterBoxesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"miterBoxes Transforms")
     intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
     semiIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"SemiIntersections")
+    pointIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Point Intersections")
 
     #Create fibula axis:
     lineStartPos = np.zeros(3)
@@ -1272,7 +1293,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         miterBoxName = "miterBox%d_B" % (i//2)
         biggerMiterBoxName = "biggerMiterBox%d_B" % (i//2)
-      miterBoxModel = self.createMiterBox(miterBoxSlotLength,50,miterBoxSlotWidth+2*clearanceFitPrintingTolerance,miterBoxName)
+      miterBoxModel = self.createMiterBox(miterBoxSlotLength,70,miterBoxSlotWidth+2*clearanceFitPrintingTolerance,miterBoxName)
       miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
       shNode.SetItemParent(miterBoxModelItemID, miterBoxesModelsFolder)
 
@@ -1306,8 +1327,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       semiIntersectionModelItemID = shNode.GetItemByDataNode(semiIntersectionModel)
       shNode.SetItemParent(semiIntersectionModelItemID, semiIntersectionsFolder)
 
-      averageNormalY = self.getAverageNormalFromModelWithSemiIntersectionModel(self.fibulaModelNode,semiIntersectionModel)
-      
+      #averageNormalY = self.getAverageNormalFromModelWithSemiIntersectionModel(self.fibulaModelNode,semiIntersectionModel)
+      lineStartPos = np.zeros(3)
+      lineEndPos = np.zeros(3)
+      miterBoxDirectionLine.GetNthControlPointPositionWorld(0, lineStartPos)
+      miterBoxDirectionLine.GetNthControlPointPositionWorld(1, lineEndPos)
+      averageNormalY = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+
       miterBoxAxisX = [0,0,0]
       miterBoxAxisY =  [0,0,0]
       miterBoxAxisZ = fibulaPlaneZ
@@ -1315,6 +1341,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxAxisX = miterBoxAxisX/np.linalg.norm(miterBoxAxisX)
       vtk.vtkMath.Cross(miterBoxAxisZ, miterBoxAxisX, miterBoxAxisY)# approximately medial
       miterBoxAxisY = miterBoxAxisY/np.linalg.norm(miterBoxAxisY)
+
+      normalToMiterBoxAxisYandFibulaZ = [0,0,0]
+      vtk.vtkMath.Cross(miterBoxAxisY, fibulaZ, normalToMiterBoxAxisYandFibulaZ)
+      normalToMiterBoxAxisYandFibulaZ = normalToMiterBoxAxisYandFibulaZ/np.linalg.norm(normalToMiterBoxAxisYandFibulaZ)
+      if i%2 == 0:
+        pointIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','pointIntersection%d_A' % (i//2))
+      else:
+        pointIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','pointIntersection%d_B' % (i//2))
+      self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(semiIntersectionModel,normalToMiterBoxAxisYandFibulaZ,intersectionModelCentroid,pointIntersectionModel)
+      pointIntersectionModelItemID = shNode.GetItemByDataNode(pointIntersectionModel)
+      shNode.SetItemParent(pointIntersectionModelItemID, pointIntersectionsFolder)
+
+      pointIntersectionModelCentroid = self.getCentroid(pointIntersectionModel)
 
       miterBoxAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(miterBoxAxisX, miterBoxAxisY, miterBoxAxisZ)
       WorldToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix([1,0,0], [0,1,0], [0,0,1])
@@ -1329,9 +1368,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransform.PostMultiply()
       finalTransform.Concatenate(WorldToMiterBoxAxisRotationMatrix)
       if i%2 == 0:
-        finalTransform.Translate(intersectionModelCentroid-miterBoxAxisZ*miterBoxSlotWidth/2)
+        finalTransform.Translate(pointIntersectionModelCentroid+miterBoxAxisY*(miterBoxSlotHeight+biggerMiterBoxDistanceToFibula)-miterBoxAxisZ*miterBoxSlotWidth/2)
       else:
-        finalTransform.Translate(intersectionModelCentroid+miterBoxAxisZ*miterBoxSlotWidth/2)
+        finalTransform.Translate(pointIntersectionModelCentroid+miterBoxAxisY*(miterBoxSlotHeight+biggerMiterBoxDistanceToFibula)+miterBoxAxisZ*miterBoxSlotWidth/2)
 
       transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
 
@@ -1348,6 +1387,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(miterBoxesTransformsFolder)
     shNode.RemoveItem(intersectionsFolder)
     shNode.RemoveItem(semiIntersectionsFolder)
+    shNode.RemoveItem(pointIntersectionsFolder)
 
   
   def createMiterBox(self, X, Y, Z, name):
