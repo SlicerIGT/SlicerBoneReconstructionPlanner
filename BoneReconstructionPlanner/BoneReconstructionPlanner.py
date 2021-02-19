@@ -1526,7 +1526,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(surgicalGuideBaseModel.GetPolyData())
-    surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibularSurgicalGuidePrototype'))
+    surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibulaSurgicalGuidePrototype'))
 
     for i in range(len(biggerMiterBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, biggerMiterBoxesModelsList[i], surgicalGuideModel, 'union')
