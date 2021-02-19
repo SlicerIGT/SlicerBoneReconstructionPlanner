@@ -1305,12 +1305,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         miterBoxName = "miterBox%d_B" % (i//2)
         biggerMiterBoxName = "biggerMiterBox%d_B" % (i//2)
-      miterBoxModel = self.createMiterBox(miterBoxSlotLength,70,miterBoxSlotWidth+2*clearanceFitPrintingTolerance,miterBoxName)
+      miterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance
+      miterBoxLength = miterBoxSlotLength
+      miterBoxHeight = 70
+      miterBoxModel = self.createMiterBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
       miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
       shNode.SetItemParent(miterBoxModelItemID, miterBoxesModelsFolder)
 
       biggerMiterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance+2*slotWall
-      biggerMiterBoxModel = self.createMiterBox(miterBoxSlotLength+2*slotWall,2*miterBoxSlotHeight,biggerMiterBoxWidth,biggerMiterBoxName)
+      biggerMiterBoxLength = miterBoxSlotLength+2*slotWall
+      biggerMiterBoxHeight = miterBoxSlotHeight
+      biggerMiterBoxModel = self.createMiterBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
       biggerMiterBoxModelItemID = shNode.GetItemByDataNode(biggerMiterBoxModel)
       shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
 
