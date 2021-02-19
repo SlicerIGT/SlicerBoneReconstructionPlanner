@@ -1237,6 +1237,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     pd = model.GetPolyData().GetPoints().GetData()
     from vtk.util.numpy_support import vtk_to_numpy
     return np.average(vtk_to_numpy(pd), axis=0)
+
+  def getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(self,twoPointsModel,vector):
+    pointsData = twoPointsModel.GetPolyData().GetPoints().GetData()
+    from vtk.util.numpy_support import vtk_to_numpy
+
+    points = vtk_to_numpy(pointsData)
+
+    pointsVector = (points[1]-points[0])/np.linalg.norm(points[1]-points[0])
+
+    if vtk.vtkMath.Dot(pointsVector, vector) > 0:
+      return points[1]
+    else:
+      return points[0]
   
   def createMiterBoxesFromFibulaPlanes(self):
     parameterNode = self.getParameterNode()
@@ -1261,8 +1274,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerMiterBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"biggerMiterBoxes Models")
     miterBoxesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"miterBoxes Transforms")
     intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
-    semiIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"SemiIntersections")
-    pointIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Point Intersections")
+    pointsIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Points Intersections")
 
     #Create fibula axis:
     lineStartPos = np.zeros(3)
@@ -1297,7 +1309,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
       shNode.SetItemParent(miterBoxModelItemID, miterBoxesModelsFolder)
 
-      biggerMiterBoxModel = self.createMiterBox(miterBoxSlotLength+2*slotWall,2*miterBoxSlotHeight,miterBoxSlotWidth+2*clearanceFitPrintingTolerance+2*slotWall,biggerMiterBoxName)
+      biggerMiterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance+2*slotWall
+      biggerMiterBoxModel = self.createMiterBox(miterBoxSlotLength+2*slotWall,2*miterBoxSlotHeight,biggerMiterBoxWidth,biggerMiterBoxName)
       biggerMiterBoxModelItemID = shNode.GetItemByDataNode(biggerMiterBoxModel)
       shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
 
@@ -1306,59 +1319,57 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneZ = np.array([fibulaPlaneMatrix.GetElement(0,2),fibulaPlaneMatrix.GetElement(1,2),fibulaPlaneMatrix.GetElement(2,2)])
       fibulaPlaneOrigin = np.array([fibulaPlaneMatrix.GetElement(0,3),fibulaPlaneMatrix.GetElement(1,3),fibulaPlaneMatrix.GetElement(2,3)])
 
-      if i%2 == 0:
-        intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % (i//2))
-        intersectionModel.CreateDefaultDisplayNodes()
-        self.getIntersectionBetweenModelAnd1Plane(self.fibulaModelNode,fibulaPlanesList[i],intersectionModel)
-        semiIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','semiIntersection%d_A' % (i//2))
-        semiIntersectionModel.CreateDefaultDisplayNodes()
-        intersectionModelCentroid = self.getCentroid(intersectionModel)
-        self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(intersectionModel,-fibulaZ,intersectionModelCentroid,semiIntersectionModel)
-      else:
-        intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % (i//2))
-        intersectionModel.CreateDefaultDisplayNodes()
-        self.getIntersectionBetweenModelAnd1Plane(self.fibulaModelNode,fibulaPlanesList[i],intersectionModel)
-        semiIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','semiIntersection%d_B' % (i//2))
-        semiIntersectionModel.CreateDefaultDisplayNodes()
-        intersectionModelCentroid = self.getCentroid(intersectionModel)
-        self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(intersectionModel,fibulaZ,intersectionModelCentroid,semiIntersectionModel)
-      intersectionModelItemID = shNode.GetItemByDataNode(intersectionModel)
-      shNode.SetItemParent(intersectionModelItemID, intersectionsFolder)
-      semiIntersectionModelItemID = shNode.GetItemByDataNode(semiIntersectionModel)
-      shNode.SetItemParent(semiIntersectionModelItemID, semiIntersectionsFolder)
-
-      #averageNormalY = self.getAverageNormalFromModelWithSemiIntersectionModel(self.fibulaModelNode,semiIntersectionModel)
       lineStartPos = np.zeros(3)
       lineEndPos = np.zeros(3)
       miterBoxDirectionLine.GetNthControlPointPositionWorld(0, lineStartPos)
       miterBoxDirectionLine.GetNthControlPointPositionWorld(1, lineEndPos)
-      averageNormalY = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+      miterBoxDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+
+      normalToMiterBoxDirectionAndFibulaZ = [0,0,0]
+      vtk.vtkMath.Cross(miterBoxDirection, fibulaZ, normalToMiterBoxDirectionAndFibulaZ)
+      normalToMiterBoxDirectionAndFibulaZ = normalToMiterBoxDirectionAndFibulaZ/np.linalg.norm(normalToMiterBoxDirectionAndFibulaZ)
+
+      if i%2 == 0:
+        intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % (i//2))
+      else:
+        intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % (i//2))
+      intersectionModel.CreateDefaultDisplayNodes()
+      self.getIntersectionBetweenModelAnd1Plane(self.fibulaModelNode,fibulaPlanesList[i],intersectionModel)
+      intersectionModelCentroid = self.getCentroid(intersectionModel)
+      if i%2 == 0:
+        pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d_A' % (i//2))
+      else:
+        pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d_B' % (i//2))
+      pointsIntersectionModel.CreateDefaultDisplayNodes()
+      self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionModel,normalToMiterBoxDirectionAndFibulaZ,intersectionModelCentroid,pointsIntersectionModel)
+      pointOfIntersection = self.getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,miterBoxDirection)
+      intersectionModelItemID = shNode.GetItemByDataNode(intersectionModel)
+      shNode.SetItemParent(intersectionModelItemID, intersectionsFolder)
+      pointsIntersectionModelItemID = shNode.GetItemByDataNode(pointsIntersectionModel)
+      shNode.SetItemParent(pointsIntersectionModelItemID, pointsIntersectionsFolder)
 
       miterBoxAxisX = [0,0,0]
       miterBoxAxisY =  [0,0,0]
       miterBoxAxisZ = fibulaPlaneZ
-      vtk.vtkMath.Cross(averageNormalY, miterBoxAxisZ, miterBoxAxisX)#medial cross normal
+      vtk.vtkMath.Cross(miterBoxDirection, miterBoxAxisZ, miterBoxAxisX)
       miterBoxAxisX = miterBoxAxisX/np.linalg.norm(miterBoxAxisX)
-      vtk.vtkMath.Cross(miterBoxAxisZ, miterBoxAxisX, miterBoxAxisY)# approximately medial
+      vtk.vtkMath.Cross(miterBoxAxisZ, miterBoxAxisX, miterBoxAxisY)
       miterBoxAxisY = miterBoxAxisY/np.linalg.norm(miterBoxAxisY)
-
-      normalToMiterBoxAxisYandFibulaZ = [0,0,0]
-      vtk.vtkMath.Cross(miterBoxAxisY, fibulaZ, normalToMiterBoxAxisYandFibulaZ)
-      normalToMiterBoxAxisYandFibulaZ = normalToMiterBoxAxisYandFibulaZ/np.linalg.norm(normalToMiterBoxAxisYandFibulaZ)
-      if i%2 == 0:
-        pointIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','pointIntersection%d_A' % (i//2))
-      else:
-        pointIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','pointIntersection%d_B' % (i//2))
-      self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(semiIntersectionModel,normalToMiterBoxAxisYandFibulaZ,intersectionModelCentroid,pointIntersectionModel)
-      pointIntersectionModelItemID = shNode.GetItemByDataNode(pointIntersectionModel)
-      shNode.SetItemParent(pointIntersectionModelItemID, pointIntersectionsFolder)
-
-      pointIntersectionModelCentroid = self.getCentroid(pointIntersectionModel)
 
       miterBoxAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(miterBoxAxisX, miterBoxAxisY, miterBoxAxisZ)
       WorldToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix([1,0,0], [0,1,0], [0,0,1])
 
       WorldToMiterBoxAxisRotationMatrix = self.getAxes1ToAxes2RotationMatrix(WorldToWorldRotationMatrix, miterBoxAxisToWorldRotationMatrix)
+
+      #Calculations for deltaMiterBoxAxisY
+      sinOfMiterBoxAxisZAndFibulaZVector = [0,0,0]
+      vtk.vtkMath.Cross(miterBoxAxisZ, fibulaZ, sinOfMiterBoxAxisZAndFibulaZVector)
+      sinOfMiterBoxAxisZAndFibulaZ = np.linalg.norm(sinOfMiterBoxAxisZAndFibulaZVector)
+      rotatedMiterBoxAxisY = [0,0,0]
+      vtk.vtkMath.Cross(fibulaZ, miterBoxAxisX, rotatedMiterBoxAxisY)
+      rotatedMiterBoxAxisY = rotatedMiterBoxAxisY/np.linalg.norm(rotatedMiterBoxAxisY)
+      cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY = vtk.vtkMath.Dot(rotatedMiterBoxAxisY, miterBoxAxisY)
+      deltaMiterBoxAxisY = biggerMiterBoxWidth/2*sinOfMiterBoxAxisZAndFibulaZ/cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY
 
       transformNode = slicer.vtkMRMLLinearTransformNode()
       transformNode.SetName("temp%d" % i)
@@ -1368,9 +1379,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransform.PostMultiply()
       finalTransform.Concatenate(WorldToMiterBoxAxisRotationMatrix)
       if i%2 == 0:
-        finalTransform.Translate(pointIntersectionModelCentroid+miterBoxAxisY*(miterBoxSlotHeight+biggerMiterBoxDistanceToFibula)-miterBoxAxisZ*miterBoxSlotWidth/2)
+        finalTransform.Translate(pointOfIntersection+miterBoxAxisY*(miterBoxSlotHeight+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula)-miterBoxAxisZ*miterBoxSlotWidth/2)
       else:
-        finalTransform.Translate(pointIntersectionModelCentroid+miterBoxAxisY*(miterBoxSlotHeight+biggerMiterBoxDistanceToFibula)+miterBoxAxisZ*miterBoxSlotWidth/2)
+        finalTransform.Translate(pointOfIntersection+miterBoxAxisY*(miterBoxSlotHeight+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula)+miterBoxAxisZ*miterBoxSlotWidth/2)
 
       transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
 
@@ -1386,8 +1397,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     shNode.RemoveItem(miterBoxesTransformsFolder)
     shNode.RemoveItem(intersectionsFolder)
-    shNode.RemoveItem(semiIntersectionsFolder)
-    shNode.RemoveItem(pointIntersectionsFolder)
+    shNode.RemoveItem(pointsIntersectionsFolder)
 
   
   def createMiterBox(self, X, Y, Z, name):
