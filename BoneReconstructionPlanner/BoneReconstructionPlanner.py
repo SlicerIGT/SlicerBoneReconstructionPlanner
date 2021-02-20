@@ -150,6 +150,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.screwHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.clearanceFitPrintingToleranceSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.biggerMiterBoxDistanceToFibulaSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.intersectionDistanceMultiplierSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
     self.ui.rightFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -285,6 +286,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.clearanceFitPrintingToleranceSpinBox.setValue(float(self._parameterNode.GetParameter("clearanceFitPrintingTolerance")))
     if self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula") != '':
       self.ui.biggerMiterBoxDistanceToFibulaSpinBox.setValue(float(self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula")))
+    if self._parameterNode.GetParameter("intersectionDistanceMultiplier") != '':
+      self.ui.intersectionDistanceMultiplierSpinBox.setValue(float(self._parameterNode.GetParameter("intersectionDistanceMultiplier")))
 
     self.ui.rightFibulaCheckBox.checked = self._parameterNode.GetParameter("rightFibula") == "True"
 
@@ -321,7 +324,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("screwHoleCylinderRadius", str(self.ui.screwHoleCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("clearanceFitPrintingTolerance", str(self.ui.clearanceFitPrintingToleranceSpinBox.value))
     self._parameterNode.SetParameter("biggerMiterBoxDistanceToFibula", str(self.ui.biggerMiterBoxDistanceToFibulaSpinBox.value))
-
+    self._parameterNode.SetParameter("intersectionDistanceMultiplier", str(self.ui.intersectionDistanceMultiplierSpinBox.value))
+    
     if self.ui.rightFibulaCheckBox.checked:
       self._parameterNode.SetParameter("rightFibula","True")
     else:
@@ -553,6 +557,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
     initialSpace = float(parameterNode.GetParameter("initialSpace"))
     intersectionPlaceOfFibulaPlanes = float(parameterNode.GetParameter("intersectionPlaceOfFibulaPlanes"))
+    intersectionDistanceMultiplier = float(parameterNode.GetParameter("intersectionDistanceMultiplier"))
     additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
     rightFibulaChecked = parameterNode.GetParameter("rightFibula") == "True"
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
@@ -822,7 +827,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         betweenSpace.append(deltaz)
 
-        self.fibula2FibulaPlanesPositionA.append(self.fibula2FibulaPlanesPositionB[i-1] + fibulaZ*(betweenSpace[i-1]+additionalBetweenSpaceOfFibulaPlanes))
+        self.fibula2FibulaPlanesPositionA.append(self.fibula2FibulaPlanesPositionB[i-1] + fibulaZ*(intersectionDistanceMultiplier*betweenSpace[i-1]+additionalBetweenSpaceOfFibulaPlanes))
 
       self.fibula2FibulaPlanesPositionB.append(self.fibula2FibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
 
@@ -1384,9 +1389,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransform.PostMultiply()
       finalTransform.Concatenate(WorldToMiterBoxAxisRotationMatrix)
       if i%2 == 0:
-        finalTransform.Translate(pointOfIntersection+miterBoxAxisY*(miterBoxSlotHeight+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula)-miterBoxAxisZ*miterBoxSlotWidth/2)
+        finalTransform.Translate(pointOfIntersection+miterBoxAxisY*(biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula)-miterBoxAxisZ*miterBoxSlotWidth/2)
       else:
-        finalTransform.Translate(pointOfIntersection+miterBoxAxisY*(miterBoxSlotHeight+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula)+miterBoxAxisZ*miterBoxSlotWidth/2)
+        finalTransform.Translate(pointOfIntersection+miterBoxAxisY*(biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula)+miterBoxAxisZ*miterBoxSlotWidth/2)
 
       transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
 
