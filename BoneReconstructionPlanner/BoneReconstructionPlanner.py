@@ -1026,9 +1026,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode.SetNodeReferenceID("mandibleModelNode", mandibleModelNode.GetID())
 
   def updateFibulaPieces(self):
+    parameterNode = self.getParameterNode()
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    mandibleModelDisplayNode = mandibleModelNode.GetDisplayNode()
+    mandibleModelDisplayNode.SetVisibility(False)
+
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     bonePiecesTransformFolder = shNode.GetItemByName("Bone Pieces Transforms")
     shNode.RemoveItem(bonePiecesTransformFolder)
+    transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+    shNode.RemoveItem(transformedFibulaPiecesFolder)
     planeCutsList = createListFromFolderID(shNode.GetItemByName("Plane Cuts"))
     for i in range(len(planeCutsList)):
       slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(planeCutsList[i])
@@ -1040,9 +1047,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     bonePiecesTransformFolder = shNode.GetItemByName("Bone Pieces Transforms")
-    if bonePiecesTransformFolder:
-      shNode.RemoveItem(bonePiecesTransformFolder)
+    shNode.RemoveItem(bonePiecesTransformFolder)
     bonePiecesTransformFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Bone Pieces Transforms")
+    transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+    shNode.RemoveItem(transformedFibulaPiecesFolder)
+    transformedFibulaPiecesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Transformed Fibula Pieces")
 
     lineStartPos = np.zeros(3)
     lineEndPos = np.zeros(3)
@@ -1080,7 +1089,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPieceToMandibleAxisTransformNode.SetMatrixTransformToParent(fibulaPieceToMandibleAxisTransform.GetMatrix())
       fibulaPieceToMandibleAxisTransformNode.UpdateScene(slicer.mrmlScene)
 
-      cutBonesList[i].SetAndObserveTransformNodeID(fibulaPieceToMandibleAxisTransformNode.GetID())
+      transformedFibulaPiece = slicer.modules.models.logic().AddModel(cutBonesList[i].GetPolyData())
+      transformedFibulaPiece.SetName(slicer.mrmlScene.GetUniqueNameByString('Transformed ' + cutBonesList[i].GetName()))
+      transformedFibulaPiece.CreateDefaultDisplayNodes()
+      transformedFibulaPieceDisplayNode = transformedFibulaPiece.GetDisplayNode()
+      transformedFibulaPieceDisplayNode.SetColor(cutBonesList[i].GetDisplayNode().GetColor())
+      transformedFibulaPiece.SetAndObserveTransformNodeID(fibulaPieceToMandibleAxisTransformNode.GetID())
+
+      transformedFibulaPieceItemID = shNode.GetItemByDataNode(transformedFibulaPiece)
+      shNode.SetItemParent(transformedFibulaPieceItemID, transformedFibulaPiecesFolder)
 
       fibulaPieceToMandibleAxisTransformNodeItemID = shNode.GetItemByDataNode(fibulaPieceToMandibleAxisTransformNode)
       shNode.SetItemParent(fibulaPieceToMandibleAxisTransformNodeItemID, bonePiecesTransformFolder)
