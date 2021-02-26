@@ -1398,10 +1398,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransform.PostMultiply()
       finalTransform.Concatenate(WorldToMiterBoxAxisRotationMatrix)
       if i%2 == 0:
-        finalTransform.Translate(pointOfIntersection+miterBoxAxisY*(biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula)-miterBoxAxisZ*miterBoxSlotWidth/2)
+        miterBoxAxisXTranslation = 0
+        miterBoxAxisYTranslation = biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula/cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY
+        miterBoxAxisZTranslation = -miterBoxSlotWidth/2
       else:
-        finalTransform.Translate(pointOfIntersection+miterBoxAxisY*(biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula)+miterBoxAxisZ*miterBoxSlotWidth/2)
-
+        miterBoxAxisXTranslation = 0
+        miterBoxAxisYTranslation = biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula/cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY
+        miterBoxAxisZTranslation = miterBoxSlotWidth/2
+      finalTransform.Translate(pointOfIntersection + miterBoxAxisX*miterBoxAxisXTranslation + miterBoxAxisY*miterBoxAxisYTranslation + miterBoxAxisZ*miterBoxAxisZTranslation)
       transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
 
       transformNode.UpdateScene(slicer.mrmlScene)
