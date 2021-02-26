@@ -560,6 +560,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     intersectionDistanceMultiplier = float(parameterNode.GetParameter("intersectionDistanceMultiplier"))
     additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
     rightFibulaChecked = parameterNode.GetParameter("rightFibula") == "True"
+    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
     if len(planeList) <= 1:
@@ -780,7 +782,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         self.fibula2FibulaPlanesPositionA.append(fibulaZ*initialSpace)
         intersectionModelB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % i)
         intersectionModelB.CreateDefaultDisplayNodes()
-        self.getIntersectionBetweenModelAnd1TransformedPlane(self.fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
+        self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
         intersectionsList.append(intersectionModelB)
         intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
         
@@ -793,14 +795,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         if i!=(len(planeList)-2):
           intersectionModelA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % i)
           intersectionModelA.CreateDefaultDisplayNodes()
-          self.getIntersectionBetweenModelAnd1TransformedPlane(self.fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
+          self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
           intersectionsList.append(intersectionModelA)
           intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
           shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
           j=j+1
           intersectionModelB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % i)
           intersectionModelB.CreateDefaultDisplayNodes()
-          self.getIntersectionBetweenModelAnd1TransformedPlane(self.fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
+          self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
           intersectionsList.append(intersectionModelB)
           intersectionModelBItemID = shNode.GetItemByDataNode(intersectionModelB)
           shNode.SetItemParent(intersectionModelBItemID, intersectionsFolder)
@@ -812,7 +814,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         else:
           intersectionModelA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % i)
           intersectionModelA.CreateDefaultDisplayNodes()
-          self.getIntersectionBetweenModelAnd1TransformedPlane(self.fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
+          self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
           intersectionsList.append(intersectionModelA)
           intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
           shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
@@ -821,11 +823,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           intersectionsList[j-1].GetRASBounds(bounds0)
           intersectionsList[j].GetRASBounds(bounds1)
 
+        #calculate how much each FibulaPlaneA should be translated so that it doesn't intersect with fibulaPlaneB
         z0Sup = bounds0[5]
+        z0Inf = bounds0[4]
+        z1Sup = bounds1[5]
         z1Inf = bounds1[4]
-        deltaz = z0Sup - z1Inf
+        deltaZ = (z0Sup - z0Inf)/2 + (z1Sup - z1Inf)/2
 
-        betweenSpace.append(deltaz)
+        betweenSpace.append(deltaZ)
 
         self.fibula2FibulaPlanesPositionA.append(self.fibula2FibulaPlanesPositionB[i-1] + fibulaZ*(intersectionDistanceMultiplier*betweenSpace[i-1]+additionalBetweenSpaceOfFibulaPlanes))
 
@@ -906,7 +911,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
         dynamicModelerNode.SetToolName("Plane cut")
-        dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", self.fibulaModelNode.GetID())
+        dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", fibulaModelNode.GetID())
         if closestCurvePointIndexStart > closestCurvePointIndexEnd:
           dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID())
           dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
@@ -924,7 +929,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       
       
       modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-      modelNode.SetName("Cut mandible")
+      modelNode.SetName("Resected mandible")
       slicer.mrmlScene.AddNode(modelNode)
       modelNode.CreateDefaultDisplayNodes()
       modelDisplay = modelNode.GetDisplayNode()
@@ -939,7 +944,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
       dynamicModelerNode.SetToolName("Plane cut")
-      dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", self.mandibleModelNode.GetID())
+      dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", mandibleModelNode.GetID())
       if closestCurvePointIndexStart > closestCurvePointIndexEnd:
         dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID())
         dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
@@ -995,12 +1000,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       segmentationModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Segmentation Models")
     else:
       segmentationModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Segmentation Models")
-    self.fibulaModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-    self.fibulaModelNode.SetName("fibula")
-    self.mandibleModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-    self.mandibleModelNode.SetName("mandible")
+    fibulaModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+    fibulaModelNode.SetName("fibula")
+    mandibleModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+    mandibleModelNode.SetName("mandible")
     segmentations = [fibulaSegmentation,mandibularSegmentation]
-    models = [self.fibulaModelNode,self.mandibleModelNode]
+    models = [fibulaModelNode,mandibleModelNode]
     for i in range(2):
       slicer.mrmlScene.AddNode(models[i])
       models[i].CreateDefaultDisplayNodes()
@@ -1016,6 +1021,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       modelNodeItemID = shNode.GetItemByDataNode(models[i])
       shNode.SetItemParent(modelNodeItemID, segmentationModelsFolder)
+
+    parameterNode.SetNodeReferenceID("fibulaModelNode", fibulaModelNode.GetID())
+    parameterNode.SetNodeReferenceID("mandibleModelNode", mandibleModelNode.GetID())
 
   def updateFibulaPieces(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
@@ -1267,6 +1275,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     clearanceFitPrintingTolerance = float(parameterNode.GetParameter("clearanceFitPrintingTolerance"))
     biggerMiterBoxDistanceToFibula = float(parameterNode.GetParameter("biggerMiterBoxDistanceToFibula"))
     rightFibulaChecked = parameterNode.GetParameter("rightFibula") == "True"
+    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
@@ -1344,7 +1353,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % (i//2))
       intersectionModel.CreateDefaultDisplayNodes()
-      self.getIntersectionBetweenModelAnd1Plane(self.fibulaModelNode,fibulaPlanesList[i],intersectionModel)
+      self.getIntersectionBetweenModelAnd1Plane(fibulaModelNode,fibulaPlanesList[i],intersectionModel)
       intersectionModelCentroid = self.getCentroid(intersectionModel)
       if i%2 == 0:
         pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d_A' % (i//2))
@@ -1546,8 +1555,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for i in range(len(miterBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, miterBoxesModelsList[i], surgicalGuideModel, 'difference')
-
-    #combineModelsLogic.process(surgicalGuideModel, self.fibulaModelNode, surgicalGuideModel, 'difference')
 
 #
 # BoneReconstructionPlannerTest
