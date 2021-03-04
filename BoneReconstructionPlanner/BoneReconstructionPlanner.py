@@ -1079,9 +1079,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPieceToMandibleAxisTransformNode.SetMatrixTransformToParent(fibulaPieceToMandibleAxisTransform.GetMatrix())
       fibulaPieceToMandibleAxisTransformNode.UpdateScene(slicer.mrmlScene)
 
-      transformedFibulaPiece = slicer.modules.models.logic().AddModel(cutBonesList[i].GetPolyData())
-      transformedFibulaPiece.SetName(slicer.mrmlScene.GetUniqueNameByString('Transformed ' + cutBonesList[i].GetName()))
+      transformedFibulaPiece = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode',slicer.mrmlScene.GetUniqueNameByString('Transformed ' + cutBonesList[i].GetName()))
       transformedFibulaPiece.CreateDefaultDisplayNodes()
+      transformedFibulaPiece.CopyContent(cutBonesList[i])
       transformedFibulaPieceDisplayNode = transformedFibulaPiece.GetDisplayNode()
       transformedFibulaPieceDisplayNode.SetColor(cutBonesList[i].GetDisplayNode().GetColor())
       transformedFibulaPiece.SetAndObserveTransformNodeID(fibulaPieceToMandibleAxisTransformNode.GetID())
