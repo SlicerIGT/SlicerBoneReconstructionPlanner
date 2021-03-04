@@ -58,7 +58,7 @@
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QCheckBox" name="rightFibulaCheckBox">
+         <widget class="QCheckBox" name="notLeftFibulaCheckBox">
           <property name="text">
            <string>(tick if fibula is the one from the right side)</string>
           </property>
