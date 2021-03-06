@@ -130,6 +130,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
 
+    slicer.mrmlScene.AddObserver(slicer.mrmlScene.NodeAboutToBeRemovedEvent, self.onNodeAboutToBeRemovedEvent) 
+
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
     self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -186,6 +188,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     self.removeObservers()
 
+  @vtk.calldata_type(vtk.VTK_OBJECT)
+  def onNodeAboutToBeRemovedEvent(self, caller, event, callData):
+    if callData.GetClassName() == 'vtkMRMLMarkupsPlaneNode':
+      if callData.GetAttribute("isMandibularPlane") == 'True':
+        observerIndex = self.logic.mandiblePlaneNodeIDList.index(callData.GetID())
+        callData.RemoveObserver(self.logic.mandiblePlaneObserversList.pop(observerIndex))
+        self.logic.mandiblePlaneNodeIDList.pop(observerIndex)
+        self.logic.onPlaneModifiedTimer(None,None)
+
   def enter(self):
     """
     Called each time the user opens this module.
@@ -193,12 +204,51 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Make sure parameter node exists and observed
     self.initializeParameterNode()
 
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    cutBonesFolder = shNode.GetItemByName("Cut Bones")
+    cylindersFiducialsListsFolder = shNode.GetItemByName("Cylinders Fiducials Lists")
+
+    if segmentationModelsFolder:
+      self.ui.createPlanesButton.enabled = True
+    if fibulaPlanesFolder:  
+      self.ui.updateFibulaPiecesButton.enabled = True
+    if cutBonesFolder:
+      self.ui.bonesToMandibleButton.enabled = True
+    if cylindersFiducialsListsFolder:
+      self.ui.createCylindersFromFiducialListAndSurgicalGuideBaseButton.enabled = True
+
+
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
+    for i in range(len(mandibularPlanesList)):
+      mandibularPlanesList[i].SetLocked(0)
+      displayNode = mandibularPlanesList[i].GetDisplayNode()
+      displayNode.HandlesInteractiveOn()
+      self.logic.mandiblePlaneObserversList.append(mandibularPlanesList[i].AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.logic.onPlaneModifiedTimer))
+      self.logic.mandiblePlaneNodeIDList.append(mandibularPlanesList[i].GetID())
+
+
   def exit(self):
     """
     Called each time the user opens a different module.
     """
     # Do not react to parameter node changes (GUI wlil be updated when the user enters into the module)
     self.removeObserver(self._parameterNode, vtk.vtkCommand.ModifiedEvent, self.updateGUIFromParameterNode)
+
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
+    for i in range(len(mandibularPlanesList)):
+      mandibularPlanesList[i].SetLocked(1)
+      displayNode = mandibularPlanesList[i].GetDisplayNode()
+      displayNode.HandlesInteractiveOff()
+      mandibularPlanesList[i].RemoveObserver(self.logic.mandiblePlaneObserversList[i])
+    self.logic.mandiblePlaneObserversList = []
+    self.logic.mandiblePlaneNodeIDList = []
 
   def onSceneStartClose(self, caller, event):
     """
@@ -414,8 +464,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     Called when the logic class is instantiated. Can be used for initializing member variables.
     """
     ScriptedLoadableModuleLogic.__init__(self)
-    self.rotTransformParameters = []
-    self.rotTransformParameters2 = []
+    self.mandiblePlaneObserversList = []
+    self.mandiblePlaneNodeIDList = []
+    self.generateFibulaPlanesTimer = None
 
   def setDefaultParameters(self, parameterNode):
     """
@@ -492,6 +543,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeNodeItemID = shNode.GetItemByDataNode(planeNode)
     shNode.SetItemParent(planeNodeItemID, mandibularFolderID)
     planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
+    planeNode.SetAttribute("isMandibularPlane","True")
 
     aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
     colorTable = aux.GetLookupTable()
@@ -525,9 +577,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode.HandlesInteractiveOn()
     for i in range(3):
       sourceNode.SetNthControlPointVisibility(i,False)
-    planeNodeObserver = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModified)
+    self.mandiblePlaneObserversList.append(sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer))
+    self.mandiblePlaneNodeIDList.append(sourceNode.GetID())
   
-  def onPlaneModified(self,sourceNode,event):
+  def onPlaneModifiedTimer(self,sourceNode,event):
+    if self.generateFibulaPlanesTimer == None:
+      self.generateFibulaPlanesTimer = qt.QTimer()
+      self.generateFibulaPlanesTimer.setInterval(300)
+      self.generateFibulaPlanesTimer.setSingleShot(True)
+      self.generateFibulaPlanesTimer.connect('timeout()', self.onPlaneModified)
+    self.generateFibulaPlanesTimer.start()
+
+  def onPlaneModified(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
 
@@ -751,6 +812,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneA.SetAxes([1,0,0], [0,1,0], [0,0,1])
       fibulaPlaneA.SetNormal(mandiblePlane0Normal)
       fibulaPlaneA.SetOrigin(fibulaOrigin)
+      fibulaPlaneA.SetLocked(1)
       fibulaPlanesList.append(fibulaPlaneA)
 
       fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
@@ -760,6 +822,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneB.SetAxes([1,0,0], [0,1,0], [0,0,1])
       fibulaPlaneB.SetNormal(mandiblePlane1Normal)
       fibulaPlaneB.SetOrigin(fibulaOrigin)
+      fibulaPlaneB.SetLocked(1)
       fibulaPlanesList.append(fibulaPlaneB)
 
 
@@ -1459,14 +1522,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
 
   def createFiducialList(self):
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    cylindersFiducialsListsFolder = shNode.GetItemByName("Cylinders Fiducials Lists")
+    if cylindersFiducialsListsFolder == 0:
+      cylindersFiducialsListsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Cylinders Fiducials Lists")
+    
     fiducialListNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")
     fiducialListNode.SetName("temp")
     slicer.mrmlScene.AddNode(fiducialListNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fiducialListNode)
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fiducialListNodeItemID = shNode.GetItemByDataNode(fiducialListNode)
-    shNode.SetItemParent(fiducialListNodeItemID, self.getParentFolderItemID())
-    fiducialListNode.SetName(slicer.mrmlScene.GetUniqueNameByString("fiducialList"))
+    shNode.SetItemParent(fiducialListNodeItemID, cylindersFiducialsListsFolder)
+    fiducialListNode.SetName(slicer.mrmlScene.GetUniqueNameByString("cylindersFiducialsList"))
 
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(fiducialListNode)
