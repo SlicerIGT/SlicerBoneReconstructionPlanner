@@ -1452,6 +1452,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxAxisX = [0,0,0]
       miterBoxAxisY =  [0,0,0]
       miterBoxAxisZ = fibulaPlaneZ
+      if vtk.vtkMath.Dot(fibulaZ, miterBoxAxisZ) < 0:
+        miterBoxAxisZ = -miterBoxAxisZ
       vtk.vtkMath.Cross(miterBoxDirection, miterBoxAxisZ, miterBoxAxisX)
       miterBoxAxisX = miterBoxAxisX/np.linalg.norm(miterBoxAxisX)
       vtk.vtkMath.Cross(miterBoxAxisZ, miterBoxAxisX, miterBoxAxisY)
