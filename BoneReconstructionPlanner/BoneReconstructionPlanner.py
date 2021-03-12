@@ -192,9 +192,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onNodeAboutToBeRemovedEvent(self, caller, event, callData):
     if callData.GetClassName() == 'vtkMRMLMarkupsPlaneNode':
       if callData.GetAttribute("isMandibularPlane") == 'True':
-        observerIndex = self.logic.mandiblePlaneNodeIDList.index(callData.GetID())
-        callData.RemoveObserver(self.logic.mandiblePlaneObserversList.pop(observerIndex))
-        self.logic.mandiblePlaneNodeIDList.pop(observerIndex)
+        for i in range(len(self.logic.mandiblePlaneObserversAndNodeIDList)):
+          if self.logic.mandiblePlaneObserversAndNodeIDList[i][1] == callData.GetID():
+            observerIndex = i
+        callData.RemoveObserver(self.logic.mandiblePlaneObserversAndNodeIDList.pop(observerIndex)[0])
         self.logic.onPlaneModifiedTimer(None,None)
 
   def enter(self):
@@ -227,8 +228,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       mandibularPlanesList[i].SetLocked(0)
       displayNode = mandibularPlanesList[i].GetDisplayNode()
       displayNode.HandlesInteractiveOn()
-      self.logic.mandiblePlaneObserversList.append(mandibularPlanesList[i].AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.logic.onPlaneModifiedTimer))
-      self.logic.mandiblePlaneNodeIDList.append(mandibularPlanesList[i].GetID())
+      observer = mandibularPlanesList[i].AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.logic.onPlaneModifiedTimer)
+      self.logic.mandiblePlaneObserversAndNodeIDList.append([observer,mandibularPlanesList[i].GetID()])
 
 
   def exit(self):
@@ -246,9 +247,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       mandibularPlanesList[i].SetLocked(1)
       displayNode = mandibularPlanesList[i].GetDisplayNode()
       displayNode.HandlesInteractiveOff()
-      mandibularPlanesList[i].RemoveObserver(self.logic.mandiblePlaneObserversList[i])
-    self.logic.mandiblePlaneObserversList = []
-    self.logic.mandiblePlaneNodeIDList = []
+      mandibularPlanesList[i].RemoveObserver(self.logic.mandiblePlaneObserversAndNodeIDList[i][0])
+    self.logic.mandiblePlaneObserversAndNodeIDList = []
 
   def onSceneStartClose(self, caller, event):
     """
@@ -464,9 +464,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     Called when the logic class is instantiated. Can be used for initializing member variables.
     """
     ScriptedLoadableModuleLogic.__init__(self)
-    self.mandiblePlaneObserversList = []
-    self.mandiblePlaneNodeIDList = []
-    self.generateFibulaPlanesTimer = None
+    self.mandiblePlaneObserversAndNodeIDList = []
+    self.generateFibulaPlanesTimer = qt.QTimer()
+    self.generateFibulaPlanesTimer.setInterval(300)
+    self.generateFibulaPlanesTimer.setSingleShot(True)
+    self.generateFibulaPlanesTimer.connect('timeout()', self.onPlaneModified)
 
   def setDefaultParameters(self, parameterNode):
     """
@@ -577,15 +579,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode.HandlesInteractiveOn()
     for i in range(3):
       sourceNode.SetNthControlPointVisibility(i,False)
-    self.mandiblePlaneObserversList.append(sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer))
-    self.mandiblePlaneNodeIDList.append(sourceNode.GetID())
+    observer = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer)
+    self.mandiblePlaneObserversAndNodeIDList.append([observer,sourceNode.GetID()])
   
   def onPlaneModifiedTimer(self,sourceNode,event):
-    if self.generateFibulaPlanesTimer == None:
-      self.generateFibulaPlanesTimer = qt.QTimer()
-      self.generateFibulaPlanesTimer.setInterval(300)
-      self.generateFibulaPlanesTimer.setSingleShot(True)
-      self.generateFibulaPlanesTimer.connect('timeout()', self.onPlaneModified)
     self.generateFibulaPlanesTimer.start()
 
   def onPlaneModified(self):
@@ -812,7 +809,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneA.SetAxes([1,0,0], [0,1,0], [0,0,1])
       fibulaPlaneA.SetNormal(mandiblePlane0Normal)
       fibulaPlaneA.SetOrigin(fibulaOrigin)
-      fibulaPlaneA.SetLocked(1)
+      fibulaPlaneA.SetLocked(True)
       fibulaPlanesList.append(fibulaPlaneA)
 
       fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
@@ -822,7 +819,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneB.SetAxes([1,0,0], [0,1,0], [0,0,1])
       fibulaPlaneB.SetNormal(mandiblePlane1Normal)
       fibulaPlaneB.SetOrigin(fibulaOrigin)
-      fibulaPlaneB.SetLocked(1)
+      fibulaPlaneB.SetLocked(True)
       fibulaPlanesList.append(fibulaPlaneB)
 
 
@@ -1526,7 +1523,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def createFiducialList(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     cylindersFiducialsListsFolder = shNode.GetItemByName("Cylinders Fiducials Lists")
-    if cylindersFiducialsListsFolder == 0:
+    if not cylindersFiducialsListsFolder:
       cylindersFiducialsListsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Cylinders Fiducials Lists")
     
     fiducialListNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")
