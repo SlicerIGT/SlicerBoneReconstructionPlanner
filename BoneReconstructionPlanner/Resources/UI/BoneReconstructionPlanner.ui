@@ -350,10 +350,10 @@
    <item>
     <widget class="ctkCollapsibleButton" name="CollapsibleButton_2">
      <property name="text">
-      <string>Surgical Guides Generation</string>
+      <string>Fibula Surgical Guide Generation</string>
      </property>
      <property name="collapsed">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
@@ -374,7 +374,7 @@
            <number>1</number>
           </property>
           <property name="maximum">
-           <double>5.000000000000000</double>
+           <double>60.000000000000000</double>
           </property>
           <property name="singleStep">
            <double>0.100000000000000</double>
@@ -412,7 +412,7 @@
          </widget>
         </item>
         <item row="3" column="1">
-         <widget class="ctkDoubleSpinBox" name="slotWallSpinBox">
+         <widget class="ctkDoubleSpinBox" name="miterBoxSlotWallSpinBox">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -480,7 +480,7 @@
         <item row="5" column="1">
          <widget class="qMRMLNodeComboBox" name="miterBoxDirectionLineSelector">
           <property name="enabled">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="nodeTypes">
            <stringlist>
@@ -526,12 +526,12 @@
         <item row="1" column="0">
          <widget class="QLabel" name="label_13">
           <property name="text">
-           <string>Select surgical guide base</string>
+           <string>Select fibula surgical guide base</string>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="qMRMLNodeComboBox" name="surgicalGuideBaseSelector">
+         <widget class="qMRMLNodeComboBox" name="fibulaSurgicalGuideBaseSelector">
           <property name="nodeTypes">
            <stringlist>
             <string>vtkMRMLModelNode</string>
@@ -596,10 +596,192 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="makeBooleanOperationsToSurgicalGuideBaseButton">
+       <widget class="QPushButton" name="makeBooleanOperationsToFibulaSurgicalGuideBaseButton">
         <property name="text">
          <string>Make boolean operations to surgical guide base with
  screwHolesCylinders and miterBoxes</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="ctkCollapsibleButton" name="CollapsibleButton_4">
+     <property name="text">
+      <string>Mandible Surgical Guide Generation</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_5">
+      <item>
+       <layout class="QFormLayout" name="formLayout_5">
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_28">
+          <property name="text">
+           <string>Slot width (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="ctkDoubleSpinBox" name="sawBoxSlotWidthSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>60.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>1.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_27">
+          <property name="text">
+           <string>Slot length (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="ctkDoubleSpinBox" name="sawBoxSlotLengthSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>20.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_26">
+          <property name="text">
+           <string>Slot height (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="ctkDoubleSpinBox" name="sawBoxSlotHeightSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>15.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_25">
+          <property name="text">
+           <string>Slot wall (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="ctkDoubleSpinBox" name="sawBoxSlotWallSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>20.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>3.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="label_24">
+          <property name="text">
+           <string>Bigger saw box distance to mandible (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="ctkDoubleSpinBox" name="biggerSawBoxDistanceToMandibleSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>50.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>3.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="label_29">
+          <property name="text">
+           <string>Mandible bridge curve</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="qMRMLNodeComboBox" name="mandibleBridgeCurveSelector">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="nodeTypes">
+           <stringlist>
+            <string>vtkMRMLMarkupsCurveNode</string>
+           </stringlist>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1">
+         <widget class="qMRMLNodeComboBox" name="MRMLNodeComboBox">
+          <property name="nodeTypes">
+           <stringlist>
+            <string>vtkMRMLModelNode</string>
+           </stringlist>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0">
+         <widget class="QLabel" name="label_30">
+          <property name="text">
+           <string>Mandible surgical guide bases</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QPushButton" name="createMandibleSurgicalGuidesBridgeModelButton">
+        <property name="text">
+         <string>Create mandible surgical guides bridge model</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="createSawBoxesFromFirstAndLastMandiblePlanesButton">
+        <property name="text">
+         <string>Create saw boxes from first and last mandible planes</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="makeBooleanOperationsToMandibleSurgicalGuideBaseButton">
+        <property name="text">
+         <string>Make boolean operations to surgical guide bases with
+ mandibleBridgeModel and sawBoxes</string>
         </property>
        </widget>
       </item>
@@ -777,7 +959,7 @@
   <connection>
    <sender>BoneReconstructionPlanner</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>surgicalGuideBaseSelector</receiver>
+   <receiver>fibulaSurgicalGuideBaseSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
    <hints>
     <hint type="sourcelabel">
