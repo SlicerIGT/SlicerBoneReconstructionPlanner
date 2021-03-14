@@ -505,7 +505,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="createFiducialListButton">
+       <widget class="QPushButton" name="createFibulaCylindersFiducialListButton">
         <property name="text">
          <string>Create fiducial list</string>
         </property>
@@ -546,7 +546,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="qMRMLNodeComboBox" name="fiducialListSelector">
+         <widget class="qMRMLNodeComboBox" name="fibulaFiducialListSelector">
           <property name="nodeTypes">
            <stringlist>
             <string>vtkMRMLMarkupsFiducialNode</string>
@@ -568,7 +568,7 @@
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="ctkDoubleSpinBox" name="screwHoleCylinderRadiusSpinBox">
+         <widget class="ctkDoubleSpinBox" name="fibulaScrewHoleCylinderRadiusSpinBox">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -586,12 +586,12 @@
        </layout>
       </item>
       <item>
-       <widget class="QPushButton" name="createCylindersFromFiducialListAndSurgicalGuideBaseButton">
+       <widget class="QPushButton" name="createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton">
         <property name="enabled">
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Create cylinders from fiducial list and surgical guide base</string>
+         <string>Create cylinders from fiducial list and fibula surgical guide base</string>
         </property>
        </widget>
       </item>
@@ -729,24 +729,24 @@
         <item row="5" column="0">
          <widget class="QLabel" name="label_29">
           <property name="text">
-           <string>Mandible bridge curve</string>
+           <string>Select mandible bridge model</string>
           </property>
          </widget>
         </item>
         <item row="5" column="1">
-         <widget class="qMRMLNodeComboBox" name="mandibleBridgeCurveSelector">
+         <widget class="qMRMLNodeComboBox" name="mandibleBridgeModelSelector">
           <property name="enabled">
            <bool>false</bool>
           </property>
           <property name="nodeTypes">
            <stringlist>
-            <string>vtkMRMLMarkupsCurveNode</string>
+            <string>vtkMRMLModelNode</string>
            </stringlist>
           </property>
          </widget>
         </item>
         <item row="6" column="1">
-         <widget class="qMRMLNodeComboBox" name="MRMLNodeComboBox">
+         <widget class="qMRMLNodeComboBox" name="mandibleSurgicalGuideBaseSelector">
           <property name="nodeTypes">
            <stringlist>
             <string>vtkMRMLModelNode</string>
@@ -757,16 +757,59 @@
         <item row="6" column="0">
          <widget class="QLabel" name="label_30">
           <property name="text">
-           <string>Mandible surgical guide bases</string>
+           <string>Select mandible surgical guide bases</string>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="0">
+         <widget class="QLabel" name="label_31">
+          <property name="text">
+           <string>Select fiducial list to create cylinders</string>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0">
+         <widget class="QLabel" name="label_32">
+          <property name="text">
+           <string>Screw holes cylinders radius (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="1">
+         <widget class="qMRMLNodeComboBox" name="mandibleFiducialListSelector"/>
+        </item>
+        <item row="8" column="1">
+         <widget class="ctkDoubleSpinBox" name="mandibleScrewHoleCylinderRadiusSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>5.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>1.500000000000000</double>
           </property>
          </widget>
         </item>
        </layout>
       </item>
       <item>
-       <widget class="QPushButton" name="createMandibleSurgicalGuidesBridgeModelButton">
+       <widget class="QPushButton" name="createMandibleCylindersFiducialListButton">
         <property name="text">
-         <string>Create mandible surgical guides bridge model (on development)</string>
+         <string>Create fiducial list</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="createCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Create cylinders from fiducial list and mandible surgical guide base</string>
         </property>
        </widget>
       </item>
@@ -975,7 +1018,7 @@
   <connection>
    <sender>BoneReconstructionPlanner</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>fiducialListSelector</receiver>
+   <receiver>fibulaFiducialListSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -1001,6 +1044,54 @@
     <hint type="destinationlabel">
      <x>314</x>
      <y>712</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>mandibleBridgeModelSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>216</x>
+     <y>698</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>320</x>
+     <y>1117</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>mandibleSurgicalGuideBaseSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>216</x>
+     <y>698</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>320</x>
+     <y>1143</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>mandibleFiducialListSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>216</x>
+     <y>698</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>320</x>
+     <y>1169</y>
     </hint>
    </hints>
   </connection>
