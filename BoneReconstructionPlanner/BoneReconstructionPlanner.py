@@ -483,7 +483,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     try:
 
       # Compute output
-      self.logic.generateFibulaPlanes()
+      self.logic.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible()
       
     except Exception as e:
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -641,7 +641,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if fibulaLine != None:
       try:
         # Compute output
-        self.generateFibulaPlanes()
+        self.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible()
 
       except Exception as e:
         slicer.util.errorDisplay("Failed to compute results: "+str(e))
@@ -1009,7 +1009,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       modelNodeItemID = shNode.GetItemByDataNode(modelNode)
       shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
 
-  def generateFibulaPlanes(self):
+  def generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible(self):
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
+
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
@@ -1076,6 +1080,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.updateFibulaPieces()
 
     self.tranformBonePiecesToMandible()
+
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
+
 
   def getAxes1ToWorldRotationMatrix(self,axis1X,axis1Y,axis1Z):
     axes1ToWorldRotationMatrix = vtk.vtkMatrix4x4()
@@ -1172,6 +1180,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     decimatedMandibleModelDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
     decimatedMandibleModelDisplayNode.SetVisibility(False)
 
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     planeCutsList = createListFromFolderID(shNode.GetItemByName("Plane Cuts"))
     for i in range(len(planeCutsList)):
       slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(planeCutsList[i])
