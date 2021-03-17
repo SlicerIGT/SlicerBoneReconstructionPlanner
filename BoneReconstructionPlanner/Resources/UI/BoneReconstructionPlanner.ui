@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>434</width>
-    <height>1397</height>
+    <height>1478</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -306,32 +306,13 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="createPlanesButton">
+       <widget class="ctkCheckablePushButton" name="generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton">
         <property name="enabled">
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Update fibula planes over fibula line</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="updateFibulaPiecesButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Update fibula bone pieces with fibula planes</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="bonesToMandibleButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Transform fibula bone pieces to mandible</string>
+         <string>Update fibula planes over fibula line; update fibula 
+bone pieces and transform them to mandible</string>
         </property>
        </widget>
       </item>
@@ -824,7 +805,7 @@
        <widget class="QPushButton" name="makeBooleanOperationsToMandibleSurgicalGuideBaseButton">
         <property name="text">
          <string>Make boolean operations to surgical guide bases with
- mandibleBridgeModel and sawBoxes (on development)</string>
+ mandibleBridgeModel and sawBoxes</string>
         </property>
        </widget>
       </item>
@@ -874,6 +855,11 @@
  </widget>
  <customwidgets>
   <customwidget>
+   <class>ctkCheckablePushButton</class>
+   <extends>ctkPushButton</extends>
+   <header>ctkCheckablePushButton.h</header>
+  </customwidget>
+  <customwidget>
    <class>ctkCollapsibleButton</class>
    <extends>QWidget</extends>
    <header>ctkCollapsibleButton.h</header>
@@ -883,6 +869,11 @@
    <class>ctkDoubleSpinBox</class>
    <extends>QWidget</extends>
    <header>ctkDoubleSpinBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ctkPushButton</class>
+   <extends>QPushButton</extends>
+   <header>ctkPushButton.h</header>
   </customwidget>
   <customwidget>
    <class>qMRMLNodeComboBox</class>

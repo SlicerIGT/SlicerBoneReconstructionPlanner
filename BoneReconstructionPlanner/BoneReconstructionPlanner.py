@@ -163,16 +163,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.sawBoxSlotWallSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.biggerSawBoxDistanceToMandibleSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    
+    self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkBoxToggled.connect(self.updateParameterNodeFromGUI)
+
     # Buttons
     self.ui.notLeftFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
-    self.ui.createPlanesButton.connect('clicked(bool)', self.onCreatePlanesButton)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.addMandibularCurveButton.connect('clicked(bool)',self.onAddMandibularCurveButton)
     self.ui.addFibulaLineButton.connect('clicked(bool)',self.onAddFibulaLineButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
-    self.ui.updateFibulaPiecesButton.connect('clicked(bool)',self.onUpdateFibulaPiecesButton)
-    self.ui.bonesToMandibleButton.connect('clicked(bool)',self.onBonesToMandibleButton)
     self.ui.mandibularAutomaticPositioningButton.connect('clicked(bool)',self.onMandibularAutomaticPositioningButton)
     self.ui.createMiterBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateMiterBoxesFromFibulaPlanesButton)
     self.ui.createFibulaCylindersFiducialListButton.connect('clicked(bool)',self.onCreateFibulaCylindersFiducialListButton)
@@ -182,6 +180,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.createSawBoxesFromFirstAndLastMandiblePlanesButton.connect('clicked(bool)', self.onCreateSawBoxesFromFirstAndLastMandiblePlanesButton)
     self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToMandibleSurgicalGuideBaseButton)
     self.ui.createCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton.connect('clicked(bool)', self.onCreateCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton)
+    self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.connect('clicked(bool)', self.onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
     
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -204,12 +203,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeAboutToBeRemovedEvent(self, caller, event, callData):
     if callData.GetClassName() == 'vtkMRMLMarkupsPlaneNode':
-      if callData.GetAttribute("isMandibularPlane") == 'True':
-        for i in range(len(self.logic.mandiblePlaneObserversAndNodeIDList)):
-          if self.logic.mandiblePlaneObserversAndNodeIDList[i][1] == callData.GetID():
-            observerIndex = i
-        callData.RemoveObserver(self.logic.mandiblePlaneObserversAndNodeIDList.pop(observerIndex)[0])
-        self.logic.onPlaneModifiedTimer(None,None)
+      if len(self.logic.mandiblePlaneObserversAndNodeIDList) >= 0:
+        if callData.GetAttribute("isMandibularPlane") == 'True':
+          for i in range(len(self.logic.mandiblePlaneObserversAndNodeIDList)):
+            if self.logic.mandiblePlaneObserversAndNodeIDList[i][1] == callData.GetID():
+              observerIndex = i
+          callData.RemoveObserver(self.logic.mandiblePlaneObserversAndNodeIDList.pop(observerIndex)[0])
+          self.logic.onPlaneModifiedTimer(None,None)
 
   def enter(self):
     """
@@ -226,11 +226,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     mandibleCylindersFiducialsListsFolder = shNode.GetItemByName("Mandible Cylinders Fiducials Lists")
 
     if segmentationModelsFolder:
-      self.ui.createPlanesButton.enabled = True
-    if fibulaPlanesFolder:  
-      self.ui.updateFibulaPiecesButton.enabled = True
-    if cutBonesFolder:
-      self.ui.bonesToMandibleButton.enabled = True
+      self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.enabled = True
     if fibulaCylindersFiducialsListsFolder:
       self.ui.createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton.enabled = True
     if mandibleCylindersFiducialsListsFolder:
@@ -371,7 +367,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.mandibleScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius")))
 
     self.ui.notLeftFibulaCheckBox.checked = self._parameterNode.GetParameter("notLeftFibula") == "True"
-
+    if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
+      self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
+    else:
+      self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 0
 
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
@@ -421,24 +420,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("notLeftFibula","True")
     else:
       self._parameterNode.SetParameter("notLeftFibula","False")
+    if self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState == qt.Qt.Checked:
+      self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","True")
+    else:
+      self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","False")
 
     self._parameterNode.EndModify(wasModified)
-
-  def onCreatePlanesButton(self):
-    """
-    Run processing when user clicks "Apply" button.
-    """
-    try:
-
-      # Compute output
-      self.logic.generateFibulaPlanes()
-      
-    except Exception as e:
-      slicer.util.errorDisplay("Failed to compute results: "+str(e))
-      import traceback
-      traceback.print_exc()
-    
-    self.ui.updateFibulaPiecesButton.enabled = True
 
   def onAddMandibularCurveButton(self):
     self.logic.addMandibularCurve()
@@ -461,14 +448,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onMakeModelsButton(self):
     self.logic.makeModels()
-    self.ui.createPlanesButton.enabled = True
-
-  def onUpdateFibulaPiecesButton(self):
-    self.logic.updateFibulaPieces()
-    self.ui.bonesToMandibleButton.enabled = True
-
-  def onBonesToMandibleButton(self):
-    self.logic.tranformBonePiecesToMandible()
+    self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.enabled = True
 
   def onMandibularAutomaticPositioningButton(self):
     self.logic.mandiblePlanesPositioningForMaximumBoneContact()
@@ -499,6 +479,17 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onCreateCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton(self):
     self.logic.createCylindersFromFiducialListAndMandibleSurgicalGuideBase()
 
+  def onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton(self):
+    try:
+
+      # Compute output
+      self.logic.generateFibulaPlanes()
+      
+    except Exception as e:
+      slicer.util.errorDisplay("Failed to compute results: "+str(e))
+      import traceback
+      traceback.print_exc()
+
 #
 # BoneReconstructionPlannerLogic
 #
@@ -522,7 +513,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.generateFibulaPlanesTimer = qt.QTimer()
     self.generateFibulaPlanesTimer.setInterval(300)
     self.generateFibulaPlanesTimer.setSingleShot(True)
-    self.generateFibulaPlanesTimer.connect('timeout()', self.onPlaneModified)
+    self.generateFibulaPlanesTimer.connect('timeout()', self.onGenerateFibulaPlanesTimerTimeout)
 
   def setDefaultParameters(self, parameterNode):
     """
@@ -637,9 +628,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.mandiblePlaneObserversAndNodeIDList.append([observer,sourceNode.GetID()])
   
   def onPlaneModifiedTimer(self,sourceNode,event):
-    self.generateFibulaPlanesTimer.start()
+    parameterNode = self.getParameterNode()
+    updateOnMandiblePlanesMovementChecked = parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True"
 
-  def onPlaneModified(self):
+    if updateOnMandiblePlanesMovementChecked:
+      self.generateFibulaPlanesTimer.start()
+
+  def onGenerateFibulaPlanesTimerTimeout(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
 
@@ -943,6 +938,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         slicer.mrmlScene.AddNode(modelNode)
         modelNode.CreateDefaultDisplayNodes()
         modelDisplay = modelNode.GetDisplayNode()
+        modelDisplay.SetSliceIntersectionVisibility(True)
         #Set color of the model
         aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
         colorTable = aux.GetLookupTable()
@@ -986,6 +982,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(modelNode)
       modelNode.CreateDefaultDisplayNodes()
       modelDisplay = modelNode.GetDisplayNode()
+      modelDisplay.SetSliceIntersectionVisibility(True)
       #Set color of the model
       aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
       colorTable = aux.GetLookupTable()
@@ -1022,16 +1019,27 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
     notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
-    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
-    if len(planeList) <= 1:
-      return
-
-
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
 
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+
+    #delete all folders because there is only one plane and show mandible model
+    if len(planeList) <= 1:
+      shNode.RemoveItem(fibulaPlanesFolder)
+      planeCutsFolder = shNode.GetItemByName("Plane Cuts")
+      shNode.RemoveItem(planeCutsFolder)
+      cutBonesFolder = shNode.GetItemByName("Cut Bones")
+      shNode.RemoveItem(cutBonesFolder)
+      transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+      shNode.RemoveItem(transformedFibulaPiecesFolder)
+      decimatedMandibleDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
+      decimatedMandibleDisplayNode.SetVisibility(True)
+      return
+
     if fibulaPlanesFolder:
       fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
       #delete all the folders that are not updated
@@ -1041,6 +1049,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         shNode.RemoveItem(planeCutsFolder)
         cutBonesFolder = shNode.GetItemByName("Cut Bones")
         shNode.RemoveItem(cutBonesFolder)
+        transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+        shNode.RemoveItem(transformedFibulaPiecesFolder)
 
     #Delete old fibulaPlanesTransforms
     mandible2FibulaTransformsFolder = shNode.GetItemByName("Mandible2Fibula transforms")
@@ -1061,8 +1071,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.transformFibulaPlanes(fibulaModelNode,fibulaX,fibulaY,fibulaZ,fibulaOrigin,fibulaZLineNorm,planeList,fibulaPlanesList,initialSpace,intersectionPlaceOfFibulaPlanes,intersectionDistanceMultiplier,additionalBetweenSpaceOfFibulaPlanes)
 
-    self.createCutBonesWithDynamicModeler(planeList,fibulaPlanesList,mandibularCurve,fibulaModelNode,mandibleModelNode)
+    self.createCutBonesWithDynamicModeler(planeList,fibulaPlanesList,mandibularCurve,decimatedFibulaModelNode,decimatedMandibleModelNode)
   
+    self.updateFibulaPieces()
+
+    self.tranformBonePiecesToMandible()
+
   def getAxes1ToWorldRotationMatrix(self,axis1X,axis1Y,axis1Z):
     axes1ToWorldRotationMatrix = vtk.vtkMatrix4x4()
     axes1ToWorldRotationMatrix.DeepCopy((1, 0, 0, 0,
@@ -1108,11 +1122,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaModelNode.SetName("fibula")
     mandibleModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
     mandibleModelNode.SetName("mandible")
+    decimatedFibulaModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','decimatedFibula')
+    decimatedMandibleModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','decimatedMandible')
     segmentations = [fibulaSegmentation,mandibularSegmentation]
     models = [fibulaModelNode,mandibleModelNode]
+    decimatedModels = [decimatedFibulaModelNode,decimatedMandibleModelNode]
     for i in range(2):
       slicer.mrmlScene.AddNode(models[i])
       models[i].CreateDefaultDisplayNodes()
+      decimatedModels[i].CreateDefaultDisplayNodes()
 
       seg = segmentations[i]
       seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
@@ -1123,23 +1141,37 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       logic = slicer.modules.segmentations.logic()
       logic.ExportSegmentToRepresentationNode(segment, models[i])
 
+      modelDisplayNode = models[i].GetDisplayNode()
+      modelDisplayNode.SetVisibility(False)
+
+      decimatedModelDisplayNode = decimatedModels[i].GetDisplayNode()
+      decimatedModelDisplayNode.SetColor(models[i].GetDisplayNode().GetColor())
+
+      param = {
+              "inputModel": models[i],
+              "outputModel": decimatedModels[i],
+              "reductionFactor": 0.95,
+              "method": "FastQuadric"
+              }
+
+      slicer.cli.runSync(slicer.modules.decimation, parameters=param)
+
       modelNodeItemID = shNode.GetItemByDataNode(models[i])
       shNode.SetItemParent(modelNodeItemID, segmentationModelsFolder)
+      decimatedModelNodeItemID = shNode.GetItemByDataNode(decimatedModels[i])
+      shNode.SetItemParent(decimatedModelNodeItemID, segmentationModelsFolder)
 
     parameterNode.SetNodeReferenceID("fibulaModelNode", fibulaModelNode.GetID())
     parameterNode.SetNodeReferenceID("mandibleModelNode", mandibleModelNode.GetID())
+    parameterNode.SetNodeReferenceID("decimatedFibulaModelNode", decimatedFibulaModelNode.GetID())
+    parameterNode.SetNodeReferenceID("decimatedMandibleModelNode", decimatedMandibleModelNode.GetID())
 
   def updateFibulaPieces(self):
     parameterNode = self.getParameterNode()
-    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
-    mandibleModelDisplayNode = mandibleModelNode.GetDisplayNode()
-    mandibleModelDisplayNode.SetVisibility(False)
+    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
+    decimatedMandibleModelDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
+    decimatedMandibleModelDisplayNode.SetVisibility(False)
 
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    bonePiecesTransformFolder = shNode.GetItemByName("Bone Pieces Transforms")
-    shNode.RemoveItem(bonePiecesTransformFolder)
-    transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
-    shNode.RemoveItem(transformedFibulaPiecesFolder)
     planeCutsList = createListFromFolderID(shNode.GetItemByName("Plane Cuts"))
     for i in range(len(planeCutsList)):
       slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(planeCutsList[i])
@@ -1198,6 +1230,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedFibulaPiece.CopyContent(cutBonesList[i])
       transformedFibulaPieceDisplayNode = transformedFibulaPiece.GetDisplayNode()
       transformedFibulaPieceDisplayNode.SetColor(cutBonesList[i].GetDisplayNode().GetColor())
+      transformedFibulaPieceDisplayNode.SetSliceIntersectionVisibility(True)
       transformedFibulaPiece.SetAndObserveTransformNodeID(fibulaPieceToMandibleAxisTransformNode.GetID())
 
       transformedFibulaPieceItemID = shNode.GetItemByDataNode(transformedFibulaPiece)
