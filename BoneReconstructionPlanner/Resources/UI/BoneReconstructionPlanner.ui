@@ -299,6 +299,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="centerFibulaLineButton">
+        <property name="text">
+         <string>Center fibula line using fibula model</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="mandibularAutomaticPositioningButton">
         <property name="text">
          <string>Automatic mandibular planes positioning for maximum bones contact area</string>

@@ -181,7 +181,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToMandibleSurgicalGuideBaseButton)
     self.ui.createCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton.connect('clicked(bool)', self.onCreateCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton)
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.connect('clicked(bool)', self.onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
-    
+    self.ui.centerFibulaLineButton.connect('clicked(bool)', self.onCenterFibulaLineButton)
+
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
 
@@ -489,6 +490,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       slicer.util.errorDisplay("Failed to compute results: "+str(e))
       import traceback
       traceback.print_exc()
+
+  def onCenterFibulaLineButton(self):
+    self.logic.centerFibulaLine()
 
 #
 # BoneReconstructionPlannerLogic
@@ -2036,7 +2040,42 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(miterBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, miterBoxesModelsList[i], surgicalGuideModel, 'difference')
 
+  def centerFibulaLine(self):
+    parameterNode = self.getParameterNode()
+    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
 
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
+
+    lineStartPos = np.zeros(3)
+    lineEndPos = np.zeros(3)
+    fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
+    fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+
+    for i in range(5):
+      fibulaLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
+      fibulaLineDirection = (lineEndPos-lineStartPos)/fibulaLineNorm
+
+      fibulaStartIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','FibulaStartIntersection %d' % i)
+      fibulaEndIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','FibulaEndIntersection %d' % i)
+      fibulaStartIntersectionModel.CreateDefaultDisplayNodes()
+      fibulaEndIntersectionModel.CreateDefaultDisplayNodes()
+
+      fibulaStartIntersectionModelItemID = shNode.GetItemByDataNode(fibulaStartIntersectionModel)
+      shNode.SetItemParent(fibulaStartIntersectionModelItemID, intersectionsFolder)
+      fibulaEndIntersectionModelItemID = shNode.GetItemByDataNode(fibulaEndIntersectionModel)
+      shNode.SetItemParent(fibulaEndIntersectionModelItemID, intersectionsFolder)
+
+      self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,fibulaStartIntersectionModel)
+      self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,fibulaEndIntersectionModel)
+      lineStartPos = self.getCentroid(fibulaStartIntersectionModel)
+      lineEndPos = self.getCentroid(fibulaEndIntersectionModel)
+
+    fibulaLine.SetNthControlPointPositionFromArray(0,lineStartPos)
+    fibulaLine.SetNthControlPointPositionFromArray(1,lineEndPos)
+
+    shNode.RemoveItem(intersectionsFolder)
 
 #
 # BoneReconstructionPlannerTest
