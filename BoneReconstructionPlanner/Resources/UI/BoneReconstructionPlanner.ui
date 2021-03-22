@@ -313,6 +313,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="makeAllMandiblePlanesRotateTogetherCheckBox">
+        <property name="text">
+         <string>Make all mandible planes rotate together</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="ctkCheckablePushButton" name="generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton">
         <property name="enabled">
          <bool>false</bool>

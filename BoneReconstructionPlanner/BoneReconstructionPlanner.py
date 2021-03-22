@@ -182,6 +182,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.createCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton.connect('clicked(bool)', self.onCreateCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton)
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.connect('clicked(bool)', self.onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
     self.ui.centerFibulaLineButton.connect('clicked(bool)', self.onCenterFibulaLineButton)
+    self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -368,6 +369,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.mandibleScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius")))
 
     self.ui.notLeftFibulaCheckBox.checked = self._parameterNode.GetParameter("notLeftFibula") == "True"
+    self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = self._parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
     else:
@@ -421,6 +423,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("notLeftFibula","True")
     else:
       self._parameterNode.SetParameter("notLeftFibula","False")
+    if self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked:
+      self._parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","True")
+    else:
+      self._parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","False")
     if self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState == qt.Qt.Checked:
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","True")
     else:
@@ -634,13 +640,24 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def onPlaneModifiedTimer(self,sourceNode,event):
     parameterNode = self.getParameterNode()
     updateOnMandiblePlanesMovementChecked = parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True"
+    makeAllMandiblePlanesRotateTogetherChecked = parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
+    
+    if makeAllMandiblePlanesRotateTogetherChecked and sourceNode != None:
+      parameterNode.SetNodeReferenceID("mandiblePlaneOfRotation", sourceNode.GetID())
 
     if updateOnMandiblePlanesMovementChecked:
       self.generateFibulaPlanesTimer.start()
 
   def onGenerateFibulaPlanesTimerTimeout(self):
     parameterNode = self.getParameterNode()
+    makeAllMandiblePlanesRotateTogetherChecked = parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
+    mandiblePlaneOfRotation = parameterNode.GetNodeReference("mandiblePlaneOfRotation")
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+
+    if makeAllMandiblePlanesRotateTogetherChecked:
+      self.removeMandiblePlanesObservers()
+      self.transformMandiblePlanesZRotationToBeTheSameAsInputPlane(mandiblePlaneOfRotation)
+      self.addMandiblePlaneObservers()
 
     if fibulaLine != None:
       try:
@@ -651,6 +668,77 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         slicer.util.errorDisplay("Failed to compute results: "+str(e))
         import traceback
         traceback.print_exc()  
+
+  def transformMandiblePlanesZRotationToBeTheSameAsInputPlane(self,mandiblePlaneOfRotation):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+    mandiblePlanesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),'Mandible Planes Transforms')
+
+    mandiblePlaneOfRotationMatrix = vtk.vtkMatrix4x4()
+    mandiblePlaneOfRotation.GetPlaneToWorldMatrix(mandiblePlaneOfRotationMatrix)
+    mandiblePlaneOfRotationY = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,1),mandiblePlaneOfRotationMatrix.GetElement(1,1),mandiblePlaneOfRotationMatrix.GetElement(2,1)])
+      
+    for i in range(len(mandibularPlanesList)):
+      if mandiblePlaneOfRotation.GetID() != mandibularPlanesList[i].GetID():
+        mandiblePlaneMatrix = vtk.vtkMatrix4x4()
+        mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
+        mandiblePlaneX = np.array([mandiblePlaneMatrix.GetElement(0,0),mandiblePlaneMatrix.GetElement(1,0),mandiblePlaneMatrix.GetElement(2,0)])
+        mandiblePlaneY = np.array([mandiblePlaneMatrix.GetElement(0,1),mandiblePlaneMatrix.GetElement(1,1),mandiblePlaneMatrix.GetElement(2,1)])
+        mandiblePlaneZ = np.array([mandiblePlaneMatrix.GetElement(0,2),mandiblePlaneMatrix.GetElement(1,2),mandiblePlaneMatrix.GetElement(2,2)])
+        mandiblePlaneOrigin = np.array([mandiblePlaneMatrix.GetElement(0,3),mandiblePlaneMatrix.GetElement(1,3),mandiblePlaneMatrix.GetElement(2,3)])
+
+        rotatedMandiblePlaneX = [0,0,0]
+        rotatedMandiblePlaneY =  [0,0,0]
+        rotatedMandiblePlaneZ = mandiblePlaneZ
+        vtk.vtkMath.Cross(mandiblePlaneOfRotationY, rotatedMandiblePlaneZ, rotatedMandiblePlaneX)
+        rotatedMandiblePlaneX = rotatedMandiblePlaneX/np.linalg.norm(rotatedMandiblePlaneX)
+        vtk.vtkMath.Cross(rotatedMandiblePlaneZ, rotatedMandiblePlaneX, rotatedMandiblePlaneY)
+        rotatedMandiblePlaneY = rotatedMandiblePlaneY/np.linalg.norm(rotatedMandiblePlaneY)
+
+        mandiblePlaneToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandiblePlaneX, mandiblePlaneY, mandiblePlaneZ)
+        rotatedMandiblePlaneToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(rotatedMandiblePlaneX, rotatedMandiblePlaneY, rotatedMandiblePlaneZ)
+
+        mandiblePlaneToRotatedMandiblePlaneRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandiblePlaneToWorldRotationMatrix, rotatedMandiblePlaneToWorldRotationMatrix)
+
+        transformNode = slicer.vtkMRMLLinearTransformNode()
+        transformNode.SetName("temp%d" % i)
+        slicer.mrmlScene.AddNode(transformNode)
+
+        finalTransform = vtk.vtkTransform()
+        finalTransform.PostMultiply()
+        finalTransform.Translate(-mandiblePlaneOrigin)
+        finalTransform.Concatenate(mandiblePlaneToRotatedMandiblePlaneRotationMatrix)
+        finalTransform.Translate(mandiblePlaneOrigin)
+        transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
+
+        transformNode.UpdateScene(slicer.mrmlScene)
+
+        mandibularPlanesList[i].SetAndObserveTransformNodeID(transformNode.GetID())
+        mandibularPlanesList[i].HardenTransform()
+        
+        transformNodeItemID = shNode.GetItemByDataNode(transformNode)
+        shNode.SetItemParent(transformNodeItemID, mandiblePlanesTransformsFolder)
+      
+    shNode.RemoveItem(mandiblePlanesTransformsFolder)
+
+  def addMandiblePlaneObservers(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
+    for i in range(len(mandibularPlanesList)):
+      observer = mandibularPlanesList[i].AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer)
+      self.mandiblePlaneObserversAndNodeIDList.append([observer,mandibularPlanesList[i].GetID()])
+
+  def removeMandiblePlanesObservers(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
+    for i in range(len(mandibularPlanesList)):
+      mandibularPlanesList[i].RemoveObserver(self.mandiblePlaneObserversAndNodeIDList[i][0])
+    self.mandiblePlaneObserversAndNodeIDList = []
 
   def transformFibulaPlanes(self,fibulaModelNode,fibulaX,fibulaY,fibulaZ,fibulaOrigin,fibulaZLineNorm,planeList,fibulaPlanesList,initialSpace,intersectionPlaceOfFibulaPlanes,intersectionDistanceMultiplier,additionalBetweenSpaceOfFibulaPlanes):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
