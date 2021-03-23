@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>434</width>
-    <height>1478</height>
+    <height>1486</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -316,6 +316,16 @@
        <widget class="QCheckBox" name="makeAllMandiblePlanesRotateTogetherCheckBox">
         <property name="text">
          <string>Make all mandible planes rotate together</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="useMoreExactVersionOfPositioningAlgorithmCheckBox">
+        <property name="toolTip">
+         <string>Use when you have finished editing</string>
+        </property>
+        <property name="text">
+         <string>Use more exact version of the positioning algorithm (takes more time)</string>
         </property>
        </widget>
       </item>
