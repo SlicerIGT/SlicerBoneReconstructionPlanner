@@ -909,7 +909,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         lineStartPos = self.fibulaPlanesPositionA.pop()
         lineEndPos = self.fibulaPlanesPositionB.pop()
 
-        for k in range(5):
+        numberOfRepetitionsOfPositioningAlgorithm = 5
+        for k in range(numberOfRepetitionsOfPositioningAlgorithm):
           fibulaLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
           fibulaLineDirection = (lineEndPos-lineStartPos)/fibulaLineNorm
 
@@ -939,6 +940,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         self.fibulaPlanesPositionA.append(lineStartPos)
         self.fibulaPlanesPositionB.append(self.fibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
+
+        shNode.RemoveItem(intersectionsForCentroidCalculationFolder)
 
       mandiblePlane0ToFibulaPlaneATransformNode = slicer.vtkMRMLLinearTransformNode()
       mandiblePlane0ToFibulaPlaneATransformNode.SetName("Mandible2Fibula Transform%d_A" % i)
@@ -2203,7 +2206,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
     fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
 
-    for i in range(5):
+    numberOfRepetitionsOfPositioningAlgorithm = 5
+    for i in range(numberOfRepetitionsOfPositioningAlgorithm):
       fibulaLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
       fibulaLineDirection = (lineEndPos-lineStartPos)/fibulaLineNorm
 
