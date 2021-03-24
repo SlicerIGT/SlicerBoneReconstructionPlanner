@@ -683,8 +683,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     mandiblePlaneOfRotationMatrix = vtk.vtkMatrix4x4()
     mandiblePlaneOfRotation.GetPlaneToWorldMatrix(mandiblePlaneOfRotationMatrix)
+    mandiblePlaneOfRotationX = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,0),mandiblePlaneOfRotationMatrix.GetElement(1,0),mandiblePlaneOfRotationMatrix.GetElement(2,0)])
     mandiblePlaneOfRotationY = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,1),mandiblePlaneOfRotationMatrix.GetElement(1,1),mandiblePlaneOfRotationMatrix.GetElement(2,1)])
-      
+        
     for i in range(len(mandibularPlanesList)):
       if mandiblePlaneOfRotation.GetID() != mandibularPlanesList[i].GetID():
         mandiblePlaneMatrix = vtk.vtkMatrix4x4()
@@ -697,10 +698,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         rotatedMandiblePlaneX = [0,0,0]
         rotatedMandiblePlaneY =  [0,0,0]
         rotatedMandiblePlaneZ = mandiblePlaneZ
-        vtk.vtkMath.Cross(mandiblePlaneOfRotationY, rotatedMandiblePlaneZ, rotatedMandiblePlaneX)
-        rotatedMandiblePlaneX = rotatedMandiblePlaneX/np.linalg.norm(rotatedMandiblePlaneX)
-        vtk.vtkMath.Cross(rotatedMandiblePlaneZ, rotatedMandiblePlaneX, rotatedMandiblePlaneY)
-        rotatedMandiblePlaneY = rotatedMandiblePlaneY/np.linalg.norm(rotatedMandiblePlaneY)
+        if abs(vtk.vtkMath.Dot(rotatedMandiblePlaneZ,mandiblePlaneOfRotationX)) > abs(vtk.vtkMath.Dot(rotatedMandiblePlaneZ,mandiblePlaneOfRotationY)):
+          vtk.vtkMath.Cross(mandiblePlaneOfRotationY, rotatedMandiblePlaneZ, rotatedMandiblePlaneX)
+          rotatedMandiblePlaneX = rotatedMandiblePlaneX/np.linalg.norm(rotatedMandiblePlaneX)
+          vtk.vtkMath.Cross(rotatedMandiblePlaneZ, rotatedMandiblePlaneX, rotatedMandiblePlaneY)
+          rotatedMandiblePlaneY = rotatedMandiblePlaneY/np.linalg.norm(rotatedMandiblePlaneY)
+        else:
+          vtk.vtkMath.Cross(rotatedMandiblePlaneZ, mandiblePlaneOfRotationX, rotatedMandiblePlaneY)
+          rotatedMandiblePlaneY = rotatedMandiblePlaneY/np.linalg.norm(rotatedMandiblePlaneY)
+          vtk.vtkMath.Cross(rotatedMandiblePlaneY, rotatedMandiblePlaneZ, rotatedMandiblePlaneX)
+          rotatedMandiblePlaneX = rotatedMandiblePlaneX/np.linalg.norm(rotatedMandiblePlaneX)
 
         mandiblePlaneToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandiblePlaneX, mandiblePlaneY, mandiblePlaneZ)
         rotatedMandiblePlaneToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(rotatedMandiblePlaneX, rotatedMandiblePlaneY, rotatedMandiblePlaneZ)
@@ -982,7 +989,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     shNode.RemoveItem(intersectionsFolder)
 
-  def createFibulaPlanesFromMandiblePlanesAndFibulaAxis(self,mandiblePlanesList,fibulaOrigin,fibulaPlanesList):
+  def createFibulaPlanesFromMandiblePlanesAndFibulaAxis(self,mandiblePlanesList,fibulaPlanesList):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
     for i in range(len(mandiblePlanesList)-1):
@@ -992,6 +999,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandiblePlane0.GetNormal(mandiblePlane0Normal)
       mandiblePlane1Normal = [0,0,0]
       mandiblePlane1.GetNormal(mandiblePlane1Normal)
+      mandiblePlane0Origin = [0,0,0]
+      mandiblePlane0.GetOrigin(mandiblePlane0Origin)
+      mandiblePlane1Origin = [0,0,0]
+      mandiblePlane1.GetOrigin(mandiblePlane1Origin)
 
       fibulaPlaneA = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
@@ -999,7 +1010,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(fibulaPlaneAItemID, fibulaPlanesFolder)
       fibulaPlaneA.SetAxes([1,0,0], [0,1,0], [0,0,1])
       fibulaPlaneA.SetNormal(mandiblePlane0Normal)
-      fibulaPlaneA.SetOrigin(fibulaOrigin)
+      fibulaPlaneA.SetOrigin(mandiblePlane0Origin)
       fibulaPlaneA.SetLocked(True)
       fibulaPlanesList.append(fibulaPlaneA)
 
@@ -1009,7 +1020,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(fibulaPlaneBItemID, fibulaPlanesFolder)
       fibulaPlaneB.SetAxes([1,0,0], [0,1,0], [0,0,1])
       fibulaPlaneB.SetNormal(mandiblePlane1Normal)
-      fibulaPlaneB.SetOrigin(fibulaOrigin)
+      fibulaPlaneB.SetOrigin(mandiblePlane1Origin)
       fibulaPlaneB.SetLocked(True)
       fibulaPlanesList.append(fibulaPlaneB)
 
@@ -1209,7 +1220,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #Create fibula planes and set their size
     if fibulaPlanesFolder==0:
       fibulaPlanesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula planes")
-      self.createFibulaPlanesFromMandiblePlanesAndFibulaAxis(planeList,fibulaOrigin,fibulaPlanesList)
+      self.createFibulaPlanesFromMandiblePlanesAndFibulaAxis(planeList,fibulaPlanesList)
 
     self.transformFibulaPlanes(fibulaModelNode,fibulaLine,notLeftFibulaChecked,useMoreExactVersionOfPositioningAlgorithmChecked,planeList,fibulaPlanesList,initialSpace,intersectionPlaceOfFibulaPlanes,intersectionDistanceMultiplier,additionalBetweenSpaceOfFibulaPlanes)
 
