@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>434</width>
-    <height>1486</height>
+    <height>1534</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -326,6 +326,13 @@
         </property>
         <property name="text">
          <string>Use more exact version of the positioning algorithm (takes more time)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="useNonDecimatedBoneModelsForPreviewCheckBox">
+        <property name="text">
+         <string>Use non-decimated bone models for preview (takes more time)</string>
         </property>
        </widget>
       </item>

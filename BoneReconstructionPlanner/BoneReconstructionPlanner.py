@@ -184,6 +184,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.centerFibulaLineButton.connect('clicked(bool)', self.onCenterFibulaLineButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -372,6 +373,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.notLeftFibulaCheckBox.checked = self._parameterNode.GetParameter("notLeftFibula") == "True"
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = self._parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
+    self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
     else:
@@ -433,6 +435,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm","True")
     else:
       self._parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm","False")
+    if self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked:
+      self._parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview","True")
+    else:
+      self._parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview","False")
     if self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState == qt.Qt.Checked:
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","True")
     else:
@@ -1076,7 +1082,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           displayNode2 = fibulaPlanesList[2*i].GetDisplayNode()
           displayNode2.SetSelectedColor(color)
 
-  def createCutBonesWithDynamicModeler(self,planeList,fibulaPlanesList,mandibularCurve,fibulaModelNode,mandibleModelNode):
+  def createAndUpdateDynamicModelerNodes(self,planeList,fibulaPlanesList,mandibularCurve,fibulaModelNode,mandibleModelNode):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     planeCutsFolder = shNode.GetItemByName("Plane Cuts")
     if planeCutsFolder == 0:
@@ -1161,6 +1167,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(dynamicModelerNodeItemID, planeCutsFolder)
       modelNodeItemID = shNode.GetItemByDataNode(modelNode)
       shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
+    
+    else:
+      dynamicModelerNodesList = createListFromFolderID(planeCutsFolder)
+      for i in range(len(dynamicModelerNodesList)):
+        if i != (len(dynamicModelerNodesList) -1):
+          dynamicModelerNodesList[i].SetNodeReferenceID("PlaneCut.InputModel", fibulaModelNode.GetID())
+        else:
+          dynamicModelerNodesList[i].SetNodeReferenceID("PlaneCut.InputModel", mandibleModelNode.GetID())
 
   def generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible(self):
     import time
@@ -1176,8 +1190,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
     notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
+    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
     decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
@@ -1224,7 +1240,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.transformFibulaPlanes(fibulaModelNode,fibulaLine,notLeftFibulaChecked,useMoreExactVersionOfPositioningAlgorithmChecked,planeList,fibulaPlanesList,initialSpace,intersectionPlaceOfFibulaPlanes,intersectionDistanceMultiplier,additionalBetweenSpaceOfFibulaPlanes)
 
-    self.createCutBonesWithDynamicModeler(planeList,fibulaPlanesList,mandibularCurve,decimatedFibulaModelNode,decimatedMandibleModelNode)
+    if useNonDecimatedBoneModelsForPreviewChecked:
+      self.createAndUpdateDynamicModelerNodes(planeList,fibulaPlanesList,mandibularCurve,fibulaModelNode,mandibleModelNode)
+    else:
+      self.createAndUpdateDynamicModelerNodes(planeList,fibulaPlanesList,mandibularCurve,decimatedFibulaModelNode,decimatedMandibleModelNode)
   
     self.updateFibulaPieces()
 
