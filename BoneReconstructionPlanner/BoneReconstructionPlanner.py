@@ -171,7 +171,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.addMandibularCurveButton.connect('clicked(bool)',self.onAddMandibularCurveButton)
     self.ui.addFibulaLineButton.connect('clicked(bool)',self.onAddFibulaLineButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
-    self.ui.mandibularAutomaticPositioningButton.connect('clicked(bool)',self.onMandibularAutomaticPositioningButton)
     self.ui.createMiterBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateMiterBoxesFromFibulaPlanesButton)
     self.ui.createFibulaCylindersFiducialListButton.connect('clicked(bool)',self.onCreateFibulaCylindersFiducialListButton)
     self.ui.createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton.connect('clicked(bool)',self.onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton)
@@ -185,6 +184,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -375,6 +375,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = self._parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
     else:
@@ -432,6 +433,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","True")
     else:
       self._parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","False")
+    if self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked:
+      self._parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","True")
+    else:
+      self._parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","False")
     if self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked:
       self._parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm","True")
     else:
@@ -546,9 +551,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.makeModels()
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.enabled = True
 
-  def onMandibularAutomaticPositioningButton(self):
-    self.logic.mandiblePlanesPositioningForMaximumBoneContact()
-
   def onCreateMiterBoxesFromFibulaPlanesButton(self):
     self.logic.createMiterBoxesFromFibulaPlanes()
 
@@ -576,15 +578,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.createCylindersFromFiducialListAndMandibleSurgicalGuideBase()
 
   def onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton(self):
-    try:
-
-      # Compute output
-      self.logic.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible()
-      
-    except Exception as e:
-      slicer.util.errorDisplay("Failed to compute results: "+str(e))
-      import traceback
-      traceback.print_exc()
+    self.logic.onGenerateFibulaPlanesTimerTimeout()
 
   def onCenterFibulaLineButton(self):
     self.logic.centerFibulaLine()
@@ -813,14 +807,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def onGenerateFibulaPlanesTimerTimeout(self):
     parameterNode = self.getParameterNode()
+    mandiblePlanesPositioningForMaximumBoneContactChecked = parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
     makeAllMandiblePlanesRotateTogetherChecked = parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     mandiblePlaneOfRotation = parameterNode.GetNodeReference("mandiblePlaneOfRotation")
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
 
-    if makeAllMandiblePlanesRotateTogetherChecked:
+    if makeAllMandiblePlanesRotateTogetherChecked and mandiblePlanesPositioningForMaximumBoneContactChecked:
       self.removeMandiblePlanesObservers()
+      self.mandiblePlanesPositioningForMaximumBoneContact()
       self.transformMandiblePlanesZRotationToBeTheSameAsInputPlane(mandiblePlaneOfRotation)
       self.addMandiblePlaneObservers()
+    else:
+      if mandiblePlanesPositioningForMaximumBoneContactChecked:
+        self.removeMandiblePlanesObservers()
+        self.mandiblePlanesPositioningForMaximumBoneContact()
+        self.addMandiblePlaneObservers()
+      else:
+        if makeAllMandiblePlanesRotateTogetherChecked:
+          self.removeMandiblePlanesObservers()
+          self.transformMandiblePlanesZRotationToBeTheSameAsInputPlane(mandiblePlaneOfRotation)
+          self.addMandiblePlaneObservers()
 
     if fibulaLine != None:
       try:
