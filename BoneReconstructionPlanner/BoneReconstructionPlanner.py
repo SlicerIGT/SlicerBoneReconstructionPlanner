@@ -1959,6 +1959,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     clearanceFitPrintingTolerance = float(parameterNode.GetParameter("clearanceFitPrintingTolerance"))
     biggerMiterBoxDistanceToFibula = float(parameterNode.GetParameter("biggerMiterBoxDistanceToFibula"))
     notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
+    useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
 
     scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
@@ -1990,12 +1991,21 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
     pointsIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Points Intersections")
 
-    #Create fibula axis:
-    fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
+    if not useMoreExactVersionOfPositioningAlgorithmChecked:
+      #Create fibula axis:
+      fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
 
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
 
     for i in range(len(fibulaPlanesList)):
+      if useMoreExactVersionOfPositioningAlgorithmChecked:
+        lineStartPos = np.array([0,0,0])
+        lineEndPos = np.array([0,0,0])
+        fibulaPlanesList[(i//2)*2].GetOrigin(lineStartPos)
+        fibulaPlanesList[(i//2)*2 +1].GetOrigin(lineEndPos)
+        #Create fibula axis:
+        fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(lineStartPos,lineEndPos,notLeftFibulaChecked)
+
       #miterBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
       if i%2 == 0:
         miterBoxName = "miterBox%d_A" % (i//2)
