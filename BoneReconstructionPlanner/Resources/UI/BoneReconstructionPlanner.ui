@@ -306,7 +306,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="mandibularAutomaticPositioningButton">
+       <widget class="QCheckBox" name="mandiblePlanesPositioningForMaximumBoneContactCheckBox">
         <property name="text">
          <string>Automatic mandibular planes positioning for maximum bones contact area</string>
         </property>
