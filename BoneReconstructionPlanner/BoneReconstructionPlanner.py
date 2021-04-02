@@ -141,7 +141,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaFiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.miterBoxDirectionLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.scalarVolumeSelector.connect("nodeActivated(vtkMRMLNode*)", self.onScalarVolumeChanged)
+    self.ui.scalarVolumeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onScalarVolumeChanged)
     self.ui.mandibleBridgeModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleFiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -334,6 +334,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibleBridgeModelSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleBridgeModel"))
     self.ui.mandibleSurgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel"))
     self.ui.mandibleFiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleFiducialList"))
+    self.ui.scalarVolumeSelector.setCurrentNode(self._parameterNode.GetNodeReference("currentScalarVolume"))
 
     if self._parameterNode.GetParameter("initialSpace") != '':
       self.ui.initialSpinBox.setValue(float(self._parameterNode.GetParameter("initialSpace")))
@@ -453,14 +454,90 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.addFibulaLine()
 
   def onScalarVolumeChanged(self):
+    wasModified = self._parameterNode.StartModify()
+    self._parameterNode.SetNodeReferenceID("currentScalarVolume", self.ui.scalarVolumeSelector.currentNodeID)
+    self._parameterNode.EndModify(wasModified)
+
     scalarVolume = self.ui.scalarVolumeSelector.currentNode()
-    scalarVolumeID = scalarVolume.GetID()
-    redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
-    redSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
-    greenSliceLogic = slicer.app.layoutManager().sliceWidget('Green').sliceLogic()
-    greenSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
-    yellowSliceLogic = slicer.app.layoutManager().sliceWidget('Yellow').sliceLogic()
-    yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+    if scalarVolume != None:
+      scalarVolumeID = scalarVolume.GetID()
+      redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
+      redSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+      greenSliceLogic = slicer.app.layoutManager().sliceWidget('Green').sliceLogic()
+      greenSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+      yellowSliceLogic = slicer.app.layoutManager().sliceWidget('Yellow').sliceLogic()
+      yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+
+      slicer.util.resetSliceViews()
+
+      fibulaCentroidX = self._parameterNode.GetParameter("fibulaCentroidX")
+      fibulaCentroidY = self._parameterNode.GetParameter("fibulaCentroidY")
+      fibulaCentroidZ = self._parameterNode.GetParameter("fibulaCentroidZ")
+      mandibleCentroidX = self._parameterNode.GetParameter("mandibleCentroidX")
+      mandibleCentroidY = self._parameterNode.GetParameter("mandibleCentroidY")
+      mandibleCentroidZ = self._parameterNode.GetParameter("mandibleCentroidZ")
+      
+      if fibulaCentroidX != "":
+        fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
+        mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
+
+        bounds = [0,0,0,0,0,0]
+        scalarVolume.GetBounds(bounds)
+        bounds = np.array(bounds)
+        centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
+      
+        shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+        mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+        fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+        biggerMiterBoxesFolder = shNode.GetItemByName("biggerMiterBoxes Models")
+        cutBonesFolder = shNode.GetItemByName("Cut Bones")
+        transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+        mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+        fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
+        biggerMiterBoxesList = createListFromFolderID(biggerMiterBoxesFolder)
+        cutBonesList = createListFromFolderID(cutBonesFolder)
+        transformedFibulaPiecesList = createListFromFolderID(transformedFibulaPiecesFolder)
+        redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+
+        fibulaDisplayNodesWereUpdatedFlag = self._parameterNode.GetParameter("fibulaDisplayNodesWereUpdatedFlag")
+
+        if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+          #When fibulaScalarVolume:
+          if fibulaDisplayNodesWereUpdatedFlag == "" or fibulaDisplayNodesWereUpdatedFlag == "False":
+            #addIterationList = fibulaPlanesList + biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
+            #removeIterationList = mandibularPlanesList + [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
+            addIterationList = biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
+            removeIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
+
+            for i in range(len(addIterationList)):
+              displayNode = addIterationList[i].GetDisplayNode()
+              displayNode.AddViewNodeID(redSliceNode.GetID())
+            
+            for i in range(len(removeIterationList)):
+              displayNode = removeIterationList[i].GetDisplayNode()
+              displayNode.RemoveViewNodeID(redSliceNode.GetID())
+            
+            wasModified = self._parameterNode.StartModify()
+            self._parameterNode.SetParameter("fibulaDisplayNodesWereUpdatedFlag","True")
+        else:
+          #When mandibleScalarVolume:
+          if fibulaDisplayNodesWereUpdatedFlag == "" or fibulaDisplayNodesWereUpdatedFlag == "True":
+            #addIterationList = mandibularPlanesList + [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
+            #removeIterationList = fibulaPlanesList + biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
+            addIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
+            removeIterationList = biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
+            
+            for i in range(len(addIterationList)):
+              displayNode = addIterationList[i].GetDisplayNode()
+              displayNode.AddViewNodeID(redSliceNode.GetID())
+            
+            for i in range(len(removeIterationList)):
+              displayNode = removeIterationList[i].GetDisplayNode()
+              displayNode.RemoveViewNodeID(redSliceNode.GetID())
+            
+            wasModified = self._parameterNode.StartModify()
+            self._parameterNode.SetParameter("fibulaDisplayNodesWereUpdatedFlag","False")
+            self._parameterNode.EndModify(wasModified)
     
   def onAddCutPlaneButton(self):
     self.logic.addCutPlane()
@@ -537,6 +614,47 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.generateFibulaPlanesTimer.setSingleShot(True)
     self.generateFibulaPlanesTimer.connect('timeout()', self.onGenerateFibulaPlanesTimerTimeout)
 
+    customLayout = """
+      <layout type="vertical">
+      <item>
+        <layout type="horizontal">
+        <item>
+          <view class="vtkMRMLViewNode" singletontag="1">
+          <property name="viewlabel" action="default">1</property>
+          </view>
+        </item>
+        <item>
+          <view class="vtkMRMLSliceNode" singletontag="Red">
+          <property name="orientation" action="default">Axial</property>
+          <property name="viewlabel" action="default">R</property>
+          <property name="viewcolor" action="default">#F34A33</property>
+          </view>
+        </item>
+        </layout>
+      </item>
+      <item>
+        <view class="vtkMRMLViewNode" singletontag="2">
+        <property name="viewlabel" action="default">2</property>
+        </view>
+      </item>
+      </layout>
+    """
+    # Built-in layout IDs are all below 100, so you can choose any large random number
+    # for your custom layout ID.
+    self.customLayoutId=101
+
+    layoutManager = slicer.app.layoutManager()
+    layoutManager.layoutLogic().GetLayoutNode().AddLayoutDescription(self.customLayoutId, customLayout)
+
+    # Add button to layout selector toolbar for this custom layout
+    viewToolBar = slicer.util.mainWindow().findChild('QToolBar', 'ViewToolBar')
+    layoutMenu = viewToolBar.widgetForAction(viewToolBar.actions()[0]).menu()
+    layoutSwitchActionParent = layoutMenu  # use `layoutMenu` to add inside layout list, use `viewToolBar` to add next the standard layout list
+    layoutSwitchAction = layoutSwitchActionParent.addAction("BoneReconstructionPlanner") # add inside layout list
+    layoutSwitchAction.setData(self.customLayoutId)
+    layoutSwitchAction.setIcon(qt.QIcon(':Icons/Go.png'))
+    layoutSwitchAction.setToolTip('3D Mandible View, Red Slice and 3D Fibula View')
+
   def setDefaultParameters(self, parameterNode):
     """
     Initialize parameter node with default settings.
@@ -573,6 +691,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.SetItemParent(curveNodeItemID, self.getParentFolderItemID())
     curveNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularCurve"))
 
+    displayNode = curveNode.GetDisplayNode()
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
+    displayNode.AddViewNodeID(mandibleViewNode.GetID())
+
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(curveNode)
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
@@ -588,6 +710,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.SetItemParent(lineNodeItemID, self.getParentFolderItemID())
     lineNode.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaLine"))
 
+    displayNode = lineNode.GetDisplayNode()
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
+    displayNode.AddViewNodeID(fibulaViewNode.GetID())
+
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(lineNode)
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
@@ -595,6 +721,23 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def addCutPlane(self):
     parameterNode = self.getParameterNode()
+    scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
+    fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
+    fibulaCentroidY = parameterNode.GetParameter("fibulaCentroidY")
+    fibulaCentroidZ = parameterNode.GetParameter("fibulaCentroidZ")
+    mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
+    mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
+    mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
+    
+    fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
+    mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
+
+    bounds = [0,0,0,0,0,0]
+    scalarVolume.GetBounds(bounds)
+    bounds = np.array(bounds)
+    centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
+    
+
     colorIndexStr = parameterNode.GetParameter("colorIndex")
     if colorIndexStr != "":
       colorIndex = int(colorIndexStr) + 1
@@ -624,6 +767,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode = planeNode.GetDisplayNode()
     displayNode.SetGlyphScale(2.5)
     displayNode.SetSelectedColor(color)
+
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
+    displayNode.AddViewNodeID(mandibleViewNode.GetID())
+    """
+    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) > np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+      redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+      displayNode.AddViewNodeID(redSliceNode.GetID())
+    """
 
     #conections
     self.planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
@@ -1012,18 +1163,30 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       fibulaPlaneA = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
+
+      displayNode = fibulaPlaneA.GetDisplayNode()
+      fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
+      displayNode.AddViewNodeID(fibulaViewNode.GetID())
+
       fibulaPlaneAItemID = shNode.GetItemByDataNode(fibulaPlaneA)
       shNode.SetItemParent(fibulaPlaneAItemID, fibulaPlanesFolder)
+
       fibulaPlaneA.SetAxes([1,0,0], [0,1,0], [0,0,1])
       fibulaPlaneA.SetNormal(mandiblePlane0Normal)
       fibulaPlaneA.SetOrigin(mandiblePlane0Origin)
       fibulaPlaneA.SetLocked(True)
       fibulaPlanesList.append(fibulaPlaneA)
 
+
       fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneB)
+
+      displayNode = fibulaPlaneB.GetDisplayNode()
+      displayNode.AddViewNodeID(fibulaViewNode.GetID())
+
       fibulaPlaneBItemID = shNode.GetItemByDataNode(fibulaPlaneB)
       shNode.SetItemParent(fibulaPlaneBItemID, fibulaPlanesFolder)
+
       fibulaPlaneB.SetAxes([1,0,0], [0,1,0], [0,0,1])
       fibulaPlaneB.SetNormal(mandiblePlane1Normal)
       fibulaPlaneB.SetOrigin(mandiblePlane1Origin)
@@ -1096,8 +1259,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         modelNode.SetName("Fibula Segment {0}A-{1}B".format(i//2,i//2))
         slicer.mrmlScene.AddNode(modelNode)
         modelNode.CreateDefaultDisplayNodes()
-        modelDisplay = modelNode.GetDisplayNode()
-        modelDisplay.SetSliceIntersectionVisibility(True)
+        modelDisplayNode = modelNode.GetDisplayNode()
+        modelDisplayNode.SetSliceIntersectionVisibility(True)
+
+        fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
+        modelDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+
         #Set color of the model
         aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
         colorTable = aux.GetLookupTable()
@@ -1105,7 +1272,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         ind = int((nColors-1) - i/2)
         colorwithalpha = colorTable.GetTableValue(ind)
         color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
-        modelDisplay.SetColor(color)
+        modelDisplayNode.SetColor(color)
 
         #Determinate plane creation direction and set up dynamic modeler
         planeOriginStart = [0,0,0]
@@ -1140,8 +1307,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       modelNode.SetName("Resected mandible")
       slicer.mrmlScene.AddNode(modelNode)
       modelNode.CreateDefaultDisplayNodes()
-      modelDisplay = modelNode.GetDisplayNode()
-      modelDisplay.SetSliceIntersectionVisibility(True)
+      modelDisplayNode = modelNode.GetDisplayNode()
+      modelDisplayNode.SetSliceIntersectionVisibility(True)
+
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
+      modelDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+
       #Set color of the model
       aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
       colorTable = aux.GetLookupTable()
@@ -1149,7 +1320,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       ind = int((nColors-1) - (len(fibulaPlanesList)-1)/2 -1)
       colorwithalpha = colorTable.GetTableValue(ind)
       color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
-      modelDisplay.SetColor(color)
+      modelDisplayNode.SetColor(color)
 
       dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
       dynamicModelerNode.SetToolName("Plane cut")
@@ -1249,10 +1420,55 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.tranformBonePiecesToMandible()
 
+    self.setRedSliceForDisplayNodes()
+
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
 
+  def setRedSliceForDisplayNodes(self):
+    parameterNode = self.getParameterNode()
+    scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
+    fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
+    fibulaCentroidY = parameterNode.GetParameter("fibulaCentroidY")
+    fibulaCentroidZ = parameterNode.GetParameter("fibulaCentroidZ")
+    mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
+    mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
+    mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
+    
+    fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
+    mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
 
+    bounds = [0,0,0,0,0,0]
+    scalarVolume.GetBounds(bounds)
+    bounds = np.array(bounds)
+    centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
+    
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    cutBonesFolder = shNode.GetItemByName("Cut Bones")
+    transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+    fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
+    cutBonesList = createListFromFolderID(cutBonesFolder)
+    transformedFibulaPiecesList = createListFromFolderID(transformedFibulaPiecesFolder)
+    redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+
+    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+      #When fibulaScalarVolume:
+      #addIterationList = fibulaPlanesList + cutBonesList[0:(len(cutBonesList)-1)]
+      addIterationList = cutBonesList[0:(len(cutBonesList)-1)]
+      
+      for i in range(len(addIterationList)):
+        displayNode = addIterationList[i].GetDisplayNode()
+        displayNode.AddViewNodeID(redSliceNode.GetID())
+    
+    else:
+      #When mandibleScalarVolume:
+      addIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
+      
+      for i in range(len(addIterationList)):
+        displayNode = addIterationList[i].GetDisplayNode()
+        displayNode.AddViewNodeID(redSliceNode.GetID())
+      
   def getAxes1ToWorldRotationMatrix(self,axis1X,axis1Y,axis1Z):
     axes1ToWorldRotationMatrix = vtk.vtkMatrix4x4()
     axes1ToWorldRotationMatrix.DeepCopy((1, 0, 0, 0,
@@ -1283,6 +1499,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     return axes1ToAxes2RotationMatrix
 
   def makeModels(self):
+    layoutManager = slicer.app.layoutManager()
+    layoutManager.setLayout(self.customLayoutId)
+
+    slicer.util.resetSliceViews()
+
     parameterNode = self.getParameterNode()
     fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
     mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
@@ -1310,7 +1531,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       seg = segmentations[i]
       seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
-      #segmentID = seg.GetSegmentation().GetSegmentIdBySegmentName('fibulasegment')
       segmentID = seg.GetSegmentation().GetNthSegmentID(0)
       segment = seg.GetSegmentation().GetSegment(segmentID)
 
@@ -1336,6 +1556,35 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(modelNodeItemID, segmentationModelsFolder)
       decimatedModelNodeItemID = shNode.GetItemByDataNode(decimatedModels[i])
       shNode.SetItemParent(decimatedModelNodeItemID, segmentationModelsFolder)
+
+      if i==0:
+        singletonTag = "2"
+      else:
+        singletonTag = "1"
+      viewNode = slicer.mrmlScene.GetSingletonNode(singletonTag, "vtkMRMLViewNode")
+      cameraNode = slicer.modules.cameras.logic().GetViewActiveCameraNode(viewNode)
+
+      modelDisplayNode.AddViewNodeID(viewNode.GetID())
+      decimatedModelDisplayNode.AddViewNodeID(viewNode.GetID())
+
+      centroid = self.getCentroid(models[i])
+      distanceMultiplier = 4
+      if i==0: #distanceMultiplier selection is arbitrary
+        viewUpDirection = [0,1,0]
+      else:
+        viewUpDirection = [0,0,1]
+      cameraNode.SetPosition(distanceMultiplier*centroid)
+      cameraNode.SetFocalPoint(centroid)
+      cameraNode.SetViewUp(viewUpDirection)
+
+      if i==0:
+        parameterNode.SetParameter("fibulaCentroidX",str(centroid[0]))
+        parameterNode.SetParameter("fibulaCentroidY",str(centroid[1]))
+        parameterNode.SetParameter("fibulaCentroidZ",str(centroid[2]))
+      else:
+        parameterNode.SetParameter("mandibleCentroidX",str(centroid[0]))
+        parameterNode.SetParameter("mandibleCentroidY",str(centroid[1]))
+        parameterNode.SetParameter("mandibleCentroidZ",str(centroid[2]))
 
     parameterNode.SetNodeReferenceID("fibulaModelNode", fibulaModelNode.GetID())
     parameterNode.SetNodeReferenceID("mandibleModelNode", mandibleModelNode.GetID())
@@ -1394,7 +1643,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       fibulaPieceToMandibleAxisTransform = vtk.vtkTransform()
       fibulaPieceToMandibleAxisTransform.PostMultiply()
-      #fibulaPieceToMandibleAxisTransform.Translate(-x1, -y1, -z1)
       fibulaPieceToMandibleAxisTransform.Translate(-oldOrigin[0],-oldOrigin[1],-oldOrigin[2])
       fibulaPieceToMandibleAxisTransform.Concatenate(inverseRotationMatrix)
       fibulaPieceToMandibleAxisTransform.Translate(origin)
@@ -1408,6 +1656,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedFibulaPieceDisplayNode = transformedFibulaPiece.GetDisplayNode()
       transformedFibulaPieceDisplayNode.SetColor(cutBonesList[i].GetDisplayNode().GetColor())
       transformedFibulaPieceDisplayNode.SetSliceIntersectionVisibility(True)
+
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
+      transformedFibulaPieceDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+
       transformedFibulaPiece.SetAndObserveTransformNodeID(fibulaPieceToMandibleAxisTransformNode.GetID())
 
       transformedFibulaPieceItemID = shNode.GetItemByDataNode(transformedFibulaPiece)
@@ -1709,6 +1961,22 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
 
+    scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
+    fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
+    fibulaCentroidY = parameterNode.GetParameter("fibulaCentroidY")
+    fibulaCentroidZ = parameterNode.GetParameter("fibulaCentroidZ")
+    mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
+    mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
+    mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
+    
+    fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
+    mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
+
+    bounds = [0,0,0,0,0,0]
+    scalarVolume.GetBounds(bounds)
+    bounds = np.array(bounds)
+    centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
+
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
     fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
@@ -1725,6 +1993,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #Create fibula axis:
     fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
 
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
+
     for i in range(len(fibulaPlanesList)):
       #miterBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
       if i%2 == 0:
@@ -1737,6 +2007,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxLength = miterBoxSlotLength
       miterBoxHeight = 70
       miterBoxModel = self.createBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
+
+      miterBoxDisplayNode = miterBoxModel.GetDisplayNode()
+      miterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+
       miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
       shNode.SetItemParent(miterBoxModelItemID, miterBoxesModelsFolder)
 
@@ -1744,6 +2018,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       biggerMiterBoxLength = miterBoxSlotLength+2*miterBoxSlotWall
       biggerMiterBoxHeight = miterBoxSlotHeight
       biggerMiterBoxModel = self.createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
+      biggerMiterBoxDisplayNode = biggerMiterBoxModel.GetDisplayNode()
+
+      biggerMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+      biggerMiterBoxDisplayNode.SetSliceIntersectionVisibility(True)
+      if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+        redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+        biggerMiterBoxDisplayNode.AddViewNodeID(redSliceNode.GetID())
+
       biggerMiterBoxModelItemID = shNode.GetItemByDataNode(biggerMiterBoxModel)
       shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
 
