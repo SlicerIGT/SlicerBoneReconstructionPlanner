@@ -1081,6 +1081,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         numberOfRepetitionsOfPositioningAlgorithm = 5
         for k in range(numberOfRepetitionsOfPositioningAlgorithm):
+          oldLineStartPos = lineStartPos
+          oldLineEndPos = lineEndPos
+
           fibulaLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
           fibulaLineDirection = (lineEndPos-lineStartPos)/fibulaLineNorm
 
@@ -1098,6 +1101,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,intersectionB)
           lineStartPos = self.getCentroid(intersectionA)
           lineEndPos = self.getCentroid(intersectionB)
+
+          error = np.linalg.norm(lineStartPos-oldLineStartPos) + np.linalg.norm(lineEndPos-oldLineEndPos)
+          if error < 0.01:# Unavoidable errors because of fibula bone shape are about 0.6-0.8mm
+            break
         
         #Create fibula axis:
         fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(lineStartPos,lineEndPos,notLeftFibulaChecked)
