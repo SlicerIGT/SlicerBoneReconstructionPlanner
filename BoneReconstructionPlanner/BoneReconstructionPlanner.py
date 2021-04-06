@@ -207,13 +207,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeAboutToBeRemovedEvent(self, caller, event, callData):
     if callData.GetClassName() == 'vtkMRMLMarkupsPlaneNode':
-      if len(self.logic.mandiblePlaneObserversAndNodeIDList) >= 0:
-        if callData.GetAttribute("isMandibularPlane") == 'True':
+      if callData.GetAttribute("isMandibularPlane") == 'True':
+        if len(self.logic.mandiblePlaneObserversAndNodeIDList) > 0:
           for i in range(len(self.logic.mandiblePlaneObserversAndNodeIDList)):
             if self.logic.mandiblePlaneObserversAndNodeIDList[i][1] == callData.GetID():
               observerIndex = i
           callData.RemoveObserver(self.logic.mandiblePlaneObserversAndNodeIDList.pop(observerIndex)[0])
-          self.logic.onPlaneModifiedTimer(None,None)
+        self.logic.onPlaneModifiedTimer(None,None)
 
   def enter(self):
     """
@@ -806,27 +806,36 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.generateFibulaPlanesTimer.start()
 
   def onGenerateFibulaPlanesTimerTimeout(self):
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
+
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
     parameterNode = self.getParameterNode()
     mandiblePlanesPositioningForMaximumBoneContactChecked = parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
     makeAllMandiblePlanesRotateTogetherChecked = parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     mandiblePlaneOfRotation = parameterNode.GetNodeReference("mandiblePlaneOfRotation")
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
 
-    if makeAllMandiblePlanesRotateTogetherChecked and mandiblePlanesPositioningForMaximumBoneContactChecked:
-      self.removeMandiblePlanesObservers()
-      self.mandiblePlanesPositioningForMaximumBoneContact()
-      self.transformMandiblePlanesZRotationToBeTheSameAsInputPlane(mandiblePlaneOfRotation)
-      self.addMandiblePlaneObservers()
-    else:
-      if mandiblePlanesPositioningForMaximumBoneContactChecked:
+    if len(mandibularPlanesList):
+      if makeAllMandiblePlanesRotateTogetherChecked and mandiblePlanesPositioningForMaximumBoneContactChecked:
         self.removeMandiblePlanesObservers()
         self.mandiblePlanesPositioningForMaximumBoneContact()
+        self.transformMandiblePlanesZRotationToBeTheSameAsInputPlane(mandiblePlaneOfRotation)
         self.addMandiblePlaneObservers()
       else:
-        if makeAllMandiblePlanesRotateTogetherChecked:
+        if mandiblePlanesPositioningForMaximumBoneContactChecked:
           self.removeMandiblePlanesObservers()
-          self.transformMandiblePlanesZRotationToBeTheSameAsInputPlane(mandiblePlaneOfRotation)
+          self.mandiblePlanesPositioningForMaximumBoneContact()
           self.addMandiblePlaneObservers()
+        else:
+          if makeAllMandiblePlanesRotateTogetherChecked:
+            self.removeMandiblePlanesObservers()
+            self.transformMandiblePlanesZRotationToBeTheSameAsInputPlane(mandiblePlaneOfRotation)
+            self.addMandiblePlaneObservers()
 
     if fibulaLine != None:
       try:
@@ -838,11 +847,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         import traceback
         traceback.print_exc()  
 
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
+
   def transformMandiblePlanesZRotationToBeTheSameAsInputPlane(self,mandiblePlaneOfRotation):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
     mandiblePlanesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),'Mandible Planes Transforms')
+
+    if mandiblePlaneOfRotation == None:
+      mandiblePlaneOfRotation = mandibularPlanesList[0]
 
     mandiblePlaneOfRotationMatrix = vtk.vtkMatrix4x4()
     mandiblePlaneOfRotation.GetPlaneToWorldMatrix(mandiblePlaneOfRotationMatrix)
@@ -960,21 +975,23 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(planeList)-1):
       mandiblePlane0 = planeList[i]
       mandiblePlane1 = planeList[i+1]
-      mandiblePlane0Normal = [0,0,0]
-      mandiblePlane0.GetNormal(mandiblePlane0Normal)
-      mandiblePlane1Normal = [0,0,0]
-      mandiblePlane1.GetNormal(mandiblePlane1Normal)
+      mandiblePlane0X = [0,0,0]
+      mandiblePlane0Y = [0,0,0]
+      mandiblePlane0Z = [0,0,0]
+      mandiblePlane0.GetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
+      mandiblePlane1X = [0,0,0]
+      mandiblePlane1Y = [0,0,0]
+      mandiblePlane1Z = [0,0,0]
+      mandiblePlane1.GetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
       mandiblePlane0Origin = [0,0,0]
       mandiblePlane0.GetOrigin(mandiblePlane0Origin)
       mandiblePlane1Origin = [0,0,0]
       mandiblePlane1.GetOrigin(mandiblePlane1Origin)
       fibulaPlaneA = fibulaPlanesList[2*i]
       fibulaPlaneB = fibulaPlanesList[2*i+1]
-      fibulaPlaneA.SetAxes([1,0,0], [0,1,0], [0,0,1])
-      fibulaPlaneA.SetNormal(mandiblePlane0Normal)
+      fibulaPlaneA.SetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
       fibulaPlaneA.SetOrigin(mandiblePlane0Origin)
-      fibulaPlaneB.SetAxes([1,0,0], [0,1,0], [0,0,1])
-      fibulaPlaneB.SetNormal(mandiblePlane1Normal)
+      fibulaPlaneB.SetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
       fibulaPlaneB.SetOrigin(mandiblePlane1Origin)
 
       #Create origin1-origin2 vector
@@ -1165,10 +1182,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(mandiblePlanesList)-1):
       mandiblePlane0 = mandiblePlanesList[i]
       mandiblePlane1 = mandiblePlanesList[i+1]
-      mandiblePlane0Normal = [0,0,0]
-      mandiblePlane0.GetNormal(mandiblePlane0Normal)
-      mandiblePlane1Normal = [0,0,0]
-      mandiblePlane1.GetNormal(mandiblePlane1Normal)
+      mandiblePlane0X = [0,0,0]
+      mandiblePlane0Y = [0,0,0]
+      mandiblePlane0Z = [0,0,0]
+      mandiblePlane0.GetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
+      mandiblePlane1X = [0,0,0]
+      mandiblePlane1Y = [0,0,0]
+      mandiblePlane1Z = [0,0,0]
+      mandiblePlane1.GetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
       mandiblePlane0Origin = [0,0,0]
       mandiblePlane0.GetOrigin(mandiblePlane0Origin)
       mandiblePlane1Origin = [0,0,0]
@@ -1184,8 +1205,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneAItemID = shNode.GetItemByDataNode(fibulaPlaneA)
       shNode.SetItemParent(fibulaPlaneAItemID, fibulaPlanesFolder)
 
-      fibulaPlaneA.SetAxes([1,0,0], [0,1,0], [0,0,1])
-      fibulaPlaneA.SetNormal(mandiblePlane0Normal)
+      fibulaPlaneA.SetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
       fibulaPlaneA.SetOrigin(mandiblePlane0Origin)
       fibulaPlaneA.SetLocked(True)
       fibulaPlanesList.append(fibulaPlaneA)
@@ -1200,8 +1220,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneBItemID = shNode.GetItemByDataNode(fibulaPlaneB)
       shNode.SetItemParent(fibulaPlaneBItemID, fibulaPlanesFolder)
 
-      fibulaPlaneB.SetAxes([1,0,0], [0,1,0], [0,0,1])
-      fibulaPlaneB.SetNormal(mandiblePlane1Normal)
+      fibulaPlaneB.SetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
       fibulaPlaneB.SetOrigin(mandiblePlane1Origin)
       fibulaPlaneB.SetLocked(True)
       fibulaPlanesList.append(fibulaPlaneB)
@@ -1361,10 +1380,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           dynamicModelerNodesList[i].SetNodeReferenceID("PlaneCut.InputModel", mandibleModelNode.GetID())
 
   def generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible(self):
-    import time
-    startTime = time.time()
-    logging.info('Processing started')
-
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
@@ -1398,29 +1413,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       decimatedMandibleDisplayNode.SetVisibility(True)
       return
 
-    if fibulaPlanesFolder:
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
+
+    #delete all the folders that are not updated
+    if (len(fibulaPlanesList) != (2*len(planeList) - 2)) or not fibulaPlanesFolder:
+      shNode.RemoveItem(fibulaPlanesFolder)
+      planeCutsFolder = shNode.GetItemByName("Plane Cuts")
+      shNode.RemoveItem(planeCutsFolder)
+      cutBonesFolder = shNode.GetItemByName("Cut Bones")
+      shNode.RemoveItem(cutBonesFolder)
+      transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+      shNode.RemoveItem(transformedFibulaPiecesFolder)
+      fibulaPlanesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula planes")
       fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
-      #delete all the folders that are not updated
-      if ( len(fibulaPlanesList) != (2*len(planeList) - 2) ):
-        shNode.RemoveItem(fibulaPlanesFolder)
-        planeCutsFolder = shNode.GetItemByName("Plane Cuts")
-        shNode.RemoveItem(planeCutsFolder)
-        cutBonesFolder = shNode.GetItemByName("Cut Bones")
-        shNode.RemoveItem(cutBonesFolder)
-        transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
-        shNode.RemoveItem(transformedFibulaPiecesFolder)
+      #Create fibula planes and set their size
+      self.createFibulaPlanesFromMandiblePlanesAndFibulaAxis(planeList,fibulaPlanesList)
 
     #Delete old fibulaPlanesTransforms
     mandible2FibulaTransformsFolder = shNode.GetItemByName("Mandible2Fibula transforms")
     shNode.RemoveItem(mandible2FibulaTransformsFolder)
-
-    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
-    fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
-
-    #Create fibula planes and set their size
-    if fibulaPlanesFolder==0:
-      fibulaPlanesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula planes")
-      self.createFibulaPlanesFromMandiblePlanesAndFibulaAxis(planeList,fibulaPlanesList)
 
     self.transformFibulaPlanes(fibulaModelNode,fibulaLine,notLeftFibulaChecked,useMoreExactVersionOfPositioningAlgorithmChecked,planeList,fibulaPlanesList,initialSpace,intersectionPlaceOfFibulaPlanes,intersectionDistanceMultiplier,additionalBetweenSpaceOfFibulaPlanes)
 
@@ -1434,9 +1446,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.tranformBonePiecesToMandible()
 
     self.setRedSliceForDisplayNodes()
-
-    stopTime = time.time()
-    logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
 
   def setRedSliceForDisplayNodes(self):
     parameterNode = self.getParameterNode()
