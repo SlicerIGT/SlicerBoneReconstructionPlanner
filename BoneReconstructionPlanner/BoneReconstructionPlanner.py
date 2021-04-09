@@ -695,25 +695,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interactionNode.SwitchToSinglePlaceMode()
 
   def addFibulaLine(self):
-    lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
-    lineNode.SetName("temp")
-    slicer.mrmlScene.AddNode(lineNode)
-    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(lineNode)
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    lineNodeItemID = shNode.GetItemByDataNode(lineNode)
-    shNode.SetItemParent(lineNodeItemID, self.getParentFolderItemID())
-    lineNode.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaLine"))
-
-    displayNode = lineNode.GetDisplayNode()
-    fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
-    displayNode.AddViewNodeID(fibulaViewNode.GetID())
-
-    #setup placement
-    slicer.modules.markups.logic().SetActiveListID(lineNode)
-    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-    interactionNode.SwitchToSinglePlaceMode()
-
-  def addCutPlane(self):
     parameterNode = self.getParameterNode()
     scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
     fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
@@ -731,6 +712,31 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     bounds = np.array(bounds)
     centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
     
+
+    lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+    lineNode.SetName("temp")
+    slicer.mrmlScene.AddNode(lineNode)
+    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(lineNode)
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    lineNodeItemID = shNode.GetItemByDataNode(lineNode)
+    shNode.SetItemParent(lineNodeItemID, self.getParentFolderItemID())
+    lineNode.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaLine"))
+
+    displayNode = lineNode.GetDisplayNode()
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
+    displayNode.AddViewNodeID(fibulaViewNode.GetID())
+
+    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+      redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+      displayNode.AddViewNodeID(redSliceNode.GetID())
+
+    #setup placement
+    slicer.modules.markups.logic().SetActiveListID(lineNode)
+    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+    interactionNode.SwitchToSinglePlaceMode()
+
+  def addCutPlane(self):
+    parameterNode = self.getParameterNode()
 
     colorIndexStr = parameterNode.GetParameter("colorIndex")
     if colorIndexStr != "":
