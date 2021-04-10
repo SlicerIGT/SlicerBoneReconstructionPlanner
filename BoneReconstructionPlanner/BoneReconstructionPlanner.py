@@ -185,7 +185,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
-
+    self.ui.fixCutGoesThroughTheMandibleTwiceCheckBox.connect('stateChanged(int)', self.onFixCutGoesThroughTheMandibleTwiceCheckBox)
+    
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
 
@@ -452,6 +453,18 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.EndModify(wasModified)
 
+  def onFixCutGoesThroughTheMandibleTwiceCheckBox(self):
+    if self._parameterNode is None or self._updatingGUIFromParameterNode:
+      return
+
+    wasModified = self._parameterNode.StartModify()
+    if self.ui.fixCutGoesThroughTheMandibleTwiceCheckBox.checked:
+      self._parameterNode.SetParameter("fixCutGoesThroughTheMandibleTwice","True")
+    else:
+      self._parameterNode.SetParameter("fixCutGoesThroughTheMandibleTwice","False")
+    self._parameterNode.SetParameter("fixCutGoesThroughTheMandibleTwiceCheckBoxChanged","True")
+    self._parameterNode.EndModify(wasModified)
+
   def onAddMandibularCurveButton(self):
     self.logic.addMandibularCurve()
 
@@ -462,9 +475,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if self._parameterNode is None or self._updatingGUIFromParameterNode:
       return
 
-    wasModified = self._parameterNode.StartModify()
     self._parameterNode.SetNodeReferenceID("currentScalarVolume", self.ui.scalarVolumeSelector.currentNodeID)
-    self._parameterNode.EndModify(wasModified)
 
     scalarVolume = self.ui.scalarVolumeSelector.currentNode()
     if scalarVolume != None:
@@ -523,9 +534,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
               displayNode = removeIterationList[i].GetDisplayNode()
               displayNode.RemoveViewNodeID(redSliceNode.GetID())
             
-            wasModified = self._parameterNode.StartModify()
             self._parameterNode.SetParameter("fibulaDisplayNodesWereUpdatedFlag","True")
-            self._parameterNode.EndModify(wasModified)
         else:
           #When mandibleScalarVolume:
           if fibulaDisplayNodesWereUpdatedFlag == "" or fibulaDisplayNodesWereUpdatedFlag == "True":
@@ -540,9 +549,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
               displayNode = removeIterationList[i].GetDisplayNode()
               displayNode.RemoveViewNodeID(redSliceNode.GetID())
             
-            wasModified = self._parameterNode.StartModify()
             self._parameterNode.SetParameter("fibulaDisplayNodesWereUpdatedFlag","False")
-            self._parameterNode.EndModify(wasModified)
     
   def onAddCutPlaneButton(self):
     self.logic.addCutPlane()
@@ -1284,9 +1291,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           displayNode2.SetSelectedColor(color)
 
   def createAndUpdateDynamicModelerNodes(self,planeList,fibulaPlanesList,mandibularCurve,fibulaModelNode,mandibleModelNode):
+    parameterNode = self.getParameterNode()
+    fixCutGoesThroughTheMandibleTwiceCheckBoxChanged = parameterNode.GetParameter('fixCutGoesThroughTheMandibleTwiceCheckBoxChanged') == "True"
+    fixCutGoesThroughTheMandibleTwiceChecked = parameterNode.GetParameter('fixCutGoesThroughTheMandibleTwice') == "True"
+    planeToFixCutGoesThroughTheMandibleTwice = parameterNode.GetNodeReference("planeToFixCutGoesThroughTheMandibleTwice")
+
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     planeCutsFolder = shNode.GetItemByName("Plane Cuts")
-    if planeCutsFolder == 0:
+    if planeCutsFolder == 0 or fixCutGoesThroughTheMandibleTwiceCheckBoxChanged:
+      shNode.RemoveItem(planeCutsFolder)
       cutBonesFolder = shNode.GetItemByName("Cut Bones")
       shNode.RemoveItem(cutBonesFolder)
       planeCutsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Plane Cuts")
@@ -1313,8 +1326,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         modelDisplayNode.SetColor(color)
 
         #Determinate plane creation direction and set up dynamic modeler
-        planeOriginStart = [0,0,0]
-        planeOriginEnd = [0,0,0]
+        planeOriginStart = np.array([0,0,0])
+        planeOriginEnd = np.array([0,0,0])
         planeList[0].GetNthControlPointPosition(0,planeOriginStart)
         planeList[len(planeList)-1].GetNthControlPointPosition(0,planeOriginEnd)
         closestCurvePointStart = [0,0,0]
@@ -1369,6 +1382,42 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
         dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID()) 
+      
+      if fixCutGoesThroughTheMandibleTwiceChecked:
+        #if planeToFixCutGoesThroughTheMandibleTwice == None:
+        slicer.mrmlScene.RemoveNode(planeToFixCutGoesThroughTheMandibleTwice)
+        mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
+        mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
+        mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
+        mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
+
+        planeToFixCutGoesThroughTheMandibleTwice = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsPlaneNode")
+        planeToFixCutGoesThroughTheMandibleTwice.SetName("planeToFixCutGoesThroughTheMandibleTwice")
+        slicer.mrmlScene.AddNode(planeToFixCutGoesThroughTheMandibleTwice)
+        slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeToFixCutGoesThroughTheMandibleTwice)
+        shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+        planeToFixCutGoesThroughTheMandibleTwiceItemID = shNode.GetItemByDataNode(planeToFixCutGoesThroughTheMandibleTwice)
+        shNode.SetItemParent(planeToFixCutGoesThroughTheMandibleTwiceItemID, self.getParentFolderItemID())
+        parameterNode.SetNodeReferenceID("planeToFixCutGoesThroughTheMandibleTwice",planeToFixCutGoesThroughTheMandibleTwice.GetID())
+
+        displayNode = planeToFixCutGoesThroughTheMandibleTwice.GetDisplayNode()
+        displayNode.SetVisibility(False)
+
+        rightDirection = np.array([1,0,0])
+        centerBetweenStartAndEndPlanes = (planeOriginStart + planeOriginEnd)/2
+        planeToFixCutGoesThroughTheMandibleTwice.SetAxes([1,0,0],[0,1,0],[0,0,1])
+        planeToFixCutGoesThroughTheMandibleTwice.SetOrigin(mandibleCentroid)
+        if vtk.vtkMath.Dot(centerBetweenStartAndEndPlanes - mandibleCentroid, rightDirection) > 0:
+          planeToFixCutGoesThroughTheMandibleTwice.SetNormal(rightDirection)
+        else:
+          planeToFixCutGoesThroughTheMandibleTwice.SetNormal(-rightDirection)
+
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeToFixCutGoesThroughTheMandibleTwice.GetID())
+
+      #else:
+      #  slicer.mrmlScene.RemoveNode(planeToFixCutGoesThroughTheMandibleTwice)
+      #  parameterNode.SetNodeReferenceID("planeToFixCutGoesThroughTheMandibleTwice",None)
+
       dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputPositiveModel", modelNode.GetID())
       dynamicModelerNode.SetAttribute("OperationType", "Difference")
 
@@ -1376,6 +1425,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(dynamicModelerNodeItemID, planeCutsFolder)
       modelNodeItemID = shNode.GetItemByDataNode(modelNode)
       shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
+
+      if fixCutGoesThroughTheMandibleTwiceCheckBoxChanged:
+        parameterNode.SetParameter('fixCutGoesThroughTheMandibleTwiceCheckBoxChanged','False')
     
     else:
       dynamicModelerNodesList = createListFromFolderID(planeCutsFolder)

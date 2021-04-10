@@ -337,6 +337,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="fixCutGoesThroughTheMandibleTwiceCheckBox">
+        <property name="text">
+         <string>Fix cut goes through the mandible twice</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="ctkCheckablePushButton" name="generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton">
         <property name="enabled">
          <bool>false</bool>
