@@ -459,6 +459,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.addFibulaLine()
 
   def onScalarVolumeChanged(self):
+    if self._parameterNode is None or self._updatingGUIFromParameterNode:
+      return
+
     wasModified = self._parameterNode.StartModify()
     self._parameterNode.SetNodeReferenceID("currentScalarVolume", self.ui.scalarVolumeSelector.currentNodeID)
     self._parameterNode.EndModify(wasModified)
@@ -509,8 +512,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
           #When fibulaScalarVolume:
           if fibulaDisplayNodesWereUpdatedFlag == "" or fibulaDisplayNodesWereUpdatedFlag == "False":
-            #addIterationList = fibulaPlanesList + biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
-            #removeIterationList = mandibularPlanesList + [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
             addIterationList = biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
             removeIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
 
@@ -524,11 +525,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
             
             wasModified = self._parameterNode.StartModify()
             self._parameterNode.SetParameter("fibulaDisplayNodesWereUpdatedFlag","True")
+            self._parameterNode.EndModify(wasModified)
         else:
           #When mandibleScalarVolume:
           if fibulaDisplayNodesWereUpdatedFlag == "" or fibulaDisplayNodesWereUpdatedFlag == "True":
-            #addIterationList = mandibularPlanesList + [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
-            #removeIterationList = fibulaPlanesList + biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
             addIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
             removeIterationList = biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
             
