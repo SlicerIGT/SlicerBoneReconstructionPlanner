@@ -248,6 +248,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       observer = mandibularPlanesList[i].AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.logic.onPlaneModifiedTimer)
       self.logic.mandiblePlaneObserversAndNodeIDList.append([observer,mandibularPlanesList[i].GetID()])
 
+    if self.ui.scalarVolumeSelector.nodeCount() != 0 and self.ui.scalarVolumeSelector.currentNode() == None:
+      self.ui.scalarVolumeSelector.setCurrentNodeIndex(0)#0 == first scalarVolume
 
   def exit(self):
     """
@@ -777,11 +779,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
-    """
-    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) > np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
-      redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
-      displayNode.AddViewNodeID(redSliceNode.GetID())
-    """
 
     #conections
     self.planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
@@ -944,8 +941,25 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandibularPlanesList[i].RemoveObserver(self.mandiblePlaneObserversAndNodeIDList[i][0])
     self.mandiblePlaneObserversAndNodeIDList = []
 
-  def transformFibulaPlanes(self,fibulaModelNode,fibulaLine,notLeftFibulaChecked,useMoreExactVersionOfPositioningAlgorithmChecked,planeList,fibulaPlanesList,initialSpace,intersectionPlaceOfFibulaPlanes,intersectionDistanceMultiplier,additionalBetweenSpaceOfFibulaPlanes):
+  def transformFibulaPlanes(self):
+    parameterNode = self.getParameterNode()
+    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    initialSpace = float(parameterNode.GetParameter("initialSpace"))
+    intersectionPlaceOfFibulaPlanes = float(parameterNode.GetParameter("intersectionPlaceOfFibulaPlanes"))
+    intersectionDistanceMultiplier = float(parameterNode.GetParameter("intersectionDistanceMultiplier"))
+    additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
+    notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
+    useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
+    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
+    
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
+    
+    #Delete old fibulaPlanesTransforms
+    mandible2FibulaTransformsFolder = shNode.GetItemByName("Mandible2Fibula transforms")
+    shNode.RemoveItem(mandible2FibulaTransformsFolder)
     mandible2FibulaTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandible2Fibula transforms")
     
     #Create fibula axis:
@@ -1290,13 +1304,30 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           displayNode2 = fibulaPlanesList[2*i].GetDisplayNode()
           displayNode2.SetSelectedColor(color)
 
-  def createAndUpdateDynamicModelerNodes(self,planeList,fibulaPlanesList,mandibularCurve,fibulaModelNode,mandibleModelNode):
+  def createAndUpdateDynamicModelerNodes(self):
     parameterNode = self.getParameterNode()
+    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
+    nonDecimatedFibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    nonDecimatedMandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     fixCutGoesThroughTheMandibleTwiceCheckBoxChanged = parameterNode.GetParameter('fixCutGoesThroughTheMandibleTwiceCheckBoxChanged') == "True"
     fixCutGoesThroughTheMandibleTwiceChecked = parameterNode.GetParameter('fixCutGoesThroughTheMandibleTwice') == "True"
     planeToFixCutGoesThroughTheMandibleTwice = parameterNode.GetNodeReference("planeToFixCutGoesThroughTheMandibleTwice")
-
+    planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
+     
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
+    
+    if useNonDecimatedBoneModelsForPreviewChecked:
+      fibulaModelNode = nonDecimatedFibulaModelNode
+      mandibleModelNode = nonDecimatedMandibleModelNode
+    else:
+      fibulaModelNode = decimatedFibulaModelNode
+      mandibleModelNode = decimatedMandibleModelNode
+
     planeCutsFolder = shNode.GetItemByName("Plane Cuts")
     if planeCutsFolder == 0 or fixCutGoesThroughTheMandibleTwiceCheckBoxChanged:
       shNode.RemoveItem(planeCutsFolder)
@@ -1439,24 +1470,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible(self):
     parameterNode = self.getParameterNode()
-    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
-    mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
-    initialSpace = float(parameterNode.GetParameter("initialSpace"))
-    intersectionPlaceOfFibulaPlanes = float(parameterNode.GetParameter("intersectionPlaceOfFibulaPlanes"))
-    intersectionDistanceMultiplier = float(parameterNode.GetParameter("intersectionDistanceMultiplier"))
-    additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
-    notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
-    useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
-    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
-    decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
-    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    nonDecimatedMandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+
+    if useNonDecimatedBoneModelsForPreviewChecked:
+      mandibleModelNode = nonDecimatedMandibleModelNode
+    else:
+      mandibleModelNode = decimatedMandibleModelNode
 
     #delete all folders because there is only one plane and show mandible model
     if len(planeList) <= 1:
@@ -1467,8 +1492,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.RemoveItem(cutBonesFolder)
       transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
       shNode.RemoveItem(transformedFibulaPiecesFolder)
-      decimatedMandibleDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
-      decimatedMandibleDisplayNode.SetVisibility(True)
+      mandibleDisplayNode = mandibleModelNode.GetDisplayNode()
+      mandibleDisplayNode.SetVisibility(True)
       return
 
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
@@ -1488,16 +1513,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       #Create fibula planes and set their size
       self.createFibulaPlanesFromMandiblePlanesAndFibulaAxis(planeList,fibulaPlanesList)
 
-    #Delete old fibulaPlanesTransforms
-    mandible2FibulaTransformsFolder = shNode.GetItemByName("Mandible2Fibula transforms")
-    shNode.RemoveItem(mandible2FibulaTransformsFolder)
+    self.transformFibulaPlanes()
 
-    self.transformFibulaPlanes(fibulaModelNode,fibulaLine,notLeftFibulaChecked,useMoreExactVersionOfPositioningAlgorithmChecked,planeList,fibulaPlanesList,initialSpace,intersectionPlaceOfFibulaPlanes,intersectionDistanceMultiplier,additionalBetweenSpaceOfFibulaPlanes)
-
-    if useNonDecimatedBoneModelsForPreviewChecked:
-      self.createAndUpdateDynamicModelerNodes(planeList,fibulaPlanesList,mandibularCurve,fibulaModelNode,mandibleModelNode)
-    else:
-      self.createAndUpdateDynamicModelerNodes(planeList,fibulaPlanesList,mandibularCurve,decimatedFibulaModelNode,decimatedMandibleModelNode)
+    self.createAndUpdateDynamicModelerNodes()
   
     self.updateFibulaPieces()
 
@@ -1587,6 +1605,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
     mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
+    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
@@ -1618,10 +1637,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       logic.ExportSegmentToRepresentationNode(segment, models[i])
 
       modelDisplayNode = models[i].GetDisplayNode()
-      modelDisplayNode.SetVisibility(False)
 
       decimatedModelDisplayNode = decimatedModels[i].GetDisplayNode()
       decimatedModelDisplayNode.SetColor(models[i].GetDisplayNode().GetColor())
+
+      if useNonDecimatedBoneModelsForPreviewChecked:
+        modelDisplayNode.SetVisibility(True)
+        decimatedModelDisplayNode.SetVisibility(False)
+      else:
+        modelDisplayNode.SetVisibility(False)
+        decimatedModelDisplayNode.SetVisibility(True)
 
       param = {
               "inputModel": models[i],

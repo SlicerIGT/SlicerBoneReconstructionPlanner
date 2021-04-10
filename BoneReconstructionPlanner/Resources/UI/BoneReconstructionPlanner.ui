@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>434</width>
-    <height>1534</height>
+    <height>1689</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -356,9 +356,16 @@ bone pieces and transform them to mandible</string>
       </item>
       <item>
        <widget class="qMRMLSubjectHierarchyTreeView" name="planesTreeView">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>200</height>
+         </size>
+        </property>
         <property name="nodeTypes">
          <stringlist>
           <string>vtkMRMLMarkupsPlaneNode</string>
+          <string>vtkMRMLModelNode</string>
          </stringlist>
         </property>
        </widget>
@@ -999,22 +1006,6 @@ bone pieces and transform them to mandible</string>
   <connection>
    <sender>BoneReconstructionPlanner</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>planesTreeView</receiver>
-   <slot>setMRMLScene(vtkMRMLScene*)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>189</x>
-     <y>265</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>189</x>
-     <y>484</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>BoneReconstructionPlanner</sender>
-   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>mandibleCurveSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
    <hints>
@@ -1121,6 +1112,22 @@ bone pieces and transform them to mandible</string>
     <hint type="destinationlabel">
      <x>320</x>
      <y>1169</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>planesTreeView</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>189</x>
+     <y>265</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>189</x>
+     <y>484</y>
     </hint>
    </hints>
   </connection>
