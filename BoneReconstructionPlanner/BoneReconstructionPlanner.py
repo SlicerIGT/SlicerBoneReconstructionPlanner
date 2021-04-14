@@ -1042,6 +1042,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandibleAxisY = mandibleAxisY/np.linalg.norm(mandibleAxisY)
 
       mandibleAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandibleAxisX, mandibleAxisY, mandibleAxisZ)
+      #Create fibula axis:
+      fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
       fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
 
       mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
@@ -1119,7 +1121,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
       else:
         intersectionsForCentroidCalculationFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections For Centroid Calculation")
-        
+
         lineStartPos = self.fibulaPlanesPositionA.pop()
         lineEndPos = self.fibulaPlanesPositionB.pop()
 
@@ -1146,21 +1148,21 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           lineStartPos = self.getCentroid(intersectionA)
           lineEndPos = self.getCentroid(intersectionB)
 
+          #Create fibula axis:
+          fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(lineStartPos,lineEndPos,notLeftFibulaChecked)
+          
+          lineEndPos = lineStartPos + boneSegmentsDistance[i]*fibulaZ
+
           error = np.linalg.norm(lineStartPos-oldLineStartPos) + np.linalg.norm(lineEndPos-oldLineEndPos)
           if error < 0.01:# Unavoidable errors because of fibula bone shape are about 0.6-0.8mm
             break
         
-        #Create fibula axis:
-        fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(lineStartPos,lineEndPos,notLeftFibulaChecked)
-
         fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
-
         mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
-
         self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
 
         self.fibulaPlanesPositionA.append(lineStartPos)
-        self.fibulaPlanesPositionB.append(self.fibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
+        self.fibulaPlanesPositionB.append(lineEndPos)
 
         shNode.RemoveItem(intersectionsForCentroidCalculationFolder)
 
