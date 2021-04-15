@@ -134,7 +134,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
-    self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onFibulaPlanesCreationParametersChanged)
     self.ui.mandibleCurveSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibularSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -146,9 +146,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibleSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleFiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
    
-    self.ui.initialSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.intersectionSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.betweenSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.initialSpinBox.valueChanged.connect(self.onFibulaPlanesCreationParametersChanged)
+    self.ui.intersectionSpinBox.valueChanged.connect(self.onFibulaPlanesCreationParametersChanged)
+    self.ui.betweenSpinBox.valueChanged.connect(self.onFibulaPlanesCreationParametersChanged)
     self.ui.miterBoxSlotWidthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.miterBoxSlotLengthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.miterBoxSlotHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -156,7 +156,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.clearanceFitPrintingToleranceSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.biggerMiterBoxDistanceToFibulaSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.intersectionDistanceMultiplierSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.intersectionDistanceMultiplierSpinBox.valueChanged.connect(self.onFibulaPlanesCreationParametersChanged)
     self.ui.sawBoxSlotWidthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotLengthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -398,7 +398,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
 
-    self._parameterNode.SetNodeReferenceID("fibulaLine", self.ui.fibulaLineSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibleCurve", self.ui.mandibleCurveSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibularSegmentation", self.ui.mandibularSegmentationSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fibulaSegmentation", self.ui.fibulaSegmentationSelector.currentNodeID)
@@ -409,9 +408,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetNodeReferenceID("mandibleSurgicalGuideBaseModel", self.ui.mandibleSurgicalGuideBaseSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibleFiducialList", self.ui.mandibleFiducialListSelector.currentNodeID)
 
-    self._parameterNode.SetParameter("initialSpace", str(self.ui.initialSpinBox.value))
-    self._parameterNode.SetParameter("intersectionPlaceOfFibulaPlanes", str(self.ui.intersectionSpinBox.value))
-    self._parameterNode.SetParameter("additionalBetweenSpaceOfFibulaPlanes", str(self.ui.betweenSpinBox.value))
     self._parameterNode.SetParameter("miterBoxSlotWidth", str(self.ui.miterBoxSlotWidthSpinBox.value))
     self._parameterNode.SetParameter("miterBoxSlotLength", str(self.ui.miterBoxSlotLengthSpinBox.value))
     self._parameterNode.SetParameter("miterBoxSlotHeight", str(self.ui.miterBoxSlotHeightSpinBox.value))
@@ -419,7 +415,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("fibulaScrewHoleCylinderRadius", str(self.ui.fibulaScrewHoleCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("clearanceFitPrintingTolerance", str(self.ui.clearanceFitPrintingToleranceSpinBox.value))
     self._parameterNode.SetParameter("biggerMiterBoxDistanceToFibula", str(self.ui.biggerMiterBoxDistanceToFibulaSpinBox.value))
-    self._parameterNode.SetParameter("intersectionDistanceMultiplier", str(self.ui.intersectionDistanceMultiplierSpinBox.value))
     self._parameterNode.SetParameter("sawBoxSlotWidth", str(self.ui.sawBoxSlotWidthSpinBox.value))
     self._parameterNode.SetParameter("sawBoxSlotLength", str(self.ui.sawBoxSlotLengthSpinBox.value))
     self._parameterNode.SetParameter("sawBoxSlotHeight", str(self.ui.sawBoxSlotHeightSpinBox.value))
@@ -453,6 +448,19 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","False")
 
+    self._parameterNode.EndModify(wasModified)
+
+  def onFibulaPlanesCreationParametersChanged(self, caller=None, event=None):
+    if self._parameterNode is None or self._updatingGUIFromParameterNode:
+      return
+
+    wasModified = self._parameterNode.StartModify()
+    self._parameterNode.SetParameter("fibulaPlanesCreationParametersChanged", "True")
+    self._parameterNode.SetParameter("initialSpace", str(self.ui.initialSpinBox.value))
+    self._parameterNode.SetParameter("intersectionPlaceOfFibulaPlanes", str(self.ui.intersectionSpinBox.value))
+    self._parameterNode.SetParameter("additionalBetweenSpaceOfFibulaPlanes", str(self.ui.betweenSpinBox.value))
+    self._parameterNode.SetParameter("intersectionDistanceMultiplier", str(self.ui.intersectionDistanceMultiplierSpinBox.value))
+    self._parameterNode.SetNodeReferenceID("fibulaLine", self.ui.fibulaLineSelector.currentNodeID)
     self._parameterNode.EndModify(wasModified)
 
   def onFixCutGoesThroughTheMandibleTwiceCheckBox(self):
@@ -957,6 +965,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     lastMandiblePlanesPositionCurve = parameterNode.GetNodeReference("lastMandiblePlanesPositionCurve")
+    lastFibulaPlanesPositionA = parameterNode.GetNodeReference("lastFibulaPlanesPositionA")
+    lastFibulaPlanesPositionB = parameterNode.GetNodeReference("lastFibulaPlanesPositionB")
     initialSpace = float(parameterNode.GetParameter("initialSpace"))
     intersectionPlaceOfFibulaPlanes = float(parameterNode.GetParameter("intersectionPlaceOfFibulaPlanes"))
     intersectionDistanceMultiplier = float(parameterNode.GetParameter("intersectionDistanceMultiplier"))
@@ -964,6 +974,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged") == "True"
+    fibulaPlanesCreationParametersChanged = parameterNode.GetParameter("fibulaPlanesCreationParametersChanged") == "True"
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
@@ -993,9 +1004,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           planeList[mandiblePlaneIndex].GetOrigin(mandiblePlanePosition)
           if np.linalg.norm(lastMandiblePlanePosition-mandiblePlanePosition) > 1e-5:
             mandiblePlanesOriginsAreTheSame = False
+    
+    lastFibulaPlanesPositionsExist = lastFibulaPlanesPositionA != None and lastFibulaPlanesPositionB != None
 
     #This line avoids recalculating the fibulaPlanesPosition when mandiblePlanes just rotate
-    if not mandiblePlanesOriginsAreTheSame or useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged:
+    if not mandiblePlanesOriginsAreTheSame or not lastFibulaPlanesPositionsExist or useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged or fibulaPlanesCreationParametersChanged:
       #Create fibula axis:
       fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
       
@@ -1242,6 +1255,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged:
         parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged","False")
 
+      if fibulaPlanesCreationParametersChanged:
+        parameterNode.SetParameter("fibulaPlanesCreationParametersChanged","False")
+
       if not mandiblePlanesOriginsAreTheSame:
         curvePointsList = []
         for mandiblePlaneIndex in range(len(planeList)):
@@ -1255,6 +1271,25 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         points.SetNumberOfPoints(len(curvePointsArray))
         points.SetData(vtkPointsData)
         lastMandiblePlanesPositionCurve.SetControlPointPositionsWorld(points)
+
+      if not lastFibulaPlanesPositionsExist:
+        #delete curve that is alone
+        slicer.mrmlScene.RemoveNode(lastFibulaPlanesPositionA)
+        slicer.mrmlScene.RemoveNode(lastFibulaPlanesPositionB)
+        lastFibulaPlanesPositionA = self.createCurveNodeFromListOfPointsAndName(self.fibulaPlanesPositionA,"lastFibulaPlanesPositionA")
+        lastFibulaPlanesPositionB = self.createCurveNodeFromListOfPointsAndName(self.fibulaPlanesPositionB,"lastFibulaPlanesPositionB")
+        parameterNode.SetNodeReferenceID("lastFibulaPlanesPositionA",lastFibulaPlanesPositionA.GetID())
+        parameterNode.SetNodeReferenceID("lastFibulaPlanesPositionB",lastFibulaPlanesPositionB.GetID())
+      else:
+        curveNodes = [lastFibulaPlanesPositionA,lastFibulaPlanesPositionB]
+        pointLists = [self.fibulaPlanesPositionA,self.fibulaPlanesPositionB]
+        for i in range (len(curveNodes)):
+          points = vtk.vtkPoints()
+          curvePointsArray = np.array(pointLists[i])
+          vtkPointsData = vtk.util.numpy_support.numpy_to_vtk(curvePointsArray, deep=1)
+          points.SetNumberOfPoints(len(curvePointsArray))
+          points.SetData(vtkPointsData)
+          curveNodes[i].SetControlPointPositionsWorld(points)
     else:
       #Create fibula axis:
       fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
@@ -1316,8 +1351,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         else:
           intersectionsForCentroidCalculationFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections For Centroid Calculation")
 
-          lineStartPos = self.fibulaPlanesPositionA[i]
-          lineEndPos = self.fibulaPlanesPositionB[i]
+          lineStartPos = np.array([0,0,0])
+          lineEndPos = np.array([0,0,0])
+          lastFibulaPlanesPositionA.GetNthControlPointPosition(i,lineStartPos)
+          lastFibulaPlanesPositionB.GetNthControlPointPosition(i,lineEndPos)
 
           #Create fibula axis:
           fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(lineStartPos,lineEndPos,notLeftFibulaChecked)
@@ -1363,26 +1400,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandiblePlane1ToFibulaPlaneBTransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane1ToFibulaPlaneBTransformNode)
         shNode.SetItemParent(mandiblePlane1ToFibulaPlaneBTransformNodeItemID, mandible2FibulaTransformsFolder)
 
-  def createLastMandiblePlanesPositionCurve(self):
-    parameterNode = self.getParameterNode()
-    scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
-    fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
-    fibulaCentroidY = parameterNode.GetParameter("fibulaCentroidY")
-    fibulaCentroidZ = parameterNode.GetParameter("fibulaCentroidZ")
-    mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
-    mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
-    mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
-    planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
-    
-    fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
-    mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
-
-    bounds = [0,0,0,0,0,0]
-    scalarVolume.GetBounds(bounds)
-    bounds = np.array(bounds)
-    centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
-    
-
+  def createCurveNodeFromListOfPointsAndName(self,listOfPoints, name):
     curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
     curveNode.SetName("temp")
     slicer.mrmlScene.AddNode(curveNode)
@@ -1390,16 +1408,22 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     curveNodeItemID = shNode.GetItemByDataNode(curveNode)
     shNode.SetItemParent(curveNodeItemID, self.getParentFolderItemID())
-    curveNode.SetName(slicer.mrmlScene.GetUniqueNameByString("lastMandiblePlanesPositionCurve"))
+    curveNode.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
 
     displayNode = curveNode.GetDisplayNode()
-    fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
-    displayNode.AddViewNodeID(fibulaViewNode.GetID())
     displayNode.SetVisibility(False)
+    
+    points = vtk.vtkPoints()
+    curvePointsArray = np.array(listOfPoints)
+    vtkPointsData = vtk.util.numpy_support.numpy_to_vtk(curvePointsArray, deep=1)
+    points.SetNumberOfPoints(len(curvePointsArray))
+    points.SetData(vtkPointsData)
+    curveNode.SetControlPointPositionsWorld(points)
 
-    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
-      redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
-      displayNode.AddViewNodeID(redSliceNode.GetID())
+    return curveNode
+  
+  def createLastMandiblePlanesPositionCurve(self):
+    planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
 
     curvePointsList = []
     for mandiblePlaneIndex in range(len(planeList)):
@@ -1407,14 +1431,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       planeList[mandiblePlaneIndex].GetOrigin(mandiblePlaneOrigin)
       curvePointsList.append(mandiblePlaneOrigin)
     
-    points = vtk.vtkPoints()
-    curvePointsArray = np.array(curvePointsList)
-    vtkPointsData = vtk.util.numpy_support.numpy_to_vtk(curvePointsArray, deep=1)
-    points.SetNumberOfPoints(len(curvePointsArray))
-    points.SetData(vtkPointsData)
-    curveNode.SetControlPointPositionsWorld(points)
+    name = "lastMandiblePlanesPositionCurve"
 
-    return curveNode
+    return self.createCurveNodeFromListOfPointsAndName(curvePointsList, name)
 
   
   def createFibulaPlanesFromMandiblePlanesAndFibulaAxis(self,mandiblePlanesList,fibulaPlanesList):
