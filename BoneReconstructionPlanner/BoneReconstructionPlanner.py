@@ -182,7 +182,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.connect('clicked(bool)', self.onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
     self.ui.centerFibulaLineButton.connect('clicked(bool)', self.onCenterFibulaLineButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
-    self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.onUseMoreExactVersionOfPositioningAlgorithmCheckBox)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.fixCutGoesThroughTheMandibleTwiceCheckBox.connect('stateChanged(int)', self.onFixCutGoesThroughTheMandibleTwiceCheckBox)
@@ -465,6 +465,18 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self._parameterNode.SetParameter("fixCutGoesThroughTheMandibleTwice","False")
     self._parameterNode.SetParameter("fixCutGoesThroughTheMandibleTwiceCheckBoxChanged","True")
+    self._parameterNode.EndModify(wasModified)
+
+  def onUseMoreExactVersionOfPositioningAlgorithmCheckBox(self):
+    if self._parameterNode is None or self._updatingGUIFromParameterNode:
+      return
+
+    wasModified = self._parameterNode.StartModify()
+    if self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked:
+      self._parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm","True")
+    else:
+      self._parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm","False")
+    self._parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged","True")
     self._parameterNode.EndModify(wasModified)
 
   def onAddMandibularCurveButton(self):
@@ -944,12 +956,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def transformFibulaPlanes(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    lastMandiblePlanesPositionCurve = parameterNode.GetNodeReference("lastMandiblePlanesPositionCurve")
     initialSpace = float(parameterNode.GetParameter("initialSpace"))
     intersectionPlaceOfFibulaPlanes = float(parameterNode.GetParameter("intersectionPlaceOfFibulaPlanes"))
     intersectionDistanceMultiplier = float(parameterNode.GetParameter("intersectionDistanceMultiplier"))
     additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
     notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
+    useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged") == "True"
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
@@ -962,249 +976,447 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(mandible2FibulaTransformsFolder)
     mandible2FibulaTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandible2Fibula transforms")
     
-    #Create fibula axis:
-    fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
+    if lastMandiblePlanesPositionCurve == None:
+      lastMandiblePlanesPositionCurve = self.createLastMandiblePlanesPositionCurve()
+      parameterNode.SetNodeReferenceID("lastMandiblePlanesPositionCurve", lastMandiblePlanesPositionCurve.GetID())
+      mandiblePlanesOriginsAreTheSame = False
     
-    fibulaZLineNorm = self.getLineNorm(fibulaLine)
+    else:
+      mandiblePlanesOriginsAreTheSame = True
+      if len(planeList) != lastMandiblePlanesPositionCurve.GetNumberOfControlPoints():
+        mandiblePlanesOriginsAreTheSame = False
+      else:
+        for mandiblePlaneIndex in range(len(planeList)):
+          lastMandiblePlanePosition = np.array([0,0,0])
+          mandiblePlanePosition = np.array([0,0,0])
+          lastMandiblePlanesPositionCurve.GetNthControlPointPosition(mandiblePlaneIndex,lastMandiblePlanePosition)
+          planeList[mandiblePlaneIndex].GetOrigin(mandiblePlanePosition)
+          if np.linalg.norm(lastMandiblePlanePosition-mandiblePlanePosition) > 1e-5:
+            mandiblePlanesOriginsAreTheSame = False
 
-    #NewPlanes position and distance
-    self.fibulaPlanesPositionA = []
-    self.fibulaPlanesPositionB = []
-    boneSegmentsDistance = []
-
-    #Set up transform for intersections to measure betweenSpace
-    intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
-
-    fibulaToRASRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX,fibulaY,fibulaZ)
-
-    intersectionsTransformNode = slicer.vtkMRMLLinearTransformNode()
-    intersectionsTransformNode.SetName("intersectionsTransform")
-    slicer.mrmlScene.AddNode(intersectionsTransformNode)
-
-    intersectionsTransform = vtk.vtkTransform()
-    intersectionsTransform.PostMultiply()
-    intersectionsTransform.Translate(-fibulaOrigin)
-    intersectionsTransform.Concatenate(fibulaToRASRotationMatrix)
-    intersectionsTransform.Translate(fibulaOrigin)
-
-    intersectionsTransformNode.SetMatrixTransformToParent(intersectionsTransform.GetMatrix())
-    intersectionsTransformNode.UpdateScene(slicer.mrmlScene)
-
-    intersectionsTransformNodeItemID = shNode.GetItemByDataNode(intersectionsTransformNode)
-    shNode.SetItemParent(intersectionsTransformNodeItemID, intersectionsFolder)
-
-    intersectionsList = []
-    betweenSpace = []
-    j=0
-
-    self.mandibleAxisToFibulaRotationMatrixesList = []
-    #Transform fibula planes to their final position-orientation
-    for i in range(len(planeList)-1):
-      mandiblePlane0 = planeList[i]
-      mandiblePlane1 = planeList[i+1]
-      mandiblePlane0X = [0,0,0]
-      mandiblePlane0Y = [0,0,0]
-      mandiblePlane0Z = [0,0,0]
-      mandiblePlane0.GetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
-      mandiblePlane1X = [0,0,0]
-      mandiblePlane1Y = [0,0,0]
-      mandiblePlane1Z = [0,0,0]
-      mandiblePlane1.GetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
-      mandiblePlane0Origin = [0,0,0]
-      mandiblePlane0.GetOrigin(mandiblePlane0Origin)
-      mandiblePlane1Origin = [0,0,0]
-      mandiblePlane1.GetOrigin(mandiblePlane1Origin)
-      fibulaPlaneA = fibulaPlanesList[2*i]
-      fibulaPlaneB = fibulaPlanesList[2*i+1]
-      fibulaPlaneA.SetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
-      fibulaPlaneA.SetOrigin(mandiblePlane0Origin)
-      fibulaPlaneB.SetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
-      fibulaPlaneB.SetOrigin(mandiblePlane1Origin)
-
-      #Create origin1-origin2 vector
-      or0 = np.zeros(3)
-      or1 = np.zeros(3)
-      mandiblePlane0.GetOrigin(or0)
-      mandiblePlane1.GetOrigin(or1)
-      boneSegmentsDistance.append(np.linalg.norm(or1-or0))
-      mandibleAxisZ = (or1-or0)/np.linalg.norm(or1-or0)
-      
-      #Get Y component of mandiblePlane0
-      mandiblePlane0matrix = vtk.vtkMatrix4x4()
-      mandiblePlane0.GetPlaneToWorldMatrix(mandiblePlane0matrix)
-      mandiblePlane0Y = np.array([mandiblePlane0matrix.GetElement(0,1),mandiblePlane0matrix.GetElement(1,1),mandiblePlane0matrix.GetElement(2,1)])
-      
-      mandibleAxisX = [0,0,0]
-      vtk.vtkMath.Cross(mandiblePlane0Y, mandibleAxisZ, mandibleAxisX)
-      mandibleAxisX = mandibleAxisX/np.linalg.norm(mandibleAxisX)
-      mandibleAxisY = [0,0,0]
-      vtk.vtkMath.Cross(mandibleAxisZ, mandibleAxisX, mandibleAxisY)
-      mandibleAxisY = mandibleAxisY/np.linalg.norm(mandibleAxisY)
-
-      mandibleAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandibleAxisX, mandibleAxisY, mandibleAxisZ)
+    #This line avoids recalculating the fibulaPlanesPosition when mandiblePlanes just rotate
+    if not mandiblePlanesOriginsAreTheSame or useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged:
       #Create fibula axis:
       fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
-      fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
-
-      mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
-
-      mandiblePlane0ToIntersectionAxisTransform = vtk.vtkTransform()
-      mandiblePlane0ToIntersectionAxisTransform.PostMultiply()
-      mandiblePlane0ToIntersectionAxisTransform.Translate(-mandiblePlane0Origin[0], -mandiblePlane0Origin[1], -mandiblePlane0Origin[2])
-      mandiblePlane0ToIntersectionAxisTransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
-      mandiblePlane0ToIntersectionAxisTransform.Translate(fibulaOrigin + fibulaZ*fibulaZLineNorm*intersectionPlaceOfFibulaPlanes)
-      mandiblePlane1ToIntersectionAxisTransform = vtk.vtkTransform()
-      mandiblePlane1ToIntersectionAxisTransform.PostMultiply()
-      mandiblePlane1ToIntersectionAxisTransform.Translate(-mandiblePlane1Origin[0], -mandiblePlane1Origin[1], -mandiblePlane1Origin[2])
-      mandiblePlane1ToIntersectionAxisTransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
-      mandiblePlane1ToIntersectionAxisTransform.Translate(fibulaOrigin + fibulaZ*fibulaZLineNorm*intersectionPlaceOfFibulaPlanes)
       
-      if i==0:
-        self.fibulaPlanesPositionA.append(fibulaOrigin + fibulaZ*initialSpace)
-        intersectionModelB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % i)
-        intersectionModelB.CreateDefaultDisplayNodes()
-        self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
-        intersectionsList.append(intersectionModelB)
-        intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
-        
-        intersectionModelBItemID = shNode.GetItemByDataNode(intersectionModelB)
-        shNode.SetItemParent(intersectionModelBItemID, intersectionsFolder)
+      fibulaZLineNorm = self.getLineNorm(fibulaLine)
 
-      else:
-        bounds0 = [0,0,0,0,0,0]
-        bounds1 = [0,0,0,0,0,0]
-        if i!=(len(planeList)-2):
-          intersectionModelA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % i)
-          intersectionModelA.CreateDefaultDisplayNodes()
-          self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
-          intersectionsList.append(intersectionModelA)
-          intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
-          shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
-          j=j+1
+      #NewPlanes position and distance
+      self.fibulaPlanesPositionA = []
+      self.fibulaPlanesPositionB = []
+      boneSegmentsDistance = []
+
+      #Set up transform for intersections to measure betweenSpace
+      intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
+
+      fibulaToRASRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX,fibulaY,fibulaZ)
+
+      intersectionsTransformNode = slicer.vtkMRMLLinearTransformNode()
+      intersectionsTransformNode.SetName("intersectionsTransform")
+      slicer.mrmlScene.AddNode(intersectionsTransformNode)
+
+      intersectionsTransform = vtk.vtkTransform()
+      intersectionsTransform.PostMultiply()
+      intersectionsTransform.Translate(-fibulaOrigin)
+      intersectionsTransform.Concatenate(fibulaToRASRotationMatrix)
+      intersectionsTransform.Translate(fibulaOrigin)
+
+      intersectionsTransformNode.SetMatrixTransformToParent(intersectionsTransform.GetMatrix())
+      intersectionsTransformNode.UpdateScene(slicer.mrmlScene)
+
+      intersectionsTransformNodeItemID = shNode.GetItemByDataNode(intersectionsTransformNode)
+      shNode.SetItemParent(intersectionsTransformNodeItemID, intersectionsFolder)
+
+      intersectionsList = []
+      betweenSpace = []
+      j=0
+
+      self.mandibleAxisToFibulaRotationMatrixesList = []
+      #Transform fibula planes to their final position-orientation
+      for i in range(len(planeList)-1):
+        mandiblePlane0 = planeList[i]
+        mandiblePlane1 = planeList[i+1]
+        mandiblePlane0X = [0,0,0]
+        mandiblePlane0Y = [0,0,0]
+        mandiblePlane0Z = [0,0,0]
+        mandiblePlane0.GetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
+        mandiblePlane1X = [0,0,0]
+        mandiblePlane1Y = [0,0,0]
+        mandiblePlane1Z = [0,0,0]
+        mandiblePlane1.GetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
+        mandiblePlane0Origin = [0,0,0]
+        mandiblePlane0.GetOrigin(mandiblePlane0Origin)
+        mandiblePlane1Origin = [0,0,0]
+        mandiblePlane1.GetOrigin(mandiblePlane1Origin)
+        fibulaPlaneA = fibulaPlanesList[2*i]
+        fibulaPlaneB = fibulaPlanesList[2*i+1]
+        fibulaPlaneA.SetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
+        fibulaPlaneA.SetOrigin(mandiblePlane0Origin)
+        fibulaPlaneB.SetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
+        fibulaPlaneB.SetOrigin(mandiblePlane1Origin)
+
+        #Create origin1-origin2 vector
+        or0 = np.zeros(3)
+        or1 = np.zeros(3)
+        mandiblePlane0.GetOrigin(or0)
+        mandiblePlane1.GetOrigin(or1)
+        boneSegmentsDistance.append(np.linalg.norm(or1-or0))
+        mandibleAxisZ = (or1-or0)/np.linalg.norm(or1-or0)
+        
+        #Get Y component of mandiblePlane0
+        mandiblePlane0matrix = vtk.vtkMatrix4x4()
+        mandiblePlane0.GetPlaneToWorldMatrix(mandiblePlane0matrix)
+        mandiblePlane0Y = np.array([mandiblePlane0matrix.GetElement(0,1),mandiblePlane0matrix.GetElement(1,1),mandiblePlane0matrix.GetElement(2,1)])
+        
+        mandibleAxisX = [0,0,0]
+        vtk.vtkMath.Cross(mandiblePlane0Y, mandibleAxisZ, mandibleAxisX)
+        mandibleAxisX = mandibleAxisX/np.linalg.norm(mandibleAxisX)
+        mandibleAxisY = [0,0,0]
+        vtk.vtkMath.Cross(mandibleAxisZ, mandibleAxisX, mandibleAxisY)
+        mandibleAxisY = mandibleAxisY/np.linalg.norm(mandibleAxisY)
+
+        mandibleAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandibleAxisX, mandibleAxisY, mandibleAxisZ)
+        #Create fibula axis:
+        fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
+        fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
+
+        mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
+
+        mandiblePlane0ToIntersectionAxisTransform = vtk.vtkTransform()
+        mandiblePlane0ToIntersectionAxisTransform.PostMultiply()
+        mandiblePlane0ToIntersectionAxisTransform.Translate(-mandiblePlane0Origin[0], -mandiblePlane0Origin[1], -mandiblePlane0Origin[2])
+        mandiblePlane0ToIntersectionAxisTransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
+        mandiblePlane0ToIntersectionAxisTransform.Translate(fibulaOrigin + fibulaZ*fibulaZLineNorm*intersectionPlaceOfFibulaPlanes)
+        mandiblePlane1ToIntersectionAxisTransform = vtk.vtkTransform()
+        mandiblePlane1ToIntersectionAxisTransform.PostMultiply()
+        mandiblePlane1ToIntersectionAxisTransform.Translate(-mandiblePlane1Origin[0], -mandiblePlane1Origin[1], -mandiblePlane1Origin[2])
+        mandiblePlane1ToIntersectionAxisTransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
+        mandiblePlane1ToIntersectionAxisTransform.Translate(fibulaOrigin + fibulaZ*fibulaZLineNorm*intersectionPlaceOfFibulaPlanes)
+        
+        if i==0:
+          self.fibulaPlanesPositionA.append(fibulaOrigin + fibulaZ*initialSpace)
           intersectionModelB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % i)
           intersectionModelB.CreateDefaultDisplayNodes()
           self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
           intersectionsList.append(intersectionModelB)
+          intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
+          
           intersectionModelBItemID = shNode.GetItemByDataNode(intersectionModelB)
           shNode.SetItemParent(intersectionModelBItemID, intersectionsFolder)
-          j=j+1
-          intersectionsList[j-1].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
-          intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
-          intersectionsList[j-2].GetRASBounds(bounds0)
-          intersectionsList[(j-2)+1].GetRASBounds(bounds1)
+
         else:
-          intersectionModelA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % i)
-          intersectionModelA.CreateDefaultDisplayNodes()
-          self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
-          intersectionsList.append(intersectionModelA)
-          intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
-          shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
-          j=j+1
-          intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
-          intersectionsList[j-1].GetRASBounds(bounds0)
-          intersectionsList[j].GetRASBounds(bounds1)
+          bounds0 = [0,0,0,0,0,0]
+          bounds1 = [0,0,0,0,0,0]
+          if i!=(len(planeList)-2):
+            intersectionModelA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % i)
+            intersectionModelA.CreateDefaultDisplayNodes()
+            self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
+            intersectionsList.append(intersectionModelA)
+            intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
+            shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
+            j=j+1
+            intersectionModelB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % i)
+            intersectionModelB.CreateDefaultDisplayNodes()
+            self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
+            intersectionsList.append(intersectionModelB)
+            intersectionModelBItemID = shNode.GetItemByDataNode(intersectionModelB)
+            shNode.SetItemParent(intersectionModelBItemID, intersectionsFolder)
+            j=j+1
+            intersectionsList[j-1].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
+            intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
+            intersectionsList[j-2].GetRASBounds(bounds0)
+            intersectionsList[(j-2)+1].GetRASBounds(bounds1)
+          else:
+            intersectionModelA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % i)
+            intersectionModelA.CreateDefaultDisplayNodes()
+            self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
+            intersectionsList.append(intersectionModelA)
+            intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
+            shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
+            j=j+1
+            intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
+            intersectionsList[j-1].GetRASBounds(bounds0)
+            intersectionsList[j].GetRASBounds(bounds1)
 
-        #calculate how much each FibulaPlaneA should be translated so that it doesn't intersect with fibulaPlaneB
-        z0Sup = bounds0[5]
-        z0Inf = bounds0[4]
-        z1Sup = bounds1[5]
-        z1Inf = bounds1[4]
-        deltaZ = (z0Sup - z0Inf)/2 + (z1Sup - z1Inf)/2
+          #calculate how much each FibulaPlaneA should be translated so that it doesn't intersect with fibulaPlaneB
+          z0Sup = bounds0[5]
+          z0Inf = bounds0[4]
+          z1Sup = bounds1[5]
+          z1Inf = bounds1[4]
+          deltaZ = (z0Sup - z0Inf)/2 + (z1Sup - z1Inf)/2
 
-        betweenSpace.append(deltaZ)
+          betweenSpace.append(deltaZ)
 
-        self.fibulaPlanesPositionA.append(self.fibulaPlanesPositionB[i-1] + fibulaZ*(intersectionDistanceMultiplier*betweenSpace[i-1]+additionalBetweenSpaceOfFibulaPlanes))
+          self.fibulaPlanesPositionA.append(self.fibulaPlanesPositionB[i-1] + fibulaZ*(intersectionDistanceMultiplier*betweenSpace[i-1]+additionalBetweenSpaceOfFibulaPlanes))
 
-      self.fibulaPlanesPositionB.append(self.fibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
+        self.fibulaPlanesPositionB.append(self.fibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
 
-      if not useMoreExactVersionOfPositioningAlgorithmChecked:
-        self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
-      else:
-        intersectionsForCentroidCalculationFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections For Centroid Calculation")
+        if not useMoreExactVersionOfPositioningAlgorithmChecked:
+          self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
+        else:
+          intersectionsForCentroidCalculationFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections For Centroid Calculation")
 
-        lineStartPos = self.fibulaPlanesPositionA.pop()
-        lineEndPos = self.fibulaPlanesPositionB.pop()
+          lineStartPos = self.fibulaPlanesPositionA.pop()
+          lineEndPos = self.fibulaPlanesPositionB.pop()
 
-        numberOfRepetitionsOfPositioningAlgorithm = 5
-        for k in range(numberOfRepetitionsOfPositioningAlgorithm):
-          oldLineStartPos = lineStartPos
-          oldLineEndPos = lineEndPos
+          numberOfRepetitionsOfPositioningAlgorithm = 5
+          for k in range(numberOfRepetitionsOfPositioningAlgorithm):
+            oldLineStartPos = lineStartPos
+            oldLineEndPos = lineEndPos
 
-          fibulaLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
-          fibulaLineDirection = (lineEndPos-lineStartPos)/fibulaLineNorm
+            fibulaLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
+            fibulaLineDirection = (lineEndPos-lineStartPos)/fibulaLineNorm
 
-          intersectionA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection A %d' % i)
-          intersectionB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection B %d' % i)
-          intersectionA.CreateDefaultDisplayNodes()
-          intersectionB.CreateDefaultDisplayNodes()
+            intersectionA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection A %d' % i)
+            intersectionB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection B %d' % i)
+            intersectionA.CreateDefaultDisplayNodes()
+            intersectionB.CreateDefaultDisplayNodes()
+            
+            intersectionAModelItemID = shNode.GetItemByDataNode(intersectionA)
+            shNode.SetItemParent(intersectionAModelItemID, intersectionsForCentroidCalculationFolder)
+            intersectionBModelItemID = shNode.GetItemByDataNode(intersectionB)
+            shNode.SetItemParent(intersectionBModelItemID, intersectionsForCentroidCalculationFolder)
+            
+            self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,intersectionA)
+            self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,intersectionB)
+            lineStartPos = self.getCentroid(intersectionA)
+            lineEndPos = self.getCentroid(intersectionB)
+
+            #Create fibula axis:
+            fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(lineStartPos,lineEndPos,notLeftFibulaChecked)
+            
+            lineEndPos = lineStartPos + boneSegmentsDistance[i]*fibulaZ
+
+            error = np.linalg.norm(lineStartPos-oldLineStartPos) + np.linalg.norm(lineEndPos-oldLineEndPos)
+            if error < 0.01:# Unavoidable errors because of fibula bone shape are about 0.6-0.8mm
+              break
           
-          intersectionAModelItemID = shNode.GetItemByDataNode(intersectionA)
-          shNode.SetItemParent(intersectionAModelItemID, intersectionsForCentroidCalculationFolder)
-          intersectionBModelItemID = shNode.GetItemByDataNode(intersectionB)
-          shNode.SetItemParent(intersectionBModelItemID, intersectionsForCentroidCalculationFolder)
-          
-          self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,intersectionA)
-          self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,intersectionB)
-          lineStartPos = self.getCentroid(intersectionA)
-          lineEndPos = self.getCentroid(intersectionB)
+          fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
+          mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
+          self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
+
+          self.fibulaPlanesPositionA.append(lineStartPos)
+          self.fibulaPlanesPositionB.append(lineEndPos)
+
+          shNode.RemoveItem(intersectionsForCentroidCalculationFolder)
+
+        mandiblePlane0ToFibulaPlaneATransformNode = slicer.vtkMRMLLinearTransformNode()
+        mandiblePlane0ToFibulaPlaneATransformNode.SetName("Mandible2Fibula Transform%d_A" % i)
+        slicer.mrmlScene.AddNode(mandiblePlane0ToFibulaPlaneATransformNode)
+        mandiblePlane1ToFibulaPlaneBTransformNode = slicer.vtkMRMLLinearTransformNode()
+        mandiblePlane1ToFibulaPlaneBTransformNode.SetName("Mandible2Fibula Transform%d_B" % i)
+        slicer.mrmlScene.AddNode(mandiblePlane1ToFibulaPlaneBTransformNode)
+
+        mandiblePlane0ToFibulaPlaneATransform = vtk.vtkTransform()
+        mandiblePlane0ToFibulaPlaneATransform.PostMultiply()
+        mandiblePlane0ToFibulaPlaneATransform.Translate(-mandiblePlane0Origin[0], -mandiblePlane0Origin[1], -mandiblePlane0Origin[2])
+        mandiblePlane0ToFibulaPlaneATransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
+        mandiblePlane0ToFibulaPlaneATransform.Translate(self.fibulaPlanesPositionA[i])
+
+        mandiblePlane0ToFibulaPlaneATransformNode.SetMatrixTransformToParent(mandiblePlane0ToFibulaPlaneATransform.GetMatrix())
+        mandiblePlane0ToFibulaPlaneATransformNode.UpdateScene(slicer.mrmlScene)
+
+
+        mandiblePlane1ToFibulaPlaneBTransform = vtk.vtkTransform()
+        mandiblePlane1ToFibulaPlaneBTransform.PostMultiply()
+        mandiblePlane1ToFibulaPlaneBTransform.Translate(-mandiblePlane1Origin[0], -mandiblePlane1Origin[1], -mandiblePlane1Origin[2])
+        mandiblePlane1ToFibulaPlaneBTransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
+        mandiblePlane1ToFibulaPlaneBTransform.Translate(self.fibulaPlanesPositionB[i])
+
+        mandiblePlane1ToFibulaPlaneBTransformNode.SetMatrixTransformToParent(mandiblePlane1ToFibulaPlaneBTransform.GetMatrix())
+
+        mandiblePlane1ToFibulaPlaneBTransformNode.UpdateScene(slicer.mrmlScene)
+
+        fibulaPlaneA.SetAndObserveTransformNodeID(mandiblePlane0ToFibulaPlaneATransformNode.GetID())
+        fibulaPlaneB.SetAndObserveTransformNodeID(mandiblePlane1ToFibulaPlaneBTransformNode.GetID())
+        fibulaPlaneA.HardenTransform()
+        fibulaPlaneB.HardenTransform()
+
+        mandiblePlane0ToFibulaPlaneATransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane0ToFibulaPlaneATransformNode)
+        shNode.SetItemParent(mandiblePlane0ToFibulaPlaneATransformNodeItemID, mandible2FibulaTransformsFolder)
+        mandiblePlane1ToFibulaPlaneBTransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane1ToFibulaPlaneBTransformNode)
+        shNode.SetItemParent(mandiblePlane1ToFibulaPlaneBTransformNodeItemID, mandible2FibulaTransformsFolder)
+
+      shNode.RemoveItem(intersectionsFolder)
+
+      if useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged:
+        parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged","False")
+
+      if not mandiblePlanesOriginsAreTheSame:
+        curvePointsList = []
+        for mandiblePlaneIndex in range(len(planeList)):
+          mandiblePlaneOrigin = [0,0,0]
+          planeList[mandiblePlaneIndex].GetOrigin(mandiblePlaneOrigin)
+          curvePointsList.append(mandiblePlaneOrigin)
+        
+        points = vtk.vtkPoints()
+        curvePointsArray = np.array(curvePointsList)
+        vtkPointsData = vtk.util.numpy_support.numpy_to_vtk(curvePointsArray, deep=1)
+        points.SetNumberOfPoints(len(curvePointsArray))
+        points.SetData(vtkPointsData)
+        lastMandiblePlanesPositionCurve.SetControlPointPositionsWorld(points)
+    else:
+      #Create fibula axis:
+      fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
+      
+      fibulaZLineNorm = self.getLineNorm(fibulaLine)
+
+      self.mandibleAxisToFibulaRotationMatrixesList = []
+      #Transform fibula planes to their final position-orientation
+      for i in range(len(planeList)-1):
+        mandiblePlane0 = planeList[i]
+        mandiblePlane1 = planeList[i+1]
+        mandiblePlane0X = [0,0,0]
+        mandiblePlane0Y = [0,0,0]
+        mandiblePlane0Z = [0,0,0]
+        mandiblePlane0.GetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
+        mandiblePlane1X = [0,0,0]
+        mandiblePlane1Y = [0,0,0]
+        mandiblePlane1Z = [0,0,0]
+        mandiblePlane1.GetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
+        mandiblePlane0Origin = [0,0,0]
+        mandiblePlane0.GetOrigin(mandiblePlane0Origin)
+        mandiblePlane1Origin = [0,0,0]
+        mandiblePlane1.GetOrigin(mandiblePlane1Origin)
+        fibulaPlaneA = fibulaPlanesList[2*i]
+        fibulaPlaneB = fibulaPlanesList[2*i+1]
+        fibulaPlaneA.SetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
+        fibulaPlaneA.SetOrigin(mandiblePlane0Origin)
+        fibulaPlaneB.SetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
+        fibulaPlaneB.SetOrigin(mandiblePlane1Origin)
+
+        #Create origin1-origin2 vector
+        or0 = np.zeros(3)
+        or1 = np.zeros(3)
+        mandiblePlane0.GetOrigin(or0)
+        mandiblePlane1.GetOrigin(or1)
+        mandibleAxisZ = (or1-or0)/np.linalg.norm(or1-or0)
+        
+        #Get Y component of mandiblePlane0
+        mandiblePlane0matrix = vtk.vtkMatrix4x4()
+        mandiblePlane0.GetPlaneToWorldMatrix(mandiblePlane0matrix)
+        mandiblePlane0Y = np.array([mandiblePlane0matrix.GetElement(0,1),mandiblePlane0matrix.GetElement(1,1),mandiblePlane0matrix.GetElement(2,1)])
+        
+        mandibleAxisX = [0,0,0]
+        vtk.vtkMath.Cross(mandiblePlane0Y, mandibleAxisZ, mandibleAxisX)
+        mandibleAxisX = mandibleAxisX/np.linalg.norm(mandibleAxisX)
+        mandibleAxisY = [0,0,0]
+        vtk.vtkMath.Cross(mandibleAxisZ, mandibleAxisX, mandibleAxisY)
+        mandibleAxisY = mandibleAxisY/np.linalg.norm(mandibleAxisY)
+
+        mandibleAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandibleAxisX, mandibleAxisY, mandibleAxisZ)
+        #Create fibula axis:
+        fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
+        fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
+
+        mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
+
+        if not useMoreExactVersionOfPositioningAlgorithmChecked:
+          self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
+        else:
+          intersectionsForCentroidCalculationFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections For Centroid Calculation")
+
+          lineStartPos = self.fibulaPlanesPositionA[i]
+          lineEndPos = self.fibulaPlanesPositionB[i]
 
           #Create fibula axis:
           fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(lineStartPos,lineEndPos,notLeftFibulaChecked)
           
-          lineEndPos = lineStartPos + boneSegmentsDistance[i]*fibulaZ
+          fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
+          mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
+          self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
 
-          error = np.linalg.norm(lineStartPos-oldLineStartPos) + np.linalg.norm(lineEndPos-oldLineEndPos)
-          if error < 0.01:# Unavoidable errors because of fibula bone shape are about 0.6-0.8mm
-            break
-        
-        fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
-        mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
-        self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
+        mandiblePlane0ToFibulaPlaneATransformNode = slicer.vtkMRMLLinearTransformNode()
+        mandiblePlane0ToFibulaPlaneATransformNode.SetName("Mandible2Fibula Transform%d_A" % i)
+        slicer.mrmlScene.AddNode(mandiblePlane0ToFibulaPlaneATransformNode)
+        mandiblePlane1ToFibulaPlaneBTransformNode = slicer.vtkMRMLLinearTransformNode()
+        mandiblePlane1ToFibulaPlaneBTransformNode.SetName("Mandible2Fibula Transform%d_B" % i)
+        slicer.mrmlScene.AddNode(mandiblePlane1ToFibulaPlaneBTransformNode)
 
-        self.fibulaPlanesPositionA.append(lineStartPos)
-        self.fibulaPlanesPositionB.append(lineEndPos)
+        mandiblePlane0ToFibulaPlaneATransform = vtk.vtkTransform()
+        mandiblePlane0ToFibulaPlaneATransform.PostMultiply()
+        mandiblePlane0ToFibulaPlaneATransform.Translate(-mandiblePlane0Origin[0], -mandiblePlane0Origin[1], -mandiblePlane0Origin[2])
+        mandiblePlane0ToFibulaPlaneATransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
+        mandiblePlane0ToFibulaPlaneATransform.Translate(self.fibulaPlanesPositionA[i])
 
-        shNode.RemoveItem(intersectionsForCentroidCalculationFolder)
-
-      mandiblePlane0ToFibulaPlaneATransformNode = slicer.vtkMRMLLinearTransformNode()
-      mandiblePlane0ToFibulaPlaneATransformNode.SetName("Mandible2Fibula Transform%d_A" % i)
-      slicer.mrmlScene.AddNode(mandiblePlane0ToFibulaPlaneATransformNode)
-      mandiblePlane1ToFibulaPlaneBTransformNode = slicer.vtkMRMLLinearTransformNode()
-      mandiblePlane1ToFibulaPlaneBTransformNode.SetName("Mandible2Fibula Transform%d_B" % i)
-      slicer.mrmlScene.AddNode(mandiblePlane1ToFibulaPlaneBTransformNode)
-
-      mandiblePlane0ToFibulaPlaneATransform = vtk.vtkTransform()
-      mandiblePlane0ToFibulaPlaneATransform.PostMultiply()
-      mandiblePlane0ToFibulaPlaneATransform.Translate(-mandiblePlane0Origin[0], -mandiblePlane0Origin[1], -mandiblePlane0Origin[2])
-      mandiblePlane0ToFibulaPlaneATransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
-      mandiblePlane0ToFibulaPlaneATransform.Translate(self.fibulaPlanesPositionA[i])
-
-      mandiblePlane0ToFibulaPlaneATransformNode.SetMatrixTransformToParent(mandiblePlane0ToFibulaPlaneATransform.GetMatrix())
-      mandiblePlane0ToFibulaPlaneATransformNode.UpdateScene(slicer.mrmlScene)
+        mandiblePlane0ToFibulaPlaneATransformNode.SetMatrixTransformToParent(mandiblePlane0ToFibulaPlaneATransform.GetMatrix())
+        mandiblePlane0ToFibulaPlaneATransformNode.UpdateScene(slicer.mrmlScene)
 
 
-      mandiblePlane1ToFibulaPlaneBTransform = vtk.vtkTransform()
-      mandiblePlane1ToFibulaPlaneBTransform.PostMultiply()
-      mandiblePlane1ToFibulaPlaneBTransform.Translate(-mandiblePlane1Origin[0], -mandiblePlane1Origin[1], -mandiblePlane1Origin[2])
-      mandiblePlane1ToFibulaPlaneBTransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
-      mandiblePlane1ToFibulaPlaneBTransform.Translate(self.fibulaPlanesPositionB[i])
+        mandiblePlane1ToFibulaPlaneBTransform = vtk.vtkTransform()
+        mandiblePlane1ToFibulaPlaneBTransform.PostMultiply()
+        mandiblePlane1ToFibulaPlaneBTransform.Translate(-mandiblePlane1Origin[0], -mandiblePlane1Origin[1], -mandiblePlane1Origin[2])
+        mandiblePlane1ToFibulaPlaneBTransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
+        mandiblePlane1ToFibulaPlaneBTransform.Translate(self.fibulaPlanesPositionB[i])
 
-      mandiblePlane1ToFibulaPlaneBTransformNode.SetMatrixTransformToParent(mandiblePlane1ToFibulaPlaneBTransform.GetMatrix())
+        mandiblePlane1ToFibulaPlaneBTransformNode.SetMatrixTransformToParent(mandiblePlane1ToFibulaPlaneBTransform.GetMatrix())
 
-      mandiblePlane1ToFibulaPlaneBTransformNode.UpdateScene(slicer.mrmlScene)
+        mandiblePlane1ToFibulaPlaneBTransformNode.UpdateScene(slicer.mrmlScene)
 
-      fibulaPlaneA.SetAndObserveTransformNodeID(mandiblePlane0ToFibulaPlaneATransformNode.GetID())
-      fibulaPlaneB.SetAndObserveTransformNodeID(mandiblePlane1ToFibulaPlaneBTransformNode.GetID())
-      fibulaPlaneA.HardenTransform()
-      fibulaPlaneB.HardenTransform()
+        fibulaPlaneA.SetAndObserveTransformNodeID(mandiblePlane0ToFibulaPlaneATransformNode.GetID())
+        fibulaPlaneB.SetAndObserveTransformNodeID(mandiblePlane1ToFibulaPlaneBTransformNode.GetID())
+        fibulaPlaneA.HardenTransform()
+        fibulaPlaneB.HardenTransform()
 
-      mandiblePlane0ToFibulaPlaneATransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane0ToFibulaPlaneATransformNode)
-      shNode.SetItemParent(mandiblePlane0ToFibulaPlaneATransformNodeItemID, mandible2FibulaTransformsFolder)
-      mandiblePlane1ToFibulaPlaneBTransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane1ToFibulaPlaneBTransformNode)
-      shNode.SetItemParent(mandiblePlane1ToFibulaPlaneBTransformNodeItemID, mandible2FibulaTransformsFolder)
+        mandiblePlane0ToFibulaPlaneATransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane0ToFibulaPlaneATransformNode)
+        shNode.SetItemParent(mandiblePlane0ToFibulaPlaneATransformNodeItemID, mandible2FibulaTransformsFolder)
+        mandiblePlane1ToFibulaPlaneBTransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane1ToFibulaPlaneBTransformNode)
+        shNode.SetItemParent(mandiblePlane1ToFibulaPlaneBTransformNodeItemID, mandible2FibulaTransformsFolder)
 
-    shNode.RemoveItem(intersectionsFolder)
+  def createLastMandiblePlanesPositionCurve(self):
+    parameterNode = self.getParameterNode()
+    scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
+    fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
+    fibulaCentroidY = parameterNode.GetParameter("fibulaCentroidY")
+    fibulaCentroidZ = parameterNode.GetParameter("fibulaCentroidZ")
+    mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
+    mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
+    mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
+    planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
+    
+    fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
+    mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
 
+    bounds = [0,0,0,0,0,0]
+    scalarVolume.GetBounds(bounds)
+    bounds = np.array(bounds)
+    centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
+    
+
+    curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
+    curveNode.SetName("temp")
+    slicer.mrmlScene.AddNode(curveNode)
+    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(curveNode)
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    curveNodeItemID = shNode.GetItemByDataNode(curveNode)
+    shNode.SetItemParent(curveNodeItemID, self.getParentFolderItemID())
+    curveNode.SetName(slicer.mrmlScene.GetUniqueNameByString("lastMandiblePlanesPositionCurve"))
+
+    displayNode = curveNode.GetDisplayNode()
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
+    displayNode.AddViewNodeID(fibulaViewNode.GetID())
+    displayNode.SetVisibility(False)
+
+    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+      redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+      displayNode.AddViewNodeID(redSliceNode.GetID())
+
+    curvePointsList = []
+    for mandiblePlaneIndex in range(len(planeList)):
+      mandiblePlaneOrigin = [0,0,0]
+      planeList[mandiblePlaneIndex].GetOrigin(mandiblePlaneOrigin)
+      curvePointsList.append(mandiblePlaneOrigin)
+    
+    points = vtk.vtkPoints()
+    curvePointsArray = np.array(curvePointsList)
+    vtkPointsData = vtk.util.numpy_support.numpy_to_vtk(curvePointsArray, deep=1)
+    points.SetNumberOfPoints(len(curvePointsArray))
+    points.SetData(vtkPointsData)
+    curveNode.SetControlPointPositionsWorld(points)
+
+    return curveNode
+
+  
   def createFibulaPlanesFromMandiblePlanesAndFibulaAxis(self,mandiblePlanesList,fibulaPlanesList):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
