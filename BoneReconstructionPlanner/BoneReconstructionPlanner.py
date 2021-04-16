@@ -1296,6 +1296,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       
       fibulaZLineNorm = self.getLineNorm(fibulaLine)
 
+      self.fibulaPlanesPositionA = []
+      self.fibulaPlanesPositionB = []
+
       self.mandibleAxisToFibulaRotationMatrixesList = []
       #Transform fibula planes to their final position-orientation
       for i in range(len(planeList)-1):
@@ -1349,15 +1352,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         if not useMoreExactVersionOfPositioningAlgorithmChecked:
           self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
         else:
-          intersectionsForCentroidCalculationFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections For Centroid Calculation")
-
-          lineStartPos = np.array([0,0,0])
-          lineEndPos = np.array([0,0,0])
-          lastFibulaPlanesPositionA.GetNthControlPointPosition(i,lineStartPos)
-          lastFibulaPlanesPositionB.GetNthControlPointPosition(i,lineEndPos)
+          fibulaPlaneAPosition = np.array([0,0,0])
+          fibulaPlaneBPosition = np.array([0,0,0])
+          lastFibulaPlanesPositionA.GetNthControlPointPosition(i,fibulaPlaneAPosition)
+          lastFibulaPlanesPositionB.GetNthControlPointPosition(i,fibulaPlaneBPosition)
+          self.fibulaPlanesPositionA.append(fibulaPlaneAPosition)
+          self.fibulaPlanesPositionB.append(fibulaPlaneBPosition)
 
           #Create fibula axis:
-          fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(lineStartPos,lineEndPos,notLeftFibulaChecked)
+          fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(fibulaPlaneAPosition,fibulaPlaneBPosition,notLeftFibulaChecked)
           
           fibulaToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(fibulaX, fibulaY, fibulaZ)
           mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
@@ -1374,7 +1377,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandiblePlane0ToFibulaPlaneATransform.PostMultiply()
         mandiblePlane0ToFibulaPlaneATransform.Translate(-mandiblePlane0Origin[0], -mandiblePlane0Origin[1], -mandiblePlane0Origin[2])
         mandiblePlane0ToFibulaPlaneATransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
-        mandiblePlane0ToFibulaPlaneATransform.Translate(self.fibulaPlanesPositionA[i])
+        mandiblePlane0ToFibulaPlaneATransform.Translate(fibulaPlaneAPosition)
 
         mandiblePlane0ToFibulaPlaneATransformNode.SetMatrixTransformToParent(mandiblePlane0ToFibulaPlaneATransform.GetMatrix())
         mandiblePlane0ToFibulaPlaneATransformNode.UpdateScene(slicer.mrmlScene)
@@ -1384,7 +1387,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandiblePlane1ToFibulaPlaneBTransform.PostMultiply()
         mandiblePlane1ToFibulaPlaneBTransform.Translate(-mandiblePlane1Origin[0], -mandiblePlane1Origin[1], -mandiblePlane1Origin[2])
         mandiblePlane1ToFibulaPlaneBTransform.Concatenate(mandibleAxisToFibulaRotationMatrix)
-        mandiblePlane1ToFibulaPlaneBTransform.Translate(self.fibulaPlanesPositionB[i])
+        mandiblePlane1ToFibulaPlaneBTransform.Translate(fibulaPlaneBPosition)
 
         mandiblePlane1ToFibulaPlaneBTransformNode.SetMatrixTransformToParent(mandiblePlane1ToFibulaPlaneBTransform.GetMatrix())
 
@@ -1555,9 +1558,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
     
     if useNonDecimatedBoneModelsForPreviewChecked:
+      nonDecimatedFibulaModelDisplayNode = nonDecimatedFibulaModelNode.GetDisplayNode()
+      nonDecimatedFibulaModelDisplayNode.SetVisibility(True)
+      decimatedFibulaModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
+      decimatedFibulaModelDisplayNode.SetVisibility(False)
+
       fibulaModelNode = nonDecimatedFibulaModelNode
       mandibleModelNode = nonDecimatedMandibleModelNode
     else:
+      nonDecimatedFibulaModelDisplayNode = nonDecimatedFibulaModelNode.GetDisplayNode()
+      nonDecimatedFibulaModelDisplayNode.SetVisibility(False)
+      decimatedFibulaModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
+      decimatedFibulaModelDisplayNode.SetVisibility(True)
+
       fibulaModelNode = decimatedFibulaModelNode
       mandibleModelNode = decimatedMandibleModelNode
 
