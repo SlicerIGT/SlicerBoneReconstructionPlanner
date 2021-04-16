@@ -1006,9 +1006,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
             mandiblePlanesOriginsAreTheSame = False
     
     lastFibulaPlanesPositionsExist = lastFibulaPlanesPositionA != None and lastFibulaPlanesPositionB != None
-
+    if lastFibulaPlanesPositionsExist:
+      lastFibulaPlanesPositionsExistAndIsValid = (lastFibulaPlanesPositionA.GetNumberOfControlPoints() + lastFibulaPlanesPositionB.GetNumberOfControlPoints()) == (2*len(planeList) -2)
+    else:
+      lastFibulaPlanesPositionsExistAndIsValid = False
+    
     #This line avoids recalculating the fibulaPlanesPosition when mandiblePlanes just rotate
-    if not mandiblePlanesOriginsAreTheSame or not lastFibulaPlanesPositionsExist or useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged or fibulaPlanesCreationParametersChanged:
+    if not mandiblePlanesOriginsAreTheSame or not lastFibulaPlanesPositionsExistAndIsValid or useMoreExactVersionOfPositioningAlgorithmCheckBoxChanged or fibulaPlanesCreationParametersChanged:
       #Create fibula axis:
       fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
       
@@ -1272,7 +1276,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         points.SetData(vtkPointsData)
         lastMandiblePlanesPositionCurve.SetControlPointPositionsWorld(points)
 
-      if not lastFibulaPlanesPositionsExist:
+      if not lastFibulaPlanesPositionsExistAndIsValid:
         #delete curve that is alone
         slicer.mrmlScene.RemoveNode(lastFibulaPlanesPositionA)
         slicer.mrmlScene.RemoveNode(lastFibulaPlanesPositionB)
@@ -1412,6 +1416,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     curveNodeItemID = shNode.GetItemByDataNode(curveNode)
     shNode.SetItemParent(curveNodeItemID, self.getParentFolderItemID())
     curveNode.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
+    curveNode.SetLocked(True)
 
     displayNode = curveNode.GetDisplayNode()
     displayNode.SetVisibility(False)
