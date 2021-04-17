@@ -1883,6 +1883,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
       segmentID = seg.GetSegmentation().GetNthSegmentID(0)
       segment = seg.GetSegmentation().GetSegment(segmentID)
+      segDisplayNode = seg.GetDisplayNode()
+      segDisplayNode.SetSegmentVisibility(segmentID,False)
 
       logic = slicer.modules.segmentations.logic()
       logic.ExportSegmentToRepresentationNode(segment, models[i])
@@ -2736,6 +2738,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
     pointsIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Points Intersections")
 
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
+
     for i in range(0,len(mandibularPlanesList),len(mandibularPlanesList)-1):
       #sawBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
       if i == 0:
@@ -2751,12 +2755,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       sawBoxModelItemID = shNode.GetItemByDataNode(sawBoxModel)
       shNode.SetItemParent(sawBoxModelItemID, sawBoxesModelsFolder)
 
+      sawBoxDisplayNode = sawBoxModel.GetDisplayNode()
+      sawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+
       biggerSawBoxWidth = sawBoxSlotWidth+2*clearanceFitPrintingTolerance+2*sawBoxSlotWall
       biggerSawBoxLength = sawBoxSlotLength+2*sawBoxSlotWall
       biggerSawBoxHeight = sawBoxSlotHeight
       biggerSawBoxModel = self.createBox(biggerSawBoxLength,biggerSawBoxHeight,biggerSawBoxWidth,biggerSawBoxName)
       biggerSawBoxModelItemID = shNode.GetItemByDataNode(biggerSawBoxModel)
       shNode.SetItemParent(biggerSawBoxModelItemID, biggerSawBoxesModelsFolder)
+
+      biggerSawBoxDisplayNode = biggerSawBoxModel.GetDisplayNode()
+      biggerSawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
 
       mandiblePlaneMatrix = vtk.vtkMatrix4x4()
       mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
