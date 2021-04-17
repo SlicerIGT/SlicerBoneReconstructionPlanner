@@ -1353,16 +1353,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
 
+        fibulaPlaneAPosition = np.array([0,0,0])
+        fibulaPlaneBPosition = np.array([0,0,0])
+        lastFibulaPlanesPositionA.GetNthControlPointPosition(i,fibulaPlaneAPosition)
+        lastFibulaPlanesPositionB.GetNthControlPointPosition(i,fibulaPlaneBPosition)
+        self.fibulaPlanesPositionA.append(fibulaPlaneAPosition)
+        self.fibulaPlanesPositionB.append(fibulaPlaneBPosition)
+
         if not useMoreExactVersionOfPositioningAlgorithmChecked:
           self.mandibleAxisToFibulaRotationMatrixesList.append(mandibleAxisToFibulaRotationMatrix)
         else:
-          fibulaPlaneAPosition = np.array([0,0,0])
-          fibulaPlaneBPosition = np.array([0,0,0])
-          lastFibulaPlanesPositionA.GetNthControlPointPosition(i,fibulaPlaneAPosition)
-          lastFibulaPlanesPositionB.GetNthControlPointPosition(i,fibulaPlaneBPosition)
-          self.fibulaPlanesPositionA.append(fibulaPlaneAPosition)
-          self.fibulaPlanesPositionB.append(fibulaPlaneBPosition)
-
           #Create fibula axis:
           fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(fibulaPlaneAPosition,fibulaPlaneBPosition,notLeftFibulaChecked)
           
