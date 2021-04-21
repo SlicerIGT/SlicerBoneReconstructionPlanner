@@ -181,6 +181,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.createCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton.connect('clicked(bool)', self.onCreateCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton)
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.connect('clicked(bool)', self.onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
     self.ui.centerFibulaLineButton.connect('clicked(bool)', self.onCenterFibulaLineButton)
+    self.ui.showHideBiggerSawBoxesInteractionHandlesButton.connect('clicked(bool)', self.onShowHideBiggerSawBoxesInteractionHandlesButton)
+    self.ui.showHideMandiblePlanesInteractionHandlesButton.connect('clicked(bool)', self.onShowHideMandiblePlanesInteractionHandlesButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.onUseMoreExactVersionOfPositioningAlgorithmCheckBox)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -215,6 +217,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
               observerIndex = i
           callData.RemoveObserver(self.logic.mandiblePlaneObserversAndNodeIDList.pop(observerIndex)[0])
         self.logic.onPlaneModifiedTimer(None,None)
+      if callData.GetAttribute("isSawBoxPlane") == 'True':
+        if len(self.logic.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList) > 0:
+          for i in range(len(self.logic.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList)):
+            if self.logic.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][1] == callData.GetID():
+              observerIndex = i
+          callData.RemoveObserver(self.logic.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList.pop(observerIndex)[0])
 
   def enter(self):
     """
@@ -611,7 +619,27 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onCenterFibulaLineButton(self):
     self.logic.centerFibulaLine()
+  
+  def onShowHideBiggerSawBoxesInteractionHandlesButton(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    sawBoxesPlanesFolder = shNode.GetItemByName("sawBoxes Planes")
+    sawBoxesPlanesList = createListFromFolderID(sawBoxesPlanesFolder)
 
+    for i in range(len(sawBoxesPlanesList)):
+      displayNode = sawBoxesPlanesList[i].GetDisplayNode()
+      handlesVisibility = displayNode.GetHandlesInteractive()
+      displayNode.SetHandlesInteractive(not handlesVisibility)
+
+  def onShowHideMandiblePlanesInteractionHandlesButton(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
+    for i in range(len(mandibularPlanesList)):
+      displayNode = mandibularPlanesList[i].GetDisplayNode()
+      handlesVisibility = displayNode.GetHandlesInteractive()
+      displayNode.SetHandlesInteractive(not handlesVisibility)
+    
 #
 # BoneReconstructionPlannerLogic
 #
@@ -632,6 +660,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     """
     ScriptedLoadableModuleLogic.__init__(self)
     self.mandiblePlaneObserversAndNodeIDList = []
+    self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList = []
     self.generateFibulaPlanesTimer = qt.QTimer()
     self.generateFibulaPlanesTimer.setInterval(300)
     self.generateFibulaPlanesTimer.setSingleShot(True)
@@ -2732,8 +2761,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(sawBoxesModelsFolder)
     biggerSawBoxesModelsFolder = shNode.GetItemByName("biggerSawBoxes Models")
     shNode.RemoveItem(biggerSawBoxesModelsFolder)
+    sawBoxesPlanesFolder = shNode.GetItemByName("sawBoxes Planes")
+    shNode.RemoveItem(sawBoxesPlanesFolder)
+    sawBoxesTransformsFolder = shNode.GetItemByName("sawBoxes Transforms")
+    shNode.RemoveItem(sawBoxesTransformsFolder)
     sawBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"sawBoxes Models")
     biggerSawBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"biggerSawBoxes Models")
+    sawBoxesPlanesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"sawBoxes Planes")
     sawBoxesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"sawBoxes Transforms")
     intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections")
     pointsIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Points Intersections")
@@ -2757,6 +2791,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       sawBoxDisplayNode = sawBoxModel.GetDisplayNode()
       sawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+      sawBoxDisplayNode.SetVisibility(False)
 
       biggerSawBoxWidth = sawBoxSlotWidth+2*clearanceFitPrintingTolerance+2*sawBoxSlotWall
       biggerSawBoxLength = sawBoxSlotLength+2*sawBoxSlotWall
@@ -2767,6 +2802,23 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       biggerSawBoxDisplayNode = biggerSawBoxModel.GetDisplayNode()
       biggerSawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+
+      #Create sawBox plane
+      sawBoxPlane = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "sawBox Plane%d" % i)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(sawBoxPlane)
+      sawBoxPlaneItemID = shNode.GetItemByDataNode(sawBoxPlane)
+      shNode.SetItemParent(sawBoxPlaneItemID, sawBoxesPlanesFolder)
+
+      sawBoxPlane.SetAxes([1,0,0],[0,1,0],[0,0,1])
+      sawBoxPlane.SetOrigin([0,0,0])
+      sawBoxPlane.SetAttribute("isSawBoxPlane","True")
+
+      displayNode = sawBoxPlane.GetDisplayNode()
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
+      displayNode.AddViewNodeID(mandibleViewNode.GetID())
+      displayNode.SetGlyphScale(2.5)
+      displayNode.SetOpacity(0)
+      displayNode.HandlesInteractiveOn()
 
       mandiblePlaneMatrix = vtk.vtkMatrix4x4()
       mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
@@ -2819,13 +2871,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       WorldToSawBoxAxisRotationMatrix = self.getAxes1ToAxes2RotationMatrix(WorldToWorldRotationMatrix, sawBoxAxisToWorldRotationMatrix)
 
-      transformNode = slicer.vtkMRMLLinearTransformNode()
-      transformNode.SetName("temp%d" % i)
-      slicer.mrmlScene.AddNode(transformNode)
+      WorldToSawBoxAxisX = np.array([WorldToSawBoxAxisRotationMatrix.GetElement(0,0),WorldToSawBoxAxisRotationMatrix.GetElement(1,0),WorldToSawBoxAxisRotationMatrix.GetElement(2,0)])
+      WorldToSawBoxAxisY = np.array([WorldToSawBoxAxisRotationMatrix.GetElement(0,1),WorldToSawBoxAxisRotationMatrix.GetElement(1,1),WorldToSawBoxAxisRotationMatrix.GetElement(2,1)])
+      WorldToSawBoxAxisZ = np.array([WorldToSawBoxAxisRotationMatrix.GetElement(0,2),WorldToSawBoxAxisRotationMatrix.GetElement(1,2),WorldToSawBoxAxisRotationMatrix.GetElement(2,2)])
 
-      finalTransform = vtk.vtkTransform()
-      finalTransform.PostMultiply()
-      finalTransform.Concatenate(WorldToSawBoxAxisRotationMatrix)
       if i == 0:
         sawBoxAxisXTranslation = 0
         sawBoxAxisYTranslation = biggerSawBoxHeight/2+biggerSawBoxDistanceToMandible
@@ -2834,23 +2883,42 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         sawBoxAxisXTranslation = 0
         sawBoxAxisYTranslation = biggerSawBoxHeight/2+biggerSawBoxDistanceToMandible
         sawBoxAxisZTranslation = -sawBoxSlotWidth/2
-      finalTransform.Translate(pointOfIntersection + sawBoxAxisX*sawBoxAxisXTranslation + sawBoxAxisY*sawBoxAxisYTranslation + sawBoxAxisZ*sawBoxAxisZTranslation)
-      transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
+      WorldToSawBoxAxisOrigin = pointOfIntersection + sawBoxAxisX*sawBoxAxisXTranslation + sawBoxAxisY*sawBoxAxisYTranslation + sawBoxAxisZ*sawBoxAxisZTranslation
+
+      sawBoxPlane.SetAxes(WorldToSawBoxAxisX,WorldToSawBoxAxisY,WorldToSawBoxAxisZ)
+      sawBoxPlane.SetOrigin(WorldToSawBoxAxisOrigin)
+
+      transformNode = slicer.vtkMRMLLinearTransformNode()
+      transformNode.SetName("sawBoxTransform%d" % i)
+      slicer.mrmlScene.AddNode(transformNode)
+
+      sawBoxPlaneToWorldMatrix = vtk.vtkMatrix4x4()
+      sawBoxPlane.GetPlaneToWorldMatrix(sawBoxPlaneToWorldMatrix)
+      transformNode.SetMatrixTransformToParent(sawBoxPlaneToWorldMatrix)
 
       transformNode.UpdateScene(slicer.mrmlScene)
 
       sawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
-      sawBoxModel.HardenTransform()
       biggerSawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
-      biggerSawBoxModel.HardenTransform()
       
       transformNodeItemID = shNode.GetItemByDataNode(transformNode)
       shNode.SetItemParent(transformNodeItemID, sawBoxesTransformsFolder)
-    
-    shNode.RemoveItem(sawBoxesTransformsFolder)
+
+      observer = sawBoxPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onSawBoxPlaneMoved)
+      self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList.append([observer,sawBoxPlane.GetID(),transformNode.GetID()])
+
     shNode.RemoveItem(intersectionsFolder)
     shNode.RemoveItem(pointsIntersectionsFolder)
     
+  def onSawBoxPlaneMoved(self,sourceNode,event):
+    for i in range(len(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList)):
+      if self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][1] == sourceNode.GetID():
+        sawBoxPlane = slicer.mrmlScene.GetNodeByID(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][1])
+        transformNode = slicer.mrmlScene.GetNodeByID(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][2])
+        sawBoxPlaneToWorldMatrix = vtk.vtkMatrix4x4()
+        sawBoxPlane.GetPlaneToWorldMatrix(sawBoxPlaneToWorldMatrix)
+        transformNode.SetMatrixTransformToParent(sawBoxPlaneToWorldMatrix)
+
   def makeBooleanOperationsToMandibleSurgicalGuideBase(self):
     parameterNode = self.getParameterNode()
     mandibleSurgicalGuideBaseModel = parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel")
@@ -2861,25 +2929,29 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleCylindersModelsFolder = shNode.GetItemByName("Mandible Cylinders Models")
     cylindersModelsList = createListFromFolderID(mandibleCylindersModelsFolder)
     sawBoxesModelsFolder = shNode.GetItemByName("sawBoxes Models")
-    miterBoxesModelsList = createListFromFolderID(sawBoxesModelsFolder)
+    sawBoxesModelsList = createListFromFolderID(sawBoxesModelsFolder)
     biggerSawBoxesModelsFolder = shNode.GetItemByName("biggerSawBoxes Models")
-    biggerMiterBoxesModelsList = createListFromFolderID(biggerSawBoxesModelsFolder)
+    biggerSawBoxesModelsList = createListFromFolderID(biggerSawBoxesModelsFolder)
+
+    for sawBoxModel,biggerSawBox in zip(sawBoxesModelsList,biggerSawBoxesModelsList):
+      sawBoxModel.HardenTransform()
+      biggerSawBox.HardenTransform()
 
     combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(mandibleSurgicalGuideBaseModel.GetPolyData())
     surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('MandibleSurgicalGuidePrototype'))
 
-    for i in range(len(biggerMiterBoxesModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, biggerMiterBoxesModelsList[i], surgicalGuideModel, 'union')
+    for i in range(len(biggerSawBoxesModelsList)):
+      combineModelsLogic.process(surgicalGuideModel, biggerSawBoxesModelsList[i], surgicalGuideModel, 'union')
     
     combineModelsLogic.process(surgicalGuideModel, mandibleBridgeModel, surgicalGuideModel, 'union')
 
     for i in range(len(cylindersModelsList)):
       combineModelsLogic.process(surgicalGuideModel, cylindersModelsList[i], surgicalGuideModel, 'difference')
 
-    for i in range(len(miterBoxesModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, miterBoxesModelsList[i], surgicalGuideModel, 'difference')
+    for i in range(len(sawBoxesModelsList)):
+      combineModelsLogic.process(surgicalGuideModel, sawBoxesModelsList[i], surgicalGuideModel, 'difference')
 
   def centerFibulaLine(self):
     parameterNode = self.getParameterNode()
