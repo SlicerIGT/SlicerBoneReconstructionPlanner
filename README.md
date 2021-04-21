@@ -1,6 +1,6 @@
 # Bone Reconstruction Planner
 
-3D Slicer extension for planning mandible reconstruction surgery using fibula flap.
+A 3D Slicer extension for virtual surgical planning of mandibular reconstruction with vascularized fibula free flap and generation of patient-specific surgical guides. 
 
 # Documentation
 
