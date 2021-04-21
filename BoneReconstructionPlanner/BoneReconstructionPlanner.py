@@ -149,6 +149,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.initialSpinBox.valueChanged.connect(self.onFibulaPlanesCreationParametersChanged)
     self.ui.intersectionSpinBox.valueChanged.connect(self.onFibulaPlanesCreationParametersChanged)
     self.ui.betweenSpinBox.valueChanged.connect(self.onFibulaPlanesCreationParametersChanged)
+    self.ui.securityMarginOfFibulaPiecesSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.miterBoxSlotWidthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.miterBoxSlotLengthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.miterBoxSlotHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -353,6 +354,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.intersectionSpinBox.setValue(float(self._parameterNode.GetParameter("intersectionPlaceOfFibulaPlanes")))
     if self._parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes") != '':
       self.ui.betweenSpinBox.setValue(float(self._parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes")))
+    if self._parameterNode.GetParameter("securityMarginOfFibulaPieces") != '':
+      self.ui.securityMarginOfFibulaPiecesSpinBox.setValue(float(self._parameterNode.GetParameter("securityMarginOfFibulaPieces")))
     if self._parameterNode.GetParameter("miterBoxSlotWidth") != '':
       self.ui.miterBoxSlotWidthSpinBox.setValue(float(self._parameterNode.GetParameter("miterBoxSlotWidth")))
     if self._parameterNode.GetParameter("miterBoxSlotLength") != '':
@@ -387,6 +390,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
+    self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked = self._parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") != "False"
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
     else:
@@ -416,6 +420,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetNodeReferenceID("mandibleSurgicalGuideBaseModel", self.ui.mandibleSurgicalGuideBaseSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibleFiducialList", self.ui.mandibleFiducialListSelector.currentNodeID)
 
+    self._parameterNode.SetParameter("securityMarginOfFibulaPieces", str(self.ui.securityMarginOfFibulaPiecesSpinBox.value))
     self._parameterNode.SetParameter("miterBoxSlotWidth", str(self.ui.miterBoxSlotWidthSpinBox.value))
     self._parameterNode.SetParameter("miterBoxSlotLength", str(self.ui.miterBoxSlotLengthSpinBox.value))
     self._parameterNode.SetParameter("miterBoxSlotHeight", str(self.ui.miterBoxSlotHeightSpinBox.value))
@@ -451,6 +456,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview","True")
     else:
       self._parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview","False")
+    if self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked:
+      self._parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","True")
+    else:
+      self._parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","False")
     if self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState == qt.Qt.Checked:
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","True")
     else:
@@ -2345,7 +2354,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     miterBoxSlotWall = float(parameterNode.GetParameter("miterBoxSlotWall"))
     clearanceFitPrintingTolerance = float(parameterNode.GetParameter("clearanceFitPrintingTolerance"))
     biggerMiterBoxDistanceToFibula = float(parameterNode.GetParameter("biggerMiterBoxDistanceToFibula"))
+    securityMarginOfFibulaPieces = float(parameterNode.GetParameter("securityMarginOfFibulaPieces"))
     notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
+    checkSecurityMarginOnMiterBoxCreationChecked = parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") == "True"
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
 
@@ -2372,6 +2383,70 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(miterBoxesModelsFolder)
     biggerMiterBoxesModelsFolder = shNode.GetItemByName("biggerMiterBoxes Models")
     shNode.RemoveItem(biggerMiterBoxesModelsFolder)
+
+    """
+    if checkSecurityMarginOnMiterBoxCreationChecked:
+      cutBonesList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
+      duplicateFibulaBonePiecesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Duplicate Fibula Bone Pieces")
+      duplicateFibulaBonePiecesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Duplicate Fibula Bone Pieces Transforms")
+      intersectionsOfBonePiecesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections Of Bone Pieces")
+      
+      for i in range(0,len(cutBonesList)-1):
+        duplicateFibulaPiece = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Duplicate ' + cutBonesList[i].GetName())
+        duplicateFibulaPiece.CreateDefaultDisplayNodes()
+        duplicateFibulaPiece.CopyContent(cutBonesList[i])
+
+        duplicateFibulaPieceItemID = shNode.GetItemByDataNode(duplicateFibulaPiece)
+        shNode.SetItemParent(duplicateFibulaPieceItemID, duplicateFibulaBonePiecesModelsFolder)
+
+      duplicateFibulaBonePiecesList = createListFromFolderID(duplicateFibulaBonePiecesModelsFolder)
+
+      for i in range(1,len(duplicateFibulaBonePiecesList)):
+        lineStartPos = np.array([0,0,0])
+        lineEndPos = np.array([0,0,0])
+        fibulaPlanesList[i*2].GetOrigin(lineStartPos)
+        fibulaPlanesList[i*2 +1].GetOrigin(lineEndPos)
+        #Create fibula axis:
+        fibulaZ = (lineEndPos - lineStartPos)/np.linalg.norm(lineEndPos - lineStartPos)
+
+        duplicateFibulaPieceTransformNode = slicer.vtkMRMLLinearTransformNode()
+        duplicateFibulaPieceTransformNode.SetName("Duplicate Fibula Piece Transform {0}".format(i))
+        slicer.mrmlScene.AddNode(duplicateFibulaPieceTransformNode)
+
+        duplicateFibulaPieceTransform = vtk.vtkTransform()
+        duplicateFibulaPieceTransform.PostMultiply()
+        duplicateFibulaPieceTransform.Translate(-i*(securityMarginOfFibulaPieces + 1e-2)*fibulaZ)
+
+        duplicateFibulaPieceTransformNode.SetMatrixTransformToParent(duplicateFibulaPieceTransform.GetMatrix())
+
+        duplicateFibulaBonePiecesList[i].SetAndObserveTransformNodeID(duplicateFibulaPieceTransformNode.GetID())
+
+        duplicateFibulaPieceTransformNodeItemID = shNode.GetItemByDataNode(duplicateFibulaPieceTransformNode)
+        shNode.SetItemParent(duplicateFibulaPieceTransformNodeItemID, duplicateFibulaBonePiecesTransformsFolder)
+
+      combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
+
+      for i in range(0,len(duplicateFibulaBonePiecesList) -1):
+        intersectionOfFibulaPiece = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection Of Fibula Piece %i' % i)
+        intersectionOfFibulaPiece.CreateDefaultDisplayNodes()
+        intersectionOfFibulaPieceItemID = shNode.GetItemByDataNode(intersectionOfFibulaPiece)
+        shNode.SetItemParent(intersectionOfFibulaPieceItemID, intersectionsOfBonePiecesFolder)
+
+        combineModelsLogic.process(duplicateFibulaBonePiecesList[i], duplicateFibulaBonePiecesList[i+1], intersectionOfFibulaPiece, 'intersection')
+
+        if intersectionOfFibulaPiece.GetPolyData().GetNumberOfPoints() != 0:
+          #shNode.RemoveItem(intersectionsOfBonePiecesFolder)
+          #shNode.RemoveItem(duplicateFibulaBonePiecesTransformsFolder)
+          #shNode.RemoveItem(duplicateFibulaBonePiecesModelsFolder)
+          slicer.util.errorDisplay(f"ERROR: Adjacent fibula bone pieces distance do not satisfy the security margin of {securityMarginOfFibulaPieces}mm. \
+            Correct your planning increasing 'intersection distance multiplier' or 'between space' and update it")
+          return
+      
+      #shNode.RemoveItem(intersectionsOfBonePiecesFolder)
+      #shNode.RemoveItem(duplicateFibulaBonePiecesTransformsFolder)
+      #shNode.RemoveItem(duplicateFibulaBonePiecesModelsFolder)
+    """
+
     miterBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"miterBoxes Models")
     biggerMiterBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"biggerMiterBoxes Models")
     miterBoxesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"miterBoxes Transforms")
