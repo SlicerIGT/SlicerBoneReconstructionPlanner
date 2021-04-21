@@ -639,6 +639,20 @@ bone pieces and transform them to mandible</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_5">
       <item>
+       <widget class="QPushButton" name="showHideBiggerSawBoxesInteractionHandlesButton">
+        <property name="text">
+         <string>Show/Hide biggerSawBoxes interaction handles</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="showHideMandiblePlanesInteractionHandlesButton">
+        <property name="text">
+         <string>Show/Hide mandible planes interaction handles</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <layout class="QFormLayout" name="formLayout_5">
         <property name="topMargin">
          <number>0</number>
