@@ -408,7 +408,7 @@ bone pieces and transform them to mandible</string>
       <item>
        <widget class="QCheckBox" name="checkSecurityMarginOnMiterBoxCreationCheckBox">
         <property name="text">
-         <string>Check security margin on miter box creation (feature in development)</string>
+         <string>Check security margin on miter box creation</string>
         </property>
         <property name="checked">
          <bool>true</bool>
