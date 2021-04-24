@@ -2790,6 +2790,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(fibulaSurgicalGuideBaseModel.GetPolyData())
     surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibulaSurgicalGuidePrototype'))
+    surgicalGuideModelItemID = shNode.GetItemByDataNode(surgicalGuideModel)
+    shNode.SetItemParent(surgicalGuideModelItemID, self.getParentFolderItemID())
+
+    displayNode = surgicalGuideModel.GetDisplayNode()
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
+    displayNode.AddViewNodeID(fibulaViewNode.GetID())
 
     for i in range(len(biggerMiterBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, biggerMiterBoxesModelsList[i], surgicalGuideModel, 'union')
@@ -3018,6 +3024,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(mandibleSurgicalGuideBaseModel.GetPolyData())
     surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('MandibleSurgicalGuidePrototype'))
+    surgicalGuideModelItemID = shNode.GetItemByDataNode(surgicalGuideModel)
+    shNode.SetItemParent(surgicalGuideModelItemID, self.getParentFolderItemID())
+
+    displayNode = surgicalGuideModel.GetDisplayNode()
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
+    displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
     for i in range(len(biggerSawBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, biggerSawBoxesModelsList[i], surgicalGuideModel, 'union')
