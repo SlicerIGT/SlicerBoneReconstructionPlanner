@@ -2384,12 +2384,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerMiterBoxesModelsFolder = shNode.GetItemByName("biggerMiterBoxes Models")
     shNode.RemoveItem(biggerMiterBoxesModelsFolder)
 
-    """
     if checkSecurityMarginOnMiterBoxCreationChecked:
       cutBonesList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
       duplicateFibulaBonePiecesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Duplicate Fibula Bone Pieces")
       duplicateFibulaBonePiecesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Duplicate Fibula Bone Pieces Transforms")
-      intersectionsOfBonePiecesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections Of Bone Pieces")
       
       for i in range(0,len(cutBonesList)-1):
         duplicateFibulaPiece = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Duplicate ' + cutBonesList[i].GetName())
@@ -2420,32 +2418,36 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         duplicateFibulaPieceTransformNode.SetMatrixTransformToParent(duplicateFibulaPieceTransform.GetMatrix())
 
         duplicateFibulaBonePiecesList[i].SetAndObserveTransformNodeID(duplicateFibulaPieceTransformNode.GetID())
+        duplicateFibulaBonePiecesList[i].HardenTransform()
 
         duplicateFibulaPieceTransformNodeItemID = shNode.GetItemByDataNode(duplicateFibulaPieceTransformNode)
         shNode.SetItemParent(duplicateFibulaPieceTransformNodeItemID, duplicateFibulaBonePiecesTransformsFolder)
 
-      combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
-
-      for i in range(0,len(duplicateFibulaBonePiecesList) -1):
-        intersectionOfFibulaPiece = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection Of Fibula Piece %i' % i)
-        intersectionOfFibulaPiece.CreateDefaultDisplayNodes()
-        intersectionOfFibulaPieceItemID = shNode.GetItemByDataNode(intersectionOfFibulaPiece)
-        shNode.SetItemParent(intersectionOfFibulaPieceItemID, intersectionsOfBonePiecesFolder)
-
-        combineModelsLogic.process(duplicateFibulaBonePiecesList[i], duplicateFibulaBonePiecesList[i+1], intersectionOfFibulaPiece, 'intersection')
-
-        if intersectionOfFibulaPiece.GetPolyData().GetNumberOfPoints() != 0:
-          #shNode.RemoveItem(intersectionsOfBonePiecesFolder)
-          #shNode.RemoveItem(duplicateFibulaBonePiecesTransformsFolder)
-          #shNode.RemoveItem(duplicateFibulaBonePiecesModelsFolder)
-          slicer.util.errorDisplay(f"ERROR: Adjacent fibula bone pieces distance do not satisfy the security margin of {securityMarginOfFibulaPieces}mm. \
-            Correct your planning increasing 'intersection distance multiplier' or 'between space' and update it")
-          return
+      collisionDetected = False
       
-      #shNode.RemoveItem(intersectionsOfBonePiecesFolder)
-      #shNode.RemoveItem(duplicateFibulaBonePiecesTransformsFolder)
-      #shNode.RemoveItem(duplicateFibulaBonePiecesModelsFolder)
-    """
+      for i in range(0,len(duplicateFibulaBonePiecesList) -1):
+        collisionDetection = vtk.vtkCollisionDetectionFilter()
+        collisionDetection.SetInputData(0, duplicateFibulaBonePiecesList[i].GetPolyData())
+        collisionDetection.SetInputData(1, duplicateFibulaBonePiecesList[i+1].GetPolyData())
+        matrix1 = vtk.vtkMatrix4x4()
+        collisionDetection.SetMatrix(0, matrix1)
+        collisionDetection.SetMatrix(1, matrix1)
+        collisionDetection.SetBoxTolerance(0.0)
+        collisionDetection.SetCellTolerance(0.0)
+        collisionDetection.SetNumberOfCellsPerNode(2)
+        collisionDetection.Update()
+        
+        if collisionDetection.GetNumberOfContacts() > 0:
+          collisionDetected = True
+          break
+      
+      shNode.RemoveItem(duplicateFibulaBonePiecesTransformsFolder)
+      shNode.RemoveItem(duplicateFibulaBonePiecesModelsFolder)
+      if collisionDetected:
+        slicer.util.errorDisplay(f"ERROR: Adjacent fibula bone pieces distance do not satisfy the security margin of {securityMarginOfFibulaPieces}mm. \
+            Correct your planning increasing 'intersection distance multiplier' or 'between space' and update it")
+        return
+
 
     miterBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"miterBoxes Models")
     biggerMiterBoxesModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"biggerMiterBoxes Models")
