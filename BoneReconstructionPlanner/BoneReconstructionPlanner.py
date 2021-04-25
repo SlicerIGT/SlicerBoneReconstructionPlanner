@@ -955,6 +955,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandiblePlaneOfRotation.GetPlaneToWorldMatrix(mandiblePlaneOfRotationMatrix)
     mandiblePlaneOfRotationX = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,0),mandiblePlaneOfRotationMatrix.GetElement(1,0),mandiblePlaneOfRotationMatrix.GetElement(2,0)])
     mandiblePlaneOfRotationY = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,1),mandiblePlaneOfRotationMatrix.GetElement(1,1),mandiblePlaneOfRotationMatrix.GetElement(2,1)])
+    mandiblePlaneOfRotationZ = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,2),mandiblePlaneOfRotationMatrix.GetElement(1,2),mandiblePlaneOfRotationMatrix.GetElement(2,2)])
         
     for i in range(len(mandibularPlanesList)):
       if mandiblePlaneOfRotation.GetID() != mandibularPlanesList[i].GetID():
@@ -965,19 +966,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandiblePlaneZ = np.array([mandiblePlaneMatrix.GetElement(0,2),mandiblePlaneMatrix.GetElement(1,2),mandiblePlaneMatrix.GetElement(2,2)])
         mandiblePlaneOrigin = np.array([mandiblePlaneMatrix.GetElement(0,3),mandiblePlaneMatrix.GetElement(1,3),mandiblePlaneMatrix.GetElement(2,3)])
 
-        rotatedMandiblePlaneX = [0,0,0]
-        rotatedMandiblePlaneY =  [0,0,0]
-        rotatedMandiblePlaneZ = mandiblePlaneZ
-        if abs(vtk.vtkMath.Dot(rotatedMandiblePlaneZ,mandiblePlaneOfRotationX)) > abs(vtk.vtkMath.Dot(rotatedMandiblePlaneZ,mandiblePlaneOfRotationY)):
-          vtk.vtkMath.Cross(mandiblePlaneOfRotationY, rotatedMandiblePlaneZ, rotatedMandiblePlaneX)
-          rotatedMandiblePlaneX = rotatedMandiblePlaneX/np.linalg.norm(rotatedMandiblePlaneX)
-          vtk.vtkMath.Cross(rotatedMandiblePlaneZ, rotatedMandiblePlaneX, rotatedMandiblePlaneY)
-          rotatedMandiblePlaneY = rotatedMandiblePlaneY/np.linalg.norm(rotatedMandiblePlaneY)
-        else:
-          vtk.vtkMath.Cross(rotatedMandiblePlaneZ, mandiblePlaneOfRotationX, rotatedMandiblePlaneY)
-          rotatedMandiblePlaneY = rotatedMandiblePlaneY/np.linalg.norm(rotatedMandiblePlaneY)
-          vtk.vtkMath.Cross(rotatedMandiblePlaneY, rotatedMandiblePlaneZ, rotatedMandiblePlaneX)
-          rotatedMandiblePlaneX = rotatedMandiblePlaneX/np.linalg.norm(rotatedMandiblePlaneX)
+        rotatedMandiblePlaneX = np.copy(mandiblePlaneX)
+        rotatedMandiblePlaneY =  np.copy(mandiblePlaneY)
+        rotatedMandiblePlaneZ = np.copy(mandiblePlaneZ)
+        
+        epsilon = 0.0001
+        if not (vtk.vtkMath.Dot(rotatedMandiblePlaneZ, mandiblePlaneOfRotationZ) >= 1.0 - epsilon):
+          angleRadians = vtk.vtkMath.AngleBetweenVectors(rotatedMandiblePlaneZ, mandiblePlaneOfRotationZ)
+          rotationAxis = [0,0,0]
+          vtk.vtkMath.Cross(mandiblePlaneOfRotationZ, rotatedMandiblePlaneZ, rotationAxis)
+          if (vtk.vtkMath.Norm(rotationAxis) < epsilon):
+            #New + old normals are facing opposite directions.
+            #Find a perpendicular axis to flip around.
+            vtk.vtkMath.Perpendiculars(mandiblePlaneOfRotationZ, rotationAxis, None, 0)
+          rotationAxis = rotationAxis/np.linalg.norm(rotationAxis)
+          finalTransform = vtk.vtkTransform()
+          finalTransform.PostMultiply()
+          finalTransform.RotateWXYZ(vtk.vtkMath.DegreesFromRadians(angleRadians), rotationAxis)
+
+          finalTransform.TransformVector(mandiblePlaneOfRotationX, rotatedMandiblePlaneX)
+          finalTransform.TransformVector(mandiblePlaneOfRotationY, rotatedMandiblePlaneY)
 
         mandiblePlaneToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandiblePlaneX, mandiblePlaneY, mandiblePlaneZ)
         rotatedMandiblePlaneToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(rotatedMandiblePlaneX, rotatedMandiblePlaneY, rotatedMandiblePlaneZ)
