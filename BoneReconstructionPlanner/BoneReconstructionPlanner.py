@@ -850,6 +850,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
 
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
     temporalOrigin = [0,0,0]
     sourceNode.GetNthControlPointPosition(0,temporalOrigin)
     
@@ -861,6 +865,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       sourceNode.SetNthControlPointVisibility(i,False)
     observer = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer)
     self.mandiblePlaneObserversAndNodeIDList.append([observer,sourceNode.GetID()])
+
+    mandiblePlaneAndCurvePointIndexList = []
+    for i in range(len(mandibularPlanesList)):
+      origin = [0,0,0]
+      mandibularPlanesList[i].GetNthControlPointPosition(0,origin)
+      closestCurvePoint = [0,0,0]
+      closestCurvePointIndex = mandibleCurve.GetClosestPointPositionAlongCurveWorld(origin,closestCurvePoint)
+      mandiblePlaneAndCurvePointIndexList.append([mandibularPlanesList[i],closestCurvePointIndex])
+    
+    mandiblePlaneAndCurvePointIndexList.sort(key = lambda item : item[1])
+
+    mandibularPlanesFolder2 = shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandibular planes 2")
+    
+    for i in range(len(mandiblePlaneAndCurvePointIndexList)):
+      mandiblePlane = mandiblePlaneAndCurvePointIndexList[i][0]
+      mandiblePlaneItemID = shNode.GetItemByDataNode(mandiblePlane)
+      shNode.SetItemParent(mandiblePlaneItemID, mandibularPlanesFolder2)
+
+    shNode.RemoveItem(mandibularPlanesFolder)
+    shNode.SetItemName(mandibularPlanesFolder2,"Mandibular planes")
   
   def onPlaneModifiedTimer(self,sourceNode,event):
     parameterNode = self.getParameterNode()
@@ -996,7 +1020,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
 
     for i in range(len(mandibularPlanesList)):
-      mandibularPlanesList[i].RemoveObserver(self.mandiblePlaneObserversAndNodeIDList[i][0])
+      mandiblePlane = slicer.mrmlScene.GetNodeByID(self.mandiblePlaneObserversAndNodeIDList[i][1])
+      mandiblePlane.RemoveObserver(self.mandiblePlaneObserversAndNodeIDList[i][0])
     self.mandiblePlaneObserversAndNodeIDList = []
 
   def transformFibulaPlanes(self):
