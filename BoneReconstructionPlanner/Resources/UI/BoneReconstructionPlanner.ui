@@ -378,6 +378,13 @@ bone pieces and transform them to mandible</string>
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="create3DModelOfTheReconstructionButton">
+        <property name="text">
+         <string>Create 3D model of the reconstruction</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="qMRMLSubjectHierarchyTreeView" name="planesTreeView">
         <property name="minimumSize">
          <size>
