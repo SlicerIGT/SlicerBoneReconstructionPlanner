@@ -11,9 +11,11 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 # Screenshots
 
 - Virtual Surgery Planning:
+
 ![](BoneReconstructionPlanner/Resources/Screenshots/screenshotPlanning.png)
 
 - Patient-specific Surgical Guides:
+
 ![](BoneReconstructionPlanner/Resources/Screenshots/screenshotPatientSpecificSurgicalGuides.png)
 
 # Documentation
