@@ -184,6 +184,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.centerFibulaLineButton.connect('clicked(bool)', self.onCenterFibulaLineButton)
     self.ui.showHideBiggerSawBoxesInteractionHandlesButton.connect('clicked(bool)', self.onShowHideBiggerSawBoxesInteractionHandlesButton)
     self.ui.showHideMandiblePlanesInteractionHandlesButton.connect('clicked(bool)', self.onShowHideMandiblePlanesInteractionHandlesButton)
+    self.ui.create3DModelOfTheReconstructionButton.connect('clicked(bool)', self.onCreate3DModelOfTheReconstructionButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.onUseMoreExactVersionOfPositioningAlgorithmCheckBox)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -648,6 +649,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode = mandibularPlanesList[i].GetDisplayNode()
       handlesVisibility = displayNode.GetHandlesInteractive()
       displayNode.SetHandlesInteractive(not handlesVisibility)
+
+  def onCreate3DModelOfTheReconstructionButton(self):
+    self.logic.create3DModelOfTheReconstruction()
     
 #
 # BoneReconstructionPlannerLogic
@@ -2090,6 +2094,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedFibulaPieceDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
 
       transformedFibulaPiece.SetAndObserveTransformNodeID(fibulaPieceToMandibleAxisTransformNode.GetID())
+      transformedFibulaPiece.HardenTransform()
 
       transformedFibulaPieceItemID = shNode.GetItemByDataNode(transformedFibulaPiece)
       shNode.SetItemParent(transformedFibulaPieceItemID, transformedFibulaPiecesFolder)
@@ -3049,10 +3054,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerSawBoxesModelsFolder = shNode.GetItemByName("biggerSawBoxes Models")
     biggerSawBoxesModelsList = createListFromFolderID(biggerSawBoxesModelsFolder)
 
-    for sawBoxModel,biggerSawBox in zip(sawBoxesModelsList,biggerSawBoxesModelsList):
-      sawBoxModel.HardenTransform()
-      biggerSawBox.HardenTransform()
-
     combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(mandibleSurgicalGuideBaseModel.GetPolyData())
@@ -3114,6 +3115,73 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     shNode.RemoveItem(intersectionsFolder)
 
+  def create3DModelOfTheReconstruction(self):
+    parameterNode = self.getParameterNode()
+    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
+
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    scaledFibulaPiecesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Scaled Fibula Pieces")
+    scaledFibulaPiecesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Scaled Fibula Pieces Transforms")
+    transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+    transformedFibulaPiecesList = createListFromFolderID(transformedFibulaPiecesFolder)
+    cutBonesList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
+
+    if len(transformedFibulaPiecesList) == 0:
+      return
+
+    for i in range(len(transformedFibulaPiecesList)):
+      or0 = np.zeros(3)
+      planeList[i].GetOrigin(or0)
+      or1 = np.zeros(3)
+      planeList[i+1].GetOrigin(or1)
+      origin = (or0+or1)/2
+
+      scaleTransformNode = slicer.vtkMRMLLinearTransformNode()
+      scaleTransformNode.SetName("Scale Bone Piece {0} Transform".format(i))
+      slicer.mrmlScene.AddNode(scaleTransformNode)
+
+      scaleTransform = vtk.vtkTransform()
+      scaleTransform.PostMultiply()
+      scaleTransform.Translate(-origin)
+      #Just scale them enough so that boolean union is successful
+      scaleTransform.Scale(1.0001, 1.0001, 1.0001)
+      scaleTransform.Translate(origin)
+
+      scaleTransformNode.SetMatrixTransformToParent(scaleTransform.GetMatrix())
+      scaleTransformNode.UpdateScene(slicer.mrmlScene)
+
+      scaledFibulaPiece = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode',slicer.mrmlScene.GetUniqueNameByString('Scaled ' + cutBonesList[i].GetName()))
+      scaledFibulaPiece.CreateDefaultDisplayNodes()
+      scaledFibulaPiece.CopyContent(transformedFibulaPiecesList[i])
+      scaledFibulaPieceDisplayNode = scaledFibulaPiece.GetDisplayNode()
+      scaledFibulaPieceDisplayNode.SetColor(transformedFibulaPiecesList[i].GetDisplayNode().GetColor())
+      scaledFibulaPieceDisplayNode.SetSliceIntersectionVisibility(True)
+
+      scaledFibulaPiece.SetAndObserveTransformNodeID(scaleTransformNode.GetID())
+      scaledFibulaPiece.HardenTransform()
+
+      scaledFibulaPieceItemID = shNode.GetItemByDataNode(scaledFibulaPiece)
+      shNode.SetItemParent(scaledFibulaPieceItemID, scaledFibulaPiecesFolder)
+
+      scaleTransformNodeItemID = shNode.GetItemByDataNode(scaleTransformNode)
+      shNode.SetItemParent(scaleTransformNodeItemID, scaledFibulaPiecesTransformsFolder)
+
+    shNode.RemoveItem(scaledFibulaPiecesTransformsFolder)
+
+    scaledFibulaPiecesList = createListFromFolderID(scaledFibulaPiecesFolder)
+
+    mandibleReconstructionModel = slicer.modules.models.logic().AddModel(cutBonesList[-1].GetPolyData())
+    mandibleReconstructionModel.SetName('Mandible Reconstruction')
+    mandibleReconstructionModelItemID = shNode.GetItemByDataNode(mandibleReconstructionModel)
+    shNode.SetItemParent(mandibleReconstructionModelItemID, self.getParentFolderItemID())
+
+    combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
+    for i in range(len(scaledFibulaPiecesList)):
+      combineModelsLogic.process(mandibleReconstructionModel, scaledFibulaPiecesList[i], mandibleReconstructionModel, 'union')
+
+    shNode.RemoveItem(scaledFibulaPiecesFolder)
+    
 #
 # BoneReconstructionPlannerTest
 #
