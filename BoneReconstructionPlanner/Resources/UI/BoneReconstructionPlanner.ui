@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>434</width>
-    <height>1797</height>
+    <height>1826</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -329,6 +329,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="showHideOriginalMandibleButton">
+        <property name="text">
+         <string>Show/Hide original mandible model</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QCheckBox" name="mandiblePlanesPositioningForMaximumBoneContactCheckBox">
         <property name="text">
          <string>Automatic mandibular planes positioning for maximum bones contact area</string>
@@ -380,7 +387,7 @@ bone pieces and transform them to mandible</string>
       <item>
        <widget class="QPushButton" name="create3DModelOfTheReconstructionButton">
         <property name="text">
-         <string>Create 3D model of the reconstruction</string>
+         <string>Create 3D model of the reconstruction for 3D printing</string>
         </property>
        </widget>
       </item>
