@@ -185,6 +185,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showHideBiggerSawBoxesInteractionHandlesButton.connect('clicked(bool)', self.onShowHideBiggerSawBoxesInteractionHandlesButton)
     self.ui.showHideMandiblePlanesInteractionHandlesButton.connect('clicked(bool)', self.onShowHideMandiblePlanesInteractionHandlesButton)
     self.ui.create3DModelOfTheReconstructionButton.connect('clicked(bool)', self.onCreate3DModelOfTheReconstructionButton)
+    self.ui.showHideOriginalMandibleButton.connect('clicked(bool)', self.onShowHideOriginalMandibleButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.onUseMoreExactVersionOfPositioningAlgorithmCheckBox)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -652,6 +653,24 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onCreate3DModelOfTheReconstructionButton(self):
     self.logic.create3DModelOfTheReconstruction()
+
+  def onShowHideOriginalMandibleButton(self):
+    mandibleModelNode = self._parameterNode.GetNodeReference("mandibleModelNode")
+    decimatedMandibleModelNode = self._parameterNode.GetNodeReference("decimatedMandibleModelNode")
+    useNonDecimatedBoneModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+
+    mandibleModelDisplayNode = mandibleModelNode.GetDisplayNode()
+    decimatedMandibleModelDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
+
+    if mandibleModelDisplayNode.GetVisibility() or decimatedMandibleModelDisplayNode.GetVisibility():
+      mandibleModelDisplayNode.SetVisibility(False)
+      decimatedMandibleModelDisplayNode.SetVisibility(False)
+    else:
+      if useNonDecimatedBoneModelsForPreviewChecked:
+        mandibleModelDisplayNode.SetVisibility(True)
+      else:
+        decimatedMandibleModelDisplayNode.SetVisibility(True)
+
     
 #
 # BoneReconstructionPlannerLogic
@@ -2025,11 +2044,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode.SetNodeReferenceID("decimatedMandibleModelNode", decimatedMandibleModelNode.GetID())
 
   def updateFibulaPieces(self):
-    parameterNode = self.getParameterNode()
-    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
-    decimatedMandibleModelDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
-    decimatedMandibleModelDisplayNode.SetVisibility(False)
-
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     planeCutsList = createListFromFolderID(shNode.GetItemByName("Plane Cuts"))
     for i in range(len(planeCutsList)):
