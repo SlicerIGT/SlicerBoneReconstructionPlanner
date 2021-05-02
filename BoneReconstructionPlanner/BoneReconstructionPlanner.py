@@ -191,6 +191,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.fixCutGoesThroughTheMandibleTwiceCheckBox.connect('stateChanged(int)', self.onFixCutGoesThroughTheMandibleTwiceCheckBox)
+    self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -2477,8 +2478,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       collisionDetected = False
       
+      import vtkSlicerRtCommonPython
       for i in range(0,len(duplicateFibulaBonePiecesList) -1):
-        collisionDetection = vtk.vtkCollisionDetectionFilter()
+        collisionDetection = vtkSlicerRtCommonPython.vtkCollisionDetectionFilter()
+        #collisionDetection = vtk.vtkCollisionDetectionFilter()
         collisionDetection.SetInputData(0, duplicateFibulaBonePiecesList[i].GetPolyData())
         collisionDetection.SetInputData(1, duplicateFibulaBonePiecesList[i+1].GetPolyData())
         matrix1 = vtk.vtkMatrix4x4()
