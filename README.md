@@ -32,3 +32,4 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 # Important information
 - Mandible/Fibula Segmentation are inputs of this module. The segment at position zero (first segment of the segmentation) should be the mandible/fibula bone segment because it is used to make the 3D bone model used in BoneReconstructionPlanner.
 - Mandible/Fibula segments shouldn't have holes inside because they confuse the positioning algorithm of the sawBoxes/miterBoxes. To eliminate holes from a segment use WrapSolidify effect in the segment editor.
+- BoneReconstructionPlanner module is made to do virtual surgical planning and design of patient-specific surgical guides for mandibular reconstruction.
