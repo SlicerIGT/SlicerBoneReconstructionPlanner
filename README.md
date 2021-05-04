@@ -21,10 +21,14 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 
 # Video
 
- <a href="https://youtu.be/wsr_g_1E_pw" target="_BLANK"><img src="https://raw.githubusercontent.com/lassoan/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/videoThumbnail.png" /></a>
+ <a href="https://youtu.be/wsr_g_1E_pw" target="_blanck"><img src="https://raw.githubusercontent.com/lassoan/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/videoThumbnail.png" /></a>
 # Documentation
 
 - [High-level design overview](https://github.com/lassoan/SlicerBoneReconstructionPlanner/raw/main/Docs/Design.pptx)
 
 # Use Cases
 [First clinical use](https://github.com/lassoan/SlicerBoneReconstructionPlanner/discussions/40)
+
+# Important information
+- Mandible/Fibula Segmentation are inputs of this module. The segment at position zero (first segment of the segmentation) should be the mandible/fibula bone segment because it is used to make the 3D bone model used in BoneReconstructionPlanner.
+- Mandible/Fibula segments shouldn't have holes inside because they confuse the positioning algorithm of the sawBoxes/miterBoxes. To eliminate holes from a segment use WrapSolidify effect in the segment editor.
