@@ -21,7 +21,7 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 
 # Video
 
-[<img src="https://raw.githubusercontent.com/lassoan/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/videoThumbnail.png">](https://youtu.be/wsr_g_1E_pw)
+ <a href="https://youtu.be/wsr_g_1E_pw" target="_BLANK"><img src="https://raw.githubusercontent.com/lassoan/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/videoThumbnail.png" /></a>
 # Documentation
 
 - [High-level design overview](https://github.com/lassoan/SlicerBoneReconstructionPlanner/raw/main/Docs/Design.pptx)
