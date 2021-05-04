@@ -4,9 +4,9 @@ project(BoneReconstructionPlanner)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "https://github.com/lassoan/SlicerBoneReconstructionPlanner")
+set(EXTENSION_HOMEPAGE "https://github.com/lassoan/SlicerBoneReconstructionPlanner#bone-reconstruction-planner")
 set(EXTENSION_CATEGORY "Planning")
-set(EXTENSION_CONTRIBUTORS "Eng. Mauro I. Dominguez, PhD. Andras Lasso (PerkLab), Dr. Manjula Herath")
+set(EXTENSION_CONTRIBUTORS "MSc. Mauro I. Dominguez, PhD. Andras Lasso (PerkLab), Dr. Manjula Herath")
 set(EXTENSION_DESCRIPTION "A extension for virtual surgical planning of mandibular reconstruction with vascularized fibula free flap and generation of patient-specific surgical guides.  ")
 set(EXTENSION_ICONURL "https://raw.githubusercontent.com/lassoan/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner.jpg")
 set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/lassoan/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/screenshotPlanning.png https://raw.githubusercontent.com/lassoan/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/screenshotPatientSpecificSurgicalGuides.png")
