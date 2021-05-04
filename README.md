@@ -37,3 +37,6 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 # Sample Data
 - <a href="https://github.com/lassoan/SlicerBoneReconstructionPlanner/releases/download/TestingData/Fibula.nrrd" >Fibula Scalar Volume</a>
 - <a href="https://github.com/lassoan/SlicerBoneReconstructionPlanner/releases/download/TestingData/ResectedMandible.nrrd" >Mandible Scalar Volume</a>
+
+# License
+- <a href="https://github.com/lassoan/SlicerBoneReconstructionPlanner/blob/main/LICENSE" >Read license</a>
