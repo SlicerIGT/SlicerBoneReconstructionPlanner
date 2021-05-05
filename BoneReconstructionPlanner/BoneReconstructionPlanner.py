@@ -2499,8 +2499,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.RemoveItem(duplicateFibulaBonePiecesTransformsFolder)
       shNode.RemoveItem(duplicateFibulaBonePiecesModelsFolder)
       if collisionDetected:
-        slicer.util.errorDisplay(f"ERROR: Adjacent fibula bone pieces distance do not satisfy the security margin of {securityMarginOfFibulaPieces}mm. \
-            Correct your planning increasing 'intersection distance multiplier' or 'between space' and update it")
+        slicer.util.errorDisplay(f"Planned fibula segments could overlap each other (the distance in between them do not satisfy the security margin of {securityMarginOfFibulaPieces}mm). " +
+            "You can fix this by increasing 'intersection distance multiplier' or 'between space' and pressing the update button")
         return
 
 
@@ -2861,6 +2861,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(miterBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, miterBoxesModelsList[i], surgicalGuideModel, 'difference')
 
+    if surgicalGuideModel.GetPolyData().GetNumberOfPoints() == 0:
+      slicer.mrmlScene.RemoveNode(surgicalGuideModel)
+      slicer.util.errorDisplay("ERROR: Boolean operations to make fibula surgical guide failed")
+
   def createMandibleCylindersFiducialList(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandibleCylindersFiducialsListsFolder = shNode.GetItemByName("Mandible Cylinders Fiducials Lists")
@@ -3093,6 +3097,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for i in range(len(sawBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, sawBoxesModelsList[i], surgicalGuideModel, 'difference')
+
+    if surgicalGuideModel.GetPolyData().GetNumberOfPoints() == 0:
+      slicer.mrmlScene.RemoveNode(surgicalGuideModel)
+      slicer.util.errorDisplay("ERROR: Boolean operations to make mandible surgical failed")
+
 
   def centerFibulaLine(self):
     parameterNode = self.getParameterNode()
