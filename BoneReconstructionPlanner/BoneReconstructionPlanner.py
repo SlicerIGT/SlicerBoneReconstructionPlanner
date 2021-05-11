@@ -23,13 +23,12 @@ class BoneReconstructionPlanner(ScriptedLoadableModule):
     self.parent.contributors = ["Mauro I. Dominguez, Andras Lasso, Manjula Herath"]  # TODO: replace with "Firstname Lastname (Organization)"
     # TODO: update with short description of the module and a link to online module documentation
     self.parent.helpText = """
-This is a module for surgical planning of mandibular reconstruction with free fibula flap.
+A 3D Slicer module for virtual surgical planning of mandibular reconstruction with vascularized fibula free flap and generation of patient-specific surgical guides.
 See the whole project in <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner">this link</a>.
 """
     # TODO: replace with organization, grant and thanks
     self.parent.acknowledgementText = """
-This file is developed by Mauro I. Dominguez with the supervision and advice of Eng. Andras Lasso, PerkLab,
-and the useful inputs of Dr. Manjula Herath and it is made as a final project of engineering of Mauro.
+Mauro I. Dominguez developed this module for his final project of engineering studies ​at FCEIA-UNR under the supervision and advice of PhD. Andras Lasso at PerkLab, and the clinical inputs of Dr. Manjula Herath.
 """
 
     # Additional initialization step after application startup is complete
