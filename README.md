@@ -21,13 +21,13 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 
 # Video
 
- <a href="https://youtu.be/wsr_g_1E_pw" target="_blanck"><img src="https://raw.githubusercontent.com/lassoan/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/videoThumbnail.png" /></a>
+ <a href="https://youtu.be/wsr_g_1E_pw" target="_blanck"><img src="https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/videoThumbnail.png" /></a>
 # Documentation
 
-- [High-level design overview](https://github.com/lassoan/SlicerBoneReconstructionPlanner/raw/main/Docs/Design.pptx)
+- [High-level design overview](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/raw/main/Docs/Design.pptx)
 
 # Use Cases
-[First clinical use](https://github.com/lassoan/SlicerBoneReconstructionPlanner/discussions/40)
+[First clinical use](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40)
 
 # Important information
 - Mandible/Fibula Segmentation are inputs of this module. The segment at position zero (first segment of the segmentation) should be the mandible/fibula bone segment because it is used to make the 3D bone model used in BoneReconstructionPlanner.
@@ -35,8 +35,8 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 - BoneReconstructionPlanner module is made to do virtual surgical planning and design of patient-specific surgical guides for mandibular reconstruction.
 
 # Sample Data
-- <a href="https://github.com/lassoan/SlicerBoneReconstructionPlanner/releases/download/TestingData/Fibula.nrrd" >Fibula Scalar Volume</a>
-- <a href="https://github.com/lassoan/SlicerBoneReconstructionPlanner/releases/download/TestingData/ResectedMandible.nrrd" >Mandible Scalar Volume</a>
+- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/Fibula.nrrd" >Fibula Scalar Volume</a>
+- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/ResectedMandible.nrrd" >Mandible Scalar Volume</a>
 
 # License
-- <a href="https://github.com/lassoan/SlicerBoneReconstructionPlanner/blob/main/LICENSE" >Read license</a>
+- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/LICENSE" >Read license</a>
