@@ -24,7 +24,7 @@ class BoneReconstructionPlanner(ScriptedLoadableModule):
     # TODO: update with short description of the module and a link to online module documentation
     self.parent.helpText = """
 This is a module for surgical planning of mandibular reconstruction with free fibula flap.
-See the whole project in <a href="https://github.com/lassoan/SlicerBoneReconstructionPlanner">this link</a>.
+See the whole project in <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner">this link</a>.
 """
     # TODO: replace with organization, grant and thanks
     self.parent.acknowledgementText = """
@@ -61,7 +61,7 @@ def registerSampleData():
     # It can be created by Screen Capture module, "Capture all views" option enabled, "Number of images" set to "Single".
     thumbnailFileName=os.path.join(iconsPath, 'iconFibulaCropped.png'),
     # Download URL and target file name
-    uris="https://github.com/lassoan/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaCropped.nrrd",
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaCropped.nrrd",
     fileNames='FibulaCropped.nrrd',
     # Checksum to ensure file integrity. Can be computed by this command:
     #  import hashlib; print(hashlib.sha256(open(filename, "rb").read()).hexdigest())
@@ -77,7 +77,7 @@ def registerSampleData():
     sampleName='ResectedMandible',
     thumbnailFileName=os.path.join(iconsPath, 'iconResectedMandible.png'),
     # Download URL and target file name
-    uris="https://github.com/lassoan/SlicerBoneReconstructionPlanner/releases/download/TestingData/ResectedMandible.nrrd",
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/ResectedMandible.nrrd",
     fileNames='ResectedMandible.nrrd',
     checksums = 'SHA256:352aefed1905bd2ad7373972a6bb115bd494e26e4fc438d2c8679384dcfd2654',
     # This node name will be used when the data set is loaded
