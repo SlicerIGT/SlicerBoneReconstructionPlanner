@@ -184,6 +184,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showHideBiggerSawBoxesInteractionHandlesButton.connect('clicked(bool)', self.onShowHideBiggerSawBoxesInteractionHandlesButton)
     self.ui.showHideMandiblePlanesInteractionHandlesButton.connect('clicked(bool)', self.onShowHideMandiblePlanesInteractionHandlesButton)
     self.ui.create3DModelOfTheReconstructionButton.connect('clicked(bool)', self.onCreate3DModelOfTheReconstructionButton)
+    self.ui.showHideFibulaSegmentsLengthsButton.connect('clicked(bool)', self.onShowHideFibulaSegmentsLengthsButton)
     self.ui.showHideOriginalMandibleButton.connect('clicked(bool)', self.onShowHideOriginalMandibleButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.onUseMoreExactVersionOfPositioningAlgorithmCheckBox)
@@ -650,6 +651,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode = mandibularPlanesList[i].GetDisplayNode()
       handlesVisibility = displayNode.GetHandlesInteractive()
       displayNode.SetHandlesInteractive(not handlesVisibility)
+
+  def onShowHideFibulaSegmentsLengthsButton(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    fibulaSegmentsLengthsFolder = shNode.GetItemByName("Fibula Segments Lengths")
+    fibulaSegmentsLengthsList = createListFromFolderID(fibulaSegmentsLengthsFolder)
+
+    for i in range(len(fibulaSegmentsLengthsList)):
+      lineDisplayNode = fibulaSegmentsLengthsList[i].GetDisplayNode()
+      visibility = lineDisplayNode.GetVisibility()
+      lineDisplayNode.SetVisibility(not visibility)
 
   def onCreate3DModelOfTheReconstructionButton(self):
     self.logic.create3DModelOfTheReconstruction()
@@ -1378,6 +1389,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         lastFibulaPlanesPositionB = self.createCurveNodeFromListOfPointsAndName(self.fibulaPlanesPositionB,"lastFibulaPlanesPositionB")
         parameterNode.SetNodeReferenceID("lastFibulaPlanesPositionA",lastFibulaPlanesPositionA.GetID())
         parameterNode.SetNodeReferenceID("lastFibulaPlanesPositionB",lastFibulaPlanesPositionB.GetID())
+        #Create measurement lines
+        self.createFibulaSegmentsLengthsLines(self.fibulaPlanesPositionA,self.fibulaPlanesPositionB)
       else:
         curveNodes = [lastFibulaPlanesPositionA,lastFibulaPlanesPositionB]
         pointLists = [self.fibulaPlanesPositionA,self.fibulaPlanesPositionB]
@@ -1388,6 +1401,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           points.SetNumberOfPoints(len(curvePointsArray))
           points.SetData(vtkPointsData)
           curveNodes[i].SetControlPointPositionsWorld(points)
+
+        #Update measurement lines
+        fibulaSegmentsLengthsFolder = shNode.GetItemByName("Fibula Segments Lengths")
+        fibulaSegmentsLengthsList = createListFromFolderID(fibulaSegmentsLengthsFolder)
+        for i in range(len(fibulaSegmentsLengthsList)):
+          fibulaSegmentLengthLine = fibulaSegmentsLengthsList[i]
+          fibulaSegmentLengthLine.SetNthControlPointPositionFromArray(0,self.fibulaPlanesPositionA[i])
+          fibulaSegmentLengthLine.SetNthControlPointPositionFromArray(1,self.fibulaPlanesPositionB[i])
     else:
       #Create fibula axis:
       fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
@@ -1501,6 +1522,30 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandiblePlane1ToFibulaPlaneBTransformNodeItemID = shNode.GetItemByDataNode(mandiblePlane1ToFibulaPlaneBTransformNode)
         shNode.SetItemParent(mandiblePlane1ToFibulaPlaneBTransformNodeItemID, mandible2FibulaTransformsFolder)
 
+  def createFibulaSegmentsLengthsLines(self,fibulaPlanesAPosition,fibulaPlanesBPosition):
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    fibulaSegmentsLengthsFolder = shNode.GetItemByName("Fibula Segments Lengths")
+    shNode.RemoveItem(fibulaSegmentsLengthsFolder)
+    fibulaSegmentsLengthsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula Segments Lengths")
+    
+    for i in range(len(fibulaPlanesAPosition)):
+      lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+      lineNode.SetName("S%d" %i)
+      slicer.mrmlScene.AddNode(lineNode)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(lineNode)
+      lineNodeItemID = shNode.GetItemByDataNode(lineNode)
+      shNode.SetItemParent(lineNodeItemID, fibulaSegmentsLengthsFolder)
+
+      displayNode = lineNode.GetDisplayNode()
+      fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
+      displayNode.AddViewNodeID(fibulaViewNode.GetID())
+      displayNode.SetOccludedVisibility(True)
+      
+      lineNode.AddControlPoint(vtk.vtkVector3d(fibulaPlanesAPosition[i]))
+      lineNode.AddControlPoint(vtk.vtkVector3d(fibulaPlanesBPosition[i]))
+
+      lineNode.SetLocked(True)
+  
   def createCurveNodeFromListOfPointsAndName(self,listOfPoints, name):
     curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
     curveNode.SetName("temp")
@@ -1563,6 +1608,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode = fibulaPlaneA.GetDisplayNode()
       fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
+      displayNode.SetPropertiesLabelVisibility(False)
 
       fibulaPlaneAItemID = shNode.GetItemByDataNode(fibulaPlaneA)
       shNode.SetItemParent(fibulaPlaneAItemID, fibulaPlanesFolder)
@@ -1578,6 +1624,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = fibulaPlaneB.GetDisplayNode()
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
+      displayNode.SetPropertiesLabelVisibility(False)
 
       fibulaPlaneBItemID = shNode.GetItemByDataNode(fibulaPlaneB)
       shNode.SetItemParent(fibulaPlaneBItemID, fibulaPlanesFolder)
