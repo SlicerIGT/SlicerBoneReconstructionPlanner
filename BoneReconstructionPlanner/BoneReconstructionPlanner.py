@@ -5,6 +5,7 @@ import vtk, qt, ctk, slicer, math
 import numpy as np
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
+from BRPLib.helperFunctions import *
 
 #
 # BoneReconstructionPlanner
@@ -1121,7 +1122,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       #Create fibula axis:
       fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
       
-      fibulaZLineNorm = self.getLineNorm(fibulaLine)
+      fibulaZLineNorm = getLineNorm(fibulaLine)
 
       #NewPlanes position and distance
       self.fibulaPlanesPositionA = []
@@ -1219,7 +1220,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           self.fibulaPlanesPositionA.append(fibulaOrigin + fibulaZ*initialSpace)
           intersectionModelB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % i)
           intersectionModelB.CreateDefaultDisplayNodes()
-          self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
+          getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
           intersectionsList.append(intersectionModelB)
           intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
           
@@ -1232,14 +1233,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           if i!=(len(planeList)-2):
             intersectionModelA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % i)
             intersectionModelA.CreateDefaultDisplayNodes()
-            self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
+            getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
             intersectionsList.append(intersectionModelA)
             intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
             shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
             j=j+1
             intersectionModelB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % i)
             intersectionModelB.CreateDefaultDisplayNodes()
-            self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
+            getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
             intersectionsList.append(intersectionModelB)
             intersectionModelBItemID = shNode.GetItemByDataNode(intersectionModelB)
             shNode.SetItemParent(intersectionModelBItemID, intersectionsFolder)
@@ -1251,7 +1252,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           else:
             intersectionModelA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % i)
             intersectionModelA.CreateDefaultDisplayNodes()
-            self.getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
+            getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane0ToIntersectionAxisTransform, fibulaPlaneA, intersectionModelA)
             intersectionsList.append(intersectionModelA)
             intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
             shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
@@ -1299,10 +1300,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
             intersectionBModelItemID = shNode.GetItemByDataNode(intersectionB)
             shNode.SetItemParent(intersectionBModelItemID, intersectionsForCentroidCalculationFolder)
             
-            self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,intersectionA)
-            self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,intersectionB)
-            lineStartPos = self.getCentroid(intersectionA)
-            lineEndPos = self.getCentroid(intersectionB)
+            getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,intersectionA)
+            getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,intersectionB)
+            lineStartPos = getCentroid(intersectionA)
+            lineEndPos = getCentroid(intersectionB)
 
             #Create fibula axis:
             fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(lineStartPos,lineEndPos,notLeftFibulaChecked)
@@ -1413,7 +1414,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       #Create fibula axis:
       fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
       
-      fibulaZLineNorm = self.getLineNorm(fibulaLine)
+      fibulaZLineNorm = getLineNorm(fibulaLine)
 
       self.fibulaPlanesPositionA = []
       self.fibulaPlanesPositionB = []
@@ -2066,7 +2067,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       modelDisplayNode.AddViewNodeID(viewNode.GetID())
       decimatedModelDisplayNode.AddViewNodeID(viewNode.GetID())
 
-      centroid = self.getCentroid(models[i])
+      centroid = getCentroid(models[i])
       distanceMultiplier = 4
       if i==0: #distanceMultiplier selection is arbitrary
         viewUpDirection = [0,1,0]
@@ -2223,88 +2224,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     shNode.RemoveItem(mandiblePlaneTransformsFolder)
   
-  def getIntersectionBetweenModelAnd1TransformedPlane(self,modelNode,transform,planeNode,intersectionModel):
-    plane = vtk.vtkPlane()
-    origin = [0,0,0]
-    normal = [0,0,0]
-    transformedOrigin = [0,0,0]
-    transformedNormal = [0,0,0]
-    planeNode.GetOrigin(origin)
-    planeNode.GetNormal(normal)
-    transform.TransformPoint(origin,transformedOrigin)
-    transform.TransformNormal(normal,transformedNormal)
-    plane.SetOrigin(transformedOrigin)
-    plane.SetNormal(transformedNormal)
-
-    cutter = vtk.vtkCutter()
-    cutter.SetInputData(modelNode.GetPolyData())
-    cutter.SetCutFunction(plane)
-    cutter.Update()
-
-    intersectionModel.SetAndObservePolyData(cutter.GetOutput())
-
-  def getIntersectionBetweenModelAnd1Plane(self,modelNode,planeNode,intersectionModel):
-    plane = vtk.vtkPlane()
-    origin = [0,0,0]
-    normal = [0,0,0]
-    planeNode.GetOrigin(origin)
-    planeNode.GetNormal(normal)
-    plane.SetOrigin(origin)
-    plane.SetNormal(normal)
-
-    cutter = vtk.vtkCutter()
-    cutter.SetInputData(modelNode.GetPolyData())
-    cutter.SetCutFunction(plane)
-    cutter.Update()
-
-    intersectionModel.SetAndObservePolyData(cutter.GetOutput())
-
-  def getNearestIntersectionBetweenModelAnd1Plane(self,modelNode,planeNode,intersectionModel):
-    plane = vtk.vtkPlane()
-    origin = [0,0,0]
-    normal = [0,0,0]
-    planeNode.GetOrigin(origin)
-    planeNode.GetNormal(normal)
-    plane.SetOrigin(origin)
-    plane.SetNormal(normal)
-
-    cutter = vtk.vtkCutter()
-    cutter.SetInputData(modelNode.GetPolyData())
-    cutter.SetCutFunction(plane)
-    cutter.Update()
-
-    connectivityFilter = vtk.vtkConnectivityFilter()
-    connectivityFilter.SetInputData(cutter.GetOutput())
-    connectivityFilter.SetClosestPoint(origin)
-    connectivityFilter.SetExtractionModeToClosestPointRegion()
-    connectivityFilter.Update()
-
-    intersectionModel.SetAndObservePolyData(connectivityFilter.GetOutput())
-
-  def getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(self,modelNode,normal,origin,intersectionModel):
-    plane = vtk.vtkPlane()
-    plane.SetOrigin(origin)
-    plane.SetNormal(normal)
-
-    cutter = vtk.vtkCutter()
-    cutter.SetInputData(modelNode.GetPolyData())
-    cutter.SetCutFunction(plane)
-    cutter.Update()
-
-    intersectionModel.SetAndObservePolyData(cutter.GetOutput())
-
-  def getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(self,modelNode,normal,origin,intersectionModel):
-    plane = vtk.vtkPlane()
-    plane.SetOrigin(origin)
-    plane.SetNormal(normal)
-
-    clipper = vtk.vtkClipPolyData()
-    clipper.SetInputData(modelNode.GetPolyData())
-    clipper.SetClipFunction(plane)
-    clipper.Update()
-
-    intersectionModel.SetAndObservePolyData(clipper.GetOutput())
-
   def setupMandiblePlaneStraightOverMandibleCurve(self,planeNode,temporalOrigin, mandibleCurve, planeNodeObserver):
     closestCurvePoint = [0,0,0]
     closestCurvePointIndex = mandibleCurve.GetClosestPointPositionAlongCurveWorld(temporalOrigin,closestCurvePoint)
@@ -2326,73 +2245,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeNode.SetNthControlPointPositionFromArray(0,mandiblePlaneStraightOrigin)
     planeNode.SetNthControlPointPositionFromArray(1,mandiblePlaneStraightOrigin + mandiblePlaneStraightX*dx)
     planeNode.SetNthControlPointPositionFromArray(2,mandiblePlaneStraightOrigin + mandiblePlaneStraightY*dy)
-
-  def getAverageNormalFromModel(self,model):
-    pointsOfModel = slicer.util.arrayFromModelPoints(model)
-    normalsOfModel = slicer.util.arrayFromModelPointData(model, 'Normals')
-    modelMesh = model.GetMesh()
-
-    averageNormal = np.array([0,0,0])
-    for pointID in range(len(pointsOfModel)):
-      normalAtPointID = normalsOfModel[pointID]
-      averageNormal = averageNormal + normalAtPointID
-    
-    averageNormal = averageNormal/len(pointsOfModel)
-
-    return averageNormal
-
-  def getAverageNormalFromModelPoint(self,model,point):
-    normalsOfModel = slicer.util.arrayFromModelPointData(model, 'Normals')
-    
-    modelMesh = model.GetMesh()
-    pointID = modelMesh.FindPoint(point)
-    normalAtPointID = normalsOfModel[pointID]
-
-    cylinder = vtk.vtkCylinder()
-    cylinder.SetRadius(3)
-    cylinder.SetCenter(point)
-    cylinder.SetAxis(normalAtPointID)
-
-    clipper = vtk.vtkClipPolyData()
-    clipper.SetInputData(model.GetPolyData())
-    clipper.InsideOutOn()
-    clipper.SetClipFunction(cylinder)
-    clipper.Update()
-
-    connectivityFilter = vtk.vtkConnectivityFilter()
-    connectivityFilter.SetInputData(clipper.GetOutput())
-    connectivityFilter.SetClosestPoint(point)
-    connectivityFilter.SetExtractionModeToClosestPointRegion()
-    connectivityFilter.Update()
-
-    cylinderIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','cylinderIntersection')
-    cylinderIntersectionModel.CreateDefaultDisplayNodes()
-    cylinderIntersectionModel.SetAndObservePolyData(connectivityFilter.GetOutput())
-
-    averageNormal = self.getAverageNormalFromModel(cylinderIntersectionModel)
-
-    slicer.mrmlScene.RemoveNode(cylinderIntersectionModel)
-
-    return averageNormal
-
-
-  def getCentroid(self,model):
-    pd = model.GetPolyData().GetPoints().GetData()
-    from vtk.util.numpy_support import vtk_to_numpy
-    return np.average(vtk_to_numpy(pd), axis=0)
-
-  def getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(self,twoPointsModel,vector):
-    pointsData = twoPointsModel.GetPolyData().GetPoints().GetData()
-    from vtk.util.numpy_support import vtk_to_numpy
-
-    points = vtk_to_numpy(pointsData)
-
-    pointsVector = (points[1]-points[0])/np.linalg.norm(points[1]-points[0])
-
-    if vtk.vtkMath.Dot(pointsVector, vector) > 0:
-      return points[1]
-    else:
-      return points[0]
 
   def createFibulaAxisFromFibulaLineAndNotLeftChecked(self,fibulaLine,notLeftFibulaChecked):
     lineStartPos = np.zeros(3)
@@ -2435,13 +2287,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaY = fibulaY/np.linalg.norm(fibulaY)
 
     return fibulaX, fibulaY, fibulaZ, fibulaOrigin
-
-  def getLineNorm(self,line):
-    lineStartPos = np.array([0,0,0])
-    lineEndPos = np.array([0,0,0])
-    line.GetNthControlPointPositionWorld(0, lineStartPos)
-    line.GetNthControlPointPositionWorld(1, lineEndPos)
-    return np.linalg.norm(lineEndPos-lineStartPos)
   
   def createMiterBoxesFromFibulaPlanes(self):
     parameterNode = self.getParameterNode()
@@ -2581,7 +2426,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance
       miterBoxLength = miterBoxSlotLength
       miterBoxHeight = 70
-      miterBoxModel = self.createBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
+      miterBoxModel = createBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
 
       miterBoxDisplayNode = miterBoxModel.GetDisplayNode()
       miterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
@@ -2592,7 +2437,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       biggerMiterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance+2*miterBoxSlotWall
       biggerMiterBoxLength = miterBoxSlotLength+2*miterBoxSlotWall
       biggerMiterBoxHeight = miterBoxSlotHeight
-      biggerMiterBoxModel = self.createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
+      biggerMiterBoxModel = createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
       biggerMiterBoxDisplayNode = biggerMiterBoxModel.GetDisplayNode()
 
       biggerMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
@@ -2624,15 +2469,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_B' % (i//2))
       intersectionModel.CreateDefaultDisplayNodes()
-      self.getIntersectionBetweenModelAnd1Plane(fibulaModelNode,fibulaPlanesList[i],intersectionModel)
-      intersectionModelCentroid = self.getCentroid(intersectionModel)
+      getIntersectionBetweenModelAnd1Plane(fibulaModelNode,fibulaPlanesList[i],intersectionModel)
+      intersectionModelCentroid = getCentroid(intersectionModel)
       if i%2 == 0:
         pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d_A' % (i//2))
       else:
         pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d_B' % (i//2))
       pointsIntersectionModel.CreateDefaultDisplayNodes()
-      self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionModel,normalToMiterBoxDirectionAndFibulaZ,intersectionModelCentroid,pointsIntersectionModel)
-      pointOfIntersection = self.getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,miterBoxDirection)
+      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionModel,normalToMiterBoxDirectionAndFibulaZ,intersectionModelCentroid,pointsIntersectionModel)
+      pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,miterBoxDirection)
       intersectionModelItemID = shNode.GetItemByDataNode(intersectionModel)
       shNode.SetItemParent(intersectionModelItemID, intersectionsFolder)
       pointsIntersectionModelItemID = shNode.GetItemByDataNode(pointsIntersectionModel)
@@ -2695,23 +2540,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(intersectionsFolder)
     shNode.RemoveItem(pointsIntersectionsFolder)
 
-  
-  def createBox(self, X, Y, Z, name):
-    miterBox = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
-    miterBox.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
-    slicer.mrmlScene.AddNode(miterBox)
-    miterBox.CreateDefaultDisplayNodes()
-    miterBoxSource = vtk.vtkCubeSource()
-    miterBoxSource.SetXLength(X)
-    miterBoxSource.SetYLength(Y)
-    miterBoxSource.SetZLength(Z)
-    triangleFilter = vtk.vtkTriangleFilter()
-    triangleFilter.SetInputConnection(miterBoxSource.GetOutputPort())
-    triangleFilter.Update()
-    miterBox.SetAndObservePolyData(triangleFilter.GetOutput())
-    return miterBox
-
-
   def createFibulaCylindersFiducialList(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaCylindersFiducialsListsFolder = shNode.GetItemByName("Fibula Cylinders Fiducials Lists")
@@ -2761,7 +2589,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedCylinderAxisZ = normalAtPointID
       vtk.vtkMath.Perpendiculars(transformedCylinderAxisZ,transformedCylinderAxisX,transformedCylinderAxisY,0)
 
-      cylinderModel = self.createCylinder(fibulaScrewHoleCylinderRadius, "cylinder%d" % i)
+      cylinderModel = createCylinder(fibulaScrewHoleCylinderRadius, "cylinder%d" % i)
       cylinderModelItemID = shNode.GetItemByDataNode(cylinderModel)
       shNode.SetItemParent(cylinderModelItemID, fibulaCylindersModelsFolder)
       
@@ -2824,7 +2652,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedCylinderAxisZ = normalAtPointID
       vtk.vtkMath.Perpendiculars(transformedCylinderAxisZ,transformedCylinderAxisX,transformedCylinderAxisY,0)
 
-      cylinderModel = self.createCylinder(mandibleScrewHoleCylinderRadius, "cylinder%d" % i)
+      cylinderModel = createCylinder(mandibleScrewHoleCylinderRadius, "cylinder%d" % i)
       cylinderModelItemID = shNode.GetItemByDataNode(cylinderModel)
       shNode.SetItemParent(cylinderModelItemID, mandibleCylindersModelsFolder)
       
@@ -2857,23 +2685,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(transformNodeItemID, cylindersTransformsFolder)
     
     shNode.RemoveItem(cylindersTransformsFolder)
-
-  def createCylinder(self,R,name):
-    cylinder = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
-    cylinder.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
-    slicer.mrmlScene.AddNode(cylinder)
-    cylinder.CreateDefaultDisplayNodes()
-    lineSource = vtk.vtkLineSource()
-    lineSource.SetPoint1(0, 0, 25)
-    lineSource.SetPoint2(0, 0, -25)
-    tubeFilter = vtk.vtkTubeFilter()
-    tubeFilter.SetInputConnection(lineSource.GetOutputPort())
-    tubeFilter.SetRadius(R)
-    tubeFilter.SetNumberOfSides(50)
-    tubeFilter.CappingOn()
-    tubeFilter.Update()
-    cylinder.SetAndObservePolyData(tubeFilter.GetOutput())
-    return cylinder
 
   def makeBooleanOperationsToFibulaSurgicalGuideBase(self):
     parameterNode = self.getParameterNode()
@@ -2973,7 +2784,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       sawBoxWidth = sawBoxSlotWidth+2*clearanceFitPrintingTolerance
       sawBoxLength = sawBoxSlotLength
       sawBoxHeight = 70
-      sawBoxModel = self.createBox(sawBoxLength,sawBoxHeight,sawBoxWidth,sawBoxName)
+      sawBoxModel = createBox(sawBoxLength,sawBoxHeight,sawBoxWidth,sawBoxName)
       sawBoxModelItemID = shNode.GetItemByDataNode(sawBoxModel)
       shNode.SetItemParent(sawBoxModelItemID, sawBoxesModelsFolder)
 
@@ -2984,7 +2795,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       biggerSawBoxWidth = sawBoxSlotWidth+2*clearanceFitPrintingTolerance+2*sawBoxSlotWall
       biggerSawBoxLength = sawBoxSlotLength+2*sawBoxSlotWall
       biggerSawBoxHeight = sawBoxSlotHeight
-      biggerSawBoxModel = self.createBox(biggerSawBoxLength,biggerSawBoxHeight,biggerSawBoxWidth,biggerSawBoxName)
+      biggerSawBoxModel = createBox(biggerSawBoxLength,biggerSawBoxHeight,biggerSawBoxWidth,biggerSawBoxName)
       biggerSawBoxModelItemID = shNode.GetItemByDataNode(biggerSawBoxModel)
       shNode.SetItemParent(biggerSawBoxModelItemID, biggerSawBoxesModelsFolder)
 
@@ -3027,23 +2838,23 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d' % (len(mandibularPlanesList)-1))
       intersectionModel.CreateDefaultDisplayNodes()
-      self.getNearestIntersectionBetweenModelAnd1Plane(mandibleModelNode,mandibularPlanesList[i],intersectionModel)
-      intersectionModelCentroid = self.getCentroid(intersectionModel)
+      getNearestIntersectionBetweenModelAnd1Plane(mandibleModelNode,mandibularPlanesList[i],intersectionModel)
+      intersectionModelCentroid = getCentroid(intersectionModel)
       if i == 0:
         pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d' % i)
       else:
         pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d' % (len(mandibularPlanesList)-1))
       pointsIntersectionModel.CreateDefaultDisplayNodes()
-      self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionModel,normalToMandiblePlaneZAndMandibularCurveX,intersectionModelCentroid,pointsIntersectionModel)
+      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionModel,normalToMandiblePlaneZAndMandibularCurveX,intersectionModelCentroid,pointsIntersectionModel)
       anterior = [0,1,0]
-      pointOfIntersection = self.getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,anterior)
+      pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,anterior)
       intersectionModelItemID = shNode.GetItemByDataNode(intersectionModel)
       shNode.SetItemParent(intersectionModelItemID, intersectionsFolder)
       pointsIntersectionModelItemID = shNode.GetItemByDataNode(pointsIntersectionModel)
       shNode.SetItemParent(pointsIntersectionModelItemID, pointsIntersectionsFolder)
 
 
-      sawBoxDirection = self.getAverageNormalFromModelPoint(mandibleModelNode,pointOfIntersection)
+      sawBoxDirection = getAverageNormalFromModelPoint(mandibleModelNode,pointOfIntersection)
       #sawBoxDirection = (pointOfIntersection-intersectionModelCentroid)/np.linalg.norm(pointOfIntersection-intersectionModelCentroid)
 
       sawBoxAxisX = [0,0,0]
@@ -3177,10 +2988,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaEndIntersectionModelItemID = shNode.GetItemByDataNode(fibulaEndIntersectionModel)
       shNode.SetItemParent(fibulaEndIntersectionModelItemID, intersectionsFolder)
 
-      self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,fibulaStartIntersectionModel)
-      self.getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,fibulaEndIntersectionModel)
-      lineStartPos = self.getCentroid(fibulaStartIntersectionModel)
-      lineEndPos = self.getCentroid(fibulaEndIntersectionModel)
+      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,fibulaStartIntersectionModel)
+      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,fibulaEndIntersectionModel)
+      lineStartPos = getCentroid(fibulaStartIntersectionModel)
+      lineEndPos = getCentroid(fibulaEndIntersectionModel)
 
     fibulaLine.SetNthControlPointPositionFromArray(0,lineStartPos)
     fibulaLine.SetNthControlPointPositionFromArray(1,lineEndPos)
