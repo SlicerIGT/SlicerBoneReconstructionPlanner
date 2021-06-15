@@ -1104,8 +1104,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandiblePlanesOriginsAreTheSame = False
       else:
         for mandiblePlaneIndex in range(len(planeList)):
-          lastMandiblePlanePosition = np.array([0,0,0])
-          mandiblePlanePosition = np.array([0,0,0])
+          lastMandiblePlanePosition = np.zeros(3)
+          mandiblePlanePosition = np.zeros(3)
           lastMandiblePlanesPositionCurve.GetNthControlPointPosition(mandiblePlaneIndex,lastMandiblePlanePosition)
           planeList[mandiblePlaneIndex].GetOrigin(mandiblePlanePosition)
           if np.linalg.norm(lastMandiblePlanePosition-mandiblePlanePosition) > 1e-5:
@@ -1469,8 +1469,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         mandibleAxisToFibulaRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandibleAxisToWorldRotationMatrix, fibulaToWorldRotationMatrix)
 
-        fibulaPlaneAPosition = np.array([0,0,0])
-        fibulaPlaneBPosition = np.array([0,0,0])
+        fibulaPlaneAPosition = np.zeros(3)
+        fibulaPlaneBPosition = np.zeros(3)
         lastFibulaPlanesPositionA.GetNthControlPointPosition(i,fibulaPlaneAPosition)
         lastFibulaPlanesPositionB.GetNthControlPointPosition(i,fibulaPlaneBPosition)
         self.fibulaPlanesPositionA.append(fibulaPlaneAPosition)
@@ -1750,8 +1750,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         modelDisplayNode.SetColor(color)
 
         #Determinate plane creation direction and set up dynamic modeler
-        planeOriginStart = np.array([0,0,0])
-        planeOriginEnd = np.array([0,0,0])
+        planeOriginStart = np.zeros(3)
+        planeOriginEnd = np.zeros(3)
         planeList[0].GetNthControlPointPosition(0,planeOriginStart)
         planeList[len(planeList)-1].GetNthControlPointPosition(0,planeOriginEnd)
         closestCurvePointStart = [0,0,0]
@@ -2344,8 +2344,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       duplicateFibulaBonePiecesList = createListFromFolderID(duplicateFibulaBonePiecesModelsFolder)
 
       for i in range(1,len(duplicateFibulaBonePiecesList)):
-        lineStartPos = np.array([0,0,0])
-        lineEndPos = np.array([0,0,0])
+        lineStartPos = np.zeros(3)
+        lineEndPos = np.zeros(3)
         fibulaPlanesList[i*2].GetOrigin(lineStartPos)
         fibulaPlanesList[i*2 +1].GetOrigin(lineEndPos)
         #Create fibula axis:
@@ -2409,8 +2409,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for i in range(len(fibulaPlanesList)):
       if useMoreExactVersionOfPositioningAlgorithmChecked:
-        lineStartPos = np.array([0,0,0])
-        lineEndPos = np.array([0,0,0])
+        lineStartPos = np.zeros(3)
+        lineEndPos = np.zeros(3)
         fibulaPlanesList[(i//2)*2].GetOrigin(lineStartPos)
         fibulaPlanesList[(i//2)*2 +1].GetOrigin(lineEndPos)
         #Create fibula axis:
