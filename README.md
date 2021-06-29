@@ -52,6 +52,7 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 Make a mandible segmentation and a fibula segmentation.
 
 Example:
+
 0. CTs should have a recommended slice thickness of 0.65mm (or a maximum slice thickness of 1mm)
 1. Go to the segment editor. Create a new segmentation. Create a new segment, name it 'fibula'.
 2. Use threshold effect to select bone but not connecting tissue (like ligaments). Check if your selected threshold value is okay if there is no connection of the segmented bones near the joint. Threshold value should not be too low to not lose detail. Suggested value: 200
