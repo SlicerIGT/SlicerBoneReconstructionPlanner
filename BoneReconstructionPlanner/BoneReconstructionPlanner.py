@@ -11,6 +11,8 @@ from BRPLib.helperFunctions import *
 # BoneReconstructionPlanner
 #
 
+SLICER_CHANGE_OF_API_REVISION = '29927'
+
 class BoneReconstructionPlanner(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
@@ -987,7 +989,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandiblePlaneOfRotation = mandibularPlanesList[0]
 
     mandiblePlaneOfRotationMatrix = vtk.vtkMatrix4x4()
-    mandiblePlaneOfRotation.GetPlaneToWorldMatrix(mandiblePlaneOfRotationMatrix)
+    if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+      mandiblePlaneOfRotation.GetObjectToWorldMatrix(mandiblePlaneOfRotationMatrix)
+    else:
+      mandiblePlaneOfRotation.GetPlaneToWorldMatrix(mandiblePlaneOfRotationMatrix)
     mandiblePlaneOfRotationX = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,0),mandiblePlaneOfRotationMatrix.GetElement(1,0),mandiblePlaneOfRotationMatrix.GetElement(2,0)])
     mandiblePlaneOfRotationY = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,1),mandiblePlaneOfRotationMatrix.GetElement(1,1),mandiblePlaneOfRotationMatrix.GetElement(2,1)])
     mandiblePlaneOfRotationZ = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,2),mandiblePlaneOfRotationMatrix.GetElement(1,2),mandiblePlaneOfRotationMatrix.GetElement(2,2)])
@@ -995,7 +1000,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(mandibularPlanesList)):
       if mandiblePlaneOfRotation.GetID() != mandibularPlanesList[i].GetID():
         mandiblePlaneMatrix = vtk.vtkMatrix4x4()
-        mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
+        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+          mandibularPlanesList[i].GetObjectToWorldMatrix(mandiblePlaneMatrix)
+        else:
+          mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
         mandiblePlaneX = np.array([mandiblePlaneMatrix.GetElement(0,0),mandiblePlaneMatrix.GetElement(1,0),mandiblePlaneMatrix.GetElement(2,0)])
         mandiblePlaneY = np.array([mandiblePlaneMatrix.GetElement(0,1),mandiblePlaneMatrix.GetElement(1,1),mandiblePlaneMatrix.GetElement(2,1)])
         mandiblePlaneZ = np.array([mandiblePlaneMatrix.GetElement(0,2),mandiblePlaneMatrix.GetElement(1,2),mandiblePlaneMatrix.GetElement(2,2)])
@@ -1188,7 +1196,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         
         #Get Y component of mandiblePlane0
         mandiblePlane0matrix = vtk.vtkMatrix4x4()
-        mandiblePlane0.GetPlaneToWorldMatrix(mandiblePlane0matrix)
+        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+          mandiblePlane0.GetObjectToWorldMatrix(mandiblePlane0matrix)
+        else:
+          mandiblePlane0.GetPlaneToWorldMatrix(mandiblePlane0matrix)
         mandiblePlane0Y = np.array([mandiblePlane0matrix.GetElement(0,1),mandiblePlane0matrix.GetElement(1,1),mandiblePlane0matrix.GetElement(2,1)])
         
         mandibleAxisX = [0,0,0]
@@ -1452,7 +1463,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         
         #Get Y component of mandiblePlane0
         mandiblePlane0matrix = vtk.vtkMatrix4x4()
-        mandiblePlane0.GetPlaneToWorldMatrix(mandiblePlane0matrix)
+        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+          mandiblePlane0.GetObjectToWorldMatrix(mandiblePlane0matrix)
+        else:
+          mandiblePlane0.GetPlaneToWorldMatrix(mandiblePlane0matrix)
         mandiblePlane0Y = np.array([mandiblePlane0matrix.GetElement(0,1),mandiblePlane0matrix.GetElement(1,1),mandiblePlane0matrix.GetElement(2,1)])
         
         mandibleAxisX = [0,0,0]
@@ -2184,7 +2198,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       #Get X, Y, Z components of mandiblePlane1
       mandiblePlane1matrix = vtk.vtkMatrix4x4()
-      planeList[i+1].GetPlaneToWorldMatrix(mandiblePlane1matrix)
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        planeList[i+1].GetObjectToWorldMatrix(mandiblePlane1matrix)
+      else:
+        planeList[i+1].GetPlaneToWorldMatrix(mandiblePlane1matrix)
       mandiblePlane1X = np.array([mandiblePlane1matrix.GetElement(0,0),mandiblePlane1matrix.GetElement(1,0),mandiblePlane1matrix.GetElement(2,0)])
       mandiblePlane1Y = np.array([mandiblePlane1matrix.GetElement(0,1),mandiblePlane1matrix.GetElement(1,1),mandiblePlane1matrix.GetElement(2,1)])
       mandiblePlane1Z = np.array([mandiblePlane1matrix.GetElement(0,2),mandiblePlane1matrix.GetElement(1,2),mandiblePlane1matrix.GetElement(2,2)])
@@ -2368,11 +2385,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         shNode.SetItemParent(duplicateFibulaPieceTransformNodeItemID, duplicateFibulaBonePiecesTransformsFolder)
 
       collisionDetected = False
-      
-      import vtkSlicerRtCommonPython
       for i in range(0,len(duplicateFibulaBonePiecesList) -1):
-        collisionDetection = vtkSlicerRtCommonPython.vtkCollisionDetectionFilter()
-        #collisionDetection = vtk.vtkCollisionDetectionFilter()
+        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+          collisionDetection = vtk.vtkCollisionDetectionFilter()
+        else:
+          import vtkSlicerRtCommonPython
+          collisionDetection = vtkSlicerRtCommonPython.vtkCollisionDetectionFilter()
         collisionDetection.SetInputData(0, duplicateFibulaBonePiecesList[i].GetPolyData())
         collisionDetection.SetInputData(1, duplicateFibulaBonePiecesList[i+1].GetPolyData())
         matrix1 = vtk.vtkMatrix4x4()
@@ -2450,7 +2468,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
 
       fibulaPlaneMatrix = vtk.vtkMatrix4x4()
-      fibulaPlanesList[i].GetPlaneToWorldMatrix(fibulaPlaneMatrix)
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        fibulaPlanesList[i].GetObjectToWorldMatrix(fibulaPlaneMatrix)
+      else:
+        fibulaPlanesList[i].GetPlaneToWorldMatrix(fibulaPlaneMatrix)
       fibulaPlaneZ = np.array([fibulaPlaneMatrix.GetElement(0,2),fibulaPlaneMatrix.GetElement(1,2),fibulaPlaneMatrix.GetElement(2,2)])
       fibulaPlaneOrigin = np.array([fibulaPlaneMatrix.GetElement(0,3),fibulaPlaneMatrix.GetElement(1,3),fibulaPlaneMatrix.GetElement(2,3)])
 
@@ -2820,7 +2841,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.HandlesInteractiveOn()
 
       mandiblePlaneMatrix = vtk.vtkMatrix4x4()
-      mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        mandibularPlanesList[i].GetObjectToWorldMatrix(mandiblePlaneMatrix)
+      else:
+        mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
       mandiblePlaneZ = np.array([mandiblePlaneMatrix.GetElement(0,2),mandiblePlaneMatrix.GetElement(1,2),mandiblePlaneMatrix.GetElement(2,2)])
       mandiblePlaneOrigin = np.array([mandiblePlaneMatrix.GetElement(0,3),mandiblePlaneMatrix.GetElement(1,3),mandiblePlaneMatrix.GetElement(2,3)])
 
@@ -2892,7 +2916,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(transformNode)
 
       sawBoxPlaneToWorldMatrix = vtk.vtkMatrix4x4()
-      sawBoxPlane.GetPlaneToWorldMatrix(sawBoxPlaneToWorldMatrix)
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        sawBoxPlane.GetObjectToWorldMatrix(sawBoxPlaneToWorldMatrix)
+      else:
+        sawBoxPlane.GetPlaneToWorldMatrix(sawBoxPlaneToWorldMatrix)
       transformNode.SetMatrixTransformToParent(sawBoxPlaneToWorldMatrix)
 
       transformNode.UpdateScene(slicer.mrmlScene)
@@ -2915,7 +2942,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         sawBoxPlane = slicer.mrmlScene.GetNodeByID(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][1])
         transformNode = slicer.mrmlScene.GetNodeByID(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][2])
         sawBoxPlaneToWorldMatrix = vtk.vtkMatrix4x4()
-        sawBoxPlane.GetPlaneToWorldMatrix(sawBoxPlaneToWorldMatrix)
+        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+          sawBoxPlane.GetObjectToWorldMatrix(sawBoxPlaneToWorldMatrix)
+        else:
+          sawBoxPlane.GetPlaneToWorldMatrix(sawBoxPlaneToWorldMatrix)
         transformNode.SetMatrixTransformToParent(sawBoxPlaneToWorldMatrix)
 
   def makeBooleanOperationsToMandibleSurgicalGuideBase(self):
