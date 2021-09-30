@@ -19,11 +19,13 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 ![](BoneReconstructionPlanner/Resources/Screenshots/screenshotPatientSpecificSurgicalGuides.png)
 
 
-# Video
+# Preview Video
+ [![Mandible Reconstruction Preview Video on Slicer](https://img.youtube.com/vi/wsr_g_1E_pw/0.jpg)](https://www.youtube.com/watch?v=wsr_g_1E_pw)
 
- <a href="https://youtu.be/wsr_g_1E_pw" target="_blanck"><img src="https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/videoThumbnail.png" /></a>
+# Videotutorial
+[![Mandible Reconstruction Tutorial on Slicer](https://img.youtube.com/vi/g9Vql5h6uHM/0.jpg)](https://www.youtube.com/watch?v=g9Vql5h6uHM)
+
 # Documentation
-
 - [High-level design overview](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/raw/main/Docs/Design.pptx)
 
 # Use Cases
