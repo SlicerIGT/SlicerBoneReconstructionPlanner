@@ -2794,6 +2794,30 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
 
+    #get best fitting plane to curve with curveCrescent normal direction
+    curvePoints = slicer.util.arrayFromMarkupsCurvePoints(mandibularCurve)
+    bestFittingPlaneNormalOfCurvePoints = getBestFittingPlaneNormalFromPoints(curvePoints)
+
+    startIndex = 0
+    curveLength = mandibularCurve.GetCurveLengthWorld()
+    middleIndex = mandibularCurve.GetCurvePointIndexAlongCurveWorld(startIndex,curveLength)
+    endIndex = mandibularCurve.GetCurvePointIndexAlongCurveWorld(startIndex,curveLength)
+    matrix = vtk.vtkMatrix4x4()
+    mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(startIndex,matrix)
+    startPoint = np.array([matrix.GetElement(0,3),matrix.GetElement(1,3),matrix.GetElement(2,3)])
+    mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(middleIndex,matrix)
+    middlePoint = np.array([matrix.GetElement(0,3),matrix.GetElement(1,3),matrix.GetElement(2,3)])
+    mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(endIndex,matrix)
+    endPoint = np.array([matrix.GetElement(0,3),matrix.GetElement(1,3),matrix.GetElement(2,3)])
+    startToMiddle = middlePoint - startPoint
+    middleToEnd = endPoint - middlePoint
+    normalToCurve = [0,0,0]
+    vtk.vtkMath.Cross(startToMiddle, middleToEnd, normalToCurve)
+    
+    if vtk.vtkMath.Dot(bestFittingPlaneNormalOfCurvePoints,normalToCurve) < 0:
+      bestFittingPlaneNormalOfCurvePoints *= -1
+
+
     for i in range(0,len(mandibularPlanesList),len(mandibularPlanesList)-1):
       #sawBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
       if i == 0:
@@ -2846,16 +2870,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
       mandiblePlaneZ = np.array([mandiblePlaneMatrix.GetElement(0,2),mandiblePlaneMatrix.GetElement(1,2),mandiblePlaneMatrix.GetElement(2,2)])
-      mandiblePlaneOrigin = np.array([mandiblePlaneMatrix.GetElement(0,3),mandiblePlaneMatrix.GetElement(1,3),mandiblePlaneMatrix.GetElement(2,3)])
-
-      closestCurvePoint = [0,0,0]
-      closestCurvePointIndex = mandibularCurve.GetClosestPointPositionAlongCurveWorld(mandiblePlaneOrigin,closestCurvePoint)
-      matrix = vtk.vtkMatrix4x4()
-      mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(closestCurvePointIndex,matrix)
-      mandibularCurveX = np.array([matrix.GetElement(0,0),matrix.GetElement(1,0),matrix.GetElement(2,0)])
-      normalToMandiblePlaneZAndMandibularCurveX = [0,0,0]
-      vtk.vtkMath.Cross(mandiblePlaneZ, mandibularCurveX, normalToMandiblePlaneZAndMandibularCurveX)
-      normalToMandiblePlaneZAndMandibularCurveX = normalToMandiblePlaneZAndMandibularCurveX/np.linalg.norm(normalToMandiblePlaneZAndMandibularCurveX)
       
       if i == 0:
         intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d' % i)
@@ -2869,9 +2883,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d' % (len(mandibularPlanesList)-1))
       pointsIntersectionModel.CreateDefaultDisplayNodes()
-      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionModel,normalToMandiblePlaneZAndMandibularCurveX,intersectionModelCentroid,pointsIntersectionModel)
-      anterior = [0,1,0]
-      pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,anterior)
+      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionModel,bestFittingPlaneNormalOfCurvePoints,intersectionModelCentroid,pointsIntersectionModel)
+      curvePlanarConvexityDirection = [0,0,0]
+      vtk.vtkMath.Cross(mandiblePlaneZ, bestFittingPlaneNormalOfCurvePoints, curvePlanarConvexityDirection)
+      pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,curvePlanarConvexityDirection)
       intersectionModelItemID = shNode.GetItemByDataNode(intersectionModel)
       shNode.SetItemParent(intersectionModelItemID, intersectionsFolder)
       pointsIntersectionModelItemID = shNode.GetItemByDataNode(pointsIntersectionModel)

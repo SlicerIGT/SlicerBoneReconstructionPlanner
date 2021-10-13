@@ -190,4 +190,21 @@ def createCylinder(R,name):
   tubeFilter.CappingOn()
   tubeFilter.Update()
   cylinder.SetAndObservePolyData(tubeFilter.GetOutput())
+  cylinder.SetAttribute('radius',str(R))
+  cylinder.SetAttribute('height',str(H))
   return cylinder
+
+def getBestFittingPlaneNormalFromPoints(points):
+  """Code: https://math.stackexchange.com/questions/99299/best-fitting-plane-given-a-set-of-points"""
+  #convert points to form [Xdata,Ydata,Zdata]
+  points = np.array(points).T
+  
+  # now find the best-fitting plane for the test points
+  # subtract out the centroid and take the SVD
+  svd = np.linalg.svd(points - np.mean(points, axis=1, keepdims=True))
+
+  # Extract the left singular vectors
+  left = svd[0]
+
+  # the corresponding left singular vector is the normal vector of the best-fitting plane
+  return left[:, -1]
