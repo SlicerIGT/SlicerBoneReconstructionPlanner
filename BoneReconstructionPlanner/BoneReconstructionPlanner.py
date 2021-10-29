@@ -2610,7 +2610,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedCylinderAxisZ = normalAtPointID
       vtk.vtkMath.Perpendiculars(transformedCylinderAxisZ,transformedCylinderAxisX,transformedCylinderAxisY,0)
 
-      cylinderModel = createCylinder(fibulaScrewHoleCylinderRadius, "cylinder%d" % i)
+      cylinderModel = createCylinder("cylinder%d" % i, fibulaScrewHoleCylinderRadius)
       cylinderModelItemID = shNode.GetItemByDataNode(cylinderModel)
       shNode.SetItemParent(cylinderModelItemID, fibulaCylindersModelsFolder)
       
@@ -2673,7 +2673,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedCylinderAxisZ = normalAtPointID
       vtk.vtkMath.Perpendiculars(transformedCylinderAxisZ,transformedCylinderAxisX,transformedCylinderAxisY,0)
 
-      cylinderModel = createCylinder(mandibleScrewHoleCylinderRadius, "cylinder%d" % i)
+      cylinderModel = createCylinder("cylinder%d" % i, mandibleScrewHoleCylinderRadius)
       cylinderModelItemID = shNode.GetItemByDataNode(cylinderModel)
       shNode.SetItemParent(cylinderModelItemID, mandibleCylindersModelsFolder)
       

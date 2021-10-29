@@ -175,14 +175,14 @@ def createBox(X, Y, Z, name):
   miterBox.SetAndObservePolyData(triangleFilter.GetOutput())
   return miterBox
 
-def createCylinder(R,name):
+def createCylinder(name,R,H=50):
   cylinder = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
   cylinder.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
   slicer.mrmlScene.AddNode(cylinder)
   cylinder.CreateDefaultDisplayNodes()
   lineSource = vtk.vtkLineSource()
-  lineSource.SetPoint1(0, 0, 25)
-  lineSource.SetPoint2(0, 0, -25)
+  lineSource.SetPoint1(0, 0, H/2)
+  lineSource.SetPoint2(0, 0, -H/2)
   tubeFilter = vtk.vtkTubeFilter()
   tubeFilter.SetInputConnection(lineSource.GetOutputPort())
   tubeFilter.SetRadius(R)
