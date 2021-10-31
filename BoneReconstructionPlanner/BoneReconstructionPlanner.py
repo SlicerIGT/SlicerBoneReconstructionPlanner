@@ -12,6 +12,7 @@ from BRPLib.helperFunctions import *
 #
 
 SLICER_CHANGE_OF_API_REVISION = '29927'
+SLICER_STABLE_RELEASE_REVISION = '29738'
 
 class BoneReconstructionPlanner(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
@@ -237,6 +238,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     # Make sure parameter node exists and observed
     self.initializeParameterNode()
+
+    if int(slicer.app.revision) == int(SLICER_STABLE_RELEASE_REVISION):
+      warningTitle = 'Warning'
+      warningDescription = """Attention: change to Slicer's Preview Release. In Slicer's Stable Release (this one) you will NOT be able to create the surgical guides."""
+      slicer.util.warningDisplay(warningDescription,warningTitle)
 
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
