@@ -241,8 +241,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     if int(slicer.app.revision) == int(SLICER_STABLE_RELEASE_REVISION):
       warningTitle = 'Warning'
-      warningDescription = """Attention: change to Slicer's Preview Release. In Slicer's Stable Release (this one) you will NOT be able to create the surgical guides."""
-      slicer.util.warningDisplay(warningDescription,warningTitle)
+      warningDescription = """Attention: change to Slicer's Preview Release. In Slicer's Stable Release (this one) you will NOT be able to create the surgical guides.\n"""
+      slicer.util.warningDisplay(warningDescription,warningTitle,dontShowAgainSettingsKey = "BoneReconstructionPlanner/DontShowAgainStableReleaseWarning")
+    else:
+      try:
+        combineModelsLogic = slicer.modules.combinemodels
+      except:
+        slicer.util.errorDisplay("""ERROR: Sandbox extension is not installed. Install it because it is needed to create the surgical guides.\n"""
+        """If it is not available in the Extensions Manager, try again in a few hours.\n""",dontShowAgainSettingsKey = "BoneReconstructionPlanner/DontShowAgainSandboxError")
 
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
