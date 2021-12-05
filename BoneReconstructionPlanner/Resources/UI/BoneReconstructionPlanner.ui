@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>434</width>
-    <height>1855</height>
+    <height>1884</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -546,7 +546,7 @@ bone pieces and transform them to mandible</string>
            <double>0.100000000000000</double>
           </property>
           <property name="value">
-           <double>3.000000000000000</double>
+           <double>1.000000000000000</double>
           </property>
          </widget>
         </item>

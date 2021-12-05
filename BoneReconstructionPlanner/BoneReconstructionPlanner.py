@@ -2446,39 +2446,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         #Create fibula axis:
         fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(lineStartPos,lineEndPos,notLeftFibulaChecked)
 
-      #miterBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
-      if i%2 == 0:
-        miterBoxName = "miterBox%d_A" % (i//2)
-        biggerMiterBoxName = "biggerMiterBox%d_A" % (i//2)
-      else:
-        miterBoxName = "miterBox%d_B" % (i//2)
-        biggerMiterBoxName = "biggerMiterBox%d_B" % (i//2)
-      miterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance
-      miterBoxLength = miterBoxSlotLength
-      miterBoxHeight = 70
-      miterBoxModel = createBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
-
-      miterBoxDisplayNode = miterBoxModel.GetDisplayNode()
-      miterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
-
-      miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
-      shNode.SetItemParent(miterBoxModelItemID, miterBoxesModelsFolder)
-
-      biggerMiterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance+2*miterBoxSlotWall
-      biggerMiterBoxLength = miterBoxSlotLength+2*miterBoxSlotWall
-      biggerMiterBoxHeight = miterBoxSlotHeight
-      biggerMiterBoxModel = createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
-      biggerMiterBoxDisplayNode = biggerMiterBoxModel.GetDisplayNode()
-
-      biggerMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
-      biggerMiterBoxDisplayNode.SetSliceIntersectionVisibility(True)
-      if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
-        redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
-        biggerMiterBoxDisplayNode.AddViewNodeID(redSliceNode.GetID())
-
-      biggerMiterBoxModelItemID = shNode.GetItemByDataNode(biggerMiterBoxModel)
-      shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
-
       fibulaPlaneMatrix = vtk.vtkMatrix4x4()
       if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
         fibulaPlanesList[i].GetObjectToWorldMatrix(fibulaPlaneMatrix)
@@ -2525,21 +2492,45 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxAxisX = miterBoxAxisX/np.linalg.norm(miterBoxAxisX)
       vtk.vtkMath.Cross(miterBoxAxisZ, miterBoxAxisX, miterBoxAxisY)
       miterBoxAxisY = miterBoxAxisY/np.linalg.norm(miterBoxAxisY)
+      
+      #miterBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
+      if i%2 == 0:
+        miterBoxName = "miterBox%d_A" % (i//2)
+        biggerMiterBoxName = "biggerMiterBox%d_A" % (i//2)
+      else:
+        miterBoxName = "miterBox%d_B" % (i//2)
+        biggerMiterBoxName = "biggerMiterBox%d_B" % (i//2)
+      miterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance
+      miterBoxLength = miterBoxSlotLength
+      miterBoxHeight = 70
+      miterBoxModel = createBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
+
+      miterBoxDisplayNode = miterBoxModel.GetDisplayNode()
+      miterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+
+      miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
+      shNode.SetItemParent(miterBoxModelItemID, miterBoxesModelsFolder)
+
+      biggerMiterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance+2*miterBoxSlotWall
+      biggerMiterBoxLength = miterBoxSlotLength+2*miterBoxSlotWall
+      biggerMiterBoxHeight = miterBoxSlotHeight
+      biggerMiterBoxModel = createAdaptedBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName,miterBoxAxisX,miterBoxAxisZ,fibulaZ)
+      distanceToLowerFaceOfMiterBox = float(biggerMiterBoxModel.GetAttribute('distanceToLowerFace'))
+      biggerMiterBoxDisplayNode = biggerMiterBoxModel.GetDisplayNode()
+
+      biggerMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+      biggerMiterBoxDisplayNode.SetSliceIntersectionVisibility(True)
+      if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+        redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+        biggerMiterBoxDisplayNode.AddViewNodeID(redSliceNode.GetID())
+
+      biggerMiterBoxModelItemID = shNode.GetItemByDataNode(biggerMiterBoxModel)
+      shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
 
       miterBoxAxisToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(miterBoxAxisX, miterBoxAxisY, miterBoxAxisZ)
       WorldToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix([1,0,0], [0,1,0], [0,0,1])
 
       WorldToMiterBoxAxisRotationMatrix = self.getAxes1ToAxes2RotationMatrix(WorldToWorldRotationMatrix, miterBoxAxisToWorldRotationMatrix)
-
-      #Calculations for deltaMiterBoxAxisY
-      sinOfMiterBoxAxisZAndFibulaZVector = [0,0,0]
-      vtk.vtkMath.Cross(miterBoxAxisZ, fibulaZ, sinOfMiterBoxAxisZAndFibulaZVector)
-      sinOfMiterBoxAxisZAndFibulaZ = np.linalg.norm(sinOfMiterBoxAxisZAndFibulaZVector)
-      rotatedMiterBoxAxisY = [0,0,0]
-      vtk.vtkMath.Cross(fibulaZ, miterBoxAxisX, rotatedMiterBoxAxisY)
-      rotatedMiterBoxAxisY = rotatedMiterBoxAxisY/np.linalg.norm(rotatedMiterBoxAxisY)
-      cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY = vtk.vtkMath.Dot(rotatedMiterBoxAxisY, miterBoxAxisY)
-      deltaMiterBoxAxisY = biggerMiterBoxWidth/2*sinOfMiterBoxAxisZAndFibulaZ/cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY
 
       transformNode = slicer.vtkMRMLLinearTransformNode()
       transformNode.SetName("temp%d" % i)
@@ -2550,13 +2541,48 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       finalTransform.Concatenate(WorldToMiterBoxAxisRotationMatrix)
       if i%2 == 0:
         miterBoxAxisXTranslation = 0
-        miterBoxAxisYTranslation = biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula/cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY
+        miterBoxAxisYTranslation = distanceToLowerFaceOfMiterBox
         miterBoxAxisZTranslation = -miterBoxSlotWidth/2
       else:
         miterBoxAxisXTranslation = 0
-        miterBoxAxisYTranslation = biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula/cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY
+        miterBoxAxisYTranslation = distanceToLowerFaceOfMiterBox
         miterBoxAxisZTranslation = miterBoxSlotWidth/2
       finalTransform.Translate(pointOfIntersection + miterBoxAxisX*miterBoxAxisXTranslation + miterBoxAxisY*miterBoxAxisYTranslation + miterBoxAxisZ*miterBoxAxisZTranslation)
+      
+      #iteratively check collisions of the fibula with the miterbox
+      collisionDetection = vtk.vtkCollisionDetectionFilter()
+
+      collisionDetection.SetInputData(0, fibulaModelNode.GetPolyData())
+      collisionDetection.SetInputData(1, biggerMiterBoxModel.GetPolyData())
+      collisionDetection.SetBoxTolerance(0.0)
+      collisionDetection.SetCellTolerance(0.0)
+      collisionDetection.SetNumberOfCellsPerNode(2)
+
+      identityMatrix = vtk.vtkMatrix4x4()
+      collisionDetection.SetMatrix(0, identityMatrix)
+      collisionDetection.SetTransform(1, finalTransform)
+
+      collisionDetection.Update()
+
+      collisionDetected = True
+      if collisionDetection.GetNumberOfContacts() == 0:
+          collisionDetected = False
+
+      stepmm = 0.25
+      while collisionDetected:
+          finalTransform.Translate(
+              stepmm * miterBoxAxisY
+          )
+          collisionDetection.SetTransform(1, finalTransform)
+
+          collisionDetection.Update()
+
+          if collisionDetection.GetNumberOfContacts() == 0:
+              collisionDetected = False
+              break
+
+      finalTransform.Translate(biggerMiterBoxDistanceToFibula * miterBoxAxisY)
+
       transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
 
       transformNode.UpdateScene(slicer.mrmlScene)

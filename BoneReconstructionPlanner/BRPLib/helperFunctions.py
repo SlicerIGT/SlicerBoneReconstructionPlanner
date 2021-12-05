@@ -175,6 +175,101 @@ def createBox(X, Y, Z, name):
   miterBox.SetAndObservePolyData(triangleFilter.GetOutput())
   return miterBox
 
+def createAdaptedBox(X, Y, Z, name, boxX, boxZ, referenceZ):
+  import math
+
+  normalVector = [0,0,0]
+  vtk.vtkMath.Cross(boxZ, referenceZ, normalVector)
+
+  if (normalVector @ boxX.T) >= 0:
+    deltaY = Z*math.tan(math.acos(boxZ @ referenceZ.T))
+  else:
+    deltaY = -Z*math.tan(math.acos(boxZ @ referenceZ.T))
+
+  points = []
+  points.append(np.array([-X/2, Y/2, -Z/2,], dtype=np.float))
+  points.append(np.array([X/2, Y/2,-Z/2,], dtype=np.float))
+  points.append(np.array([X/2, Y/2, Z/2,], dtype=np.float))
+  points.append(np.array([-X/2, Y/2, Z/2,], dtype=np.float))
+  points.append(np.array([-X/2, -Y/2, -Z/2,], dtype=np.float))
+  points.append(np.array([X/2, -Y/2, -Z/2,], dtype=np.float))
+  points.append(np.array([X/2, -(Y/2 + deltaY), Z/2,], dtype=np.float))
+  points.append(np.array([-X/2, -(Y/2 + deltaY), Z/2,], dtype=np.float))
+
+  centroid = np.zeros(3)
+  for i in range(len(points)):
+    centroid += points[i]
+  centroid = centroid/len(points)
+
+  #make the origin zero
+  for i in range(len(points)):
+    points[i] = points[i] - centroid
+
+  lowerFaceCentroid = np.zeros(3)
+  for i in range(4,len(points)):
+    lowerFaceCentroid += points[i]
+  lowerFaceCentroid = lowerFaceCentroid/(len(points)-4)
+
+  distanceToLowerFace = np.linalg.norm(lowerFaceCentroid)
+
+  points_vtk = vtk.vtkPoints()
+  pointID = 0
+
+  for i in range(len(points)):
+    points_vtk.InsertNextPoint(points[i])
+    pointID += 1
+
+  cellArray = vtk.vtkCellArray()
+
+  facesPointsIDs = []
+  #Y/2 Constant
+  facesPointsIDs.append([0,1,2,3])
+  #Lower face
+  facesPointsIDs.append([4,5,6,7])
+  #X/2 constant face
+  facesPointsIDs.append([1,2,6,5])
+  #-X/2 constant face
+  facesPointsIDs.append([0,3,7,4])
+  #Z/2 constant face
+  facesPointsIDs.append([2,3,7,6])
+  #-Z/2 constant face
+  facesPointsIDs.append([0,1,5,4])
+
+  for pointIDs in facesPointsIDs:
+    polygon = vtk.vtkPolygon()
+    polygon.GetPointIds().SetNumberOfIds(len(pointIDs))
+    for i in range(len(pointIDs)):
+        polygon.GetPointIds().SetId(i, pointIDs[i])
+    cellArray.InsertNextCell(polygon)
+  
+  polydata = vtk.vtkPolyData()
+  polydata.SetPoints(points_vtk)
+  polydata.SetPolys(cellArray)
+
+  # remove duplicate points
+  cleanFilter = vtk.vtkCleanPolyData()
+  cleanFilter.SetInputData(polydata)
+  cleanFilter.Update()
+
+  triangleFilter = vtk.vtkTriangleFilter()
+  triangleFilter.SetInputData(cleanFilter.GetOutput())
+  triangleFilter.Update()
+
+  normalsFilter = vtk.vtkPolyDataNormals()
+  normalsFilter.SetInputData(triangleFilter.GetOutput())
+  normalsFilter.AutoOrientNormalsOn()
+  normalsFilter.Update()
+
+  adaptedBoxModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+  slicer.mrmlScene.AddNode(adaptedBoxModel)
+  adaptedBoxModel.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
+  adaptedBoxModel.CreateDefaultDisplayNodes()
+  adaptedBoxModel.SetAndObservePolyData(normalsFilter.GetOutput())
+
+  adaptedBoxModel.SetAttribute('distanceToLowerFace',str(distanceToLowerFace))
+
+  return adaptedBoxModel
+
 def createCylinder(name,R,H=50):
   cylinder = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
   cylinder.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
