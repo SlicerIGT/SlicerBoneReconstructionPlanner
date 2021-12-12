@@ -167,6 +167,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.sawBoxSlotWallSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.biggerSawBoxDistanceToMandibleSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.numberOfSegmentsOfAutomaticReconstructionSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.minimalBoneSegmentLengthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkBoxToggled.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
@@ -190,6 +192,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.create3DModelOfTheReconstructionButton.connect('clicked(bool)', self.onCreate3DModelOfTheReconstructionButton)
     self.ui.showHideFibulaSegmentsLengthsButton.connect('clicked(bool)', self.onShowHideFibulaSegmentsLengthsButton)
     self.ui.showHideOriginalMandibleButton.connect('clicked(bool)', self.onShowHideOriginalMandibleButton)
+    self.ui.makeAutomaticPlanButton.connect('clicked(bool)', self.onMakeAutomaticPlanButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.onUseMoreExactVersionOfPositioningAlgorithmCheckBox)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -402,6 +405,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.biggerSawBoxDistanceToMandibleSpinBox.setValue(float(self._parameterNode.GetParameter("biggerSawBoxDistanceToMandible")))
     if self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius") != '':
       self.ui.mandibleScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius")))
+    if self._parameterNode.GetParameter("numberOfSegmentsOfAutomaticReconstruction") != '':
+      self.ui.numberOfSegmentsOfAutomaticReconstructionSpinBox.setValue(int(self._parameterNode.GetParameter("numberOfSegmentsOfAutomaticReconstruction")))
+    if self._parameterNode.GetParameter("minimalBoneSegmentLength") != '':
+      self.ui.minimalBoneSegmentLengthSpinBox.setValue(float(self._parameterNode.GetParameter("minimalBoneSegmentLength")))
 
     self.ui.notLeftFibulaCheckBox.checked = self._parameterNode.GetParameter("notLeftFibula") == "True"
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = self._parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
@@ -452,6 +459,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("sawBoxSlotWall", str(self.ui.sawBoxSlotWallSpinBox.value))
     self._parameterNode.SetParameter("biggerSawBoxDistanceToMandible", str(self.ui.biggerSawBoxDistanceToMandibleSpinBox.value))
     self._parameterNode.SetParameter("mandibleScrewHoleCylinderRadius", str(self.ui.mandibleScrewHoleCylinderRadiusSpinBox.value))
+    self._parameterNode.SetParameter("numberOfSegmentsOfAutomaticReconstruction", str(self.ui.numberOfSegmentsOfAutomaticReconstructionSpinBox.value))
+    self._parameterNode.SetParameter("minimalBoneSegmentLength", str(self.ui.minimalBoneSegmentLengthSpinBox.value))
     
 
     if self.ui.notLeftFibulaCheckBox.checked:
@@ -608,6 +617,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
             
             self._parameterNode.SetParameter("fibulaDisplayNodesWereUpdatedFlag","False")
     
+  def onMakeAutomaticPlanButton(self):
+    self.logic.makeAutomaticPlan()
+  
   def onAddCutPlaneButton(self):
     self.logic.addCutPlane()
 
@@ -851,7 +863,103 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
     interactionNode.SwitchToSinglePlaceMode()
 
-  def addCutPlane(self):
+  def makeAutomaticPlan(self):
+    parameterNode = self.getParameterNode()
+    mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
+    numberOfSegments = int(parameterNode.GetParameter("numberOfSegmentsOfAutomaticReconstruction"))
+    minimalBoneSegmentLength = float(parameterNode.GetParameter("minimalBoneSegmentLength"))
+
+    pointsToCreatePlanes = self.getPointsForOptimalReconstruction(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+    
+    if pointsToCreatePlanes == []:
+      slicer.util.errorDisplay(
+        "No broken-line could be made of "+str(numberOfSegments)+
+        " segments with minimal length: " + str(minimalBoneSegmentLength) + "mm.\n"
+        "Please try with less segments or lower minimal length."
+      )
+      return
+
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    shNode.RemoveItem(mandibularPlanesFolder)
+
+    for point in pointsToCreatePlanes:
+      print(point)
+      self.addCutPlane(point)
+  
+  def getPointsForOptimalReconstruction(self,curve,numberOfSegments,minimalLengthOfSegments):
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
+
+    curvePoints = slicer.util.arrayFromMarkupsCurvePoints(curve)
+
+    if numberOfSegments == 1:
+      return curvePoints[np.array([0,-1])]
+
+    numberOfPointsOfCurve = len(curvePoints)
+    numberOfPointsOfApproximation = numberOfSegments + 1
+
+    maxNumber = 0
+    for i in range(numberOfPointsOfApproximation-1):
+      maxNumber +=(numberOfPointsOfCurve**(i))*(numberOfPointsOfCurve-1)
+
+    pointToPointDistanceMatrix = []
+    for i in range(numberOfPointsOfCurve):
+      currentPoint = curvePoints[i]
+      pointToPointDistanceVector = []
+      for j in range(numberOfPointsOfCurve):
+        if j<i:
+          pointToPointDistanceVector.append(-1)
+          continue
+        pointToCompare = curvePoints[j]
+        distance = np.linalg.norm(pointToCompare-currentPoint)
+        pointToPointDistanceVector.append(distance)
+      pointToPointDistanceMatrix.append(pointToPointDistanceVector)
+
+    indicesAndMetricsVector = []
+    for i in range((numberOfPointsOfCurve-1),maxNumber+1,numberOfPointsOfCurve):
+      nextNumber = False
+      digitsMoreSignificantDigitFirst = digits(i,numberOfPointsOfCurve)
+      #
+      while len(digitsMoreSignificantDigitFirst) != numberOfPointsOfApproximation:
+        digitsMoreSignificantDigitFirst.append(0)
+      #
+      digitsMoreSignificantDigitFirst.reverse()
+      for j in range(numberOfPointsOfApproximation-1):
+        if (
+          digitsMoreSignificantDigitFirst[j] >= digitsMoreSignificantDigitFirst[j+1]
+        ):
+          nextNumber = True
+          break
+      #
+      if nextNumber:
+        continue
+      #
+      if not(validDistancesBetweenPointsOfIndices(
+        digitsMoreSignificantDigitFirst, minimalLengthOfSegments, pointToPointDistanceMatrix)
+      ):
+        continue
+      #
+      maxL1,meanL1,meanL2 = calculateMetricsForPolyline(curvePoints,digitsMoreSignificantDigitFirst)
+      indicesAndMetricsVector.append([digitsMoreSignificantDigitFirst,maxL1,meanL1,meanL2])
+
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
+
+    if len(indicesAndMetricsVector) > 0:
+      indicesAndMetricsVector.sort(key = lambda item : item[1])
+      indicesAndMetricMaxL1 = indicesAndMetricsVector[0]
+      #
+      #indicesAndMetricsVector.sort(key = lambda item : item[2])
+      #indicesAndMetricMeanL1 = indicesAndMetricsVector[0]
+      #
+      mask = np.array(indicesAndMetricMaxL1[0])
+      return curvePoints[mask]
+    else:
+      return []
+
+  def addCutPlane(self,point=[]):
     parameterNode = self.getParameterNode()
 
     colorIndexStr = parameterNode.GetParameter("colorIndex")
@@ -890,10 +998,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #conections
     self.planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
 
-    #setup placement
-    slicer.modules.markups.logic().SetActiveListID(planeNode)
-    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-    interactionNode.SwitchToSinglePlaceMode()
+    if point == []:
+      #setup placement
+      slicer.modules.markups.logic().SetActiveListID(planeNode)
+      interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+      interactionNode.SwitchToSinglePlaceMode()
+    else:
+      planeNode.SetOrigin(point)
 
   def onPlanePointAdded(self,sourceNode,event):
     parameterNode = self.getParameterNode()

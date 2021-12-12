@@ -208,3 +208,67 @@ def getBestFittingPlaneNormalFromPoints(points):
 
   # the corresponding left singular vector is the normal vector of the best-fitting plane
   return left[:, -1]
+
+def digits(number, base=10):
+    assert number >= 0
+    if number == 0:
+        return [0]
+    l = []
+    while number > 0:
+        l.append(number % base)
+        number = number // base
+    return l
+
+def distanceToSegment(point0, linePointA, linePointB):
+  vectorAB = linePointB - linePointA
+  vectorA0 = point0 - linePointA
+  #
+  if (vectorA0 @ vectorAB.T) <= 0.0:
+    return np.linalg.norm(vectorA0)
+  #
+  vectorB0 = point0 - linePointB
+  #
+  if (vectorB0 @ vectorAB.T) >= 0.0:
+    return np.linalg.norm(vectorB0)
+  #
+  cross = [0,0,0]
+  vtk.vtkMath.Cross(vectorAB, vectorA0, cross)
+  return np.linalg.norm(cross)/np.linalg.norm(vectorAB)
+
+def validDistancesBetweenPointsOfIndices(indices,minimalDistance,pointToPointDistanceMatrix):
+  for i in range(len(indices)-1):
+    distanceOfPointToNextOne = pointToPointDistanceMatrix[indices[i]][indices[i+1]]
+    if distanceOfPointToNextOne < minimalDistance:
+      return False
+  #
+  return True
+
+def calculateMetricsForPolyline(curvePoints,indices):
+  indices_np = np.array(indices)
+  polyLine = curvePoints[indices_np]
+  #
+  maxL1Distance = 1e5
+  meanL1Distance = 0
+  meanL2Distance = 0
+  distances = []
+  for i in range(len(curvePoints)):
+    distanceOfPointToSegments = 1e5
+    currentDistance = 0
+    for j in range(len(polyLine)-1):
+      currentDistance = distanceToSegment(curvePoints[i],polyLine[j],polyLine[j+1])
+      if currentDistance < distanceOfPointToSegments:
+        distanceOfPointToSegments = currentDistance
+    #
+    distances.append(distanceOfPointToSegments)
+  #
+  for i in range(len(curvePoints)):
+    meanL1Distance += abs(distances[i])
+    meanL2Distance += distances[i]**2
+  #
+  meanL1Distance = meanL1Distance/len(curvePoints)
+  meanL2Distance = meanL2Distance/len(curvePoints)
+  #
+  distances.sort(reverse=True)
+  maxL1Distance = distances[0]
+  #
+  return maxL1Distance, meanL1Distance, meanL2Distance

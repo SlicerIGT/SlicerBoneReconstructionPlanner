@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>434</width>
-    <height>1855</height>
+    <height>1990</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -312,6 +312,48 @@
           </property>
          </widget>
         </item>
+        <item row="15" column="1">
+         <widget class="QSpinBox" name="numberOfSegmentsOfAutomaticReconstructionSpinBox">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>8</number>
+          </property>
+          <property name="value">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="15" column="0">
+         <widget class="QLabel" name="label_34">
+          <property name="text">
+           <string>N° of segments
+(automatic planning)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="16" column="0">
+         <widget class="QLabel" name="label_35">
+          <property name="text">
+           <string>Minimal bone
+segment length</string>
+          </property>
+         </widget>
+        </item>
+        <item row="16" column="1">
+         <widget class="ctkDoubleSpinBox" name="minimalBoneSegmentLengthSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="minimum">
+           <double>20.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>150.000000000000000</double>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
       <item>
@@ -370,6 +412,14 @@
        <widget class="QCheckBox" name="fixCutGoesThroughTheMandibleTwiceCheckBox">
         <property name="text">
          <string>Fix cut goes through the mandible twice</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="makeAutomaticPlanButton">
+        <property name="text">
+         <string>Make automatic plan using mandibularCurve,
+fibulaLine and N° of segments</string>
         </property>
        </widget>
       </item>
