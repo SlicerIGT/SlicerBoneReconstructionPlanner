@@ -1023,8 +1023,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #conections
     self.planeNodeObserver = planeNode.AddObserver(
       slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
-      lambda sourceNode,event,dontCreateModifiedEventObserver=dontCreateModifiedEventObserver: 
-      self.onPlanePointAdded(sourceNode,event,dontCreateModifiedEventObserver)
+      lambda sourceNode,event,dontCreateModifiedEventObserver=dontCreateModifiedEventObserver,
+      keepOriginalOrigin=True: 
+      self.onPlanePointAdded(sourceNode,event,dontCreateModifiedEventObserver,keepOriginalOrigin)
     )
 
     if point == []:
@@ -1035,7 +1036,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     else:
       planeNode.SetOrigin(point)
 
-  def onPlanePointAdded(self,sourceNode,event,dontCreateModifiedEventObserver):
+  def onPlanePointAdded(self,sourceNode,event,dontCreateModifiedEventObserver,keepOriginalOrigin=False):
     parameterNode = self.getParameterNode()
     mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
 
@@ -1046,7 +1047,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     temporalOrigin = [0,0,0]
     sourceNode.GetNthControlPointPosition(0,temporalOrigin)
     
-    self.setupMandiblePlaneStraightOverMandibleCurve(sourceNode,temporalOrigin, mandibleCurve, self.planeNodeObserver)
+    self.setupMandiblePlaneStraightOverMandibleCurve(sourceNode,temporalOrigin, mandibleCurve, self.planeNodeObserver, keepOriginalOrigin)
 
     displayNode = sourceNode.GetDisplayNode()
     displayNode.HandlesInteractiveOn()
@@ -2466,12 +2467,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     shNode.RemoveItem(mandiblePlaneTransformsFolder)
   
-  def setupMandiblePlaneStraightOverMandibleCurve(self,planeNode,temporalOrigin, mandibleCurve, planeNodeObserver):
+  def setupMandiblePlaneStraightOverMandibleCurve(self,planeNode,temporalOrigin, mandibleCurve, planeNodeObserver,keepOriginalOrigin):
     closestCurvePoint = [0,0,0]
     closestCurvePointIndex = mandibleCurve.GetClosestPointPositionAlongCurveWorld(temporalOrigin,closestCurvePoint)
     matrix = vtk.vtkMatrix4x4()
     mandibleCurve.GetCurvePointToWorldTransformAtPointIndex(closestCurvePointIndex,matrix)
-    mandiblePlaneStraightOrigin = np.array([matrix.GetElement(0,3),matrix.GetElement(1,3),matrix.GetElement(2,3)])
+    if keepOriginalOrigin:
+      mandiblePlaneStraightOrigin = temporalOrigin
+    else:
+      mandiblePlaneStraightOrigin = np.array([matrix.GetElement(0,3),matrix.GetElement(1,3),matrix.GetElement(2,3)])
     mandiblePlaneStraightZ = np.array([matrix.GetElement(0,2),matrix.GetElement(1,2),matrix.GetElement(2,2)])
     mandiblePlaneStraightY = [0,0,0]
     posterior = [0,-1,0]
