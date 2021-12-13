@@ -1106,78 +1106,93 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
-    mandiblePlanesTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),'Mandible Planes Transforms')
 
     if mandiblePlaneOfRotation == None:
       mandiblePlaneOfRotation = mandibularPlanesList[0]
 
-    mandiblePlaneOfRotationMatrix = vtk.vtkMatrix4x4()
-    if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-      mandiblePlaneOfRotation.GetObjectToWorldMatrix(mandiblePlaneOfRotationMatrix)
-    else:
-      mandiblePlaneOfRotation.GetPlaneToWorldMatrix(mandiblePlaneOfRotationMatrix)
-    mandiblePlaneOfRotationX = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,0),mandiblePlaneOfRotationMatrix.GetElement(1,0),mandiblePlaneOfRotationMatrix.GetElement(2,0)])
-    mandiblePlaneOfRotationY = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,1),mandiblePlaneOfRotationMatrix.GetElement(1,1),mandiblePlaneOfRotationMatrix.GetElement(2,1)])
-    mandiblePlaneOfRotationZ = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,2),mandiblePlaneOfRotationMatrix.GetElement(1,2),mandiblePlaneOfRotationMatrix.GetElement(2,2)])
-        
+    #search mandiblePlaneOfRotationIndex
+    indexOfMandiblePlaneOfRotation = -1
     for i in range(len(mandibularPlanesList)):
-      if mandiblePlaneOfRotation.GetID() != mandibularPlanesList[i].GetID():
-        mandiblePlaneMatrix = vtk.vtkMatrix4x4()
-        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-          mandibularPlanesList[i].GetObjectToWorldMatrix(mandiblePlaneMatrix)
-        else:
-          mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
-        mandiblePlaneX = np.array([mandiblePlaneMatrix.GetElement(0,0),mandiblePlaneMatrix.GetElement(1,0),mandiblePlaneMatrix.GetElement(2,0)])
-        mandiblePlaneY = np.array([mandiblePlaneMatrix.GetElement(0,1),mandiblePlaneMatrix.GetElement(1,1),mandiblePlaneMatrix.GetElement(2,1)])
-        mandiblePlaneZ = np.array([mandiblePlaneMatrix.GetElement(0,2),mandiblePlaneMatrix.GetElement(1,2),mandiblePlaneMatrix.GetElement(2,2)])
-        mandiblePlaneOrigin = np.array([mandiblePlaneMatrix.GetElement(0,3),mandiblePlaneMatrix.GetElement(1,3),mandiblePlaneMatrix.GetElement(2,3)])
+      if mandiblePlaneOfRotation.GetID() == mandibularPlanesList[i].GetID():
+        indexOfMandiblePlaneOfRotation = i
+        print(indexOfMandiblePlaneOfRotation)
+        break
 
-        rotatedMandiblePlaneX = np.copy(mandiblePlaneX)
-        rotatedMandiblePlaneY =  np.copy(mandiblePlaneY)
-        rotatedMandiblePlaneZ = np.copy(mandiblePlaneZ)
+    for i in range(indexOfMandiblePlaneOfRotation,len(mandibularPlanesList)-1):
+      mandiblePlaneToCopy = mandibularPlanesList[i]
+      mandiblePlaneToChange = mandibularPlanesList[i+1]
+      mandiblePlaneToCopyMatrix = vtk.vtkMatrix4x4()
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        mandiblePlaneToCopy.GetObjectToWorldMatrix(mandiblePlaneToCopyMatrix)
+      else:
+        mandiblePlaneToCopy.GetPlaneToWorldMatrix(mandiblePlaneToCopyMatrix)
+      mandiblePlaneToCopyX = np.array([mandiblePlaneToCopyMatrix.GetElement(0,0),mandiblePlaneToCopyMatrix.GetElement(1,0),mandiblePlaneToCopyMatrix.GetElement(2,0)])
+      mandiblePlaneToCopyY = np.array([mandiblePlaneToCopyMatrix.GetElement(0,1),mandiblePlaneToCopyMatrix.GetElement(1,1),mandiblePlaneToCopyMatrix.GetElement(2,1)])
+      mandiblePlaneToCopyZ = np.array([mandiblePlaneToCopyMatrix.GetElement(0,2),mandiblePlaneToCopyMatrix.GetElement(1,2),mandiblePlaneToCopyMatrix.GetElement(2,2)])
         
-        epsilon = 0.0001
-        if not (vtk.vtkMath.Dot(rotatedMandiblePlaneZ, mandiblePlaneOfRotationZ) >= 1.0 - epsilon):
-          angleRadians = vtk.vtkMath.AngleBetweenVectors(rotatedMandiblePlaneZ, mandiblePlaneOfRotationZ)
-          rotationAxis = [0,0,0]
-          vtk.vtkMath.Cross(mandiblePlaneOfRotationZ, rotatedMandiblePlaneZ, rotationAxis)
-          if (vtk.vtkMath.Norm(rotationAxis) < epsilon):
-            #New + old normals are facing opposite directions.
-            #Find a perpendicular axis to flip around.
-            vtk.vtkMath.Perpendiculars(mandiblePlaneOfRotationZ, rotationAxis, None, 0)
-          rotationAxis = rotationAxis/np.linalg.norm(rotationAxis)
-          finalTransform = vtk.vtkTransform()
-          finalTransform.PostMultiply()
-          finalTransform.RotateWXYZ(vtk.vtkMath.DegreesFromRadians(angleRadians), rotationAxis)
+      mandiblePlaneToChangeX = np.copy(mandiblePlaneToCopyX)
+      mandiblePlaneToChangeY = np.copy(mandiblePlaneToCopyY)
+      mandiblePlaneToChangeZ = np.zeros(3)
+      mandiblePlaneToChange.GetNormal(mandiblePlaneToChangeZ)
 
-          finalTransform.TransformVector(mandiblePlaneOfRotationX, rotatedMandiblePlaneX)
-          finalTransform.TransformVector(mandiblePlaneOfRotationY, rotatedMandiblePlaneY)
-
-        mandiblePlaneToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(mandiblePlaneX, mandiblePlaneY, mandiblePlaneZ)
-        rotatedMandiblePlaneToWorldRotationMatrix = self.getAxes1ToWorldRotationMatrix(rotatedMandiblePlaneX, rotatedMandiblePlaneY, rotatedMandiblePlaneZ)
-
-        mandiblePlaneToRotatedMandiblePlaneRotationMatrix = self.getAxes1ToAxes2RotationMatrix(mandiblePlaneToWorldRotationMatrix, rotatedMandiblePlaneToWorldRotationMatrix)
-
-        transformNode = slicer.vtkMRMLLinearTransformNode()
-        transformNode.SetName("temp%d" % i)
-        slicer.mrmlScene.AddNode(transformNode)
-
+      epsilon = 0.0001
+      if not (vtk.vtkMath.Dot(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ) >= 1.0 - epsilon):
+        angleRadians = vtk.vtkMath.AngleBetweenVectors(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ)
+        rotationAxis = [0,0,0]
+        vtk.vtkMath.Cross(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ, rotationAxis)
+        if (vtk.vtkMath.Norm(rotationAxis) < epsilon):
+          #New + old normals are facing opposite directions.
+          #Find a perpendicular axis to flip around.
+          rotationAxis = mandiblePlaneToCopyY
+        rotationAxis = rotationAxis/np.linalg.norm(rotationAxis)
         finalTransform = vtk.vtkTransform()
         finalTransform.PostMultiply()
-        finalTransform.Translate(-mandiblePlaneOrigin)
-        finalTransform.Concatenate(mandiblePlaneToRotatedMandiblePlaneRotationMatrix)
-        finalTransform.Translate(mandiblePlaneOrigin)
-        transformNode.SetMatrixTransformToParent(finalTransform.GetMatrix())
+        finalTransform.RotateWXYZ(vtk.vtkMath.DegreesFromRadians(angleRadians), rotationAxis)
 
-        transformNode.UpdateScene(slicer.mrmlScene)
+        finalTransform.TransformVector(mandiblePlaneToCopyX, mandiblePlaneToChangeX)
+        finalTransform.TransformVector(mandiblePlaneToCopyY, mandiblePlaneToChangeY)
 
-        mandibularPlanesList[i].SetAndObserveTransformNodeID(transformNode.GetID())
-        mandibularPlanesList[i].HardenTransform()
+      mandiblePlaneToChange.SetAxes(mandiblePlaneToChangeX,mandiblePlaneToChangeY,mandiblePlaneToChangeZ)
+      print(i+1)
+      print(mandiblePlaneToChange)
+
+    for i in range(indexOfMandiblePlaneOfRotation,0,-1):
+      mandiblePlaneToCopy = mandibularPlanesList[i]
+      mandiblePlaneToChange = mandibularPlanesList[i-1]
+      mandiblePlaneToCopyMatrix = vtk.vtkMatrix4x4()
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        mandiblePlaneToCopy.GetObjectToWorldMatrix(mandiblePlaneToCopyMatrix)
+      else:
+        mandiblePlaneToCopy.GetPlaneToWorldMatrix(mandiblePlaneToCopyMatrix)
+      mandiblePlaneToCopyX = np.array([mandiblePlaneToCopyMatrix.GetElement(0,0),mandiblePlaneToCopyMatrix.GetElement(1,0),mandiblePlaneToCopyMatrix.GetElement(2,0)])
+      mandiblePlaneToCopyY = np.array([mandiblePlaneToCopyMatrix.GetElement(0,1),mandiblePlaneToCopyMatrix.GetElement(1,1),mandiblePlaneToCopyMatrix.GetElement(2,1)])
+      mandiblePlaneToCopyZ = np.array([mandiblePlaneToCopyMatrix.GetElement(0,2),mandiblePlaneToCopyMatrix.GetElement(1,2),mandiblePlaneToCopyMatrix.GetElement(2,2)])
         
-        transformNodeItemID = shNode.GetItemByDataNode(transformNode)
-        shNode.SetItemParent(transformNodeItemID, mandiblePlanesTransformsFolder)
-      
-    shNode.RemoveItem(mandiblePlanesTransformsFolder)
+      mandiblePlaneToChangeX = np.copy(mandiblePlaneToCopyX)
+      mandiblePlaneToChangeY = np.copy(mandiblePlaneToCopyY)
+      mandiblePlaneToChangeZ = np.zeros(3)
+      mandiblePlaneToChange.GetNormal(mandiblePlaneToChangeZ)
+
+      epsilon = 0.0001
+      if not (vtk.vtkMath.Dot(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ) >= 1.0 - epsilon):
+        angleRadians = vtk.vtkMath.AngleBetweenVectors(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ)
+        rotationAxis = [0,0,0]
+        vtk.vtkMath.Cross(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ, rotationAxis)
+        if (vtk.vtkMath.Norm(rotationAxis) < epsilon):
+          #New + old normals are facing opposite directions.
+          #Find a perpendicular axis to flip around.
+          rotationAxis = mandiblePlaneToCopyY
+        rotationAxis = rotationAxis/np.linalg.norm(rotationAxis)
+        finalTransform = vtk.vtkTransform()
+        finalTransform.PostMultiply()
+        finalTransform.RotateWXYZ(vtk.vtkMath.DegreesFromRadians(angleRadians), rotationAxis)
+
+        finalTransform.TransformVector(mandiblePlaneToCopyX, mandiblePlaneToChangeX)
+        finalTransform.TransformVector(mandiblePlaneToCopyY, mandiblePlaneToChangeY)
+
+      mandiblePlaneToChange.SetAxes(mandiblePlaneToChangeX,mandiblePlaneToChangeY,mandiblePlaneToChangeZ)
+      print(i-1)
+      print(mandiblePlaneToChange)
 
   def addMandiblePlaneObservers(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
