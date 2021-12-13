@@ -172,10 +172,93 @@
           </property>
          </widget>
         </item>
+        <item row="8" column="1">
+         <widget class="ctkDoubleSpinBox" name="initialSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+         </widget>
+        </item>
         <item row="9" column="0">
          <widget class="QLabel" name="label_5">
           <property name="text">
            <string>Intersection position (0.00 - 0.99)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="1">
+         <widget class="ctkDoubleSpinBox" name="intersectionSpinBox">
+          <property name="maximum">
+           <double>0.990000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.010000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.250000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="0">
+         <widget class="QLabel" name="label_23">
+          <property name="text">
+           <string>Intersection distance multiplier</string>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="1">
+         <widget class="ctkDoubleSpinBox" name="intersectionDistanceMultiplierSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>30.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>1.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="11" column="0">
+         <widget class="QLabel" name="label_18">
+          <property name="text">
+           <string>Between space (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="11" column="1">
+         <widget class="ctkDoubleSpinBox" name="betweenSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="value">
+           <double>0.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="12" column="0">
+         <widget class="QLabel" name="label_33">
+          <property name="text">
+           <string>Security margin (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="12" column="1">
+         <widget class="ctkDoubleSpinBox" name="securityMarginOfFibulaPiecesSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <double>30.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>1.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -229,86 +312,11 @@
           </property>
          </widget>
         </item>
-        <item row="8" column="1">
-         <widget class="ctkDoubleSpinBox" name="initialSpinBox">
-          <property name="decimals">
-           <number>1</number>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="1">
-         <widget class="ctkDoubleSpinBox" name="intersectionSpinBox">
-          <property name="maximum">
-           <double>0.990000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.010000000000000</double>
-          </property>
-          <property name="value">
-           <double>0.250000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="11" column="0">
-         <widget class="QLabel" name="label_18">
+        <item row="15" column="0">
+         <widget class="QLabel" name="label_34">
           <property name="text">
-           <string>Between space (mm)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="11" column="1">
-         <widget class="ctkDoubleSpinBox" name="betweenSpinBox">
-          <property name="decimals">
-           <number>1</number>
-          </property>
-          <property name="value">
-           <double>0.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="10" column="0">
-         <widget class="QLabel" name="label_23">
-          <property name="text">
-           <string>Intersection distance multiplier</string>
-          </property>
-         </widget>
-        </item>
-        <item row="10" column="1">
-         <widget class="ctkDoubleSpinBox" name="intersectionDistanceMultiplierSpinBox">
-          <property name="decimals">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <double>30.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.100000000000000</double>
-          </property>
-          <property name="value">
-           <double>1.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="12" column="0">
-         <widget class="QLabel" name="label_33">
-          <property name="text">
-           <string>Security margin (mm)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="12" column="1">
-         <widget class="ctkDoubleSpinBox" name="securityMarginOfFibulaPiecesSpinBox">
-          <property name="decimals">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <double>30.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.100000000000000</double>
-          </property>
-          <property name="value">
-           <double>1.000000000000000</double>
+           <string>N° of segments
+(automatic planning)</string>
           </property>
          </widget>
         </item>
@@ -322,14 +330,6 @@
           </property>
           <property name="value">
            <number>2</number>
-          </property>
-         </widget>
-        </item>
-        <item row="15" column="0">
-         <widget class="QLabel" name="label_34">
-          <property name="text">
-           <string>N° of segments
-(automatic planning)</string>
           </property>
          </widget>
         </item>
@@ -374,6 +374,13 @@ segment length</string>
        <widget class="QPushButton" name="showHideOriginalMandibleButton">
         <property name="text">
          <string>Show/Hide original mandible model</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="correctBonePositionsByNormalsOfTheMandibleCheckBox">
+        <property name="text">
+         <string>Correct bone positions by normal of the mandible (automatic planning)</string>
         </property>
        </widget>
       </item>

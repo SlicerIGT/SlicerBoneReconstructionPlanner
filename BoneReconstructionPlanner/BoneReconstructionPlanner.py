@@ -415,6 +415,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
+    self.ui.correctBonePositionsByNormalsOfTheMandibleCheckBox.checked = self._parameterNode.GetParameter("correctBonePositionsByNormalsOfTheMandible") == "True"
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked = self._parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") != "False"
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
@@ -475,6 +476,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","True")
     else:
       self._parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","False")
+    if self.ui.correctBonePositionsByNormalsOfTheMandibleCheckBox.checked:
+      self._parameterNode.SetParameter("correctBonePositionsByNormalsOfTheMandible","True")
+    else:
+      self._parameterNode.SetParameter("correctBonePositionsByNormalsOfTheMandible","False")
     if self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked:
       self._parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm","True")
     else:
@@ -781,10 +786,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     """
     Initialize parameter node with default settings.
     """
-    if not parameterNode.GetParameter("Threshold"):
-      parameterNode.SetParameter("Threshold", "100.0")
-    if not parameterNode.GetParameter("Invert"):
-      parameterNode.SetParameter("Invert", "false")
+    if not parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether"):
+      parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether", "True")
+    if not parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact"):
+      parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact", "True")
+    if not parameterNode.GetParameter("correctBonePositionsByNormalsOfTheMandible"):
+      parameterNode.SetParameter("correctBonePositionsByNormalsOfTheMandible", "True")
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -866,6 +873,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def makeAutomaticPlan(self):
     parameterNode = self.getParameterNode()
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
+    correctBonePositionsByNormalsOfTheMandible = parameterNode.GetParameter("correctBonePositionsByNormalsOfTheMandible") == 'True'
     numberOfSegments = int(parameterNode.GetParameter("numberOfSegmentsOfAutomaticReconstruction"))
     minimalBoneSegmentLength = float(parameterNode.GetParameter("minimalBoneSegmentLength"))
 
@@ -882,10 +890,27 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     shNode.RemoveItem(mandibularPlanesFolder)
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    shNode.RemoveItem(fibulaPlanesFolder)
+    planeCutsFolder = shNode.GetItemByName("Plane Cuts")
+    shNode.RemoveItem(planeCutsFolder)
+    cutBonesFolder = shNode.GetItemByName("Cut Bones")
+    shNode.RemoveItem(cutBonesFolder)
+    transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+    shNode.RemoveItem(transformedFibulaPiecesFolder)
 
     for point in pointsToCreatePlanes:
       print(point)
-      self.addCutPlane(point)
+      self.addCutPlane(point,dontCreateModifiedEventObserver=True)
+
+    self.addMandiblePlaneObservers()
+
+    self.onGenerateFibulaPlanesTimerTimeout()
+
+    if correctBonePositionsByNormalsOfTheMandible:
+      pass
+      #self.correctMandbiblePlanesPositionsByNormalOfMandibleOnMandibularCurve()
+      #self.onGenerateFibulaPlanesTimerTimeout()
   
   def getPointsForOptimalReconstruction(self,curve,numberOfSegments,minimalLengthOfSegments):
     import time
@@ -959,7 +984,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     else:
       return []
 
-  def addCutPlane(self,point=[]):
+  def addCutPlane(self,point=[],dontCreateModifiedEventObserver=False):
     parameterNode = self.getParameterNode()
 
     colorIndexStr = parameterNode.GetParameter("colorIndex")
@@ -996,7 +1021,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
     #conections
-    self.planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
+    self.planeNodeObserver = planeNode.AddObserver(
+      slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+      lambda sourceNode,event,dontCreateModifiedEventObserver=dontCreateModifiedEventObserver: 
+      self.onPlanePointAdded(sourceNode,event,dontCreateModifiedEventObserver)
+    )
 
     if point == []:
       #setup placement
@@ -1006,7 +1035,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     else:
       planeNode.SetOrigin(point)
 
-  def onPlanePointAdded(self,sourceNode,event):
+  def onPlanePointAdded(self,sourceNode,event,dontCreateModifiedEventObserver):
     parameterNode = self.getParameterNode()
     mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
 
@@ -1023,8 +1052,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode.HandlesInteractiveOn()
     for i in range(3):
       sourceNode.SetNthControlPointVisibility(i,False)
-    observer = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer)
-    self.mandiblePlaneObserversAndNodeIDList.append([observer,sourceNode.GetID()])
+
+    if not dontCreateModifiedEventObserver:
+      observer = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer)
+      self.mandiblePlaneObserversAndNodeIDList.append([observer,sourceNode.GetID()])
 
     mandiblePlaneAndCurvePointIndexList = []
     for i in range(len(mandibularPlanesList)):
@@ -1115,7 +1146,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(mandibularPlanesList)):
       if mandiblePlaneOfRotation.GetID() == mandibularPlanesList[i].GetID():
         indexOfMandiblePlaneOfRotation = i
-        print(indexOfMandiblePlaneOfRotation)
         break
 
     for i in range(indexOfMandiblePlaneOfRotation,len(mandibularPlanesList)-1):
@@ -1153,8 +1183,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         finalTransform.TransformVector(mandiblePlaneToCopyY, mandiblePlaneToChangeY)
 
       mandiblePlaneToChange.SetAxes(mandiblePlaneToChangeX,mandiblePlaneToChangeY,mandiblePlaneToChangeZ)
-      print(i+1)
-      print(mandiblePlaneToChange)
 
     for i in range(indexOfMandiblePlaneOfRotation,0,-1):
       mandiblePlaneToCopy = mandibularPlanesList[i]
@@ -1213,6 +1241,65 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandiblePlane.RemoveObserver(self.mandiblePlaneObserversAndNodeIDList[i][0])
     self.mandiblePlaneObserversAndNodeIDList = []
 
+  def correctMandbiblePlanesPositionsByNormalOfMandibleOnMandibularCurve(self):
+    parameterNode = self.getParameterNode()
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    mandible2FibulaTransformsFolder = shNode.GetItemByName("Mandible2Fibula transforms")
+    fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
+    mandible2FibulaTransformsList = createListFromFolderID(mandible2FibulaTransformsFolder)
+    mandiblePlaneList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
+
+    fibulaIntersectionsWithPlanesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"fibula intersections with planes")
+    pointsOfIntersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"points of intersections")
+    
+    # create and transform intersections to the mandible
+    for i in range(len(fibulaPlanesList)):
+      intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d' % i)
+      intersectionModel.CreateDefaultDisplayNodes()
+      intersectionModelItemID = shNode.GetItemByDataNode(intersectionModel)
+      shNode.SetItemParent(intersectionModelItemID, fibulaIntersectionsWithPlanesFolder)
+
+      getIntersectionBetweenModelAnd1Plane(fibulaModelNode,fibulaPlanesList[i],intersectionModel)
+
+      fibula2MandibleTransformMatrix = mandible2FibulaTransformsList[i].GetMatrixTransformToParent()
+      fibula2MandibleTransformMatrix.Invert()
+
+      transformerOfIntersection = vtk.vtkTransformPolyDataFilter()
+      transformerOfIntersection.SetTransform(fibula2MandibleTransformMatrix)
+      transformerOfIntersection.SetInputData(intersectionModel.GetPolyData())
+      transformerOfIntersection.Update()
+      intersectionModel.SetAndObservePolyData(transformerOfIntersection.GetOutput())
+
+    intersectionsList = createListFromFolderID(fibulaIntersectionsWithPlanesFolder)
+
+    # find the offset on the normal direction and compensate it
+    normalsOfMandibleModel = slicer.util.arrayFromModelPointData(mandibleModelNode, 'Normals')
+    
+    mandibleMesh = mandibleModelNode.GetMesh()
+
+    mandiblePlaneIndex = 0
+    i=0
+    while i<len(intersectionsList):
+      if i==0 or i==(len(intersectionsList)-1):
+        origin = [0,0,0]
+        mandiblePlaneList[mandiblePlaneIndex].GetOrigin(origin)
+
+        pointID = mandibleMesh.FindPoint(origin)
+        normalAtPointID = normalsOfMandibleModel[pointID]
+
+        pointsOfIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d' % i)
+        pointsOfIntersectionModel.CreateDefaultDisplayNodes()
+        pointsOfIntersectionModelItemID = shNode.GetItemByDataNode(pointsOfIntersectionModel)
+        shNode.SetItemParent(pointsOfIntersectionModelItemID, pointsOfIntersectionsFolder)
+        getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(intersectionsList[i],normalToMiterBoxDirectionAndFibulaZ,intersectionModelCentroid,pointsOfIntersectionModel)
+        pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,miterBoxDirection)        
+      else:
+        continue
+  
   def transformFibulaPlanes(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
