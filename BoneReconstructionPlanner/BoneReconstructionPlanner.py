@@ -199,7 +199,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.fixCutGoesThroughTheMandibleTwiceCheckBox.connect('stateChanged(int)', self.onFixCutGoesThroughTheMandibleTwiceCheckBox)
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
-    
+    self.ui.correctBonePositionsByNormalsOfTheMandibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
 
@@ -877,15 +878,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     numberOfSegments = int(parameterNode.GetParameter("numberOfSegmentsOfAutomaticReconstruction"))
     minimalBoneSegmentLength = float(parameterNode.GetParameter("minimalBoneSegmentLength"))
 
-    pointsToCreatePlanes = self.getPointsForOptimalReconstruction(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+    pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstruction(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
     
-    if pointsToCreatePlanes == []:
+    if pointsToCreatePlanesAndMask == []:
       slicer.util.errorDisplay(
         "No broken-line could be made of "+str(numberOfSegments)+
         " segments with minimal length: " + str(minimalBoneSegmentLength) + "mm.\n"
         "Please try with less segments or lower minimal length."
       )
       return
+    
+    pointsToCreatePlanes = pointsToCreatePlanesAndMask[0]
+    mask = pointsToCreatePlanesAndMask[1]
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
@@ -900,7 +904,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(transformedFibulaPiecesFolder)
 
     for point in pointsToCreatePlanes:
-      print(point)
       self.addCutPlane(point,dontCreateModifiedEventObserver=True)
 
     self.addMandiblePlaneObservers()
@@ -908,9 +911,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.onGenerateFibulaPlanesTimerTimeout()
 
     if correctBonePositionsByNormalsOfTheMandible:
-      pass
-      #self.correctMandbiblePlanesPositionsByNormalOfMandibleOnMandibularCurve()
-      #self.onGenerateFibulaPlanesTimerTimeout()
+      self.removeMandiblePlanesObservers()
+      self.correctMandbiblePlanesPositionsByNormalOfMandibleOnMandibularCurve(mask)
+      self.addMandiblePlaneObservers()
+      self.onGenerateFibulaPlanesTimerTimeout()
   
   def getPointsForOptimalReconstruction(self,curve,numberOfSegments,minimalLengthOfSegments):
     import time
@@ -920,7 +924,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     curvePoints = slicer.util.arrayFromMarkupsCurvePoints(curve)
 
     if numberOfSegments == 1:
-      return curvePoints[np.array([0,-1])]
+      mask = np.array([0,-1])
+      return [curvePoints[mask],mask]
 
     numberOfPointsOfCurve = len(curvePoints)
     numberOfPointsOfApproximation = numberOfSegments + 1
@@ -980,7 +985,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       #indicesAndMetricMeanL1 = indicesAndMetricsVector[0]
       #
       mask = np.array(indicesAndMetricMaxL1[0])
-      return curvePoints[mask]
+      return [curvePoints[mask],mask]
     else:
       return []
 
@@ -1220,8 +1225,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         finalTransform.TransformVector(mandiblePlaneToCopyY, mandiblePlaneToChangeY)
 
       mandiblePlaneToChange.SetAxes(mandiblePlaneToChangeX,mandiblePlaneToChangeY,mandiblePlaneToChangeZ)
-      print(i-1)
-      print(mandiblePlaneToChange)
 
   def addMandiblePlaneObservers(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -1242,9 +1245,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandiblePlane.RemoveObserver(self.mandiblePlaneObserversAndNodeIDList[i][0])
     self.mandiblePlaneObserversAndNodeIDList = []
 
-  def correctMandbiblePlanesPositionsByNormalOfMandibleOnMandibularCurve(self):
+  def correctMandbiblePlanesPositionsByNormalOfMandibleOnMandibularCurve(self,indexOfPointsToCorrect):
     parameterNode = self.getParameterNode()
-    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
@@ -1268,39 +1271,80 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       fibula2MandibleTransformMatrix = mandible2FibulaTransformsList[i].GetMatrixTransformToParent()
       fibula2MandibleTransformMatrix.Invert()
+      
+      fibula2MandibleTransform = vtk.vtkTransform()
+      fibula2MandibleTransform.PostMultiply()
+      fibula2MandibleTransform.Concatenate(fibula2MandibleTransformMatrix)
 
       transformerOfIntersection = vtk.vtkTransformPolyDataFilter()
-      transformerOfIntersection.SetTransform(fibula2MandibleTransformMatrix)
+      transformerOfIntersection.SetTransform(fibula2MandibleTransform)
       transformerOfIntersection.SetInputData(intersectionModel.GetPolyData())
       transformerOfIntersection.Update()
       intersectionModel.SetAndObservePolyData(transformerOfIntersection.GetOutput())
 
     intersectionsList = createListFromFolderID(fibulaIntersectionsWithPlanesFolder)
 
-    # find the offset on the normal direction and compensate it
-    normalsOfMandibleModel = slicer.util.arrayFromModelPointData(mandibleModelNode, 'Normals')
-    
-    mandibleMesh = mandibleModelNode.GetMesh()
+    unitNormalVectorsOfMandibleCurve = getUnitNormalVectorsOfCurveNode(mandibleCurve)
 
     mandiblePlaneIndex = 0
-    i=0
-    while i<len(intersectionsList):
-      if i==0 or i==(len(intersectionsList)-1):
-        origin = [0,0,0]
-        mandiblePlaneList[mandiblePlaneIndex].GetOrigin(origin)
+    intersectionListIndex=0
+    while intersectionListIndex<len(intersectionsList):
+      origin = np.zeros(3)
+      mandiblePlaneList[mandiblePlaneIndex].GetOrigin(origin)
+      normalOfMandiblePlane = np.zeros(3)
+      mandiblePlaneList[mandiblePlaneIndex].GetNormal(normalOfMandiblePlane)
 
-        pointID = mandibleMesh.FindPoint(origin)
-        normalAtPointID = normalsOfMandibleModel[pointID]
+      unitNormalVectorOfCurve = unitNormalVectorsOfMandibleCurve[indexOfPointsToCorrect[mandiblePlaneIndex]]
 
+      normalToCurveAndMandiblePlane = [0,0,0]
+      vtk.vtkMath.Cross(unitNormalVectorOfCurve, normalOfMandiblePlane, normalToCurveAndMandiblePlane)
+      normalToCurveAndMandiblePlane = normalToCurveAndMandiblePlane/np.linalg.norm(normalToCurveAndMandiblePlane)
+
+      if intersectionListIndex==0 or intersectionListIndex==(len(intersectionsList)-1):
         pointsOfIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d' % i)
         pointsOfIntersectionModel.CreateDefaultDisplayNodes()
         pointsOfIntersectionModelItemID = shNode.GetItemByDataNode(pointsOfIntersectionModel)
         shNode.SetItemParent(pointsOfIntersectionModelItemID, pointsOfIntersectionsFolder)
-        getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(intersectionsList[i],normalToMiterBoxDirectionAndFibulaZ,intersectionModelCentroid,pointsOfIntersectionModel)
-        pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,miterBoxDirection)        
+        getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionsList[intersectionListIndex],normalToCurveAndMandiblePlane,origin,pointsOfIntersectionModel)
+        pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsOfIntersectionModel,-unitNormalVectorOfCurve)
+
+        difference = pointOfIntersection - origin
+        offset = np.linalg.norm(pointOfIntersection - origin)
+        unitDifference = -difference/offset
+        print(mandiblePlaneIndex)
+        print(unitDifference)
+        print(unitNormalVectorOfCurve)
+        mandiblePlaneList[mandiblePlaneIndex].SetOrigin(origin + unitNormalVectorOfCurve*offset)
+        mandiblePlaneIndex += 1
+        intersectionListIndex += 1
       else:
-        continue
-  
+        pointsOfIntersectionAModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d' % i)
+        pointsOfIntersectionAModel.CreateDefaultDisplayNodes()
+        pointsOfIntersectionAModelItemID = shNode.GetItemByDataNode(pointsOfIntersectionAModel)
+        shNode.SetItemParent(pointsOfIntersectionAModelItemID, pointsOfIntersectionsFolder)
+        getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionsList[intersectionListIndex],normalToCurveAndMandiblePlane,origin,pointsOfIntersectionAModel)
+        pointOfIntersectionA = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsOfIntersectionAModel,-unitNormalVectorOfCurve)
+
+        pointsOfIntersectionBModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d' % i)
+        pointsOfIntersectionBModel.CreateDefaultDisplayNodes()
+        pointsOfIntersectionBModelItemID = shNode.GetItemByDataNode(pointsOfIntersectionBModel)
+        shNode.SetItemParent(pointsOfIntersectionBModelItemID, pointsOfIntersectionsFolder)
+        getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionsList[intersectionListIndex+1],normalToCurveAndMandiblePlane,origin,pointsOfIntersectionBModel)
+        pointOfIntersectionB = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsOfIntersectionBModel,-unitNormalVectorOfCurve)
+
+        difference = -((pointOfIntersectionA - origin) + (pointOfIntersectionB - origin))/2
+        offset = (np.linalg.norm(pointOfIntersectionA - origin) + np.linalg.norm(pointOfIntersectionB - origin))/2
+        unitDifference = difference/offset
+        print(mandiblePlaneIndex)
+        print(unitDifference)
+        print(unitNormalVectorOfCurve)
+        mandiblePlaneList[mandiblePlaneIndex].SetOrigin(origin + unitNormalVectorOfCurve*offset)
+        mandiblePlaneIndex += 1
+        intersectionListIndex += 2
+    
+    #shNode.RemoveItem(fibulaIntersectionsWithPlanesFolder)
+    #shNode.RemoveItem(pointsOfIntersectionsFolder)
+
   def transformFibulaPlanes(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")

@@ -272,3 +272,34 @@ def calculateMetricsForPolyline(curvePoints,indices):
   maxL1Distance = distances[0]
   #
   return maxL1Distance, meanL1Distance, meanL2Distance
+
+def getUnitNormalVectorsOfCurveNode(curveNode):
+  a = slicer.util.arrayFromMarkupsCurvePoints(curveNode)
+  
+  dx_dt = np.gradient(a[:, 0])
+  dy_dt = np.gradient(a[:, 1])
+  dz_dt = np.gradient(a[:, 2])
+  velocity = np.array([ [dx_dt[i], dy_dt[i], dz_dt[i]] for i in range(dx_dt.size)])
+
+  ds_dt = np.sqrt(dx_dt * dx_dt + dy_dt * dy_dt + dz_dt * dz_dt)
+
+  tangent = np.array([1/ds_dt] * 3).transpose() * velocity
+
+  #check
+  np.sqrt(tangent[:,0] * tangent[:,0] + tangent[:,1] * tangent[:,1] + tangent[:,2] * tangent[:,2])
+
+  tangent_x = tangent[:, 0]
+  tangent_y = tangent[:, 1]
+  tangent_z = tangent[:, 2]
+
+  deriv_tangent_x = np.gradient(tangent_x)
+  deriv_tangent_y = np.gradient(tangent_y)
+  deriv_tangent_z = np.gradient(tangent_z)
+
+  dT_dt = np.array([ [deriv_tangent_x[i], deriv_tangent_y[i], deriv_tangent_z[i]] for i in range(deriv_tangent_x.size)])
+
+  length_dT_dt = np.sqrt(deriv_tangent_x * deriv_tangent_x + deriv_tangent_y * deriv_tangent_y + deriv_tangent_z * deriv_tangent_z)
+
+  normal = np.array([1/length_dT_dt] * 3).transpose() * dT_dt
+
+  return normal
