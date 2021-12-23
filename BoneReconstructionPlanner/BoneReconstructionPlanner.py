@@ -1052,8 +1052,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaModelNode,
     mandibleModelNode
   ):
+    HALF_EXTRUSION_LENGTH = 7.5
+
     mandiblePlanesList = [firstMandiblePlaneFrameMatrix,lastMandiblePlaneFrameMatrix]
-    mandiblePlanesIntersectionsWithMandibleList = []
+    extrudedMandiblePlanesIntersectionsWithMandibleList = []
 
     for i in range(len(mandiblePlanesList)):
       mandiblePlaneOrigin = np.array([0,0,0,1],dtype='double')
@@ -1078,36 +1080,164 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       connectivityFilter.SetExtractionModeToClosestPointRegion()
       connectivityFilter.SetClosestPoint(mandiblePlaneOrigin)
       connectivityFilter.Update()
-      
-      mandiblePlaneIntersectionWithMandible = vtk.vtkPolyData()
-      mandiblePlaneIntersectionWithMandible.ShallowCopy(connectivityFilter.GetOutput())
 
-      mandiblePlanesIntersectionsWithMandibleList.append(
-        mandiblePlaneIntersectionWithMandible
+      stripper = vtk.vtkStripper()
+      stripper.SetInputData(connectivityFilter.GetOutput())
+      stripper.JoinContiguousSegmentsOn()
+      stripper.Update()
+
+      contourTriangulator = vtk.vtkContourTriangulator()
+      contourTriangulator.SetInputData(stripper.GetOutput())
+      contourTriangulator.Update()
+
+      extrusionMandibleIntersectionFilter = vtk.vtkLinearExtrusionFilter()
+      extrusionMandibleIntersectionFilter.SetInputData(contourTriangulator.GetOutput())
+      extrusionMandibleIntersectionFilter.SetExtrusionTypeToNormalExtrusion()
+      extrusionMandibleIntersectionFilter.SetVector(*mandiblePlaneZ)
+      extrusionMandibleIntersectionFilter.SetScaleFactor(2*HALF_EXTRUSION_LENGTH)
+      extrusionMandibleIntersectionFilter.Update()
+
+      normalsFilter = vtk.vtkPolyDataNormals()
+      normalsFilter.SetInputData(extrusionMandibleIntersectionFilter.GetOutput())
+      normalsFilter.AutoOrientNormalsOn()
+      normalsFilter.Update()
+
+      translateAlongNormalTransform = vtk.vtkTransform()
+      translateAlongNormalTransform.PostMultiply()
+      translateAlongNormalTransform.Translate(mandiblePlaneZ*HALF_EXTRUSION_LENGTH)
+
+      transformerTranslateAlongNormal = vtk.vtkTransformPolyDataFilter()
+      transformerTranslateAlongNormal.SetTransform(translateAlongNormalTransform)
+      transformerTranslateAlongNormal.SetInputData(normalsFilter.GetOutput())
+      transformerTranslateAlongNormal.Update()
+      
+      extrudedMandiblePlaneIntersectionWithMandible = vtk.vtkPolyData()
+      extrudedMandiblePlaneIntersectionWithMandible.ShallowCopy(
+        transformerTranslateAlongNormal.GetOutput()
       )
 
+      extrudedMandiblePlanesIntersectionsWithMandibleList.append(
+        extrudedMandiblePlaneIntersectionWithMandible
+      )
 
+    fibulaPlanesList = [firstFibulaPlaneFrameMatrix,lastFibulaPlaneFrameMatrix]
+    fibulaFrameToMandibleFrameRegistrationMatrixList = [
+      firstFibulaFrameToFirstMandibleFrameRegistrationTransformMatrix,
+      lastFibulaFrameToLastMandibleFrameRegistrationTransformMatrix
+    ]
+    transformedExtrudedFibulaPlanesIntersectionsWithFibulaList = []
+    wholeFibulaIntersectionsWithFibulaList = []
 
+    for i in range(len(fibulaPlanesList)):
+      fibulaPlaneOrigin = np.array([0,0,0,1],dtype='double')
+      fibulaPlaneZ = np.array([0,0,1,0],dtype='double')
+      fibulaPlanesList[i].MultiplyPoint(fibulaPlaneOrigin,fibulaPlaneOrigin)
+      fibulaPlanesList[i].MultiplyPoint(fibulaPlaneZ,fibulaPlaneZ)
+      fibulaPlaneOrigin = fibulaPlaneOrigin[0:3]
+      fibulaPlaneZ = fibulaPlaneZ[0:3]
+      
+      fibulaPlane = vtk.vtkPlane()
+      fibulaPlaneCutter = vtk.vtkCutter()
+      fibulaPlaneCutter.SetInputData(fibulaModelNode.GetPolyData())
 
+      fibulaPlane.SetOrigin(fibulaPlaneOrigin)
+      fibulaPlane.SetNormal(fibulaPlaneZ)
 
+      fibulaPlaneCutter.SetCutFunction(fibulaPlane)
+      fibulaPlaneCutter.Update()
 
+      connectivityFilter = vtk.vtkConnectivityFilter()
+      connectivityFilter.SetInputData(fibulaPlaneCutter.GetOutput())
+      connectivityFilter.SetExtractionModeToClosestPointRegion()
+      connectivityFilter.SetClosestPoint(fibulaPlaneOrigin)
+      connectivityFilter.Update()
 
+      stripper = vtk.vtkStripper()
+      stripper.SetInputData(connectivityFilter.GetOutput())
+      stripper.JoinContiguousSegmentsOn()
+      stripper.Update()
 
+      contourTriangulator = vtk.vtkContourTriangulator()
+      contourTriangulator.SetInputData(stripper.GetOutput())
+      contourTriangulator.Update()
 
+      wholeFibulaIntersectionWithFibula = vtk.vtkPolyData()
+      wholeFibulaIntersectionWithFibula.ShallowCopy(
+        contourTriangulator.GetOutput()
+      )
+      wholeFibulaIntersectionsWithFibulaList.append(
+        wholeFibulaIntersectionWithFibula
+      )
 
+      extrusionFibulaIntersectionFilter = vtk.vtkLinearExtrusionFilter()
+      extrusionFibulaIntersectionFilter.SetInputData(contourTriangulator.GetOutput())
+      extrusionFibulaIntersectionFilter.SetExtrusionTypeToNormalExtrusion()
+      extrusionFibulaIntersectionFilter.SetVector(*fibulaPlaneZ)
+      extrusionFibulaIntersectionFilter.SetScaleFactor(2*HALF_EXTRUSION_LENGTH)
+      extrusionFibulaIntersectionFilter.Update()
 
+      normalsFilter = vtk.vtkPolyDataNormals()
+      normalsFilter.SetInputData(extrusionFibulaIntersectionFilter.GetOutput())
+      normalsFilter.AutoOrientNormalsOn()
+      normalsFilter.Update()
 
+      fibulaFrameToMandibleFrameRegistrationTransform = vtk.vtkTransform()
+      fibulaFrameToMandibleFrameRegistrationTransform.PostMultiply()
+      fibulaFrameToMandibleFrameRegistrationTransform.Concatenate(
+        fibulaFrameToMandibleFrameRegistrationMatrixList[i]
+      )
 
+      transformerFibulaToMandible = vtk.vtkTransformPolyDataFilter()
+      transformerFibulaToMandible.SetTransform(fibulaFrameToMandibleFrameRegistrationTransform)
+      transformerFibulaToMandible.SetInputData(normalsFilter.GetOutput())
+      transformerFibulaToMandible.Update()
 
+      transformedExtrudedFibulaPlaneIntersectionWithFibula = vtk.vtkPolyData()
+      transformedExtrudedFibulaPlaneIntersectionWithFibula.ShallowCopy(
+        transformerFibulaToMandible.GetOutput()
+      )
 
+      transformedExtrudedFibulaPlanesIntersectionsWithFibulaList.append(
+        transformedExtrudedFibulaPlaneIntersectionWithFibula
+      )
 
+    metricValue = 0
+    for i in range(len(extrudedMandiblePlanesIntersectionsWithMandibleList)):
+      intersectVolumesFilter = slicer.vtkPolyDataBooleanFilter()
+      intersectVolumesFilter.SetOperModeToIntersection()
+      intersectVolumesFilter.SetInputData(
+        0, 
+        extrudedMandiblePlanesIntersectionsWithMandibleList[i]
+      )
+      intersectVolumesFilter.SetInputData(
+        1, 
+        transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[i]
+      )
+      intersectVolumesFilter.Update()
 
+      triangleFilter = vtk.vtkTriangleFilter()
+      triangleFilter.SetPassLines(0)
+      triangleFilter.SetInputData(intersectVolumesFilter.GetOutput())
+      triangleFilter.Update()
 
+      massPropertiesIntersectionOfVolumesFilter = vtk.vtkMassProperties()
+      massPropertiesIntersectionOfVolumesFilter.SetInputData(triangleFilter.GetOutput())
+      massPropertiesIntersectionOfVolumesFilter.Update()
 
+      intersectionVolume = massPropertiesIntersectionOfVolumesFilter.GetVolume()
+      intersectionArea = intersectionVolume/(HALF_EXTRUSION_LENGTH)
 
+      massPropertiesFibulaIntersectionFilter = vtk.vtkMassProperties()
+      massPropertiesFibulaIntersectionFilter.SetInputData(wholeFibulaIntersectionsWithFibulaList[i])
+      massPropertiesFibulaIntersectionFilter.Update()
+      fibulaIntersectionArea = massPropertiesFibulaIntersectionFilter.GetSurfaceArea()
 
-  
-    pass
+      metricValue += (
+        (intersectionArea/fibulaIntersectionArea)/
+        len(extrudedMandiblePlanesIntersectionsWithMandibleList)
+      )
+
+    return metricValue
   
   def rotateMandiblePlanesByAngle(self,mandibularPlaneFrameMatricesList,angleOfRotation):
     #rotate the first mandible plane around Z    
