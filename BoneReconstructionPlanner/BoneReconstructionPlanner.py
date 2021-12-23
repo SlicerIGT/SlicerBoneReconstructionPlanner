@@ -875,6 +875,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     nonDecimatedFibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
     decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    nonDecimatedFibulaModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     originalFibulaLine = parameterNode.GetNodeReference("fibulaLine")
     notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
@@ -886,7 +888,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     numberOfDifferentAngles = 60
 
     fibulaModelNode = decimatedFibulaModelNode
-
+    mandibleModelNode = decimatedMandibleModelNode
 
     pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstruction(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
     
@@ -952,6 +954,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           mandibleFramesMatrixList[0],fibulaFramesMatrixList[0]
         )
       )
+      firstFibulaFrameToFirstMandibleFrameRegistrationTransformMatrix = (
+        self.getAxes1ToAxes2RegistrationTransformMatrix(
+          fibulaFramesMatrixList[0],mandibleFramesMatrixList[0]
+        )
+      )
 
       firstFibulaPlaneFrameTransform = vtk.vtkTransform()
       firstFibulaPlaneFrameTransform.PostMultiply()
@@ -968,6 +975,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           mandibleFramesMatrixList[-1],fibulaFramesMatrixList[-1]
         )
       )
+      lastFibulaFrameToLastMandibleFrameRegistrationTransformMatrix = (
+        self.getAxes1ToAxes2RegistrationTransformMatrix(
+          fibulaFramesMatrixList[-1],mandibleFramesMatrixList[-1]
+        )
+      )
 
       lastFibulaPlaneFrameTransform = vtk.vtkTransform()
       lastFibulaPlaneFrameTransform.PostMultiply()
@@ -979,7 +991,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       )
       lastFibulaPlaneFrameMatrix = lastFibulaPlaneFrameTransform.GetMatrix()
 
-
+      overlappingAreaMetric =(
+        self.calculateOverlappingAreaMetricFromMandibleFibulaPlanesAndMandibleFibulaModels(
+          rotatedMandibularPlaneFrameMatricesList[0],
+          firstFibulaPlaneFrameMatrix,
+          firstFibulaFrameToFirstMandibleFrameRegistrationTransformMatrix,
+          rotatedMandibularPlaneFrameMatricesList[-1],
+          lastFibulaPlaneFrameMatrix,
+          lastFibulaFrameToLastMandibleFrameRegistrationTransformMatrix,
+          fibulaModelNode,
+          mandibleModelNode
+        )
+      )
 
 
 
@@ -1017,6 +1040,74 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.correctMandbiblePlanesPositionsByNormalOfMandibleOnMandibularCurve(mask)
       self.addMandiblePlaneObservers()
       self.onGenerateFibulaPlanesTimerTimeout()
+  
+  def calculateOverlappingAreaMetricFromMandibleFibulaPlanesAndMandibleFibulaModels(
+    self,
+    firstMandiblePlaneFrameMatrix,
+    firstFibulaPlaneFrameMatrix,
+    firstFibulaFrameToFirstMandibleFrameRegistrationTransformMatrix,
+    lastMandiblePlaneFrameMatrix,
+    lastFibulaPlaneFrameMatrix,
+    lastFibulaFrameToLastMandibleFrameRegistrationTransformMatrix,
+    fibulaModelNode,
+    mandibleModelNode
+  ):
+    mandiblePlanesList = [firstMandiblePlaneFrameMatrix,lastMandiblePlaneFrameMatrix]
+    mandiblePlanesIntersectionsWithMandibleList = []
+
+    for i in range(len(mandiblePlanesList)):
+      mandiblePlaneOrigin = np.array([0,0,0,1],dtype='double')
+      mandiblePlaneZ = np.array([0,0,1,0],dtype='double')
+      mandiblePlanesList[i].MultiplyPoint(mandiblePlaneOrigin,mandiblePlaneOrigin)
+      mandiblePlanesList[i].MultiplyPoint(mandiblePlaneZ,mandiblePlaneZ)
+      mandiblePlaneOrigin = mandiblePlaneOrigin[0:3]
+      mandiblePlaneZ = mandiblePlaneZ[0:3]
+      
+      mandiblePlane = vtk.vtkPlane()
+      mandiblePlaneCutter = vtk.vtkCutter()
+      mandiblePlaneCutter.SetInputData(mandibleModelNode.GetPolyData())
+
+      mandiblePlane.SetOrigin(mandiblePlaneOrigin)
+      mandiblePlane.SetNormal(mandiblePlaneZ)
+
+      mandiblePlaneCutter.SetCutFunction(mandiblePlane)
+      mandiblePlaneCutter.Update()
+
+      connectivityFilter = vtk.vtkConnectivityFilter()
+      connectivityFilter.SetInputData(mandiblePlaneCutter.GetOutput())
+      connectivityFilter.SetExtractionModeToClosestPointRegion()
+      connectivityFilter.SetClosestPoint(mandiblePlaneOrigin)
+      connectivityFilter.Update()
+      
+      mandiblePlaneIntersectionWithMandible = vtk.vtkPolyData()
+      mandiblePlaneIntersectionWithMandible.ShallowCopy(connectivityFilter.GetOutput())
+
+      mandiblePlanesIntersectionsWithMandibleList.append(
+        mandiblePlaneIntersectionWithMandible
+      )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    pass
   
   def rotateMandiblePlanesByAngle(self,mandibularPlaneFrameMatricesList,angleOfRotation):
     #rotate the first mandible plane around Z    
