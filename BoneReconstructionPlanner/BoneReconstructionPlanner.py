@@ -873,10 +873,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def makeAutomaticPlan(self):
     parameterNode = self.getParameterNode()
+    nonDecimatedFibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    originalFibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
+    initialSpace = float(parameterNode.GetParameter("initialSpace"))
+    additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
     correctBonePositionsByNormalsOfTheMandible = parameterNode.GetParameter("correctBonePositionsByNormalsOfTheMandible") == 'True'
     numberOfSegments = int(parameterNode.GetParameter("numberOfSegmentsOfAutomaticReconstruction"))
     minimalBoneSegmentLength = float(parameterNode.GetParameter("minimalBoneSegmentLength"))
+
+    fibulaModelNode = decimatedFibulaModelNode
+
 
     pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstruction(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
     
@@ -903,10 +912,58 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
     shNode.RemoveItem(transformedFibulaPiecesFolder)
 
+    mandibularPlaneFrameMatricesList = (
+      self.generateMandiblePlaneFramesFromPolylineAndMandibularCurve(pointsToCreatePlanes,mandibularCurve)
+    )
+
+    fibulaLinePointsList = self.generateExternalFibulaLineFromOriginalFibulaLineModelAndMandibleCurve(
+      originalFibulaLine, fibulaModelNode, mandibularCurve
+    )
+
+
+    #Create mandible frames
+    mandibleFramesMatrixList, boneSegmentsDistance = self.generateMandibleFramesMatrixList(mandibularPlaneFrameMatricesList,pointsToCreatePlanes)
+  
+    #Create fibula frames
+    fibulaFramesMatrixList = self.generateFibulaFramesMatrixList(
+      fibulaLinePointsList,
+      mandibularPlaneFrameMatricesList,
+      notLeftFibulaChecked,
+      initialSpace,
+      additionalBetweenSpaceOfFibulaPlanes,
+      boneSegmentsDistance,
+      mandibleFramesMatrixList,
+      pointsToCreatePlanes,
+      fibulaModelNode,
+    )
+    
+    
+
+
+
+
+
+
+
+
     for point in pointsToCreatePlanes:
       self.addCutPlane(point,dontCreateModifiedEventObserver=True)
 
     self.addMandiblePlaneObservers()
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
 
     self.onGenerateFibulaPlanesTimerTimeout()
 
@@ -915,6 +972,429 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.correctMandbiblePlanesPositionsByNormalOfMandibleOnMandibularCurve(mask)
       self.addMandiblePlaneObservers()
       self.onGenerateFibulaPlanesTimerTimeout()
+  
+  def generateFibulaFramesMatrixList(
+    self,
+    fibulaLinePointsList,
+    mandibularPlaneFrameMatricesList,
+    notLeftFibulaChecked,
+    initialSpace,
+    additionalBetweenSpaceOfFibulaPlanes,
+    boneSegmentsDistance,
+    mandibleFramesMatrixList,
+    pointsToCreatePlanes,
+    fibulaModelNode,
+    ):
+    initialFibulaFrameMatrix = (
+      self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(
+        fibulaLinePointsList[0], fibulaLinePointsList[1], notLeftFibulaChecked, True
+        )
+    )
+    initialFibulaFrameX,initialFibulaFrameY,initialFibulaFrameZ,initialFibulaFrameOrigin = (
+      self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(
+        fibulaLinePointsList[0], fibulaLinePointsList[1], notLeftFibulaChecked, False
+        )
+    )
+    
+    #NewPlanes position and distance
+    self.fibulaPlanesPositionA = []
+    self.fibulaPlanesPositionB = []
+
+    worldToInitialFibulaFrame = vtk.vtkMatrix4x4()
+    worldToInitialFibulaFrame.DeepCopy(initialFibulaFrameMatrix)
+    worldToInitialFibulaFrame.Invert()
+
+    worldToInitialFibulaFrameTransform = vtk.vtkTransform()
+    worldToInitialFibulaFrameTransform.PostMultiply()
+    worldToInitialFibulaFrameTransform.Concatenate(worldToInitialFibulaFrame)
+
+    boundsList = []
+    j=0
+
+    for i in range(len(mandibularPlaneFrameMatricesList)-1):
+      if i==0:
+        self.fibulaPlanesPositionA.append(initialFibulaFrameOrigin + initialFibulaFrameZ*initialSpace)
+        self.fibulaPlanesPositionB.append(self.fibulaPlanesPositionA[i] + boneSegmentsDistance[i]*initialFibulaFrameZ)
+
+        afterMandibleToWorldChangeOfFrameMatrix = self.switchOriginToMatrix(mandibleFramesMatrixList[i],pointsToCreatePlanes[i+1])
+        afterFibulaToWorldChangeOfFrameMatrix = self.switchOriginToMatrix(initialFibulaFrameMatrix,self.fibulaPlanesPositionB[i])
+
+        afterMandibleToAfterFibulaRegistrationTransformMatrix = self.getAxes1ToAxes2RegistrationTransformMatrix(afterMandibleToWorldChangeOfFrameMatrix,afterFibulaToWorldChangeOfFrameMatrix)
+
+        fibulaPlaneBTransform = vtk.vtkTransform()
+        fibulaPlaneBTransform.PostMultiply()
+        fibulaPlaneBTransform.Concatenate(mandibularPlaneFrameMatricesList[i+1])
+        fibulaPlaneBTransform.Concatenate(afterMandibleToAfterFibulaRegistrationTransformMatrix)
+        
+        fibulaPlaneBFrameZ = np.array([0,0,1],dtype='double')
+        fibulaPlaneBFrameOrigin = np.array([0,0,0],dtype='double')
+
+        fibulaPlaneBTransform.TransformVector(fibulaPlaneBFrameZ, fibulaPlaneBFrameZ)
+        fibulaPlaneBTransform.TransformPoint(fibulaPlaneBFrameOrigin, fibulaPlaneBFrameOrigin)
+        
+        fibulaPlaneB = vtk.vtkPlane()
+        fibulaPlaneBCutter = vtk.vtkCutter()
+        fibulaPlaneBCutter.SetInputData(fibulaModelNode.GetPolyData())
+
+        #end point
+        fibulaPlaneB.SetOrigin(fibulaPlaneBFrameOrigin)
+        fibulaPlaneB.SetNormal(fibulaPlaneBFrameZ)
+
+        fibulaPlaneBCutter.SetCutFunction(fibulaPlaneB)
+        fibulaPlaneBCutter.Update()
+        
+        measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
+        measureInFibulaFrameTransformer.SetTransform(worldToInitialFibulaFrame)
+        measureInFibulaFrameTransformer.SetInputData(fibulaPlaneBCutter.GetOutput())
+        measureInFibulaFrameTransformer.Update()
+        
+        boundsFibulaPlaneB = [0,0,0,0,0,0]
+        measureInFibulaFrameTransformer.GetOutput().ComputeBounds()
+        measureInFibulaFrameTransformer.GetOutput().GetBounds(boundsFibulaPlaneB)
+
+        boundsList.append(boundsFibulaPlaneB)
+        j += 1
+      
+      else:
+        beforeMandibleToWorldChangeOfFrameMatrix = self.switchOriginToMatrix(mandibleFramesMatrixList[i],pointsToCreatePlanes[i])
+        beforeFibulaToWorldChangeOfFrameMatrix = self.switchOriginToMatrix(initialFibulaFrameMatrix,self.fibulaPlanesPositionB[i-1])
+
+        beforeMandibleToBeforeFibulaRegistrationTransformMatrix = self.getAxes1ToAxes2RegistrationTransformMatrix(beforeMandibleToWorldChangeOfFrameMatrix,beforeFibulaToWorldChangeOfFrameMatrix)
+
+        fibulaPlaneATransform = vtk.vtkTransform()
+        fibulaPlaneATransform.PostMultiply()
+        fibulaPlaneATransform.Concatenate(mandibularPlaneFrameMatricesList[i])
+        fibulaPlaneATransform.Concatenate(beforeMandibleToBeforeFibulaRegistrationTransformMatrix)
+        
+        fibulaPlaneAFrameZ = np.array([0,0,1],dtype='double')
+        fibulaPlaneAFrameOrigin = np.array([0,0,0],dtype='double')
+
+        fibulaPlaneATransform.TransformVector(fibulaPlaneAFrameZ, fibulaPlaneAFrameZ)
+        fibulaPlaneATransform.TransformPoint(fibulaPlaneAFrameOrigin, fibulaPlaneAFrameOrigin)
+        
+        fibulaPlaneA = vtk.vtkPlane()
+        fibulaPlaneACutter = vtk.vtkCutter()
+        fibulaPlaneACutter.SetInputData(fibulaModelNode.GetPolyData())
+
+        fibulaPlaneA.SetOrigin(fibulaPlaneAFrameOrigin)
+        fibulaPlaneA.SetNormal(fibulaPlaneAFrameZ)
+
+        fibulaPlaneACutter.SetCutFunction(fibulaPlaneA)
+        fibulaPlaneACutter.Update()
+        
+        measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
+        measureInFibulaFrameTransformer.SetTransform(worldToInitialFibulaFrame)
+        measureInFibulaFrameTransformer.SetInputData(fibulaPlaneACutter.GetOutput())
+        measureInFibulaFrameTransformer.Update()
+        
+        boundsfibulaPlaneA = [0,0,0,0,0,0]
+        measureInFibulaFrameTransformer.GetOutput().ComputeBounds()
+        measureInFibulaFrameTransformer.GetOutput().GetBounds(boundsfibulaPlaneA)
+
+        boundsList.append(boundsfibulaPlaneA)
+        j += 1
+        
+        
+        boundsB = boundsList[j-2]
+        boundsA = boundsList[(j-2)+1]
+
+        #calculate how much each FibulaPlaneA should be translated so that it doesn't intersect with fibulaPlaneB
+        zBSup = boundsB[5]
+        zAInf = boundsA[4]
+        deltaZ = zBSup - zAInf
+
+        self.fibulaPlanesPositionA.append(self.fibulaPlanesPositionB[i-1] + initialFibulaFrameZ*(deltaZ + additionalBetweenSpaceOfFibulaPlanes))
+        self.fibulaPlanesPositionB.append(self.fibulaPlanesPositionA[i] + boneSegmentsDistance[i]*initialFibulaFrameZ)
+
+        if i!=(len(mandibularPlaneFrameMatricesList)-2):
+          afterMandibleToWorldChangeOfFrameMatrix = self.switchOriginToMatrix(mandibleFramesMatrixList[i],pointsToCreatePlanes[i+1])
+          afterFibulaToWorldChangeOfFrameMatrix = self.switchOriginToMatrix(initialFibulaFrameMatrix,self.fibulaPlanesPositionB[i])
+
+          afterMandibleToAfterFibulaRegistrationTransformMatrix = self.getAxes1ToAxes2RegistrationTransformMatrix(afterMandibleToWorldChangeOfFrameMatrix,afterFibulaToWorldChangeOfFrameMatrix)
+
+          fibulaPlaneBTransform = vtk.vtkTransform()
+          fibulaPlaneBTransform.PostMultiply()
+          fibulaPlaneBTransform.Concatenate(mandibularPlaneFrameMatricesList[i+1])
+          fibulaPlaneBTransform.Concatenate(afterMandibleToAfterFibulaRegistrationTransformMatrix)
+          
+          fibulaPlaneBFrameZ = np.array([0,0,1],dtype='double')
+          fibulaPlaneBFrameOrigin = np.array([0,0,0],dtype='double')
+
+          fibulaPlaneBTransform.TransformVector(fibulaPlaneBFrameZ, fibulaPlaneBFrameZ)
+          fibulaPlaneBTransform.TransformPoint(fibulaPlaneBFrameOrigin, fibulaPlaneBFrameOrigin)
+          
+          fibulaPlaneB = vtk.vtkPlane()
+          fibulaPlaneBCutter = vtk.vtkCutter()
+          fibulaPlaneBCutter.SetInputData(fibulaModelNode.GetPolyData())
+
+          #end point
+          fibulaPlaneB.SetOrigin(fibulaPlaneBFrameOrigin)
+          fibulaPlaneB.SetNormal(fibulaPlaneBFrameZ)
+
+          fibulaPlaneBCutter.SetCutFunction(fibulaPlaneB)
+          fibulaPlaneBCutter.Update()
+          
+          measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
+          measureInFibulaFrameTransformer.SetTransform(worldToInitialFibulaFrame)
+          measureInFibulaFrameTransformer.SetInputData(fibulaPlaneBCutter.GetOutput())
+          measureInFibulaFrameTransformer.Update()
+          
+          boundsFibulaPlaneB = [0,0,0,0,0,0]
+          measureInFibulaFrameTransformer.GetOutput().ComputeBounds()
+          measureInFibulaFrameTransformer.GetOutput().GetBounds(boundsFibulaPlaneB)
+
+          boundsList.append(boundsFibulaPlaneB)
+          j += 1
+
+    fibulaFramesMatrixList = []
+    for i in range(len(mandibularPlaneFrameMatricesList)-1):
+      fibulaFramesMatrixList.append(
+        self.switchOriginToMatrix(
+          initialFibulaFrameMatrix,
+          (self.fibulaPlanesPositionA[i] + self.fibulaPlanesPositionB[i])/2
+          )
+      )
+
+    return fibulaFramesMatrixList
+  
+  def getAxes1ToAxes2RegistrationTransformMatrix(self,axes1ToWorldChangeOfFrameMatrix,axes2ToWorldChangeOfFrameMatrix):
+    worldToAxes1ChangeOfFrameMatrix = vtk.vtkMatrix4x4()
+    worldToAxes1ChangeOfFrameMatrix.DeepCopy(axes1ToWorldChangeOfFrameMatrix)
+    worldToAxes1ChangeOfFrameMatrix.Invert()
+    axes2ToAxes1RegistrationTransformMatrix = vtk.vtkMatrix4x4()
+    vtk.vtkMatrix4x4.Multiply4x4(axes2ToWorldChangeOfFrameMatrix, worldToAxes1ChangeOfFrameMatrix, axes2ToAxes1RegistrationTransformMatrix)
+    return axes2ToAxes1RegistrationTransformMatrix
+
+  def switchOriginToMatrix(self,matrix,newOrigin):
+    newMatrix = vtk.vtkMatrix4x4()
+    newMatrix.DeepCopy(matrix)
+    newMatrix.SetElement(0,3,newOrigin[0])
+    newMatrix.SetElement(1,3,newOrigin[1])
+    newMatrix.SetElement(2,3,newOrigin[2])
+
+    return newMatrix
+  
+  def generateMandibleFramesMatrixList(self,mandibularPlaneFrameMatricesList,pointsToCreatePlanes):
+    mandibleFramesMatrixList = []
+    boneSegmentsDistance = []
+    for i in len(range(mandibularPlaneFrameMatricesList)-1):
+      #Create origin1-origin2 vector
+        or0 = pointsToCreatePlanes[i]
+        or1 = pointsToCreatePlanes[i+1]
+        boneSegmentsDistance.append(np.linalg.norm(or1-or0))
+        mandibleAxisZ = (or1-or0)/np.linalg.norm(or1-or0)
+        mandibleAxisOrigin = (or1+or0)/2
+        
+        #Get Y component of mandiblePlane0
+        mandiblePlane0matrix = mandibularPlaneFrameMatricesList[i]
+        mandiblePlane0Y = np.array(
+          [mandiblePlane0matrix.GetElement(0,1),
+          mandiblePlane0matrix.GetElement(1,1),
+          mandiblePlane0matrix.GetElement(2,1)]
+        )
+        
+        mandibleAxisX = [0,0,0]
+        vtk.vtkMath.Cross(mandiblePlane0Y, mandibleAxisZ, mandibleAxisX)
+        mandibleAxisX = mandibleAxisX/np.linalg.norm(mandibleAxisX)
+        mandibleAxisY = [0,0,0]
+        vtk.vtkMath.Cross(mandibleAxisZ, mandibleAxisX, mandibleAxisY)
+        mandibleAxisY = mandibleAxisY/np.linalg.norm(mandibleAxisY)
+
+        mandibleFramesMatrixList.append(
+          self.getAxes1ToWorldChangeOfFrameMatrix(
+            mandibleAxisX,mandibleAxisY,mandibleAxisZ,mandibleAxisOrigin
+          )
+        )
+
+        return (mandibleFramesMatrixList,boneSegmentsDistance)
+  
+  def generateExternalFibulaLineFromOriginalFibulaLineModelAndMandibleCurve(self, originalFibulaLine, fibulaModelNode, mandibularCurve):
+    mandibleCurveLength = mandibularCurve.GetCurveLengthWorld()
+    
+    p0 = np.zeros(3)
+    p1 = np.zeros(3)
+    originalFibulaLine.GetNthControlPointPosition(0,p0)
+    originalFibulaLine.GetNthControlPointPosition(1,p1)
+    
+    fibulaLineDirection = (p1 - p0) / np.linalg.norm(p1 - p0)
+
+    fibulaLineEnd = p0 + fibulaLineDirection*mandibleCurveLength
+
+    lineStartPos = np.copy(p0)
+    lineEndPos = np.copy(fibulaLineEnd)
+
+
+    startPosPlane = vtk.vtkPlane()
+    startPosCutter = vtk.vtkCutter()
+    startPosCutter.SetInputData(fibulaModelNode.GetPolyData())
+
+    endPosPlane = vtk.vtkPlane()
+    endPosCutter = vtk.vtkCutter()
+    endPosCutter.SetInputData(fibulaModelNode.GetPolyData())
+
+    numberOfRepetitionsOfPositioningAlgorithm = 5
+    for i in range(numberOfRepetitionsOfPositioningAlgorithm):
+      fibulaLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
+      fibulaLineDirection = (lineEndPos-lineStartPos)/fibulaLineNorm
+
+      #start point
+      startPosPlane.SetOrigin(lineStartPos)
+      startPosPlane.SetNormal(fibulaLineDirection)
+
+      startPosCutter.SetCutFunction(startPosPlane)
+      startPosCutter.Update()
+
+      pd_start = vtk_to_numpy(startPosCutter.GetOutput().GetPoints().GetData())
+      from vtk.util.numpy_support import vtk_to_numpy
+      lineStartPos = np.average(pd_start, axis=0)
+
+      #end point
+      endPosPlane.SetOrigin(lineEndPos)
+      endPosPlane.SetNormal(fibulaLineDirection)
+
+      endPosCutter.SetCutFunction(endPosPlane)
+      endPosCutter.Update()
+
+      pd_end = vtk_to_numpy(endPosPlane.GetOutput().GetPoints().GetData())
+      lineEndPos = np.average(pd_end, axis=0)
+
+    newFibulaLineDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+
+    def makePointToPointDistancesMatrix(points0,points1):
+      point0ToPoint1DistancesMatrix = []
+      
+      for i in range(len(points0)):
+        point0ToPoint1DistancesVector = []
+        
+        for j in range(len(points1)):
+          point0ToPoint1DistancesVector.append([np.linalg.norm(points0[i]-points1[j]),i,j])
+        
+        point0ToPoint1DistancesMatrix.append(point0ToPoint1DistancesVector)
+      
+      return point0ToPoint1DistancesMatrix
+
+    def getListOfPointPairsOfLeastDistanceGivenAMetricsMatrix(metricsMatrix,points0,points1):
+      #get every point pair of least distance
+      pointPairsList = []
+      
+      for i in range(len(metricsMatrix)):
+        metricsMatrix[i].sort(key = lambda item : item[0])
+        
+        point0index = metricsMatrix[i][0][1]
+        point1index = metricsMatrix[i][0][2]
+        
+        pointPair = [points0[point0index]],points1[point1index]
+        pointPairsList.append(pointPair)
+
+      return pointPairsList
+
+    startPointsToEndPointsDistancesMatrix = makePointToPointDistancesMatrix(pd_start,pd_end)
+    pointPairsOfLeastDistance = getListOfPointPairsOfLeastDistanceGivenAMetricsMatrix(
+      startPointsToEndPointsDistancesMatrix,pd_start,pd_end
+    )
+    
+    def getPointPairFromListWithMostSimilarDirection(pointPairsList,direction):
+      maximumDotProduct = 0
+      maximumDotProductPointPair = []
+
+      for i in range(len(pointPairsList)):
+        pointPairDirectionLine = (
+          (pointPairsList[i][1]-pointPairsList[i][0])
+          /np.linalg.norm(pointPairsList[i][1]-pointPairsList[i][0])
+        )
+
+        dotProduct = vtk.vtkMath.Dot(pointPairDirectionLine, direction)
+        if  dotProduct > maximumDotProduct:
+          maximumDotProduct = dotProduct
+          maximumDotProductPointPair = pointPairsList[i]
+      
+      return maximumDotProductPointPair
+    
+    fibulaLinePoints = (
+      getPointPairFromListWithMostSimilarDirection(pointPairsOfLeastDistance,newFibulaLineDirection)
+    )
+
+    return fibulaLinePoints
+
+  def generateMandiblePlaneFramesFromPolylineAndMandibularCurve(self,pointsToCreatePlanes,mandibleCurve):
+    mandibleFramesMatrices = []
+    
+    #create planes from mandible curve
+    for i in range(len(pointsToCreatePlanes)):
+      closestCurvePoint = [0,0,0]
+      closestCurvePointIndex = mandibleCurve.GetClosestPointPositionAlongCurveWorld(pointsToCreatePlanes[i],closestCurvePoint)
+      matrix = vtk.vtkMatrix4x4()
+      mandibleCurve.GetCurvePointToWorldTransformAtPointIndex(closestCurvePointIndex,matrix)
+      matrix.SetElement(0,3,pointsToCreatePlanes[i][0])
+      matrix.SetElement(1,3,pointsToCreatePlanes[i][1])
+      matrix.SetElement(2,3,pointsToCreatePlanes[i][2])
+      mandibleFramesMatrices.append(matrix)
+    
+    #Set up planes for maximum bone contact
+    for i in range(0,len(mandibleFramesMatrices)-2):
+      or0 = np.array([0,0,0,1],dtype='double')
+      or1 = np.array([0,0,0,1],dtype='double')
+      or2 = np.array([0,0,0,1],dtype='double')
+      z1 = np.array([0,0,1,0],dtype='double')
+      mandibleFramesMatrices[i].MultiplyPoint(or0,or0)
+      mandibleFramesMatrices[i+1].MultiplyPoint(or1,or1)
+      mandibleFramesMatrices[i+2].MultiplyPoint(or2,or2)
+      mandibleFramesMatrices[i+1].MultiplyPoint(z1,z1)
+      or0 = or0[0:3]
+      or1 = or1[0:3]
+      or2 = or2[0:3]
+      z1 = z1[0:3]
+      lineDirectionVector = (or2-or0)/np.linalg.norm(or2-or0)
+      #lineDirectionVector1 = (or2-or1)/np.linalg.norm(or2-or1)
+
+      epsilon = 1e-5
+      if not (vtk.vtkMath.Dot(lineDirectionVector, z1) >= 1.0 - epsilon):
+        angleRadians = vtk.vtkMath.AngleBetweenVectors(lineDirectionVector, z1)
+        rotationAxis = [0,0,0]
+        vtk.vtkMath.Cross(lineDirectionVector, z1, rotationAxis)
+        rotationAxis = rotationAxis/np.linalg.norm(rotationAxis)
+        
+        finalTransform = vtk.vtkTransform()
+        finalTransform.PostMultiply()
+        finalTransform.Concatenate(mandibleFramesMatrices[i+1])
+        finalTransform.Translate(-or1)
+        finalTransform.RotateWXYZ(vtk.vtkMath.DegreesFromRadians(angleRadians), rotationAxis)
+        finalTransform.Translate(or1)
+        mandibleFramesMatrices[i+1] = finalTransform.GetMatrix()
+
+
+    #Make all the mandible planes have only an axial difference
+    for i in range(0,len(mandibleFramesMatrices)-1):
+      mandiblePlaneToCopyOrigin = np.array([0,0,0,1],dtype='double')
+      mandiblePlaneToCopyZ = np.array([0,0,1,0],dtype='double')
+      mandiblePlaneToChangeOrigin = np.array([0,0,0,1],dtype='double')
+      mandiblePlaneToChangeZ = np.array([0,0,1,0],dtype='double')
+      mandibleFramesMatrices[i].MultiplyPoint(mandiblePlaneToCopyOrigin,mandiblePlaneToCopyOrigin)
+      mandibleFramesMatrices[i].MultiplyPoint(mandiblePlaneToCopyZ,mandiblePlaneToCopyZ)
+      mandibleFramesMatrices[i+1].MultiplyPoint(mandiblePlaneToChangeOrigin,mandiblePlaneToChangeOrigin)
+      mandibleFramesMatrices[i+1].MultiplyPoint(mandiblePlaneToChangeZ,mandiblePlaneToChangeZ)
+      mandiblePlaneToCopyOrigin = mandiblePlaneToCopyOrigin[0:3]
+      mandiblePlaneToCopyZ = mandiblePlaneToCopyZ[0:3]
+      mandiblePlaneToChangeOrigin = mandiblePlaneToChangeOrigin[0:3]
+      mandiblePlaneToChangeZ = mandiblePlaneToChangeZ[0:3]
+
+      epsilon = 1e-5
+      if not (vtk.vtkMath.Dot(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ) >= 1.0 - epsilon):
+        angleRadians = vtk.vtkMath.AngleBetweenVectors(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ)
+        rotationAxis = [0,0,0]
+        vtk.vtkMath.Cross(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ, rotationAxis)
+        rotationAxis = rotationAxis/np.linalg.norm(rotationAxis)
+        
+        finalTransform = vtk.vtkTransform()
+        finalTransform.PostMultiply()
+        finalTransform.Concatenate(mandibleFramesMatrices[i])
+        finalTransform.Translate(-mandiblePlaneToCopyOrigin)
+        finalTransform.RotateWXYZ(vtk.vtkMath.DegreesFromRadians(angleRadians), rotationAxis)
+        finalTransform.Translate(mandiblePlaneToChangeOrigin)
+
+        mandibleFramesMatrices[i+1] = finalTransform.GetMatrix()
+
+    return mandibleFramesMatrices
   
   def getPointsForOptimalReconstruction(self,curve,numberOfSegments,minimalLengthOfSegments):
     import time
@@ -2262,6 +2742,24 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     axes1ToWorldRotationMatrix.SetElement(2,2,axis1Z[2])
 
     return axes1ToWorldRotationMatrix
+
+  def getAxes1ToWorldChangeOfFrameMatrix(self,axis1X,axis1Y,axis1Z,axisOrigin):
+    axes1ToWorldRotationMatrix = vtk.vtkMatrix4x4()
+    
+    axes1ToWorldRotationMatrix.SetElement(0,0,axis1X[0])
+    axes1ToWorldRotationMatrix.SetElement(1,0,axis1X[1])
+    axes1ToWorldRotationMatrix.SetElement(2,0,axis1X[2])
+    axes1ToWorldRotationMatrix.SetElement(0,1,axis1Y[0])
+    axes1ToWorldRotationMatrix.SetElement(1,1,axis1Y[1])
+    axes1ToWorldRotationMatrix.SetElement(2,1,axis1Y[2])
+    axes1ToWorldRotationMatrix.SetElement(0,2,axis1Z[0])
+    axes1ToWorldRotationMatrix.SetElement(1,2,axis1Z[1])
+    axes1ToWorldRotationMatrix.SetElement(2,2,axis1Z[2])
+    axes1ToWorldRotationMatrix.SetElement(0,3,axisOrigin[0])
+    axes1ToWorldRotationMatrix.SetElement(1,3,axisOrigin[1])
+    axes1ToWorldRotationMatrix.SetElement(2,3,axisOrigin[2])
+
+    return axes1ToWorldRotationMatrix
   
   def getAxes1ToAxes2RotationMatrix(self,axes1ToWorldRotationMatrix,axes2ToWorldRotationMatrix):
     worldToAxes2RotationMatrix = vtk.vtkMatrix4x4()
@@ -2559,7 +3057,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     return fibulaX, fibulaY, fibulaZ, fibulaOrigin
 
-  def createFibulaAxisFromFibulaLineAndNotLeftChecked_2(self,lineStartPos,lineEndPos,notLeftFibulaChecked):
+  def createFibulaAxisFromFibulaLineAndNotLeftChecked_2(self,lineStartPos,lineEndPos,notLeftFibulaChecked,returnMatrix = False):
     fibulaOrigin = lineStartPos
     fibulaZLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
     fibulaZ = (lineEndPos-lineStartPos)/fibulaZLineNorm
@@ -2576,7 +3074,25 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     vtk.vtkMath.Cross(fibulaZ, fibulaX, fibulaY)
     fibulaY = fibulaY/np.linalg.norm(fibulaY)
 
-    return fibulaX, fibulaY, fibulaZ, fibulaOrigin
+    if not returnMatrix:
+      return fibulaX, fibulaY, fibulaZ, fibulaOrigin
+    else:
+      matrix = vtk.vtkMatrix4x4()
+
+      matrix.SetElement(0,0,fibulaX[0])
+      matrix.SetElement(1,0,fibulaX[1])
+      matrix.SetElement(2,0,fibulaX[2])
+      matrix.SetElement(0,0,fibulaY[0])
+      matrix.SetElement(1,0,fibulaY[1])
+      matrix.SetElement(2,0,fibulaY[2])
+      matrix.SetElement(0,0,fibulaZ[0])
+      matrix.SetElement(1,0,fibulaZ[1])
+      matrix.SetElement(2,0,fibulaZ[2])
+      matrix.SetElement(0,0,fibulaOrigin[0])
+      matrix.SetElement(1,0,fibulaOrigin[1])
+      matrix.SetElement(2,0,fibulaOrigin[2])
+
+      return matrix
   
   def createMiterBoxesFromFibulaPlanes(self):
     parameterNode = self.getParameterNode()
