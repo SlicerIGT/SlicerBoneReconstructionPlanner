@@ -912,14 +912,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
     shNode.RemoveItem(transformedFibulaPiecesFolder)
 
-    mandibularPlaneFrameMatricesList = (
-      self.generateMandiblePlaneFramesFromPolylineAndMandibularCurve(pointsToCreatePlanes,mandibularCurve)
-    )
-
     fibulaLinePointsList = self.generateExternalFibulaLineFromOriginalFibulaLineModelAndMandibleCurve(
       originalFibulaLine, fibulaModelNode, mandibularCurve
     )
 
+    mandibularPlaneFrameMatricesList = (
+      self.generateMandiblePlaneFramesFromPolylineAndMandibularCurve(pointsToCreatePlanes,mandibularCurve)
+    )
 
     #Create mandible frames
     mandibleFramesMatrixList, boneSegmentsDistance = self.generateMandibleFramesMatrixList(mandibularPlaneFrameMatricesList,pointsToCreatePlanes)
@@ -937,7 +936,34 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaModelNode,
     )
     
+    #Create first and last fibulaPlanes
+    firstMandibleFrameToFirstFibulaFrameRegistrationTransformMatrix = (
+      self.getAxes1ToAxes2RegistrationTransformMatrix(
+        mandibleFramesMatrixList[0],fibulaFramesMatrixList[0]
+      )
+    )
 
+    firstFibulaPlaneFrameTransform = vtk.vtkTransform()
+    firstFibulaPlaneFrameTransform.PostMultiply()
+    firstFibulaPlaneFrameTransform.Concatenate(mandibleFramesMatrixList[0])
+    firstFibulaPlaneFrameTransform.Concatenate(
+      firstMandibleFrameToFirstFibulaFrameRegistrationTransformMatrix
+    )
+    firstFibulaPlaneFrameMatrix = firstFibulaPlaneFrameTransform.GetMatrix()
+
+    lastMandibleFrameToLastFibulaFrameRegistrationTransformMatrix = (
+      self.getAxes1ToAxes2RegistrationTransformMatrix(
+        mandibleFramesMatrixList[-1],fibulaFramesMatrixList[-1]
+      )
+    )
+
+    lastFibulaPlaneFrameTransform = vtk.vtkTransform()
+    lastFibulaPlaneFrameTransform.PostMultiply()
+    lastFibulaPlaneFrameTransform.Concatenate(mandibleFramesMatrixList[-1])
+    lastFibulaPlaneFrameTransform.Concatenate(
+      lastMandibleFrameToLastFibulaFrameRegistrationTransformMatrix
+    )
+    lastFibulaPlaneFrameMatrix = lastFibulaPlaneFrameTransform.GetMatrix()
 
 
 
