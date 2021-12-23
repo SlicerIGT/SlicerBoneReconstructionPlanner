@@ -937,7 +937,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaModelNode,
     )
     
-    
+
+
+
+
+
+
 
 
 
@@ -1000,22 +1005,73 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.fibulaPlanesPositionA = []
     self.fibulaPlanesPositionB = []
 
-    worldToInitialFibulaFrame = vtk.vtkMatrix4x4()
-    worldToInitialFibulaFrame.DeepCopy(initialFibulaFrameMatrix)
-    worldToInitialFibulaFrame.Invert()
+    worldToCorrectedFibulaFrame = vtk.vtkMatrix4x4()
+    worldToCorrectedFibulaFrame.DeepCopy(
+      self.switchOriginToMatrix(
+        initialFibulaFrameMatrix,initialFibulaFrameOrigin + initialFibulaFrameZ*initialSpace
+      )
+    )
+    worldToCorrectedFibulaFrame.Invert()
 
-    worldToInitialFibulaFrameTransform = vtk.vtkTransform()
-    worldToInitialFibulaFrameTransform.PostMultiply()
-    worldToInitialFibulaFrameTransform.Concatenate(worldToInitialFibulaFrame)
+    worldToCorrectedFibulaFrameTransform = vtk.vtkTransform()
+    worldToCorrectedFibulaFrameTransform.PostMultiply()
+    worldToCorrectedFibulaFrameTransform.Concatenate(worldToCorrectedFibulaFrame)
 
+    self.fibulaPlanesPositionA.append(initialFibulaFrameOrigin + initialFibulaFrameZ*initialSpace)
+    self.fibulaPlanesPositionB.append(self.fibulaPlanesPositionA[0] + boneSegmentsDistance[0]*initialFibulaFrameZ)
+
+    #get offset of intersection to fibula line so all rotated plans start from the same point
+    beforeMandibleToWorldChangeOfFrameMatrix = self.switchOriginToMatrix(mandibleFramesMatrixList[0],pointsToCreatePlanes[0])
+    beforeFibulaToWorldChangeOfFrameMatrix = self.switchOriginToMatrix(initialFibulaFrameMatrix,self.fibulaPlanesPositionA[0])
+
+    beforeMandibleToBeforeFibulaRegistrationTransformMatrix = self.getAxes1ToAxes2RegistrationTransformMatrix(beforeMandibleToWorldChangeOfFrameMatrix,beforeFibulaToWorldChangeOfFrameMatrix)
+
+    fibulaPlaneATransform = vtk.vtkTransform()
+    fibulaPlaneATransform.PostMultiply()
+    fibulaPlaneATransform.Concatenate(mandibularPlaneFrameMatricesList[0])
+    fibulaPlaneATransform.Concatenate(beforeMandibleToBeforeFibulaRegistrationTransformMatrix)
+    
+    fibulaPlaneAFrameZ = np.array([0,0,1],dtype='double')
+    fibulaPlaneAFrameOrigin = np.array([0,0,0],dtype='double')
+
+    fibulaPlaneATransform.TransformVector(fibulaPlaneAFrameZ, fibulaPlaneAFrameZ)
+    fibulaPlaneATransform.TransformPoint(fibulaPlaneAFrameOrigin, fibulaPlaneAFrameOrigin)
+    
+    fibulaPlaneA = vtk.vtkPlane()
+    fibulaPlaneACutter = vtk.vtkCutter()
+    fibulaPlaneACutter.SetInputData(fibulaModelNode.GetPolyData())
+
+    fibulaPlaneA.SetOrigin(fibulaPlaneAFrameOrigin)
+    fibulaPlaneA.SetNormal(fibulaPlaneAFrameZ)
+
+    fibulaPlaneACutter.SetCutFunction(fibulaPlaneA)
+    fibulaPlaneACutter.Update()
+    
+    measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
+    measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrame)
+    measureInFibulaFrameTransformer.SetInputData(fibulaPlaneACutter.GetOutput())
+    measureInFibulaFrameTransformer.Update()
+    
+    boundsFibulaPlaneA = [0,0,0,0,0,0]
+    measureInFibulaFrameTransformer.GetOutput().ComputeBounds()
+    measureInFibulaFrameTransformer.GetOutput().GetBounds(boundsFibulaPlaneA)
+
+    if boundsFibulaPlaneA[4] < 0:
+      self.fibulaPlanesPositionA.pop()
+      self.fibulaPlanesPositionB.pop()
+      self.fibulaPlanesPositionA.append(
+        initialFibulaFrameOrigin + initialFibulaFrameZ*(initialSpace-boundsFibulaPlaneA[4])
+      )
+      self.fibulaPlanesPositionB.append(
+        self.fibulaPlanesPositionA[0] + initialFibulaFrameZ*(
+          boneSegmentsDistance[0] - boundsFibulaPlaneA[4]
+        )
+      )
+ 
     boundsList = []
     j=0
-
     for i in range(len(mandibularPlaneFrameMatricesList)-1):
       if i==0:
-        self.fibulaPlanesPositionA.append(initialFibulaFrameOrigin + initialFibulaFrameZ*initialSpace)
-        self.fibulaPlanesPositionB.append(self.fibulaPlanesPositionA[i] + boneSegmentsDistance[i]*initialFibulaFrameZ)
-
         afterMandibleToWorldChangeOfFrameMatrix = self.switchOriginToMatrix(mandibleFramesMatrixList[i],pointsToCreatePlanes[i+1])
         afterFibulaToWorldChangeOfFrameMatrix = self.switchOriginToMatrix(initialFibulaFrameMatrix,self.fibulaPlanesPositionB[i])
 
@@ -1036,7 +1092,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         fibulaPlaneBCutter = vtk.vtkCutter()
         fibulaPlaneBCutter.SetInputData(fibulaModelNode.GetPolyData())
 
-        #end point
         fibulaPlaneB.SetOrigin(fibulaPlaneBFrameOrigin)
         fibulaPlaneB.SetNormal(fibulaPlaneBFrameZ)
 
@@ -1044,7 +1099,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         fibulaPlaneBCutter.Update()
         
         measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
-        measureInFibulaFrameTransformer.SetTransform(worldToInitialFibulaFrame)
+        measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrame)
         measureInFibulaFrameTransformer.SetInputData(fibulaPlaneBCutter.GetOutput())
         measureInFibulaFrameTransformer.Update()
         
@@ -1083,15 +1138,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         fibulaPlaneACutter.Update()
         
         measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
-        measureInFibulaFrameTransformer.SetTransform(worldToInitialFibulaFrame)
+        measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrame)
         measureInFibulaFrameTransformer.SetInputData(fibulaPlaneACutter.GetOutput())
         measureInFibulaFrameTransformer.Update()
         
-        boundsfibulaPlaneA = [0,0,0,0,0,0]
+        boundsFibulaPlaneA = [0,0,0,0,0,0]
         measureInFibulaFrameTransformer.GetOutput().ComputeBounds()
-        measureInFibulaFrameTransformer.GetOutput().GetBounds(boundsfibulaPlaneA)
+        measureInFibulaFrameTransformer.GetOutput().GetBounds(boundsFibulaPlaneA)
 
-        boundsList.append(boundsfibulaPlaneA)
+        boundsList.append(boundsFibulaPlaneA)
         j += 1
         
         
@@ -1135,7 +1190,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           fibulaPlaneBCutter.Update()
           
           measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
-          measureInFibulaFrameTransformer.SetTransform(worldToInitialFibulaFrame)
+          measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrame)
           measureInFibulaFrameTransformer.SetInputData(fibulaPlaneBCutter.GetOutput())
           measureInFibulaFrameTransformer.Update()
           
