@@ -883,6 +883,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     correctBonePositionsByNormalsOfTheMandible = parameterNode.GetParameter("correctBonePositionsByNormalsOfTheMandible") == 'True'
     numberOfSegments = int(parameterNode.GetParameter("numberOfSegmentsOfAutomaticReconstruction"))
     minimalBoneSegmentLength = float(parameterNode.GetParameter("minimalBoneSegmentLength"))
+    numberOfDifferentAngles = 60
 
     fibulaModelNode = decimatedFibulaModelNode
 
@@ -920,50 +921,63 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.generateMandiblePlaneFramesFromPolylineAndMandibularCurve(pointsToCreatePlanes,mandibularCurve)
     )
 
-    #Create mandible frames
-    mandibleFramesMatrixList, boneSegmentsDistance = self.generateMandibleFramesMatrixList(mandibularPlaneFrameMatricesList,pointsToCreatePlanes)
-  
-    #Create fibula frames
-    fibulaFramesMatrixList = self.generateFibulaFramesMatrixList(
-      fibulaLinePointsList,
-      mandibularPlaneFrameMatricesList,
-      notLeftFibulaChecked,
-      initialSpace,
-      additionalBetweenSpaceOfFibulaPlanes,
-      boneSegmentsDistance,
-      mandibleFramesMatrixList,
-      pointsToCreatePlanes,
-      fibulaModelNode,
-    )
-    
-    #Create first and last fibulaPlanes
-    firstMandibleFrameToFirstFibulaFrameRegistrationTransformMatrix = (
-      self.getAxes1ToAxes2RegistrationTransformMatrix(
-        mandibleFramesMatrixList[0],fibulaFramesMatrixList[0]
+    overlappingAreaMetricsVector = []
+    for i in range(numberOfDifferentAngles):
+      if i == 0:
+        angleOfRotation = 0
+        rotatedMandibularPlaneFrameMatricesList = mandibularPlaneFrameMatricesList
+      else:
+        angleOfRotation = (i/numberOfDifferentAngles)*360
+        rotatedMandibularPlaneFrameMatricesList = self.rotateMandiblePlanesByAngle(mandibularPlaneFrameMatricesList,angleOfRotation)
+
+      #Create mandible frames
+      mandibleFramesMatrixList, boneSegmentsDistance = self.generateMandibleFramesMatrixList(rotatedMandibularPlaneFrameMatricesList,pointsToCreatePlanes)
+
+      #Create fibula frames
+      fibulaFramesMatrixList = self.generateFibulaFramesMatrixList(
+        fibulaLinePointsList,
+        rotatedMandibularPlaneFrameMatricesList,
+        notLeftFibulaChecked,
+        initialSpace,
+        additionalBetweenSpaceOfFibulaPlanes,
+        boneSegmentsDistance,
+        mandibleFramesMatrixList,
+        pointsToCreatePlanes,
+        fibulaModelNode,
       )
-    )
-
-    firstFibulaPlaneFrameTransform = vtk.vtkTransform()
-    firstFibulaPlaneFrameTransform.PostMultiply()
-    firstFibulaPlaneFrameTransform.Concatenate(mandibleFramesMatrixList[0])
-    firstFibulaPlaneFrameTransform.Concatenate(
-      firstMandibleFrameToFirstFibulaFrameRegistrationTransformMatrix
-    )
-    firstFibulaPlaneFrameMatrix = firstFibulaPlaneFrameTransform.GetMatrix()
-
-    lastMandibleFrameToLastFibulaFrameRegistrationTransformMatrix = (
-      self.getAxes1ToAxes2RegistrationTransformMatrix(
-        mandibleFramesMatrixList[-1],fibulaFramesMatrixList[-1]
+      
+      #Create first and last fibulaPlanes
+      firstMandibleFrameToFirstFibulaFrameRegistrationTransformMatrix = (
+        self.getAxes1ToAxes2RegistrationTransformMatrix(
+          mandibleFramesMatrixList[0],fibulaFramesMatrixList[0]
+        )
       )
-    )
 
-    lastFibulaPlaneFrameTransform = vtk.vtkTransform()
-    lastFibulaPlaneFrameTransform.PostMultiply()
-    lastFibulaPlaneFrameTransform.Concatenate(mandibleFramesMatrixList[-1])
-    lastFibulaPlaneFrameTransform.Concatenate(
-      lastMandibleFrameToLastFibulaFrameRegistrationTransformMatrix
-    )
-    lastFibulaPlaneFrameMatrix = lastFibulaPlaneFrameTransform.GetMatrix()
+      firstFibulaPlaneFrameTransform = vtk.vtkTransform()
+      firstFibulaPlaneFrameTransform.PostMultiply()
+      firstFibulaPlaneFrameTransform.Concatenate(
+        rotatedMandibularPlaneFrameMatricesList[0]
+      )
+      firstFibulaPlaneFrameTransform.Concatenate(
+        firstMandibleFrameToFirstFibulaFrameRegistrationTransformMatrix
+      )
+      firstFibulaPlaneFrameMatrix = firstFibulaPlaneFrameTransform.GetMatrix()
+
+      lastMandibleFrameToLastFibulaFrameRegistrationTransformMatrix = (
+        self.getAxes1ToAxes2RegistrationTransformMatrix(
+          mandibleFramesMatrixList[-1],fibulaFramesMatrixList[-1]
+        )
+      )
+
+      lastFibulaPlaneFrameTransform = vtk.vtkTransform()
+      lastFibulaPlaneFrameTransform.PostMultiply()
+      lastFibulaPlaneFrameTransform.Concatenate(
+        rotatedMandibularPlaneFrameMatricesList[-1]
+      )
+      lastFibulaPlaneFrameTransform.Concatenate(
+        lastMandibleFrameToLastFibulaFrameRegistrationTransformMatrix
+      )
+      lastFibulaPlaneFrameMatrix = lastFibulaPlaneFrameTransform.GetMatrix()
 
 
 
@@ -1004,6 +1018,60 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.addMandiblePlaneObservers()
       self.onGenerateFibulaPlanesTimerTimeout()
   
+  def rotateMandiblePlanesByAngle(self,mandibularPlaneFrameMatricesList,angleOfRotation):
+    #rotate the first mandible plane around Z    
+    newMandibularPlaneFrameMatricesList = mandibularPlaneFrameMatricesList.copy()
+    mandiblePlaneToRotateOrigin = np.array([0,0,0,1],dtype='double')
+    mandiblePlaneToRotateZ = np.array([0,0,1,0],dtype='double')
+    mandiblePlaneToChangeOrigin = np.array([0,0,0,1],dtype='double')
+    mandiblePlaneToChangeZ = np.array([0,0,1,0],dtype='double')
+    mandibularPlaneFrameMatricesList[0].MultiplyPoint(mandiblePlaneToRotateOrigin,mandiblePlaneToRotateOrigin)
+    mandibularPlaneFrameMatricesList[0].MultiplyPoint(mandiblePlaneToRotateZ,mandiblePlaneToRotateZ)
+    mandiblePlaneToRotateOrigin = mandiblePlaneToRotateOrigin[0:3]
+    mandiblePlaneToRotateZ = mandiblePlaneToRotateZ[0:3]
+
+    finalTransform = vtk.vtkTransform()
+    finalTransform.PostMultiply()
+    finalTransform.Concatenate(newMandibularPlaneFrameMatricesList[0])
+    finalTransform.Translate(-mandiblePlaneToRotateOrigin)
+    finalTransform.RotateWXYZ(angleOfRotation, mandiblePlaneToRotateZ)
+    finalTransform.Translate(mandiblePlaneToRotateOrigin)
+
+    newMandibularPlaneFrameMatricesList[0] = finalTransform.GetMatrix()
+
+    #Make all the other mandible planes have only an axial difference
+    for i in range(0,len(newMandibularPlaneFrameMatricesList)-1):
+      mandiblePlaneToCopyOrigin = np.array([0,0,0,1],dtype='double')
+      mandiblePlaneToCopyZ = np.array([0,0,1,0],dtype='double')
+      mandiblePlaneToChangeOrigin = np.array([0,0,0,1],dtype='double')
+      mandiblePlaneToChangeZ = np.array([0,0,1,0],dtype='double')
+      newMandibularPlaneFrameMatricesList[i].MultiplyPoint(mandiblePlaneToCopyOrigin,mandiblePlaneToCopyOrigin)
+      newMandibularPlaneFrameMatricesList[i].MultiplyPoint(mandiblePlaneToCopyZ,mandiblePlaneToCopyZ)
+      newMandibularPlaneFrameMatricesList[i+1].MultiplyPoint(mandiblePlaneToChangeOrigin,mandiblePlaneToChangeOrigin)
+      newMandibularPlaneFrameMatricesList[i+1].MultiplyPoint(mandiblePlaneToChangeZ,mandiblePlaneToChangeZ)
+      mandiblePlaneToCopyOrigin = mandiblePlaneToCopyOrigin[0:3]
+      mandiblePlaneToCopyZ = mandiblePlaneToCopyZ[0:3]
+      mandiblePlaneToChangeOrigin = mandiblePlaneToChangeOrigin[0:3]
+      mandiblePlaneToChangeZ = mandiblePlaneToChangeZ[0:3]
+
+      epsilon = 1e-5
+      if not (vtk.vtkMath.Dot(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ) >= 1.0 - epsilon):
+        angleRadians = vtk.vtkMath.AngleBetweenVectors(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ)
+        rotationAxis = [0,0,0]
+        vtk.vtkMath.Cross(mandiblePlaneToCopyZ, mandiblePlaneToChangeZ, rotationAxis)
+        rotationAxis = rotationAxis/np.linalg.norm(rotationAxis)
+        
+        finalTransform = vtk.vtkTransform()
+        finalTransform.PostMultiply()
+        finalTransform.Concatenate(newMandibularPlaneFrameMatricesList[i])
+        finalTransform.Translate(-mandiblePlaneToCopyOrigin)
+        finalTransform.RotateWXYZ(vtk.vtkMath.DegreesFromRadians(angleRadians), rotationAxis)
+        finalTransform.Translate(mandiblePlaneToChangeOrigin)
+
+        newMandibularPlaneFrameMatricesList[i+1] = finalTransform.GetMatrix()
+    
+    return newMandibularPlaneFrameMatricesList
+      
   def generateFibulaFramesMatrixList(
     self,
     fibulaLinePointsList,
