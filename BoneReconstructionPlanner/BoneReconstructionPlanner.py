@@ -991,6 +991,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       )
       lastFibulaPlaneFrameMatrix = lastFibulaPlaneFrameTransform.GetMatrix()
 
+      #self.addCutPlane(frameMatrix=firstFibulaPlaneFrameMatrix)
+      #self.addCutPlane(frameMatrix=lastFibulaPlaneFrameMatrix)
+
       overlappingAreaMetric =(
         self.calculateOverlappingAreaMetricFromMandibleFibulaPlanesAndMandibleFibulaModels(
           rotatedMandibularPlaneFrameMatricesList[0],
@@ -1004,42 +1007,61 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         )
       )
 
+      overlappingAreaMetricsVector.append([overlappingAreaMetric,angleOfRotation])
 
+    overlappingAreaMetricsVector_np = np.array(overlappingAreaMetricsVector)
 
-
-
-
-
-
-
-
-
-    for point in pointsToCreatePlanes:
-      self.addCutPlane(point,dontCreateModifiedEventObserver=True)
-
-    self.addMandiblePlaneObservers()
-
+    #filter angles with value lower than 99.9% of max
+    overlappingAreaMetricsVector_np = overlappingAreaMetricsVector_np[
+      overlappingAreaMetricsVector_np[:,0] > ((0.999)*overlappingAreaMetricsVector_np[:,0].max())
+    ]
     
+    filteredOverlappingAreaMetricsVector = overlappingAreaMetricsVector_np.tolist()
 
+    #sort so smallest angle is first
+    filteredOverlappingAreaMetricsVector.sort(key = lambda item : item[1])
 
+    optimalMandibularPlaneFrameMatricesList = (
+      self.rotateMandiblePlanesByAngle(
+        mandibularPlaneFrameMatricesList,
+        filteredOverlappingAreaMetricsVector[0][1]
+        )
+    )
 
+    for i in range(len(optimalMandibularPlaneFrameMatricesList)):
+      self.addCutPlane(frameMatrix=optimalMandibularPlaneFrameMatricesList[i])
+    
+    externalFibulaLineNode = self.createFibulaLineFromPoints(fibulaLinePointsList[0],fibulaLinePointsList[1])
+    self.getParameterNode().SetNodeReferenceID("fibulaLine", externalFibulaLineNode.GetID())
+    slicer.app.processEvents()
 
+    if originalFibulaLine != None:
+      try:
+        # Compute output
+        pass
+        self.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible()
+        self.addMandiblePlaneObservers()
 
+      except Exception as e:
+        slicer.util.errorDisplay("Failed to compute results: "+str(e))
+        import traceback
+        traceback.print_exc()
+  
+  def createFibulaLineFromPoints(self,point0,point1):
+      lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+      lineNode.SetName("External fibulaLine")
+      slicer.mrmlScene.AddNode(lineNode)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(lineNode)
 
+      displayNode = lineNode.GetDisplayNode()
+      fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
+      displayNode.AddViewNodeID(fibulaViewNode.GetID())
+      displayNode.SetOccludedVisibility(True)
+      
+      lineNode.AddControlPoint(vtk.vtkVector3d(point0))
+      lineNode.AddControlPoint(vtk.vtkVector3d(point1))
 
-
-
-
-
-
-
-    self.onGenerateFibulaPlanesTimerTimeout()
-
-    if correctBonePositionsByNormalsOfTheMandible:
-      self.removeMandiblePlanesObservers()
-      self.correctMandbiblePlanesPositionsByNormalOfMandibleOnMandibularCurve(mask)
-      self.addMandiblePlaneObservers()
-      self.onGenerateFibulaPlanesTimerTimeout()
+      return lineNode
   
   def calculateOverlappingAreaMetricFromMandibleFibulaPlanesAndMandibleFibulaModels(
     self,
@@ -1168,6 +1190,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       wholeFibulaIntersectionsWithFibulaList.append(
         wholeFibulaIntersectionWithFibula
       )
+      #modelsLogic = slicer.modules.models.logic()
+      #model = modelsLogic.AddModel(wholeFibulaIntersectionWithFibula)
 
       extrusionFibulaIntersectionFilter = vtk.vtkLinearExtrusionFilter()
       extrusionFibulaIntersectionFilter.SetInputData(contourTriangulator.GetOutput())
@@ -1307,12 +1331,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     ):
     initialFibulaFrameMatrix = (
       self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(
-        fibulaLinePointsList[0], fibulaLinePointsList[1], notLeftFibulaChecked, True
+        fibulaLinePointsList[0], fibulaLinePointsList[1], notLeftFibulaChecked, returnMatrix = True
         )
     )
     initialFibulaFrameX,initialFibulaFrameY,initialFibulaFrameZ,initialFibulaFrameOrigin = (
       self.createFibulaAxisFromFibulaLineAndNotLeftChecked_2(
-        fibulaLinePointsList[0], fibulaLinePointsList[1], notLeftFibulaChecked, False
+        fibulaLinePointsList[0], fibulaLinePointsList[1], notLeftFibulaChecked, returnMatrix = False
         )
     )
     
@@ -1363,7 +1387,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaPlaneACutter.Update()
     
     measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
-    measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrame)
+    measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrameTransform)
     measureInFibulaFrameTransformer.SetInputData(fibulaPlaneACutter.GetOutput())
     measureInFibulaFrameTransformer.Update()
     
@@ -1414,7 +1438,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         fibulaPlaneBCutter.Update()
         
         measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
-        measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrame)
+        measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrameTransform)
         measureInFibulaFrameTransformer.SetInputData(fibulaPlaneBCutter.GetOutput())
         measureInFibulaFrameTransformer.Update()
         
@@ -1453,7 +1477,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         fibulaPlaneACutter.Update()
         
         measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
-        measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrame)
+        measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrameTransform)
         measureInFibulaFrameTransformer.SetInputData(fibulaPlaneACutter.GetOutput())
         measureInFibulaFrameTransformer.Update()
         
@@ -1505,7 +1529,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           fibulaPlaneBCutter.Update()
           
           measureInFibulaFrameTransformer = vtk.vtkTransformPolyDataFilter()
-          measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrame)
+          measureInFibulaFrameTransformer.SetTransform(worldToCorrectedFibulaFrameTransform)
           measureInFibulaFrameTransformer.SetInputData(fibulaPlaneBCutter.GetOutput())
           measureInFibulaFrameTransformer.Update()
           
@@ -1547,36 +1571,36 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def generateMandibleFramesMatrixList(self,mandibularPlaneFrameMatricesList,pointsToCreatePlanes):
     mandibleFramesMatrixList = []
     boneSegmentsDistance = []
-    for i in len(range(mandibularPlaneFrameMatricesList)-1):
+    for i in range(len(mandibularPlaneFrameMatricesList)-1):
       #Create origin1-origin2 vector
-        or0 = pointsToCreatePlanes[i]
-        or1 = pointsToCreatePlanes[i+1]
-        boneSegmentsDistance.append(np.linalg.norm(or1-or0))
-        mandibleAxisZ = (or1-or0)/np.linalg.norm(or1-or0)
-        mandibleAxisOrigin = (or1+or0)/2
-        
-        #Get Y component of mandiblePlane0
-        mandiblePlane0matrix = mandibularPlaneFrameMatricesList[i]
-        mandiblePlane0Y = np.array(
-          [mandiblePlane0matrix.GetElement(0,1),
-          mandiblePlane0matrix.GetElement(1,1),
-          mandiblePlane0matrix.GetElement(2,1)]
-        )
-        
-        mandibleAxisX = [0,0,0]
-        vtk.vtkMath.Cross(mandiblePlane0Y, mandibleAxisZ, mandibleAxisX)
-        mandibleAxisX = mandibleAxisX/np.linalg.norm(mandibleAxisX)
-        mandibleAxisY = [0,0,0]
-        vtk.vtkMath.Cross(mandibleAxisZ, mandibleAxisX, mandibleAxisY)
-        mandibleAxisY = mandibleAxisY/np.linalg.norm(mandibleAxisY)
+      or0 = pointsToCreatePlanes[i]
+      or1 = pointsToCreatePlanes[i+1]
+      boneSegmentsDistance.append(np.linalg.norm(or1-or0))
+      mandibleAxisZ = (or1-or0)/np.linalg.norm(or1-or0)
+      mandibleAxisOrigin = (or1+or0)/2
+      
+      #Get Y component of mandiblePlane0
+      mandiblePlane0matrix = mandibularPlaneFrameMatricesList[i]
+      mandiblePlane0Y = np.array(
+        [mandiblePlane0matrix.GetElement(0,1),
+        mandiblePlane0matrix.GetElement(1,1),
+        mandiblePlane0matrix.GetElement(2,1)]
+      )
+      
+      mandibleAxisX = [0,0,0]
+      vtk.vtkMath.Cross(mandiblePlane0Y, mandibleAxisZ, mandibleAxisX)
+      mandibleAxisX = mandibleAxisX/np.linalg.norm(mandibleAxisX)
+      mandibleAxisY = [0,0,0]
+      vtk.vtkMath.Cross(mandibleAxisZ, mandibleAxisX, mandibleAxisY)
+      mandibleAxisY = mandibleAxisY/np.linalg.norm(mandibleAxisY)
 
-        mandibleFramesMatrixList.append(
-          self.getAxes1ToWorldChangeOfFrameMatrix(
-            mandibleAxisX,mandibleAxisY,mandibleAxisZ,mandibleAxisOrigin
-          )
+      mandibleFramesMatrixList.append(
+        self.getAxes1ToWorldChangeOfFrameMatrix(
+          mandibleAxisX,mandibleAxisY,mandibleAxisZ,mandibleAxisOrigin
         )
+      )
 
-        return (mandibleFramesMatrixList,boneSegmentsDistance)
+    return (mandibleFramesMatrixList,boneSegmentsDistance)
   
   def generateExternalFibulaLineFromOriginalFibulaLineModelAndMandibleCurve(self, originalFibulaLine, fibulaModelNode, mandibularCurve):
     mandibleCurveLength = mandibularCurve.GetCurveLengthWorld()
@@ -1614,8 +1638,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       startPosCutter.SetCutFunction(startPosPlane)
       startPosCutter.Update()
 
-      pd_start = vtk_to_numpy(startPosCutter.GetOutput().GetPoints().GetData())
       from vtk.util.numpy_support import vtk_to_numpy
+      pd_start = vtk_to_numpy(startPosCutter.GetOutput().GetPoints().GetData())
       lineStartPos = np.average(pd_start, axis=0)
 
       #end point
@@ -1625,7 +1649,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       endPosCutter.SetCutFunction(endPosPlane)
       endPosCutter.Update()
 
-      pd_end = vtk_to_numpy(endPosPlane.GetOutput().GetPoints().GetData())
+      pd_end = vtk_to_numpy(endPosCutter.GetOutput().GetPoints().GetData())
       lineEndPos = np.average(pd_end, axis=0)
 
     newFibulaLineDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
@@ -1653,13 +1677,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         point0index = metricsMatrix[i][0][1]
         point1index = metricsMatrix[i][0][2]
         
-        pointPair = [points0[point0index]],points1[point1index]
+        pointPair = [points0[point0index],points1[point1index]]
         pointPairsList.append(pointPair)
 
       return pointPairsList
 
     startPointsToEndPointsDistancesMatrix = makePointToPointDistancesMatrix(pd_start,pd_end)
-    pointPairsOfLeastDistance = getListOfPointPairsOfLeastDistanceGivenAMetricsMatrix(
+    pointPairsOfLeastDistanceList = getListOfPointPairsOfLeastDistanceGivenAMetricsMatrix(
       startPointsToEndPointsDistancesMatrix,pd_start,pd_end
     )
     
@@ -1681,7 +1705,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       return maximumDotProductPointPair
     
     fibulaLinePoints = (
-      getPointPairFromListWithMostSimilarDirection(pointPairsOfLeastDistance,newFibulaLineDirection)
+      getPointPairFromListWithMostSimilarDirection(pointPairsOfLeastDistanceList,newFibulaLineDirection)
     )
 
     return fibulaLinePoints
@@ -1839,7 +1863,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     else:
       return []
 
-  def addCutPlane(self,point=[],dontCreateModifiedEventObserver=False):
+  def addCutPlane(self,point=[],frameMatrix=None,dontCreateModifiedEventObserver=False):
     parameterNode = self.getParameterNode()
 
     colorIndexStr = parameterNode.GetParameter("colorIndex")
@@ -1875,21 +1899,44 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
-    #conections
-    self.planeNodeObserver = planeNode.AddObserver(
-      slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
-      lambda sourceNode,event,dontCreateModifiedEventObserver=dontCreateModifiedEventObserver,
-      keepOriginalOrigin=True: 
-      self.onPlanePointAdded(sourceNode,event,dontCreateModifiedEventObserver,keepOriginalOrigin)
-    )
+    if frameMatrix != None:
+      mandiblePlaneX = np.array([1,0,0,0],dtype='double')
+      mandiblePlaneY = np.array([0,1,0,0],dtype='double')
+      mandiblePlaneZ = np.array([0,0,1,0],dtype='double')
+      mandiblePlaneOrigin = np.array([0,0,0,1],dtype='double')
 
-    if point == []:
-      #setup placement
-      slicer.modules.markups.logic().SetActiveListID(planeNode)
-      interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-      interactionNode.SwitchToSinglePlaceMode()
+      frameMatrix.MultiplyPoint(mandiblePlaneX,mandiblePlaneX)
+      frameMatrix.MultiplyPoint(mandiblePlaneY,mandiblePlaneY)
+      #frameMatrix.MultiplyPoint(mandiblePlaneZ,mandiblePlaneZ)
+      frameMatrix.MultiplyPoint(mandiblePlaneOrigin,mandiblePlaneOrigin)
+
+      dx = 25#Numbers choosen so the planes are visible enough
+      dy = 25
+      #planeNode.SetNormal(mandiblePlaneZ[0:3])
+      planeNode.AddControlPoint(vtk.vtkVector3d(mandiblePlaneOrigin[0:3]))
+      planeNode.AddControlPoint(vtk.vtkVector3d(mandiblePlaneOrigin[0:3] + mandiblePlaneX[0:3]*dx))
+      planeNode.AddControlPoint(vtk.vtkVector3d(mandiblePlaneOrigin[0:3] + mandiblePlaneY[0:3]*dy))
+
+      displayNode = planeNode.GetDisplayNode()
+      displayNode.HandlesInteractiveOn()
+      for i in range(3):
+        planeNode.SetNthControlPointVisibility(i,False)
+
     else:
-      planeNode.SetOrigin(point)
+      if point == []:
+        #setup placement
+        slicer.modules.markups.logic().SetActiveListID(planeNode)
+        interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+        interactionNode.SwitchToSinglePlaceMode()
+      else:
+        planeNode.SetOrigin(point)
+
+      self.planeNodeObserver = planeNode.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+        lambda sourceNode,event,dontCreateModifiedEventObserver=dontCreateModifiedEventObserver,
+        keepOriginalOrigin=True: 
+        self.onPlanePointAdded(sourceNode,event,dontCreateModifiedEventObserver,keepOriginalOrigin)
+      )
 
   def onPlanePointAdded(self,sourceNode,event,dontCreateModifiedEventObserver,keepOriginalOrigin=False):
     parameterNode = self.getParameterNode()
@@ -2354,6 +2401,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, mandiblePlane1ToIntersectionAxisTransform, fibulaPlaneB, intersectionModelB)
           intersectionsList.append(intersectionModelB)
           intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
+          intersectionsList[j].HardenTransform()
           
           intersectionModelBItemID = shNode.GetItemByDataNode(intersectionModelB)
           shNode.SetItemParent(intersectionModelBItemID, intersectionsFolder)
@@ -2378,8 +2426,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
             j=j+1
             intersectionsList[j-1].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
             intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
-            intersectionsList[j-2].GetRASBounds(bounds0)
-            intersectionsList[(j-2)+1].GetRASBounds(bounds1)
+            intersectionsList[j-1].HardenTransform()
+            intersectionsList[j].HardenTransform()
+            intersectionsList[j-2].GetBounds(bounds0)
+            intersectionsList[(j-2)+1].GetBounds(bounds1)
           else:
             intersectionModelA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d_A' % i)
             intersectionModelA.CreateDefaultDisplayNodes()
@@ -2389,15 +2439,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
             shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
             j=j+1
             intersectionsList[j].SetAndObserveTransformNodeID(intersectionsTransformNode.GetID())
-            intersectionsList[j-1].GetRASBounds(bounds0)
-            intersectionsList[j].GetRASBounds(bounds1)
+            intersectionsList[j].HardenTransform()
+            intersectionsList[j-1].GetBounds(bounds0)
+            intersectionsList[j].GetBounds(bounds1)
 
           #calculate how much each FibulaPlaneA should be translated so that it doesn't intersect with fibulaPlaneB
-          z0Sup = bounds0[5]
-          z0Inf = bounds0[4]
-          z1Sup = bounds1[5]
-          z1Inf = bounds1[4]
-          deltaZ = (z0Sup - z0Inf)/2 + (z1Sup - z1Inf)/2
+          zBSup = bounds0[5]
+          zAInf = bounds1[4]
+          deltaZ = zBSup - zAInf
 
           betweenSpace.append(deltaZ)
 
@@ -3452,15 +3501,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       matrix.SetElement(0,0,fibulaX[0])
       matrix.SetElement(1,0,fibulaX[1])
       matrix.SetElement(2,0,fibulaX[2])
-      matrix.SetElement(0,0,fibulaY[0])
-      matrix.SetElement(1,0,fibulaY[1])
-      matrix.SetElement(2,0,fibulaY[2])
-      matrix.SetElement(0,0,fibulaZ[0])
-      matrix.SetElement(1,0,fibulaZ[1])
-      matrix.SetElement(2,0,fibulaZ[2])
-      matrix.SetElement(0,0,fibulaOrigin[0])
-      matrix.SetElement(1,0,fibulaOrigin[1])
-      matrix.SetElement(2,0,fibulaOrigin[2])
+      matrix.SetElement(0,1,fibulaY[0])
+      matrix.SetElement(1,1,fibulaY[1])
+      matrix.SetElement(2,1,fibulaY[2])
+      matrix.SetElement(0,2,fibulaZ[0])
+      matrix.SetElement(1,2,fibulaZ[1])
+      matrix.SetElement(2,2,fibulaZ[2])
+      matrix.SetElement(0,3,fibulaOrigin[0])
+      matrix.SetElement(1,3,fibulaOrigin[1])
+      matrix.SetElement(2,3,fibulaOrigin[2])
 
       return matrix
   
