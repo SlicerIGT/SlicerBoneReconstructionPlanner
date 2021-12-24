@@ -1738,14 +1738,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       or1 = or1[0:3]
       or2 = or2[0:3]
       z1 = z1[0:3]
-      lineDirectionVector = (or2-or0)/np.linalg.norm(or2-or0)
-      #lineDirectionVector1 = (or2-or1)/np.linalg.norm(or2-or1)
+      lineDirectionVector0 = (or1-or0)/np.linalg.norm(or1-or0)
+      lineDirectionVector1 = (or2-or1)/np.linalg.norm(or2-or1)
+
+      meanlineDirectionVector = (lineDirectionVector0+lineDirectionVector1)/np.linalg.norm(lineDirectionVector0+lineDirectionVector1)
+      
 
       epsilon = 1e-5
-      if not (vtk.vtkMath.Dot(lineDirectionVector, z1) >= 1.0 - epsilon):
-        angleRadians = vtk.vtkMath.AngleBetweenVectors(lineDirectionVector, z1)
+      if not (vtk.vtkMath.Dot(z1, meanlineDirectionVector) >= 1.0 - epsilon):
+        angleRadians = vtk.vtkMath.AngleBetweenVectors(z1, meanlineDirectionVector)
         rotationAxis = [0,0,0]
-        vtk.vtkMath.Cross(lineDirectionVector, z1, rotationAxis)
+        vtk.vtkMath.Cross(z1, meanlineDirectionVector, rotationAxis)
         rotationAxis = rotationAxis/np.linalg.norm(rotationAxis)
         
         finalTransform = vtk.vtkTransform()
