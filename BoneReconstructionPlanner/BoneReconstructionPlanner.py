@@ -875,7 +875,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     nonDecimatedFibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
     decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
-    nonDecimatedFibulaModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    nonDecimatedMandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     originalFibulaLine = parameterNode.GetNodeReference("fibulaLine")
     notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
@@ -890,7 +890,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaModelNode = decimatedFibulaModelNode
     mandibleModelNode = decimatedMandibleModelNode
 
-    pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstruction(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+    if correctBonePositionsByNormalsOfTheMandible:
+      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV2(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+    else:
+      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstruction(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+    print(pointsToCreatePlanesAndMask[1])
     
     if pointsToCreatePlanesAndMask == []:
       slicer.util.errorDisplay(
@@ -914,6 +918,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(cutBonesFolder)
     transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
     shNode.RemoveItem(transformedFibulaPiecesFolder)
+
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
 
     fibulaLinePointsList = self.generateExternalFibulaLineFromOriginalFibulaLineModelAndMandibleCurve(
       originalFibulaLine, fibulaModelNode, mandibularCurve
@@ -1047,6 +1055,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         import traceback
         traceback.print_exc()
   
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
+
   def createFibulaLineFromPoints(self,point0,point1):
       lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
       lineNode.SetName("External fibulaLine")
@@ -1255,11 +1266,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       massPropertiesFibulaIntersectionFilter.SetInputData(wholeFibulaIntersectionsWithFibulaList[i])
       massPropertiesFibulaIntersectionFilter.Update()
       fibulaIntersectionArea = massPropertiesFibulaIntersectionFilter.GetSurfaceArea()
-
-      metricValue += (
-        (intersectionArea/fibulaIntersectionArea)/
-        len(extrudedMandiblePlanesIntersectionsWithMandibleList)
-      )
+      if abs(fibulaIntersectionArea) > 1e-4:
+        metricValue += (
+          (intersectionArea/fibulaIntersectionArea)/
+          len(extrudedMandiblePlanesIntersectionsWithMandibleList)
+        )
 
     return metricValue
   
@@ -1849,6 +1860,81 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         continue
       #
       maxL1,meanL1,meanL2 = calculateMetricsForPolyline(curvePoints,digitsMoreSignificantDigitFirst)
+      indicesAndMetricsVector.append([digitsMoreSignificantDigitFirst,maxL1,meanL1,meanL2])
+
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
+
+    if len(indicesAndMetricsVector) > 0:
+      indicesAndMetricsVector.sort(key = lambda item : item[1])
+      indicesAndMetricMaxL1 = indicesAndMetricsVector[0]
+      #
+      #indicesAndMetricsVector.sort(key = lambda item : item[2])
+      #indicesAndMetricMeanL1 = indicesAndMetricsVector[0]
+      #
+      mask = np.array(indicesAndMetricMaxL1[0])
+      return [curvePoints[mask],mask]
+    else:
+      return []
+
+  def getPointsForOptimalReconstructionV2(self,curve,numberOfSegments,minimalLengthOfSegments):
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
+
+    curvePoints = slicer.util.arrayFromMarkupsCurvePoints(curve)
+
+    if numberOfSegments == 1:
+      mask = np.array([0,-1])
+      return [curvePoints[mask],mask]
+
+    numberOfPointsOfCurve = len(curvePoints)
+    numberOfPointsOfApproximation = numberOfSegments + 1
+
+    maxNumber = 0
+    for i in range(numberOfPointsOfApproximation-1):
+      maxNumber +=(numberOfPointsOfCurve**(i))*(numberOfPointsOfCurve-1)
+
+    pointToPointDistanceMatrix = []
+    for i in range(numberOfPointsOfCurve):
+      currentPoint = curvePoints[i]
+      pointToPointDistanceVector = []
+      for j in range(numberOfPointsOfCurve):
+        if j<i:
+          pointToPointDistanceVector.append(-1)
+          continue
+        pointToCompare = curvePoints[j]
+        distance = np.linalg.norm(pointToCompare-currentPoint)
+        pointToPointDistanceVector.append(distance)
+      pointToPointDistanceMatrix.append(pointToPointDistanceVector)
+    
+    normalDistanceMetricsTensor = calculateNormalDistanceMetricsTensor(curvePoints)
+
+    indicesAndMetricsVector = []
+    for i in range((numberOfPointsOfCurve-1),maxNumber+1,numberOfPointsOfCurve):
+      nextNumber = False
+      digitsMoreSignificantDigitFirst = digits(i,numberOfPointsOfCurve)
+      #
+      while len(digitsMoreSignificantDigitFirst) != numberOfPointsOfApproximation:
+        digitsMoreSignificantDigitFirst.append(0)
+      #
+      digitsMoreSignificantDigitFirst.reverse()
+      for j in range(numberOfPointsOfApproximation-1):
+        if (
+          digitsMoreSignificantDigitFirst[j] >= digitsMoreSignificantDigitFirst[j+1]
+        ):
+          nextNumber = True
+          break
+      #
+      if nextNumber:
+        continue
+      #
+      if not(validDistancesBetweenPointsOfIndices(
+        digitsMoreSignificantDigitFirst, minimalLengthOfSegments, pointToPointDistanceMatrix)
+      ):
+        continue
+      #
+      maxL1,meanL1,meanL2 = calculateMetricsForPolylineV2(normalDistanceMetricsTensor,digitsMoreSignificantDigitFirst)
       indicesAndMetricsVector.append([digitsMoreSignificantDigitFirst,maxL1,meanL1,meanL2])
 
     stopTime = time.time()

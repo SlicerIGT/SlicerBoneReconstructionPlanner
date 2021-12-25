@@ -273,6 +273,49 @@ def calculateMetricsForPolyline(curvePoints,indices):
   #
   return maxL1Distance, meanL1Distance, meanL2Distance
 
+def calculateMetricsForPolylineV2(normalDistanceMetricsTensor,indices):
+  maxL1Distance = 1e5
+  meanL1Distance = 0
+  meanL2Distance = 0
+  distances = []
+  for i in range(len(normalDistanceMetricsTensor)):
+    distanceOfPointToSegments = 1e5
+    currentDistance = 0
+    for j in range(len(indices)-1):
+      currentDistance = normalDistanceMetricsTensor[i][indices[j]][indices[j+1]-indices[j]]
+      if currentDistance < distanceOfPointToSegments:
+        distanceOfPointToSegments = currentDistance
+    #
+    distances.append(distanceOfPointToSegments)
+  #
+  for i in range(len(normalDistanceMetricsTensor)):
+    meanL1Distance += abs(distances[i])
+    meanL2Distance += distances[i]**2
+  #
+  meanL1Distance = meanL1Distance/len(normalDistanceMetricsTensor)
+  meanL2Distance = meanL2Distance/len(normalDistanceMetricsTensor)
+  #
+  distances.sort(reverse=True)
+  maxL1Distance = distances[0]
+  #
+  return maxL1Distance, meanL1Distance, meanL2Distance
+
+
+def calculateNormalDistanceMetricsTensor(curvePoints):
+  normalDistanceMetricsTensor = []
+  for i in range(len(curvePoints)):
+    normalDistanceMetricsMatrix = []
+    for j in range(len(curvePoints)-1):
+      normalDistanceMetricsVector = []
+      for k in range(j,len(curvePoints)):
+        distance = distanceToSegment(curvePoints[i],curvePoints[j],curvePoints[k])
+        #normalDistanceMetricsVector.append([distance,i,j,k])
+        normalDistanceMetricsVector.append(distance)
+      normalDistanceMetricsMatrix.append(normalDistanceMetricsVector)
+    normalDistanceMetricsTensor.append(normalDistanceMetricsMatrix)
+
+  return normalDistanceMetricsTensor
+
 def getUnitNormalVectorsOfCurveNode(curveNode):
   a = slicer.util.arrayFromMarkupsCurvePoints(curveNode)
   
