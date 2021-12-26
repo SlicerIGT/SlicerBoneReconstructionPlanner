@@ -235,6 +235,24 @@ def distanceToSegment(point0, linePointA, linePointB):
   vtk.vtkMath.Cross(vectorAB, vectorA0, cross)
   return np.linalg.norm(cross)/np.linalg.norm(vectorAB)
 
+def distanceToSegmentAndSegmentLength(point0, linePointA, linePointB):
+  vectorAB = linePointB - linePointA
+  segmentABLength = np.linalg.norm(vectorAB)
+  vectorA0 = point0 - linePointA
+  #
+  if (vectorA0 @ vectorAB.T) <= 0.0:
+    return np.linalg.norm(vectorA0), segmentABLength
+  #
+  vectorB0 = point0 - linePointB
+  #
+  if (vectorB0 @ vectorAB.T) >= 0.0:
+    return np.linalg.norm(vectorB0), segmentABLength
+  #
+  cross = [0,0,0]
+  vtk.vtkMath.Cross(vectorAB, vectorA0, cross)
+  distance = np.linalg.norm(cross)/segmentABLength
+  return distance, segmentABLength
+
 def validDistancesBetweenPointsOfIndices(indices,minimalDistance,pointToPointDistanceMatrix):
   for i in range(len(indices)-1):
     distanceOfPointToNextOne = pointToPointDistanceMatrix[indices[i]][indices[i+1]]
@@ -300,6 +318,32 @@ def calculateMetricsForPolylineV2(normalDistanceMetricsTensor,indices):
   #
   return maxL1Distance, meanL1Distance, meanL2Distance
 
+def calculateMetricsForPolylineV3(normalDistanceMetricsTensor,indices):
+  maxL1Distance = 1e5
+  meanL1Distance = 0
+  meanL2Distance = 0
+  distances = []
+  for i in range(len(normalDistanceMetricsTensor)):
+    distanceOfPointToSegments = 1e5
+    currentDistance = 0
+    for j in range(len(indices)-1):
+      currentDistance = normalDistanceMetricsTensor[i][indices[j]][indices[j+1]]
+      if currentDistance < distanceOfPointToSegments:
+        distanceOfPointToSegments = currentDistance
+    #
+    distances.append(distanceOfPointToSegments)
+  #
+  for i in range(len(normalDistanceMetricsTensor)):
+    meanL1Distance += abs(distances[i])
+    meanL2Distance += distances[i]**2
+  #
+  meanL1Distance = meanL1Distance/len(normalDistanceMetricsTensor)
+  meanL2Distance = meanL2Distance/len(normalDistanceMetricsTensor)
+  #
+  distances.sort(reverse=True)
+  maxL1Distance = distances[0]
+  #
+  return maxL1Distance, meanL1Distance, meanL2Distance
 
 def calculateNormalDistanceMetricsTensor(curvePoints):
   normalDistanceMetricsTensor = []
@@ -315,6 +359,32 @@ def calculateNormalDistanceMetricsTensor(curvePoints):
     normalDistanceMetricsTensor.append(normalDistanceMetricsMatrix)
 
   return normalDistanceMetricsTensor
+
+def calculateNormalDistanceMetricsTensorAndNotMinimumDistancesVector(
+    curvePoints,minimunDistanceBetweenSegments
+  ):
+  normalDistanceMetricsTensor = []
+  indicesOfNotMinimumDistanceVector = []
+  for i in range(len(curvePoints)):
+    normalDistanceMetricsMatrix = []
+    for j in range(len(curvePoints)-1):
+      normalDistanceMetricsVector = []
+      for k in range(len(curvePoints)):
+        if k > j:
+          distance,segmentLength = distanceToSegmentAndSegmentLength(curvePoints[i],curvePoints[j],curvePoints[k])
+          if i == 0:
+            if segmentLength < minimunDistanceBetweenSegments:
+              indicesOfNotMinimumDistanceVector.append([j,k])
+          
+          normalDistanceMetricsVector.append(distance)
+        else:
+          normalDistanceMetricsVector.append(1e5)
+      
+      normalDistanceMetricsMatrix.append(normalDistanceMetricsVector)
+    
+    normalDistanceMetricsTensor.append(normalDistanceMetricsMatrix)
+
+  return normalDistanceMetricsTensor, indicesOfNotMinimumDistanceVector
 
 def getUnitNormalVectorsOfCurveNode(curveNode):
   a = slicer.util.arrayFromMarkupsCurvePoints(curveNode)
@@ -402,4 +472,85 @@ def generateIndicesArrayUsingHammingWeights(numberOfCurvePoints,numberOfSegments
   appendEnd = np.pad(appendStart, [(0, 0), (0, 1)], mode='constant', constant_values=(numberOfCurvePoints-1))
   
   return appendEnd
+
+def generateFilteredIndicesArrayUsingHammingWeightsAndNotMinimumDistanceArray(
+    numberOfCurvePoints,numberOfSegments,notMinimumDistanceIndicesVector
+):
+  import operator as op
+  from functools import reduce
+
+  def ncr(n, r):
+      r = min(r, n-r)
+      numer = reduce(op.mul, range(n, n-r, -1), 1)
+      denom = reduce(op.mul, range(1, r+1), 1)
+      return numer // denom  # or / in Python 2
+
+
+  numberOfSameHammingWeightNumbers = ncr(numberOfCurvePoints-2,numberOfSegments-1)
+  sameHammingWeightNumber = 0
+  sameHammingWeightNumbersList = [0]*numberOfSameHammingWeightNumbers
+  #initialize it
+  for i in range(numberOfSegments-1):
+    sameHammingWeightNumber += 2**i
+
+  sameHammingWeightNumbersList[0] = sameHammingWeightNumber
+
+  for i in range(1,numberOfSameHammingWeightNumbers):
+    #calculate next one:
+    c = sameHammingWeightNumber & -sameHammingWeightNumber
+    r = sameHammingWeightNumber + c
+    sameHammingWeightNumber = int(((r^sameHammingWeightNumber) >> 2) / c) | r
+    #
+    #and save it
+    sameHammingWeightNumbersList[i] = sameHammingWeightNumber
+
+  sameHammingWeightNumbers_array = np.array(sameHammingWeightNumbersList)
+
+  sameHammingWeightNumbers_array = (sameHammingWeightNumbers_array << 1) + 1 + 2**(numberOfCurvePoints-1)
+  
+  #for i in range(100):
+  #  print(sameHammingWeightNumbers_array[i])
+
+  for i in range(len(notMinimumDistanceIndicesVector)):
+    indicesToFilterConvertedToDecimal = (
+      2**notMinimumDistanceIndicesVector[i][0] + 2**notMinimumDistanceIndicesVector[i][1]
+      )
+    sameHammingWeightNumbers_array = (
+      sameHammingWeightNumbers_array[
+        np.logical_not((sameHammingWeightNumbers_array & indicesToFilterConvertedToDecimal) == indicesToFilterConvertedToDecimal)
+      ]
+    )
+    #print(notMinimumDistanceIndicesVector[i][0],notMinimumDistanceIndicesVector[i][1])
+
+  filteredSameHammingWeightNumbers_array = sameHammingWeightNumbers_array
+  #print('filtered array length')
+  #print(len(filteredSameHammingWeightNumbers_array))
+  #for i in range(len(filteredSameHammingWeightNumbers_array)):
+  #  print(filteredSameHammingWeightNumbers_array[i])
+
+  def unpackbits(x, num_bits):
+      if np.issubdtype(x.dtype, np.floating):
+          raise ValueError("numpy data type needs to be int-like")
+      xshape = list(x.shape)
+      x = x.reshape([-1, 1])
+      mask = 2**np.arange(num_bits, dtype=x.dtype).reshape([1, num_bits])
+      myresult = np.zeros(xshape + [num_bits],dtype=np.int8)
+      for i in range(myresult.shape[0]):
+        tempResult = (x[i] & mask).astype(bool)
+        myresult[i] = tempResult
+      return myresult
+
+  binaryMask = unpackbits(filteredSameHammingWeightNumbers_array,numberOfCurvePoints)
+
+  #for i in range(100):
+  #  print(binaryMask[i]==1)
+  #print('separator')
+  generatorArray = np.array(list(range(0, numberOfCurvePoints)),dtype=np.int8)
+
+  indicesOfCurve = np.ones([(filteredSameHammingWeightNumbers_array.shape[0]),numberOfSegments+1],dtype=np.int8)
+  for i in range(indicesOfCurve.shape[0]):
+    #print(generatorArray[binaryMask[i]==1])
+    indicesOfCurve[i] = generatorArray[binaryMask[i]==1]
+
+  return indicesOfCurve
 

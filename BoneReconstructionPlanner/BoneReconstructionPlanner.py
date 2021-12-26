@@ -891,9 +891,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleModelNode = decimatedMandibleModelNode
 
     if correctBonePositionsByNormalsOfTheMandible:
-      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV2(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
-    else:
       pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV3(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+    else:
+      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV4(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
     print(pointsToCreatePlanesAndMask[1])
     
     if pointsToCreatePlanesAndMask == []:
@@ -1803,6 +1803,66 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandibleFramesMatrices[i+1] = finalTransform.GetMatrix()
 
     return mandibleFramesMatrices
+  
+  def getPointsForOptimalReconstructionV4(self,curve,numberOfSegments,minimalLengthOfSegments):
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
+
+    curvePoints = slicer.util.arrayFromMarkupsCurvePoints(curve)
+
+    if numberOfSegments == 1:
+      mask = np.array([0,-1])
+      return [curvePoints[mask],mask]
+
+    numberOfPointsOfCurve = len(curvePoints)
+    numberOfPointsOfApproximation = numberOfSegments + 1
+
+    maxNumber = 0
+    for i in range(numberOfPointsOfApproximation-1):
+      maxNumber +=(numberOfPointsOfCurve**(i))*(numberOfPointsOfCurve-1)
+
+    pointToPointDistanceMatrix = []
+    for i in range(numberOfPointsOfCurve):
+      currentPoint = curvePoints[i]
+      pointToPointDistanceVector = []
+      for j in range(numberOfPointsOfCurve):
+        if j<i:
+          pointToPointDistanceVector.append(-1)
+          continue
+        pointToCompare = curvePoints[j]
+        distance = np.linalg.norm(pointToCompare-currentPoint)
+        pointToPointDistanceVector.append(distance)
+      pointToPointDistanceMatrix.append(pointToPointDistanceVector)
+
+    normalDistanceMetricsTensor, notMinimumDistanceIndicesVector = calculateNormalDistanceMetricsTensorAndNotMinimumDistancesVector(
+      curvePoints,
+      minimalLengthOfSegments
+    )
+
+    indicesArray = generateFilteredIndicesArrayUsingHammingWeightsAndNotMinimumDistanceArray(
+      numberOfPointsOfCurve,numberOfSegments,notMinimumDistanceIndicesVector
+    )
+    #print(indicesArray)
+    indicesAndMetricsVector = []
+    for i in range(indicesArray.shape[0]):
+      maxL1,meanL1,meanL2 = calculateMetricsForPolylineV3(normalDistanceMetricsTensor,indicesArray[i])
+      indicesAndMetricsVector.append([indicesArray[i],maxL1,meanL1,meanL2])
+
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
+
+    if len(indicesAndMetricsVector) > 0:
+      indicesAndMetricsVector.sort(key = lambda item : item[1])
+      indicesAndMetricMaxL1 = indicesAndMetricsVector[0]
+      #
+      #indicesAndMetricsVector.sort(key = lambda item : item[2])
+      #indicesAndMetricMeanL1 = indicesAndMetricsVector[0]
+      #
+      mask = np.array(indicesAndMetricMaxL1[0])
+      return [curvePoints[mask],mask]
+    else:
+      return []
   
   def getPointsForOptimalReconstructionV3(self,curve,numberOfSegments,minimalLengthOfSegments):
     import time
