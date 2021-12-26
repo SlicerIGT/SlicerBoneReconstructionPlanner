@@ -893,7 +893,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if correctBonePositionsByNormalsOfTheMandible:
       pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV2(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
     else:
-      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstruction(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV3(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
     print(pointsToCreatePlanesAndMask[1])
     
     if pointsToCreatePlanesAndMask == []:
@@ -1804,7 +1804,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     return mandibleFramesMatrices
   
-  def getPointsForOptimalReconstruction(self,curve,numberOfSegments,minimalLengthOfSegments):
+  def getPointsForOptimalReconstructionV3(self,curve,numberOfSegments,minimalLengthOfSegments):
     import time
     startTime = time.time()
     logging.info('Processing started')
@@ -1835,32 +1835,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         pointToPointDistanceVector.append(distance)
       pointToPointDistanceMatrix.append(pointToPointDistanceVector)
 
+    normalDistanceMetricsTensor = calculateNormalDistanceMetricsTensor(curvePoints)
+
+    indicesArray = generateIndicesArrayUsingHammingWeights(numberOfPointsOfCurve,numberOfSegments)
     indicesAndMetricsVector = []
-    for i in range((numberOfPointsOfCurve-1),maxNumber+1,numberOfPointsOfCurve):
-      nextNumber = False
-      digitsMoreSignificantDigitFirst = digits(i,numberOfPointsOfCurve)
-      #
-      while len(digitsMoreSignificantDigitFirst) != numberOfPointsOfApproximation:
-        digitsMoreSignificantDigitFirst.append(0)
-      #
-      digitsMoreSignificantDigitFirst.reverse()
-      for j in range(numberOfPointsOfApproximation-1):
-        if (
-          digitsMoreSignificantDigitFirst[j] >= digitsMoreSignificantDigitFirst[j+1]
-        ):
-          nextNumber = True
-          break
-      #
-      if nextNumber:
-        continue
-      #
+    for i in range(indicesArray.shape[0]):
       if not(validDistancesBetweenPointsOfIndices(
-        digitsMoreSignificantDigitFirst, minimalLengthOfSegments, pointToPointDistanceMatrix)
+        indicesArray[i], minimalLengthOfSegments, pointToPointDistanceMatrix)
       ):
         continue
       #
-      maxL1,meanL1,meanL2 = calculateMetricsForPolyline(curvePoints,digitsMoreSignificantDigitFirst)
-      indicesAndMetricsVector.append([digitsMoreSignificantDigitFirst,maxL1,meanL1,meanL2])
+      maxL1,meanL1,meanL2 = calculateMetricsForPolylineV2(normalDistanceMetricsTensor,indicesArray[i])
+      indicesAndMetricsVector.append([indicesArray[i],maxL1,meanL1,meanL2])
 
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))

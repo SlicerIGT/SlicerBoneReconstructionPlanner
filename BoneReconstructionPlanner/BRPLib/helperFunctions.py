@@ -346,3 +346,60 @@ def getUnitNormalVectorsOfCurveNode(curveNode):
   normal = np.array([1/length_dT_dt] * 3).transpose() * dT_dt
 
   return normal
+
+def generateIndicesArrayUsingHammingWeights(numberOfCurvePoints,numberOfSegments):
+  import operator as op
+  from functools import reduce
+
+  def ncr(n, r):
+      r = min(r, n-r)
+      numer = reduce(op.mul, range(n, n-r, -1), 1)
+      denom = reduce(op.mul, range(1, r+1), 1)
+      return numer // denom  # or / in Python 2
+
+
+  numberOfSameHammingWeightNumbers = ncr(numberOfCurvePoints-2,numberOfSegments-1)
+  sameHammingWeightNumber = 0
+  sameHammingWeightNumbersList = [0]*numberOfSameHammingWeightNumbers
+  #initialize it
+  for i in range(numberOfSegments-1):
+    sameHammingWeightNumber += 2**i
+
+  sameHammingWeightNumbersList[0] = sameHammingWeightNumber
+
+  for i in range(1,numberOfSameHammingWeightNumbers):
+    #calculate next one:
+    c = sameHammingWeightNumber & -sameHammingWeightNumber
+    r = sameHammingWeightNumber + c
+    sameHammingWeightNumber = int(((r^sameHammingWeightNumber) >> 2) / c) | r
+    #
+    #and save it
+    sameHammingWeightNumbersList[i] = sameHammingWeightNumber
+
+  sameHammingWeightNumbers_array = np.array(sameHammingWeightNumbersList)
+ 
+  def unpackbits(x, num_bits):
+      if np.issubdtype(x.dtype, np.floating):
+          raise ValueError("numpy data type needs to be int-like")
+      xshape = list(x.shape)
+      x = x.reshape([-1, 1])
+      mask = 2**np.arange(num_bits, dtype=x.dtype).reshape([1, num_bits])
+      myresult = np.zeros(xshape + [num_bits],dtype=np.int8)
+      for i in range(myresult.shape[0]):
+        tempResult = (x[i] & mask).astype(bool)
+        myresult[i] = tempResult
+      return myresult
+
+  binaryMask = unpackbits(sameHammingWeightNumbers_array,numberOfCurvePoints-2)
+
+  generatorArray = np.array(list(range(1, numberOfCurvePoints-1)),dtype=np.int8)
+
+  middleIndicesOfCurve = np.ones([numberOfSameHammingWeightNumbers,numberOfSegments-1],dtype=np.int8)
+  for i in range(middleIndicesOfCurve.shape[0]):
+    middleIndicesOfCurve[i] = generatorArray[binaryMask[i]==1]
+
+  appendStart = np.pad(middleIndicesOfCurve, [(0, 0), (1, 0)], mode='constant', constant_values=0)
+  appendEnd = np.pad(appendStart, [(0, 0), (0, 1)], mode='constant', constant_values=(numberOfCurvePoints-1))
+  
+  return appendEnd
+
