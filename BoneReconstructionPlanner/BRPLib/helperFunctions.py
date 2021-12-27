@@ -325,11 +325,9 @@ def calculateMetricsForPolylineV3(normalDistanceMetricsTensor,indices):
   distances = []
   for i in range(len(normalDistanceMetricsTensor)):
     distanceOfPointToSegments = 1e5
-    currentDistance = 0
     for j in range(len(indices)-1):
-      currentDistance = normalDistanceMetricsTensor[i][indices[j]][indices[j+1]]
-      if currentDistance < distanceOfPointToSegments:
-        distanceOfPointToSegments = currentDistance
+      if indices[j] <= i <= indices[j+1]:
+        distanceOfPointToSegments = normalDistanceMetricsTensor[i][indices[j]][indices[j+1]]
     #
     distances.append(distanceOfPointToSegments)
   #
