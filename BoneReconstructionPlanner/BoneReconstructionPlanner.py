@@ -890,10 +890,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaModelNode = decimatedFibulaModelNode
     mandibleModelNode = decimatedMandibleModelNode
 
-    if correctBonePositionsByNormalsOfTheMandible:
-      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV3(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
-    else:
-      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV4(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+    pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV4(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
     print(pointsToCreatePlanesAndMask[1])
     
     if pointsToCreatePlanesAndMask == []:
@@ -923,124 +920,110 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     startTime = time.time()
     logging.info('Processing started')
 
-    fibulaLinePointsList = self.generateExternalFibulaLineFromOriginalFibulaLineModelAndMandibleCurve(
-      originalFibulaLine, fibulaModelNode, mandibularCurve
+    fibulaLinePointsList = self.generateNewFibulaLineFromOriginalFibulaLineModelAndMandibleCurve(
+      originalFibulaLine, fibulaModelNode, mandibularCurve, createExternalFibulaLine=False
     )
 
     mandibularPlaneFrameMatricesList = (
       self.generateMandiblePlaneFramesFromPolylineAndMandibularCurve(pointsToCreatePlanes,mandibularCurve)
     )
 
-    overlappingAreaMetricsVector = []
-    for i in range(numberOfDifferentAngles):
-      if i == 0:
-        angleOfRotation = 0
-        rotatedMandibularPlaneFrameMatricesList = mandibularPlaneFrameMatricesList
-      else:
-        angleOfRotation = (i/numberOfDifferentAngles)*360
-        rotatedMandibularPlaneFrameMatricesList = self.rotateMandiblePlanesByAngle(mandibularPlaneFrameMatricesList,angleOfRotation)
+    #Create mandible frames
+    mandibleFramesMatrixList, boneSegmentsDistance = self.generateMandibleFramesMatrixList(mandibularPlaneFrameMatricesList,pointsToCreatePlanes)
 
-      #Create mandible frames
-      mandibleFramesMatrixList, boneSegmentsDistance = self.generateMandibleFramesMatrixList(rotatedMandibularPlaneFrameMatricesList,pointsToCreatePlanes)
-
-      #Create fibula frames
-      fibulaFramesMatrixList = self.generateFibulaFramesMatrixList(
-        fibulaLinePointsList,
-        rotatedMandibularPlaneFrameMatricesList,
-        notLeftFibulaChecked,
-        initialSpace,
-        additionalBetweenSpaceOfFibulaPlanes,
-        boneSegmentsDistance,
-        mandibleFramesMatrixList,
-        pointsToCreatePlanes,
-        fibulaModelNode,
-      )
-      
-      #Create first and last fibulaPlanes
-      firstMandibleFrameToFirstFibulaFrameRegistrationTransformMatrix = (
-        self.getAxes1ToAxes2RegistrationTransformMatrix(
-          mandibleFramesMatrixList[0],fibulaFramesMatrixList[0]
-        )
-      )
-      firstFibulaFrameToFirstMandibleFrameRegistrationTransformMatrix = (
-        self.getAxes1ToAxes2RegistrationTransformMatrix(
-          fibulaFramesMatrixList[0],mandibleFramesMatrixList[0]
-        )
-      )
-
-      firstFibulaPlaneFrameTransform = vtk.vtkTransform()
-      firstFibulaPlaneFrameTransform.PostMultiply()
-      firstFibulaPlaneFrameTransform.Concatenate(
-        rotatedMandibularPlaneFrameMatricesList[0]
-      )
-      firstFibulaPlaneFrameTransform.Concatenate(
-        firstMandibleFrameToFirstFibulaFrameRegistrationTransformMatrix
-      )
-      firstFibulaPlaneFrameMatrix = firstFibulaPlaneFrameTransform.GetMatrix()
-
-      lastMandibleFrameToLastFibulaFrameRegistrationTransformMatrix = (
-        self.getAxes1ToAxes2RegistrationTransformMatrix(
-          mandibleFramesMatrixList[-1],fibulaFramesMatrixList[-1]
-        )
-      )
-      lastFibulaFrameToLastMandibleFrameRegistrationTransformMatrix = (
-        self.getAxes1ToAxes2RegistrationTransformMatrix(
-          fibulaFramesMatrixList[-1],mandibleFramesMatrixList[-1]
-        )
-      )
-
-      lastFibulaPlaneFrameTransform = vtk.vtkTransform()
-      lastFibulaPlaneFrameTransform.PostMultiply()
-      lastFibulaPlaneFrameTransform.Concatenate(
-        rotatedMandibularPlaneFrameMatricesList[-1]
-      )
-      lastFibulaPlaneFrameTransform.Concatenate(
-        lastMandibleFrameToLastFibulaFrameRegistrationTransformMatrix
-      )
-      lastFibulaPlaneFrameMatrix = lastFibulaPlaneFrameTransform.GetMatrix()
-
-      #self.addCutPlane(frameMatrix=firstFibulaPlaneFrameMatrix)
-      #self.addCutPlane(frameMatrix=lastFibulaPlaneFrameMatrix)
-
-      overlappingAreaMetric =(
-        self.calculateOverlappingAreaMetricFromMandibleFibulaPlanesAndMandibleFibulaModels(
-          rotatedMandibularPlaneFrameMatricesList[0],
-          firstFibulaPlaneFrameMatrix,
-          firstFibulaFrameToFirstMandibleFrameRegistrationTransformMatrix,
-          rotatedMandibularPlaneFrameMatricesList[-1],
-          lastFibulaPlaneFrameMatrix,
-          lastFibulaFrameToLastMandibleFrameRegistrationTransformMatrix,
-          fibulaModelNode,
-          mandibleModelNode
-        )
-      )
-
-      overlappingAreaMetricsVector.append([overlappingAreaMetric,angleOfRotation])
-
-    overlappingAreaMetricsVector_np = np.array(overlappingAreaMetricsVector)
-
-    #filter angles with value lower than 99.9% of max
-    overlappingAreaMetricsVector_np = overlappingAreaMetricsVector_np[
-      overlappingAreaMetricsVector_np[:,0] > ((0.999)*overlappingAreaMetricsVector_np[:,0].max())
-    ]
+    #Create fibula frames
+    fibulaFramesMatrixList = self.generateFibulaFramesMatrixList(
+      fibulaLinePointsList,
+      mandibularPlaneFrameMatricesList,
+      notLeftFibulaChecked,
+      initialSpace,
+      additionalBetweenSpaceOfFibulaPlanes,
+      boneSegmentsDistance,
+      mandibleFramesMatrixList,
+      pointsToCreatePlanes,
+      fibulaModelNode,
+    )
     
-    filteredOverlappingAreaMetricsVector = overlappingAreaMetricsVector_np.tolist()
-
-    #sort so smallest angle is first
-    filteredOverlappingAreaMetricsVector.sort(key = lambda item : item[1])
-
-    optimalMandibularPlaneFrameMatricesList = (
-      self.rotateMandiblePlanesByAngle(
-        mandibularPlaneFrameMatricesList,
-        filteredOverlappingAreaMetricsVector[0][1]
+    mandibleFrameToFibulaFrameRegistrationTransformMatricesList = []
+    fibulaFrameToMandibleFrameRegistrationTransformMatricesList = []
+    for i in range(len(mandibleFramesMatrixList)):
+      mandibleFrameToFibulaFrameRegistrationTransformMatricesList.append(
+        self.getAxes1ToAxes2RegistrationTransformMatrix(
+          mandibleFramesMatrixList[i],fibulaFramesMatrixList[i]
         )
+      )
+      fibulaFrameToMandibleFrameRegistrationTransformMatricesList.append(
+        self.getAxes1ToAxes2RegistrationTransformMatrix(
+          fibulaFramesMatrixList[i],mandibleFramesMatrixList[i]
+        )
+      )
+
+    fibulaPlaneFrameMatricesList = []
+    for i in range(len(mandibularPlaneFrameMatricesList)):
+      if i == 0:
+        fibulaPlaneFrameTransform = vtk.vtkTransform()
+        fibulaPlaneFrameTransform.PostMultiply()
+        fibulaPlaneFrameTransform.Concatenate(
+          mandibularPlaneFrameMatricesList[0]
+        )
+        fibulaPlaneFrameTransform.Concatenate(
+          mandibleFrameToFibulaFrameRegistrationTransformMatricesList[0]
+        )
+        firstFibulaPlaneFrameMatrix = fibulaPlaneFrameTransform.GetMatrix()
+        fibulaPlaneFrameMatricesList.append(firstFibulaPlaneFrameMatrix)
+      elif i == (len(mandibularPlaneFrameMatricesList) -1):
+        fibulaPlaneFrameTransform = vtk.vtkTransform()
+        fibulaPlaneFrameTransform.PostMultiply()
+        fibulaPlaneFrameTransform.Concatenate(
+          mandibularPlaneFrameMatricesList[-1]
+        )
+        fibulaPlaneFrameTransform.Concatenate(
+          mandibleFrameToFibulaFrameRegistrationTransformMatricesList[-1]
+        )
+        firstFibulaPlaneFrameMatrix = fibulaPlaneFrameTransform.GetMatrix()
+        fibulaPlaneFrameMatricesList.append(firstFibulaPlaneFrameMatrix)
+      else:
+        fibulaPlaneBFrameTransform = vtk.vtkTransform()
+        fibulaPlaneBFrameTransform.PostMultiply()
+        fibulaPlaneBFrameTransform.Concatenate(
+          mandibularPlaneFrameMatricesList[i]
+        )
+        fibulaPlaneBFrameTransform.Concatenate(
+          mandibleFrameToFibulaFrameRegistrationTransformMatricesList[i-1]
+        )
+        firstFibulaBPlaneFrameMatrix = fibulaPlaneBFrameTransform.GetMatrix()
+        fibulaPlaneFrameMatricesList.append(firstFibulaBPlaneFrameMatrix)
+      
+        fibulaPlaneAFrameTransform = vtk.vtkTransform()
+        fibulaPlaneAFrameTransform.PostMultiply()
+        fibulaPlaneAFrameTransform.Concatenate(
+          mandibularPlaneFrameMatricesList[i]
+        )
+        fibulaPlaneAFrameTransform.Concatenate(
+          mandibleFrameToFibulaFrameRegistrationTransformMatricesList[i]
+        )
+        firstFibulaAPlaneFrameMatrix = fibulaPlaneAFrameTransform.GetMatrix()
+        fibulaPlaneFrameMatricesList.append(firstFibulaAPlaneFrameMatrix)
+
+
+    print(mandibularPlaneFrameMatricesList)
+    print('')
+    print(fibulaPlaneFrameMatricesList)
+    correctedMandibularPlaneFrameMatricesList =(
+      self.calculateCorrectedMandibularPlaneFrameMatricesList(
+        mandibularPlaneFrameMatricesList,
+        fibulaPlaneFrameMatricesList,
+        fibulaFrameToMandibleFrameRegistrationTransformMatricesList,
+        fibulaModelNode,
+        mandibleModelNode
+      )
     )
 
-    for i in range(len(optimalMandibularPlaneFrameMatricesList)):
-      self.addCutPlane(frameMatrix=optimalMandibularPlaneFrameMatricesList[i])
+    for i in range(len(correctedMandibularPlaneFrameMatricesList)):
+      self.addCutPlane(frameMatrix=correctedMandibularPlaneFrameMatricesList[i])
     
-    externalFibulaLineNode = self.createFibulaLineFromPoints(fibulaLinePointsList[0],fibulaLinePointsList[1])
-    self.getParameterNode().SetNodeReferenceID("fibulaLine", externalFibulaLineNode.GetID())
+    newFibulaLineNode = self.createFibulaLineFromPoints(fibulaLinePointsList[0],fibulaLinePointsList[1])
+    self.getParameterNode().SetNodeReferenceID("fibulaLine", newFibulaLineNode.GetID())
     slicer.app.processEvents()
 
     if originalFibulaLine != None:
@@ -1060,7 +1043,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def createFibulaLineFromPoints(self,point0,point1):
       lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
-      lineNode.SetName("External fibulaLine")
+      lineNode.SetName("New fibulaLine")
       slicer.mrmlScene.AddNode(lineNode)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(lineNode)
 
@@ -1073,6 +1056,466 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       lineNode.AddControlPoint(vtk.vtkVector3d(point1))
 
       return lineNode
+  
+  def calculateCorrectedMandibularPlaneFrameMatricesList(
+    self,
+    mandibularPlaneFrameMatricesList,
+    fibulaPlaneFrameMatricesList,
+    fibulaFrameToMandibleFrameRegistrationTransformMatricesList,
+    fibulaModelNode,
+    mandibleModelNode
+  ):
+    HALF_EXTRUSION_LENGTH = 7.5
+
+    extrudedMandiblePlanesIntersectionsWithMandibleList = []
+    mandiblePlaneNormals = []
+    mandiblePlaneOrigins = []
+    for i in range(len(mandibularPlaneFrameMatricesList)):
+      mandiblePlaneOrigin = np.array([0,0,0,1],dtype='double')
+      mandiblePlaneZ = np.array([0,0,1,0],dtype='double')
+      mandibularPlaneFrameMatricesList[i].MultiplyPoint(mandiblePlaneOrigin,mandiblePlaneOrigin)
+      mandibularPlaneFrameMatricesList[i].MultiplyPoint(mandiblePlaneZ,mandiblePlaneZ)
+      mandiblePlaneOrigin = mandiblePlaneOrigin[0:3]
+      mandiblePlaneOrigins.append(mandiblePlaneOrigin)
+      mandiblePlaneZ = mandiblePlaneZ[0:3]
+      mandiblePlaneNormals.append(mandiblePlaneZ)
+      
+      mandiblePlane = vtk.vtkPlane()
+      mandiblePlaneCutter = vtk.vtkCutter()
+      mandiblePlaneCutter.SetInputData(mandibleModelNode.GetPolyData())
+
+      mandiblePlane.SetOrigin(mandiblePlaneOrigin)
+      mandiblePlane.SetNormal(mandiblePlaneZ)
+
+      mandiblePlaneCutter.SetCutFunction(mandiblePlane)
+      mandiblePlaneCutter.Update()
+
+      connectivityFilter = vtk.vtkConnectivityFilter()
+      connectivityFilter.SetInputData(mandiblePlaneCutter.GetOutput())
+      connectivityFilter.SetExtractionModeToClosestPointRegion()
+      connectivityFilter.SetClosestPoint(mandiblePlaneOrigin)
+      connectivityFilter.Update()
+
+      stripper = vtk.vtkStripper()
+      stripper.SetInputData(connectivityFilter.GetOutput())
+      stripper.JoinContiguousSegmentsOn()
+      stripper.Update()
+
+      contourTriangulator = vtk.vtkContourTriangulator()
+      contourTriangulator.SetInputData(stripper.GetOutput())
+      contourTriangulator.Update()
+
+      extrusionMandibleIntersectionFilter = vtk.vtkLinearExtrusionFilter()
+      extrusionMandibleIntersectionFilter.SetInputData(contourTriangulator.GetOutput())
+      extrusionMandibleIntersectionFilter.SetExtrusionTypeToNormalExtrusion()
+      extrusionMandibleIntersectionFilter.SetVector(*mandiblePlaneZ)
+      extrusionMandibleIntersectionFilter.SetScaleFactor(2*HALF_EXTRUSION_LENGTH)
+      extrusionMandibleIntersectionFilter.Update()
+
+      normalsFilter = vtk.vtkPolyDataNormals()
+      normalsFilter.SetInputData(extrusionMandibleIntersectionFilter.GetOutput())
+      normalsFilter.AutoOrientNormalsOn()
+      normalsFilter.Update()
+
+      #translateAlongNormalTransform = vtk.vtkTransform()
+      #translateAlongNormalTransform.PostMultiply()
+      #translateAlongNormalTransform.Translate(mandiblePlaneZ*HALF_EXTRUSION_LENGTH)
+
+      #transformerTranslateAlongNormal = vtk.vtkTransformPolyDataFilter()
+      #transformerTranslateAlongNormal.SetTransform(translateAlongNormalTransform)
+      #transformerTranslateAlongNormal.SetInputData(normalsFilter.GetOutput())
+      #transformerTranslateAlongNormal.Update()
+      
+      extrudedMandiblePlaneIntersectionWithMandible = vtk.vtkPolyData()
+      extrudedMandiblePlaneIntersectionWithMandible.ShallowCopy(
+        normalsFilter.GetOutput()
+      )
+
+      extrudedMandiblePlanesIntersectionsWithMandibleList.append(
+        extrudedMandiblePlaneIntersectionWithMandible
+      )
+
+    transformedExtrudedFibulaPlanesIntersectionsWithFibulaList = []
+    transformedFibulaPlaneIntersectionWithFibulaList = []
+    for i in range(len(fibulaPlaneFrameMatricesList)):
+      fibulaPlaneOrigin = np.array([0,0,0,1],dtype='double')
+      fibulaPlaneZ = np.array([0,0,1,0],dtype='double')
+      fibulaPlaneFrameMatricesList[i].MultiplyPoint(fibulaPlaneOrigin,fibulaPlaneOrigin)
+      fibulaPlaneFrameMatricesList[i].MultiplyPoint(fibulaPlaneZ,fibulaPlaneZ)
+      fibulaPlaneOrigin = fibulaPlaneOrigin[0:3]
+      fibulaPlaneZ = fibulaPlaneZ[0:3]
+      
+      fibulaPlane = vtk.vtkPlane()
+      fibulaPlaneCutter = vtk.vtkCutter()
+      fibulaPlaneCutter.SetInputData(fibulaModelNode.GetPolyData())
+
+      fibulaPlane.SetOrigin(fibulaPlaneOrigin)
+      fibulaPlane.SetNormal(fibulaPlaneZ)
+
+      fibulaPlaneCutter.SetCutFunction(fibulaPlane)
+      fibulaPlaneCutter.Update()
+
+      connectivityFilter = vtk.vtkConnectivityFilter()
+      connectivityFilter.SetInputData(fibulaPlaneCutter.GetOutput())
+      connectivityFilter.SetExtractionModeToClosestPointRegion()
+      connectivityFilter.SetClosestPoint(fibulaPlaneOrigin)
+      connectivityFilter.Update()
+
+      stripper = vtk.vtkStripper()
+      stripper.SetInputData(connectivityFilter.GetOutput())
+      stripper.JoinContiguousSegmentsOn()
+      stripper.Update()
+
+      fibulaFrameToMandibleFrameRegistrationTransform = vtk.vtkTransform()
+      fibulaFrameToMandibleFrameRegistrationTransform.PostMultiply()
+      fibulaFrameToMandibleFrameRegistrationTransform.Concatenate(
+        fibulaFrameToMandibleFrameRegistrationTransformMatricesList[i//2]
+      )
+      if i == 0:
+        mandiblePlaneZ = mandiblePlaneNormals[i]
+      elif i == (len(fibulaPlaneFrameMatricesList)-1):
+        mandiblePlaneZ = mandiblePlaneNormals[-1]
+      else:
+        mandiblePlaneZ = mandiblePlaneNormals[(i-1)//2 +1]
+      fibulaFrameToMandibleFrameRegistrationTransform.Translate(mandiblePlaneZ*HALF_EXTRUSION_LENGTH/2)
+
+      transformerFibulaToMandible = vtk.vtkTransformPolyDataFilter()
+      transformerFibulaToMandible.SetTransform(fibulaFrameToMandibleFrameRegistrationTransform)
+      transformerFibulaToMandible.SetInputData(stripper.GetOutput())
+      transformerFibulaToMandible.Update()
+
+      transformedFibulaPlaneIntersectionWithFibula = vtk.vtkPolyData()
+      transformedFibulaPlaneIntersectionWithFibula.ShallowCopy(
+        transformerFibulaToMandible.GetOutput()
+      )
+      transformedFibulaPlaneIntersectionWithFibulaList.append(
+        transformedFibulaPlaneIntersectionWithFibula
+      )
+
+      contourTriangulator = vtk.vtkContourTriangulator()
+      contourTriangulator.SetInputData(transformerFibulaToMandible.GetOutput())
+      contourTriangulator.Update()
+
+      #modelsLogic = slicer.modules.models.logic()
+      #model = modelsLogic.AddModel(wholeFibulaIntersectionWithFibula)
+
+      extrusionFibulaIntersectionFilter = vtk.vtkLinearExtrusionFilter()
+      extrusionFibulaIntersectionFilter.SetInputData(contourTriangulator.GetOutput())
+      extrusionFibulaIntersectionFilter.SetExtrusionTypeToNormalExtrusion()
+      extrusionFibulaIntersectionFilter.SetVector(*mandiblePlaneZ)
+      extrusionFibulaIntersectionFilter.SetScaleFactor(HALF_EXTRUSION_LENGTH)
+      extrusionFibulaIntersectionFilter.Update()
+
+      normalsFilter = vtk.vtkPolyDataNormals()
+      normalsFilter.SetInputData(extrusionFibulaIntersectionFilter.GetOutput())
+      normalsFilter.AutoOrientNormalsOn()
+      normalsFilter.Update()
+
+      transformedExtrudedFibulaPlaneIntersectionWithFibula = vtk.vtkPolyData()
+      transformedExtrudedFibulaPlaneIntersectionWithFibula.ShallowCopy(
+        normalsFilter.GetOutput()
+      )
+
+      transformedExtrudedFibulaPlanesIntersectionsWithFibulaList.append(
+        transformedExtrudedFibulaPlaneIntersectionWithFibula
+      )
+
+    print('extrudedMandiblePlanesIntersectionsWithMandibleList')
+    print(extrudedMandiblePlanesIntersectionsWithMandibleList)
+    print(len(extrudedMandiblePlanesIntersectionsWithMandibleList))
+    newMandiblePlaneOrigins = []
+
+    for i in range(len(extrudedMandiblePlanesIntersectionsWithMandibleList)):
+      print('test, i is increasing %d' % i)
+
+    for i in range(len(extrudedMandiblePlanesIntersectionsWithMandibleList)):
+      print('i equals %d' % i) 
+      if i == 0:
+        booleanOperationsFilter = slicer.vtkPolyDataBooleanFilter()
+        booleanOperationsFilter.SetOperModeToIntersection()
+        booleanOperationsFilter.SetInputData(
+          0, 
+          transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[i]
+        )
+        booleanOperationsFilter.SetInputData(
+          1, 
+          extrudedMandiblePlanesIntersectionsWithMandibleList[i]
+        )
+        booleanOperationsFilter.Update()
+        
+        modelsLogic = slicer.modules.models.logic()
+        model = modelsLogic.AddModel(transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[i])
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedFibulaIntersection"))
+        model = modelsLogic.AddModel(extrudedMandiblePlanesIntersectionsWithMandibleList[i])
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedMandibleIntersection"))
+        model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("intersection"))
+
+        from vtk.util.numpy_support import vtk_to_numpy
+        intersectionOfVolumesPointsArray = (
+          vtk_to_numpy(booleanOperationsFilter.GetOutput().GetPoints().GetData())
+        )
+        intersectionOfVolumesCentroid = np.average(intersectionOfVolumesPointsArray, axis=0)
+        realIntersectionOfVolumesCentroid = (
+          intersectionOfVolumesCentroid - mandiblePlaneNormals[i]*HALF_EXTRUSION_LENGTH/2
+        )
+
+        # calculate the difference
+        booleanOperationsFilter = slicer.vtkPolyDataBooleanFilter()
+        booleanOperationsFilter.SetOperModeToDifference()
+        booleanOperationsFilter.SetInputData(
+          0, 
+          transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[i]
+        )
+        booleanOperationsFilter.SetInputData(
+          1, 
+          extrudedMandiblePlanesIntersectionsWithMandibleList[i]
+        )
+        booleanOperationsFilter.Update()
+
+        model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("difference"))
+
+        from vtk.util.numpy_support import vtk_to_numpy
+        differenceOfVolumesPointsArray = (
+          vtk_to_numpy(booleanOperationsFilter.GetOutput().GetPoints().GetData())
+        )
+        differenceOfVolumesCentroid = np.average(differenceOfVolumesPointsArray, axis=0)
+        realDifferenceOfVolumesCentroid = (
+          differenceOfVolumesCentroid - mandiblePlaneNormals[i]*HALF_EXTRUSION_LENGTH/2
+        )
+
+        correctionOfPositionVector = realIntersectionOfVolumesCentroid - realDifferenceOfVolumesCentroid
+        correctionOfPositionDirection = (correctionOfPositionVector)/np.linalg.norm(correctionOfPositionVector)
+
+        planeCutter = vtk.vtkCutter()
+        planeCutter.SetInputData(transformedFibulaPlaneIntersectionWithFibulaList[i])
+
+        modelsLogic = slicer.modules.models.logic()
+        model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[i])
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+
+        print(realDifferenceOfVolumesCentroid)
+
+        planeNormal = [0,0,0]
+        vtk.vtkMath.Cross(mandiblePlaneNormals[i], correctionOfPositionDirection, planeNormal)
+        planeNormal = planeNormal/np.linalg.norm(planeNormal)
+
+        plane = vtk.vtkPlane()
+        plane.SetOrigin(realDifferenceOfVolumesCentroid)
+        plane.SetNormal(planeNormal)
+
+        planeCutter.SetCutFunction(plane)
+        planeCutter.Update()
+
+        model = modelsLogic.AddModel(planeCutter.GetOutput())
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("pointsOfCalculation"))
+
+        transformedCorrectionPoint = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
+          planeCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
+        )
+
+        realCorrectionPoint = transformedCorrectionPoint - mandiblePlaneNormals[i]*HALF_EXTRUSION_LENGTH/2
+
+        newMandiblePlaneOrigin = (mandiblePlaneOrigins[i] - realCorrectionPoint) + mandiblePlaneOrigins[i]
+
+        print('goes through i==0')
+        newMandiblePlaneOrigins.append(newMandiblePlaneOrigin)
+      elif i == (len(extrudedMandiblePlanesIntersectionsWithMandibleList) -1):
+        booleanOperationsFilter = slicer.vtkPolyDataBooleanFilter()
+        booleanOperationsFilter.SetOperModeToIntersection()
+        booleanOperationsFilter.SetInputData(
+          0, 
+          transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[-1]
+        )
+        booleanOperationsFilter.SetInputData(
+          1, 
+          extrudedMandiblePlanesIntersectionsWithMandibleList[-1]
+        )
+        booleanOperationsFilter.Update()
+
+        modelsLogic = slicer.modules.models.logic()
+        model = modelsLogic.AddModel(transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[-1])
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedFibulaIntersection"))
+        model = modelsLogic.AddModel(extrudedMandiblePlanesIntersectionsWithMandibleList[-1])
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedMandibleIntersection"))
+        model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("intersection"))
+
+        from vtk.util.numpy_support import vtk_to_numpy
+        intersectionOfVolumesPointsArray = (
+          vtk_to_numpy(booleanOperationsFilter.GetOutput().GetPoints().GetData())
+        )
+        intersectionOfVolumesCentroid = np.average(intersectionOfVolumesPointsArray, axis=0)
+        realIntersectionOfVolumesCentroid = (
+          intersectionOfVolumesCentroid - mandiblePlaneNormals[-1]*HALF_EXTRUSION_LENGTH/2
+        )
+
+        # calculate the difference
+        booleanOperationsFilter = slicer.vtkPolyDataBooleanFilter()
+        booleanOperationsFilter.SetOperModeToDifference()
+        booleanOperationsFilter.SetInputData(
+          0, 
+          transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[-1]
+        )
+        booleanOperationsFilter.SetInputData(
+          1, 
+          extrudedMandiblePlanesIntersectionsWithMandibleList[-1]
+        )
+        booleanOperationsFilter.Update()
+
+        model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("difference"))
+
+        from vtk.util.numpy_support import vtk_to_numpy
+        differenceOfVolumesPointsArray = (
+          vtk_to_numpy(booleanOperationsFilter.GetOutput().GetPoints().GetData())
+        )
+        differenceOfVolumesCentroid = np.average(differenceOfVolumesPointsArray, axis=0)
+        realDifferenceOfVolumesCentroid = (
+          differenceOfVolumesCentroid - mandiblePlaneNormals[-1]*HALF_EXTRUSION_LENGTH/2
+        )
+
+        correctionOfPositionVector = realIntersectionOfVolumesCentroid - realDifferenceOfVolumesCentroid
+        correctionOfPositionDirection = (correctionOfPositionVector)/np.linalg.norm(correctionOfPositionVector)
+
+        planeCutter = vtk.vtkCutter()
+        planeCutter.SetInputData(transformedFibulaPlaneIntersectionWithFibulaList[-1])
+
+        planeNormal = [0,0,0]
+        vtk.vtkMath.Cross(mandiblePlaneNormals[-1], correctionOfPositionDirection, planeNormal)
+        planeNormal = planeNormal/np.linalg.norm(planeNormal)
+
+        plane = vtk.vtkPlane()
+        plane.SetOrigin(realDifferenceOfVolumesCentroid)
+        plane.SetNormal(planeNormal)
+
+        planeCutter.SetCutFunction(plane)
+        planeCutter.Update()
+
+        model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[-1])
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+
+        model = modelsLogic.AddModel(planeCutter.GetOutput())
+        model.SetName(slicer.mrmlScene.GetUniqueNameByString("pointsOfCalculation"))
+
+        transformedCorrectionPoint = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
+          planeCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
+        )
+
+        realCorrectionPoint = transformedCorrectionPoint - mandiblePlaneNormals[-1]*HALF_EXTRUSION_LENGTH/2
+
+        newMandiblePlaneOrigin = (mandiblePlaneOrigins[-1] - realCorrectionPoint) + mandiblePlaneOrigins[-1]
+
+        print('goes through i==(len-1)')
+        newMandiblePlaneOrigins.append(newMandiblePlaneOrigin)
+      else:
+        newMandiblePlaneOriginsToAverage = []
+        for j in range(2):
+          booleanOperationsFilter = slicer.vtkPolyDataBooleanFilter()
+          booleanOperationsFilter.SetOperModeToIntersection()
+          booleanOperationsFilter.SetInputData(
+            0, 
+            transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[2*i-1+j]
+          )
+          booleanOperationsFilter.SetInputData(
+            1, 
+            extrudedMandiblePlanesIntersectionsWithMandibleList[i]
+          )
+          booleanOperationsFilter.Update()
+
+          modelsLogic = slicer.modules.models.logic()
+          model = modelsLogic.AddModel(transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[2*i-1+j])
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedFibulaIntersection"))
+          model = modelsLogic.AddModel(extrudedMandiblePlanesIntersectionsWithMandibleList[i])
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedMandibleIntersection"))
+          model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("intersection"))
+
+          from vtk.util.numpy_support import vtk_to_numpy
+          intersectionOfVolumesPointsArray = (
+            vtk_to_numpy(booleanOperationsFilter.GetOutput().GetPoints().GetData())
+          )
+          intersectionOfVolumesCentroid = np.average(intersectionOfVolumesPointsArray, axis=0)
+          realIntersectionOfVolumesCentroid = (
+            intersectionOfVolumesCentroid - mandiblePlaneNormals[i]*HALF_EXTRUSION_LENGTH/2
+          )
+
+          # calculate the difference
+          booleanOperationsFilter = slicer.vtkPolyDataBooleanFilter()
+          booleanOperationsFilter.SetOperModeToDifference()
+          booleanOperationsFilter.SetInputData(
+            0, 
+            transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[2*i-1+j]
+          )
+          booleanOperationsFilter.SetInputData(
+            1, 
+            extrudedMandiblePlanesIntersectionsWithMandibleList[i]
+          )
+          booleanOperationsFilter.Update()
+
+          model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("difference"))
+
+          from vtk.util.numpy_support import vtk_to_numpy
+          differenceOfVolumesPointsArray = (
+            vtk_to_numpy(booleanOperationsFilter.GetOutput().GetPoints().GetData())
+          )
+          differenceOfVolumesCentroid = np.average(differenceOfVolumesPointsArray, axis=0)
+          realDifferenceOfVolumesCentroid = (
+            differenceOfVolumesCentroid - mandiblePlaneNormals[i]*HALF_EXTRUSION_LENGTH/2
+          )
+
+          correctionOfPositionVector = realIntersectionOfVolumesCentroid - realDifferenceOfVolumesCentroid
+          correctionOfPositionDirection = (correctionOfPositionVector)/np.linalg.norm(correctionOfPositionVector)
+
+          planeCutter = vtk.vtkCutter()
+          planeCutter.SetInputData(transformedFibulaPlaneIntersectionWithFibulaList[2*i-1+j])
+
+          planeNormal = [0,0,0]
+          vtk.vtkMath.Cross(mandiblePlaneNormals[i], correctionOfPositionDirection, planeNormal)
+          planeNormal = planeNormal/np.linalg.norm(planeNormal)
+
+          plane = vtk.vtkPlane()
+          plane.SetOrigin(realDifferenceOfVolumesCentroid)
+          plane.SetNormal(planeNormal)
+
+          planeCutter.SetCutFunction(plane)
+          planeCutter.Update()
+
+          model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[2*i-1+j])
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+
+          model = modelsLogic.AddModel(planeCutter.GetOutput())
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("pointsOfCalculation"))
+
+          transformedCorrectionPoint = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
+            planeCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
+          )
+
+          realCorrectionPoint = transformedCorrectionPoint - mandiblePlaneNormals[i]*HALF_EXTRUSION_LENGTH/2
+
+          newMandiblePlaneOrigin = (mandiblePlaneOrigins[i] - realCorrectionPoint) + mandiblePlaneOrigins[i]
+
+          newMandiblePlaneOriginsToAverage.append(newMandiblePlaneOrigin)
+
+        print('goes through the middle cases of i')
+        newMandiblePlaneOrigins.append(
+          (newMandiblePlaneOriginsToAverage[0]+newMandiblePlaneOriginsToAverage[1])/2
+        )
+      
+    print(newMandiblePlaneOrigins)
+
+    correctedMandibularPlaneFrameMatricesList = []
+    for i in range(len(newMandiblePlaneOrigins)):
+      correctedMandibularPlaneFrameMatricesList.append(
+        self.switchOriginToMatrix(
+          mandibularPlaneFrameMatricesList[i],newMandiblePlaneOrigins[i]
+        )
+      )
+
+    return correctedMandibularPlaneFrameMatricesList
+
   
   def calculateOverlappingAreaMetricFromMandibleFibulaPlanesAndMandibleFibulaModels(
     self,
@@ -1613,7 +2056,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     return (mandibleFramesMatrixList,boneSegmentsDistance)
   
-  def generateExternalFibulaLineFromOriginalFibulaLineModelAndMandibleCurve(self, originalFibulaLine, fibulaModelNode, mandibularCurve):
+  def generateNewFibulaLineFromOriginalFibulaLineModelAndMandibleCurve(
+    self, originalFibulaLine, fibulaModelNode, mandibularCurve,
+    createExternalFibulaLine = True  
+  ):
     mandibleCurveLength = mandibularCurve.GetCurveLengthWorld()
     
     p0 = np.zeros(3)
@@ -1664,6 +2110,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       lineEndPos = np.average(pd_end, axis=0)
 
     newFibulaLineDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+
+    if not createExternalFibulaLine:
+      return [lineStartPos,lineEndPos]
 
     def makePointToPointDistancesMatrix(points0,points1):
       point0ToPoint1DistancesMatrix = []

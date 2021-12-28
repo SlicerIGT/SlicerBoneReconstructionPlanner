@@ -140,8 +140,11 @@ def getCentroid(model):
   from vtk.util.numpy_support import vtk_to_numpy
   return np.average(vtk_to_numpy(pd), axis=0)
 
-def getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(twoPointsModel,vector):
-  pointsData = twoPointsModel.GetPolyData().GetPoints().GetData()
+def getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(twoPointsModel,vector,isPolydata=False):
+  if not isPolydata:
+    pointsData = twoPointsModel.GetPolyData().GetPoints().GetData()
+  else:
+    pointsData = twoPointsModel.GetPoints().GetData()
   from vtk.util.numpy_support import vtk_to_numpy
 
   points = vtk_to_numpy(pointsData)
