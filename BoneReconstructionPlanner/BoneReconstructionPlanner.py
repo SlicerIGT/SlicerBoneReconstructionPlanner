@@ -1332,12 +1332,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         booleanOperationsFilter.Update()
         
         modelsLogic = slicer.modules.models.logic()
-        model = modelsLogic.AddModel(transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[i])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedFibulaIntersection"))
-        model = modelsLogic.AddModel(extrudedMandiblePlanesIntersectionsWithMandibleList[i])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedMandibleIntersection"))
-        model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("intersection"))
+        #model = modelsLogic.AddModel(transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[i])
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedFibulaIntersection"))
+        #model = modelsLogic.AddModel(extrudedMandiblePlanesIntersectionsWithMandibleList[i])
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedMandibleIntersection"))
+        #model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("intersection"))
 
         from vtk.util.numpy_support import vtk_to_numpy
         intersectionOfVolumesPointsArray = (
@@ -1361,8 +1361,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         )
         booleanOperationsFilter.Update()
 
-        model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("difference"))
+        #model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("difference"))
 
         from vtk.util.numpy_support import vtk_to_numpy
         differenceOfVolumesPointsArray = (
@@ -1380,8 +1380,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         fibulaPointsCutter.SetInputData(transformedFibulaPlaneIntersectionWithFibulaList[i])
 
         modelsLogic = slicer.modules.models.logic()
-        model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[i])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+        #model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[i])
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
 
         #print(realDifferenceOfVolumesCentroidFibula)
 
@@ -1396,8 +1396,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         fibulaPointsCutter.SetCutFunction(plane)
         fibulaPointsCutter.Update()
 
-        model = modelsLogic.AddModel(fibulaPointsCutter.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaPointsOfCalculation"))
+        #model = modelsLogic.AddModel(fibulaPointsCutter.GetOutput())
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaPointsOfCalculation"))
 
         transformedCorrectionPointFibula = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
           fibulaPointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
@@ -1409,8 +1409,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandiblePointsCutter.SetInputData(mandiblePlanesIntersectionsWithMandibleList[i])
 
         modelsLogic = slicer.modules.models.logic()
-        model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[i])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
+        #model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[i])
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
 
         realDifferenceOfVolumesCentroidMandible = (
           differenceOfVolumesCentroid - mandiblePlaneNormals[i]*HALF_EXTRUSION_LENGTH
@@ -1423,8 +1423,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandiblePointsCutter.SetCutFunction(plane)
         mandiblePointsCutter.Update()
 
-        model = modelsLogic.AddModel(mandiblePointsCutter.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandiblePointsOfCalculation"))
+        #model = modelsLogic.AddModel(mandiblePointsCutter.GetOutput())
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandiblePointsOfCalculation"))
 
         realCorrectionPointMandible = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
           mandiblePointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
@@ -1448,12 +1448,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         booleanOperationsFilter.Update()
 
         modelsLogic = slicer.modules.models.logic()
-        model = modelsLogic.AddModel(transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[-1])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedFibulaIntersection"))
-        model = modelsLogic.AddModel(extrudedMandiblePlanesIntersectionsWithMandibleList[-1])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedMandibleIntersection"))
-        model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("intersection"))
+        #model = modelsLogic.AddModel(transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[-1])
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedFibulaIntersection"))
+        #model = modelsLogic.AddModel(extrudedMandiblePlanesIntersectionsWithMandibleList[-1])
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedMandibleIntersection"))
+        #model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("intersection"))
 
         from vtk.util.numpy_support import vtk_to_numpy
         intersectionOfVolumesPointsArray = (
@@ -1477,8 +1477,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         )
         booleanOperationsFilter.Update()
 
-        model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("difference"))
+        #model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("difference"))
 
         from vtk.util.numpy_support import vtk_to_numpy
         differenceOfVolumesPointsArray = (
@@ -1506,11 +1506,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         fibulaPointsCutter.SetCutFunction(plane)
         fibulaPointsCutter.Update()
 
-        model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[-1])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+        #model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[-1])
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
 
-        model = modelsLogic.AddModel(fibulaPointsCutter.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaPointsOfCalculation"))
+        #model = modelsLogic.AddModel(fibulaPointsCutter.GetOutput())
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaPointsOfCalculation"))
 
         transformedCorrectionPointFibula = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
           fibulaPointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
@@ -1522,8 +1522,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandiblePointsCutter.SetInputData(mandiblePlanesIntersectionsWithMandibleList[-1])
 
         modelsLogic = slicer.modules.models.logic()
-        model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[-1])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
+        #model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[-1])
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
 
         realDifferenceOfVolumesCentroidMandible = (
           differenceOfVolumesCentroid - mandiblePlaneNormals[-1]*HALF_EXTRUSION_LENGTH
@@ -1536,8 +1536,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandiblePointsCutter.SetCutFunction(plane)
         mandiblePointsCutter.Update()
 
-        model = modelsLogic.AddModel(mandiblePointsCutter.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandiblePointsOfCalculation"))
+        #model = modelsLogic.AddModel(mandiblePointsCutter.GetOutput())
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandiblePointsOfCalculation"))
 
         realCorrectionPointMandible = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
           mandiblePointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
@@ -1563,12 +1563,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           booleanOperationsFilter.Update()
 
           modelsLogic = slicer.modules.models.logic()
-          model = modelsLogic.AddModel(transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[2*i-1+j])
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedFibulaIntersection"))
-          model = modelsLogic.AddModel(extrudedMandiblePlanesIntersectionsWithMandibleList[i])
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedMandibleIntersection"))
-          model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("intersection"))
+          #model = modelsLogic.AddModel(transformedExtrudedFibulaPlanesIntersectionsWithFibulaList[2*i-1+j])
+          #model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedFibulaIntersection"))
+          #model = modelsLogic.AddModel(extrudedMandiblePlanesIntersectionsWithMandibleList[i])
+          #model.SetName(slicer.mrmlScene.GetUniqueNameByString("extrudedMandibleIntersection"))
+          #model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+          #model.SetName(slicer.mrmlScene.GetUniqueNameByString("intersection"))
 
           from vtk.util.numpy_support import vtk_to_numpy
           intersectionOfVolumesPointsArray = (
@@ -1592,8 +1592,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           )
           booleanOperationsFilter.Update()
 
-          model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("difference"))
+          #model = modelsLogic.AddModel(booleanOperationsFilter.GetOutput())
+          #model.SetName(slicer.mrmlScene.GetUniqueNameByString("difference"))
 
           from vtk.util.numpy_support import vtk_to_numpy
           differenceOfVolumesPointsArray = (
@@ -1621,11 +1621,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           fibulaPointsCutter.SetCutFunction(plane)
           fibulaPointsCutter.Update()
 
-          model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[2*i-1+j])
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+          #model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[2*i-1+j])
+          #model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
 
-          model = modelsLogic.AddModel(fibulaPointsCutter.GetOutput())
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaPointsOfCalculation"))
+          #model = modelsLogic.AddModel(fibulaPointsCutter.GetOutput())
+          #model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaPointsOfCalculation"))
 
           transformedCorrectionPointFibula = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
             fibulaPointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
@@ -1637,8 +1637,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           mandiblePointsCutter.SetInputData(mandiblePlanesIntersectionsWithMandibleList[i])
 
           modelsLogic = slicer.modules.models.logic()
-          model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[i])
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
+          #model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[i])
+          #model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
 
           realDifferenceOfVolumesCentroidMandible = (
             differenceOfVolumesCentroid - mandiblePlaneNormals[i]*HALF_EXTRUSION_LENGTH
@@ -1651,8 +1651,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           mandiblePointsCutter.SetCutFunction(plane)
           mandiblePointsCutter.Update()
 
-          model = modelsLogic.AddModel(mandiblePointsCutter.GetOutput())
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandiblePointsOfCalculation"))
+          #model = modelsLogic.AddModel(mandiblePointsCutter.GetOutput())
+          #model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandiblePointsOfCalculation"))
 
           realCorrectionPointMandible = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
             mandiblePointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
