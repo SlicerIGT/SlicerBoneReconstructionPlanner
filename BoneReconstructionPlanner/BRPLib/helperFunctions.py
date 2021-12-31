@@ -346,6 +346,31 @@ def calculateMetricsForPolylineV3(normalDistanceMetricsTensor,indices):
   #
   return maxL1Distance, meanL1Distance, meanL2Distance
 
+def calculateMetricsForPolylineV4(normalDistanceMetricsTensor,indices):
+  maxL1Distance = 1e5
+  meanL1Distance = 0
+  meanL2Distance = 0
+  distances = []
+  for j in range(len(indices)-1):
+    for i in range(indices[j],indices[j+1]):
+      distanceOfPointToSegments = normalDistanceMetricsTensor[i][indices[j]][indices[j+1]]
+      distances.append(distanceOfPointToSegments)
+
+  distanceOfPointToSegments = normalDistanceMetricsTensor[indices[-1]][indices[-2]][indices[-1]]
+  distances.append(distanceOfPointToSegments)
+  #
+  for i in range(len(normalDistanceMetricsTensor)):
+    meanL1Distance += abs(distances[i])
+    meanL2Distance += distances[i]**2
+  #
+  meanL1Distance = meanL1Distance/len(normalDistanceMetricsTensor)
+  meanL2Distance = meanL2Distance/len(normalDistanceMetricsTensor)
+  #
+  distances.sort(reverse=True)
+  maxL1Distance = distances[0]
+  #
+  return maxL1Distance, meanL1Distance, meanL2Distance
+
 def calculateNormalDistanceMetricsTensor(curvePoints):
   normalDistanceMetricsTensor = []
   for i in range(len(curvePoints)):

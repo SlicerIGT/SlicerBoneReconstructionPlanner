@@ -2535,7 +2535,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #print(indicesArray)
     indicesAndMetricsVector = []
     for i in range(indicesArray.shape[0]):
-      maxL1,meanL1,meanL2 = calculateMetricsForPolylineV3(normalDistanceMetricsTensor,indicesArray[i])
+      maxL1,meanL1,meanL2 = calculateMetricsForPolylineV4(normalDistanceMetricsTensor,indicesArray[i])
       indicesAndMetricsVector.append([indicesArray[i],maxL1,meanL1,meanL2])
 
     stopTime = time.time()
