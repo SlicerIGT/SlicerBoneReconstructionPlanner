@@ -890,9 +890,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaModelNode = decimatedFibulaModelNode
     mandibleModelNode = decimatedMandibleModelNode
 
-    pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV4(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
-    print(pointsToCreatePlanesAndMask[1])
-    
+    if correctBonePositionsByNormalsOfTheMandible:
+      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV5(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+    else:
+      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV4(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+
     if pointsToCreatePlanesAndMask == []:
       slicer.util.errorDisplay(
         "No broken-line could be made of "+str(numberOfSegments)+
@@ -901,6 +903,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       )
       return
     
+    print(pointsToCreatePlanesAndMask[1])
+
     pointsToCreatePlanes = pointsToCreatePlanesAndMask[0]
     mask = pointsToCreatePlanesAndMask[1]
 
@@ -2493,6 +2497,111 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     return mandibleFramesMatrices
   
+  def getPointsForOptimalReconstructionV5(self,curve,numberOfSegments,minimalLengthOfSegments):
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
+
+    curvePoints = slicer.util.arrayFromMarkupsCurvePoints(curve)
+
+    if numberOfSegments == 1:
+      mask = np.array([0,-1])
+      return [curvePoints[mask],mask]
+
+    numberOfPointsOfCurve = len(curvePoints)
+    numberOfPointsOfApproximation = numberOfSegments + 1
+
+    maxNumber = 0
+    for i in range(numberOfPointsOfApproximation-1):
+      maxNumber +=(numberOfPointsOfCurve**(i))*(numberOfPointsOfCurve-1)
+
+    pointToPointDistanceMatrix = []
+    for i in range(numberOfPointsOfCurve):
+      currentPoint = curvePoints[i]
+      pointToPointDistanceVector = []
+      for j in range(numberOfPointsOfCurve):
+        if j<i:
+          pointToPointDistanceVector.append(-1)
+          continue
+        pointToCompare = curvePoints[j]
+        distance = np.linalg.norm(pointToCompare-currentPoint)
+        pointToPointDistanceVector.append(distance)
+      pointToPointDistanceMatrix.append(pointToPointDistanceVector)
+
+    normalDistanceMetricsTensor, notMinimumDistanceIndicesVector = calculateNormalDistanceMetricsTensorAndNotMinimumDistancesVector(
+      curvePoints,
+      minimalLengthOfSegments
+    )
+
+    notMinimumDistanceRangesVector = []
+    notMinimumDistanceIndicesVectorSorted = notMinimumDistanceIndicesVector.copy()
+    notMinimumDistanceIndicesVectorSorted.sort(key = lambda item : item[0])
+    notMinimumDistanceIndicesVectorSorted_np = np.array(notMinimumDistanceIndicesVectorSorted)
+    uniqueRows = np.unique(notMinimumDistanceIndicesVectorSorted_np.T[0])
+    for i in range(uniqueRows.shape[0]):
+      arrayWithStartingIndex = (
+        notMinimumDistanceIndicesVectorSorted_np[
+          notMinimumDistanceIndicesVectorSorted_np.T[0] == uniqueRows[i]
+        ]
+      )
+      arrayMinIndex = uniqueRows[i]
+      arrayMaxIndex = arrayWithStartingIndex.T[1].max()
+      notMinimumDistanceRangesVector.append([arrayMinIndex,arrayMaxIndex])
+      if arrayMaxIndex == (numberOfPointsOfCurve -1):
+        break
+    
+    #print(notMinimumDistanceRangesVector)
+
+    notMinimumDistanceRangesVectorReversed = []
+    notMinimumDistanceIndicesVectorSorted = notMinimumDistanceIndicesVector.copy()
+    notMinimumDistanceIndicesVectorSorted.sort(key = lambda item : item[1],reverse=True)
+    notMinimumDistanceIndicesVectorSorted_np = np.array(notMinimumDistanceIndicesVectorSorted)
+    uniqueRows = np.unique(notMinimumDistanceIndicesVectorSorted_np.T[1])
+    for i in range(uniqueRows.shape[0]-1,-1,-1):
+      arrayWithEndingIndex = (
+        notMinimumDistanceIndicesVectorSorted_np[
+          notMinimumDistanceIndicesVectorSorted_np.T[1] == uniqueRows[i]
+        ]
+      )
+      arrayMaxIndex = uniqueRows[i]
+      arrayMinIndex = arrayWithEndingIndex.T[0].min()
+      notMinimumDistanceRangesVectorReversed.append([arrayMinIndex,arrayMaxIndex])
+      if arrayMinIndex == 0:
+        break
+
+    notMinimumDistanceRangesVectorReversed.sort(key = lambda item : item[1])
+
+    #print(notMinimumDistanceRangesVectorReversed)
+    
+    notMinimumDistanceRangesVector_np = np.array(notMinimumDistanceRangesVector)
+    notMinimumDistanceRangesVectorReversed_np = np.array(notMinimumDistanceRangesVectorReversed)
+    
+    indicesArray = generateIndicesArrayRecursivelyUsingNonMinimumDistanceRanges(
+      numberOfPointsOfCurve,numberOfSegments,notMinimumDistanceRangesVector_np,
+      notMinimumDistanceRangesVectorReversed_np
+    )
+    #print(indicesArray)
+    indicesAndMetricsVector = []
+    for i in range(len(indicesArray)):
+      maxL1,meanL1,meanL2 = calculateMetricsForPolylineV4(normalDistanceMetricsTensor,indicesArray[i])
+      indicesAndMetricsVector.append([indicesArray[i],maxL1,meanL1,meanL2])
+
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
+
+    if len(indicesAndMetricsVector) > 0:
+      indicesAndMetricsVector.sort(key = lambda item : item[1])
+      indicesAndMetricMaxL1 = indicesAndMetricsVector[0]
+      #
+      #indicesAndMetricsVector.sort(key = lambda item : item[2])
+      #indicesAndMetricMeanL1 = indicesAndMetricsVector[0]
+      #
+      mask = np.array(indicesAndMetricMaxL1[0])
+      print(indicesAndMetricMaxL1[1])
+      return [curvePoints[mask],mask]
+    else:
+      return []
+
   def getPointsForOptimalReconstructionV4(self,curve,numberOfSegments,minimalLengthOfSegments):
     import time
     startTime = time.time()
@@ -2549,6 +2658,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       #indicesAndMetricMeanL1 = indicesAndMetricsVector[0]
       #
       mask = np.array(indicesAndMetricMaxL1[0])
+      print(indicesAndMetricMaxL1[1])
       return [curvePoints[mask],mask]
     else:
       return []

@@ -580,3 +580,67 @@ def generateFilteredIndicesArrayUsingHammingWeightsAndNotMinimumDistanceArray(
 
   return indicesOfCurve
 
+def generateIndicesArrayRecursivelyUsingNonMinimumDistanceRanges(
+  numberOfPointsOfCurve,numberOfSegments,notMinimumDistancesRangesVector_np,
+  notMinimumDistanceRangesVectorReversed_np
+):
+
+  indicesArray = []
+  global oneIndicesArray
+  oneIndicesArray = [0,]
+
+  nextPossiblePointBackwardList = []
+  for rootCrescentLevel in range(numberOfSegments,2-1,-1):
+    nextPossiblePointBackward = getNextPossiblePointBackward(
+      numberOfPointsOfCurve-1,
+      numberOfSegments - (numberOfSegments-rootCrescentLevel+1),
+      notMinimumDistanceRangesVectorReversed_np
+    )
+    nextPossiblePointBackwardList.append(nextPossiblePointBackward)
+  
+  def recursiveIndicesArrayCreationFunction(index,rootCrescentLevel):
+    global oneIndicesArray
+    nextPossiblePointForward = getNextPossiblePointForward(
+      index,
+      1,
+      notMinimumDistancesRangesVector_np
+    )
+    nextPossiblePointBackward = nextPossiblePointBackwardList[
+      numberOfSegments-rootCrescentLevel
+    ]
+    #print(nextPossiblePointForward,nextPossiblePointBackward)
+    if rootCrescentLevel == 2:
+      for i in range(nextPossiblePointForward,nextPossiblePointBackward+1):
+        oneIndicesArray.append(i)
+        oneIndicesArray.append(numberOfPointsOfCurve-1)
+        indicesArray.append(oneIndicesArray)
+        oneIndicesArray = oneIndicesArray[0:-2]
+      return
+    
+    for i in range(nextPossiblePointForward,nextPossiblePointBackward+1):
+      oneIndicesArray.append(i)
+      recursiveIndicesArrayCreationFunction(i,rootCrescentLevel-1)
+      oneIndicesArray = oneIndicesArray[0:-1]
+
+  recursiveIndicesArrayCreationFunction(0,numberOfSegments)
+
+  return indicesArray
+
+def getNextPossiblePointForward(curvePointIndex,order,notMinimumDistancesRangesVector):
+  result = curvePointIndex
+  for i in range(order):
+    if result >= notMinimumDistancesRangesVector[-1][0]:
+      return notMinimumDistancesRangesVector[-1][1]
+    currentCurvePointIndex = notMinimumDistancesRangesVector[result][1]
+    result = currentCurvePointIndex + 1
+  return result
+
+def getNextPossiblePointBackward(curvePointIndex,order,notMinimumDistanceRangesVectorReversed):
+  result = curvePointIndex - notMinimumDistanceRangesVectorReversed[0][1]
+  currentCurvePointIndex = curvePointIndex
+  for i in range(order):
+    if currentCurvePointIndex <= notMinimumDistanceRangesVectorReversed[0][1]:
+      return 0
+    currentCurvePointIndex = notMinimumDistanceRangesVectorReversed[result][0] -1
+    result = currentCurvePointIndex - notMinimumDistanceRangesVectorReversed[0][1]
+  return currentCurvePointIndex
