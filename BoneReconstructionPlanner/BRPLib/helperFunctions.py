@@ -156,6 +156,36 @@ def getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(twoPointsMode
   else:
     return points[0]
 
+def getPointOfAThatMakesLineDirectionSimilarToVectorAndItIsNearest(twoPointsModel,nearPoint,vector,isPolydata=False):
+  if not isPolydata:
+    pointsData = twoPointsModel.GetPolyData().GetPoints().GetData()
+  else:
+    pointsData = twoPointsModel.GetPoints().GetData()
+  from vtk.util.numpy_support import vtk_to_numpy
+
+  points = vtk_to_numpy(pointsData)
+
+  if len(points) > 2:
+    pointsAndDistancesList = []
+    for i in range(len(points)):
+      distance = np.linalg.norm(points[i]-nearPoint)
+      pointsAndDistancesList.append([points[i],distance])
+    
+    pointsAndDistancesList.sort(key = lambda item : item[1])
+
+    firstTwoPointsInCrescentDistanceOrder = []
+    for i in range(0,2):
+      firstTwoPointsInCrescentDistanceOrder.append(pointsAndDistancesList[i][0])
+    
+    points = firstTwoPointsInCrescentDistanceOrder
+
+  pointsVector = (points[1]-points[0])/np.linalg.norm(points[1]-points[0])
+
+  if vtk.vtkMath.Dot(pointsVector, vector) > 0:
+    return points[1]
+  else:
+    return points[0]
+
 def getLineNorm(line):
   lineStartPos = np.array([0,0,0])
   lineEndPos = np.array([0,0,0])
@@ -370,6 +400,35 @@ def calculateMetricsForPolylineV4(normalDistanceMetricsTensor,indices):
   maxL1Distance = distances[0]
   #
   return maxL1Distance, meanL1Distance, meanL2Distance
+
+def calculateMaxDistanceMetricForPolyline(normalDistanceMetricsTensor,indices):
+  maxL1Distance = 0
+  distances = []
+  for j in range(len(indices)-1):
+    for i in range(indices[j],indices[j+1]):
+      distanceOfPointToSegments = normalDistanceMetricsTensor[i][indices[j]][indices[j+1]]
+      if distanceOfPointToSegments > maxL1Distance:
+        maxL1Distance = distanceOfPointToSegments
+
+  distanceOfPointToSegments = normalDistanceMetricsTensor[indices[-1]][indices[-2]][indices[-1]]
+  if distanceOfPointToSegments > maxL1Distance:
+        maxL1Distance = distanceOfPointToSegments
+
+  return maxL1Distance
+
+def calculateMeanDistanceMetricForPolyline(normalDistanceMetricsTensor,indices):
+  meanL1Distance = 0
+  for j in range(len(indices)-1):
+    for i in range(indices[j],indices[j+1]):
+      distanceOfPointToSegments = normalDistanceMetricsTensor[i][indices[j]][indices[j+1]]
+      meanL1Distance += distanceOfPointToSegments
+
+  distanceOfPointToSegments = normalDistanceMetricsTensor[indices[-1]][indices[-2]][indices[-1]]
+  meanL1Distance += distanceOfPointToSegments
+  
+  meanL1Distance = meanL1Distance/len(normalDistanceMetricsTensor)
+
+  return meanL1Distance
 
 def calculateNormalDistanceMetricsTensor(curvePoints):
   normalDistanceMetricsTensor = []

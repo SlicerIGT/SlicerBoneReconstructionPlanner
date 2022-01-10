@@ -201,6 +201,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.correctBonePositionsByNormalsOfTheMandibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
 
+    #comboBoxes
+    self.ui.metricSelectionComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
+
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
 
@@ -411,6 +414,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if self._parameterNode.GetParameter("minimalBoneSegmentLength") != '':
       self.ui.minimalBoneSegmentLengthSpinBox.setValue(float(self._parameterNode.GetParameter("minimalBoneSegmentLength")))
 
+    self.ui.metricSelectionComboBox.currentText = self._parameterNode.GetParameter("metric")
+
     self.ui.notLeftFibulaCheckBox.checked = self._parameterNode.GetParameter("notLeftFibula") == "True"
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = self._parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
@@ -464,6 +469,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("numberOfSegmentsOfAutomaticReconstruction", str(self.ui.numberOfSegmentsOfAutomaticReconstructionSpinBox.value))
     self._parameterNode.SetParameter("minimalBoneSegmentLength", str(self.ui.minimalBoneSegmentLengthSpinBox.value))
     
+    self._parameterNode.SetParameter("metric",self.ui.metricSelectionComboBox.currentText)
 
     if self.ui.notLeftFibulaCheckBox.checked:
       self._parameterNode.SetParameter("notLeftFibula","True")
@@ -793,6 +799,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact", "True")
     if not parameterNode.GetParameter("correctBonePositionsByNormalsOfTheMandible"):
       parameterNode.SetParameter("correctBonePositionsByNormalsOfTheMandible", "True")
+    if not parameterNode.GetParameter("metric"):
+      parameterNode.SetParameter("metric", "MaxError")
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -885,13 +893,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     correctBonePositionsByNormalsOfTheMandible = parameterNode.GetParameter("correctBonePositionsByNormalsOfTheMandible") == 'True'
     numberOfSegments = int(parameterNode.GetParameter("numberOfSegmentsOfAutomaticReconstruction"))
     minimalBoneSegmentLength = float(parameterNode.GetParameter("minimalBoneSegmentLength"))
+    metric = parameterNode.GetParameter("metric")
     numberOfOptimizations = 1
 
     fibulaModelNode = decimatedFibulaModelNode
     mandibleModelNode = decimatedMandibleModelNode
 
     if correctBonePositionsByNormalsOfTheMandible:
-      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV5(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV5(mandibularCurve,numberOfSegments,minimalBoneSegmentLength,metric)
     else:
       pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV4(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
 
@@ -1403,8 +1412,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         #model = modelsLogic.AddModel(fibulaPointsCutter.GetOutput())
         #model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaPointsOfCalculation"))
 
-        transformedCorrectionPointFibula = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
-          fibulaPointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
+        transformedCorrectionPointFibula = getPointOfAThatMakesLineDirectionSimilarToVectorAndItIsNearest(
+          fibulaPointsCutter.GetOutput(),mandiblePlaneOrigins[i],-correctionOfPositionDirection,isPolydata=True
         )
 
         realCorrectionPointFibula = transformedCorrectionPointFibula - mandiblePlaneNormals[i]*HALF_EXTRUSION_LENGTH/2
@@ -1430,8 +1439,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         #model = modelsLogic.AddModel(mandiblePointsCutter.GetOutput())
         #model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandiblePointsOfCalculation"))
 
-        realCorrectionPointMandible = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
-          mandiblePointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
+        realCorrectionPointMandible = getPointOfAThatMakesLineDirectionSimilarToVectorAndItIsNearest(
+          mandiblePointsCutter.GetOutput(),mandiblePlaneOrigins[i],-correctionOfPositionDirection,isPolydata=True
         )
 
         newMandiblePlaneOrigin = mandiblePlaneOrigins[i] + (realCorrectionPointMandible - realCorrectionPointFibula)
@@ -1516,8 +1525,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         #model = modelsLogic.AddModel(fibulaPointsCutter.GetOutput())
         #model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaPointsOfCalculation"))
 
-        transformedCorrectionPointFibula = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
-          fibulaPointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
+        transformedCorrectionPointFibula = getPointOfAThatMakesLineDirectionSimilarToVectorAndItIsNearest(
+          fibulaPointsCutter.GetOutput(),mandiblePlaneOrigins[-1],-correctionOfPositionDirection,isPolydata=True
         )
 
         realCorrectionPointFibula = transformedCorrectionPointFibula - mandiblePlaneNormals[-1]*HALF_EXTRUSION_LENGTH/2
@@ -1543,11 +1552,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         #model = modelsLogic.AddModel(mandiblePointsCutter.GetOutput())
         #model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandiblePointsOfCalculation"))
 
-        realCorrectionPointMandible = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
-          mandiblePointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
+        realCorrectionPointMandible = getPointOfAThatMakesLineDirectionSimilarToVectorAndItIsNearest(
+          mandiblePointsCutter.GetOutput(),mandiblePlaneOrigins[-1],-correctionOfPositionDirection,isPolydata=True
         )
 
-        newMandiblePlaneOrigin = mandiblePlaneOrigins[i] + (realCorrectionPointMandible - realCorrectionPointFibula)
+        newMandiblePlaneOrigin = mandiblePlaneOrigins[-1] + (realCorrectionPointMandible - realCorrectionPointFibula)
 
         #print('goes through i==(len-1)')
         newMandiblePlaneOrigins.append(newMandiblePlaneOrigin)
@@ -1631,8 +1640,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           #model = modelsLogic.AddModel(fibulaPointsCutter.GetOutput())
           #model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaPointsOfCalculation"))
 
-          transformedCorrectionPointFibula = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
-            fibulaPointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
+          transformedCorrectionPointFibula = getPointOfAThatMakesLineDirectionSimilarToVectorAndItIsNearest(
+            fibulaPointsCutter.GetOutput(),mandiblePlaneOrigins[i],-correctionOfPositionDirection,isPolydata=True
           )
 
           realCorrectionPointFibula = transformedCorrectionPointFibula - mandiblePlaneNormals[i]*HALF_EXTRUSION_LENGTH/2
@@ -1658,8 +1667,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           #model = modelsLogic.AddModel(mandiblePointsCutter.GetOutput())
           #model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandiblePointsOfCalculation"))
 
-          realCorrectionPointMandible = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(
-            mandiblePointsCutter.GetOutput(),-correctionOfPositionDirection,isPolydata=True
+          realCorrectionPointMandible = getPointOfAThatMakesLineDirectionSimilarToVectorAndItIsNearest(
+            mandiblePointsCutter.GetOutput(),mandiblePlaneOrigins[i],-correctionOfPositionDirection,isPolydata=True
           )
 
           newMandiblePlaneOrigin = mandiblePlaneOrigins[i] + (realCorrectionPointMandible - realCorrectionPointFibula)
@@ -2497,7 +2506,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     return mandibleFramesMatrices
   
-  def getPointsForOptimalReconstructionV5(self,curve,numberOfSegments,minimalLengthOfSegments):
+  def getPointsForOptimalReconstructionV5(self,curve,numberOfSegments,minimalLengthOfSegments,metric):
     import time
     startTime = time.time()
     logging.info('Processing started')
@@ -2581,23 +2590,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       notMinimumDistanceRangesVectorReversed_np
     )
     #print(indicesArray)
+
+    if metric == 'MaxError':
+      calculateMetricForPolyline = calculateMaxDistanceMetricForPolyline
+    else:
+      calculateMetricForPolyline = calculateMeanDistanceMetricForPolyline
+
     indicesAndMetricsVector = []
     for i in range(len(indicesArray)):
-      maxL1,meanL1,meanL2 = calculateMetricsForPolylineV4(normalDistanceMetricsTensor,indicesArray[i])
-      indicesAndMetricsVector.append([indicesArray[i],maxL1,meanL1,meanL2])
+      metric = calculateMetricForPolyline(normalDistanceMetricsTensor,indicesArray[i])
+      indicesAndMetricsVector.append([indicesArray[i],metric])
 
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
 
     if len(indicesAndMetricsVector) > 0:
       indicesAndMetricsVector.sort(key = lambda item : item[1])
-      indicesAndMetricMaxL1 = indicesAndMetricsVector[0]
-      #
-      #indicesAndMetricsVector.sort(key = lambda item : item[2])
-      #indicesAndMetricMeanL1 = indicesAndMetricsVector[0]
-      #
-      mask = np.array(indicesAndMetricMaxL1[0])
-      print(indicesAndMetricMaxL1[1])
+      indicesAndMetricOptimized = indicesAndMetricsVector[0]
+      
+      mask = np.array(indicesAndMetricOptimized[0])
+      print(indicesAndMetricOptimized[1])
       return [curvePoints[mask],mask]
     else:
       return []
