@@ -156,6 +156,15 @@ def getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(twoPointsMode
   else:
     return points[0]
 
+def getPointOfArrayNearestToTestPoint(arrayOfPoints, testPoint):
+    pointsAndDistancesList = []
+    for i in range(len(arrayOfPoints)):
+      distance = np.linalg.norm(arrayOfPoints[i]-testPoint)
+      pointsAndDistancesList.append([arrayOfPoints[i],i,distance])
+    
+    pointsAndDistancesList.sort(key = lambda item : item[2])
+    return pointsAndDistancesList[0][0], pointsAndDistancesList[0][1]
+
 def getPointOfAThatMakesLineDirectionSimilarToVectorAndItIsNearest(twoPointsModel,nearPoint,vector,isPolydata=False):
   if not isPolydata:
     pointsData = twoPointsModel.GetPolyData().GetPoints().GetData()
@@ -703,3 +712,88 @@ def getNextPossiblePointBackward(curvePointIndex,order,notMinimumDistanceRangesV
     currentCurvePointIndex = notMinimumDistanceRangesVectorReversed[result][0] -1
     result = currentCurvePointIndex - notMinimumDistanceRangesVectorReversed[0][1]
   return currentCurvePointIndex
+
+def makePointToPointDistancesMatrix(points0,points1):
+  point0ToPoint1DistancesMatrix = []
+  
+  for i in range(len(points0)):
+    point0ToPoint1DistancesVector = []
+    
+    for j in range(len(points1)):
+      point0ToPoint1DistancesVector.append([np.linalg.norm(points0[i]-points1[j]),i,j])
+    
+    point0ToPoint1DistancesMatrix.append(point0ToPoint1DistancesVector)
+  
+  return point0ToPoint1DistancesMatrix
+
+def getListOfPointPairsOfLeastDistanceGivenAMetricsMatrix(metricsMatrix,points0,points1):
+  #get every point pair of least distance
+  pointPairsList = []
+  
+  for i in range(len(metricsMatrix)):
+    metricsMatrix[i].sort(key = lambda item : item[0])
+    
+    point0index = metricsMatrix[i][0][1]
+    point1index = metricsMatrix[i][0][2]
+    
+    pointPair = [points0[point0index],points1[point1index]]
+    pointPairsList.append(pointPair)
+
+  return pointPairsList
+
+def getPointPairFromListWithMostSimilarDirection(pointPairsList,direction):
+  maximumDotProduct = 0
+  maximumDotProductPointPair = []
+
+  for i in range(len(pointPairsList)):
+    pointPairDirectionLine = (
+      (pointPairsList[i][1]-pointPairsList[i][0])
+      /np.linalg.norm(pointPairsList[i][1]-pointPairsList[i][0])
+    )
+
+    dotProduct = vtk.vtkMath.Dot(pointPairDirectionLine, direction)
+    if  dotProduct > maximumDotProduct:
+      maximumDotProduct = dotProduct
+      maximumDotProductPointPair = pointPairsList[i]
+  
+  return maximumDotProductPointPair
+
+def rotation_from_matrix(matrix):
+  """Return rotation angle and axis from rotation matrix.
+
+  >>> angle = (random.random() - 0.5) * (2*math.pi)
+  >>> direc = np.random.random(3) - 0.5
+  >>> point = np.random.random(3) - 0.5
+  >>> R0 = rotation_matrix(angle, direc, point)
+  >>> angle, direc, point = rotation_from_matrix(R0)
+  >>> R1 = rotation_matrix(angle, direc, point)
+  >>> is_same_transform(R0, R1)
+  True
+
+  """
+  import math
+  R = np.array(matrix, dtype=np.float64, copy=False)
+  R33 = R[:3, :3]
+  # direction: unit eigenvector of R33 corresponding to eigenvalue of 1
+  l, W = np.linalg.eig(R33.T)
+  i = np.where(abs(np.real(l) - 1.0) < 1e-8)[0]
+  if not len(i):
+      raise ValueError("no unit eigenvector corresponding to eigenvalue 1")
+  direction = np.real(W[:, i[-1]]).squeeze()
+  # point: unit eigenvector of R33 corresponding to eigenvalue of 1
+  l, Q = np.linalg.eig(R)
+  i = np.where(abs(np.real(l) - 1.0) < 1e-8)[0]
+  if not len(i):
+      raise ValueError("no unit eigenvector corresponding to eigenvalue 1")
+  point = np.real(Q[:, i[-1]]).squeeze()
+  point /= point[3]
+  # rotation angle depending on direction
+  cosa = (np.trace(R33) - 1.0) / 2.0
+  if abs(direction[2]) > 1e-8:
+      sina = (R[1, 0] + (cosa - 1.0) * direction[0] * direction[1]) / direction[2]
+  elif abs(direction[1]) > 1e-8:
+      sina = (R[0, 2] + (cosa - 1.0) * direction[0] * direction[2]) / direction[1]
+  else:
+      sina = (R[2, 1] + (cosa - 1.0) * direction[1] * direction[2]) / direction[0]
+  angle = math.atan2(sina, cosa)
+  return angle, direction, point
