@@ -654,8 +654,9 @@ def generateIndicesArrayRecursivelyUsingNonMinimumDistanceRanges(
 ):
 
   indicesArray = []
-  global oneIndicesArray
+  global oneIndicesArray,resultIndicesArray
   oneIndicesArray = [0,]
+  resultIndicesArray = []
 
   nextPossiblePointBackwardList = []
   for rootCrescentLevel in range(numberOfSegments,2-1,-1):
@@ -666,8 +667,10 @@ def generateIndicesArrayRecursivelyUsingNonMinimumDistanceRanges(
     )
     nextPossiblePointBackwardList.append(nextPossiblePointBackward)
   
+  partial_indices_cache = {}
+
   def recursiveIndicesArrayCreationFunction(index,rootCrescentLevel):
-    global oneIndicesArray
+    global oneIndicesArray,resultIndicesArray
     nextPossiblePointForward = getNextPossiblePointForward(
       index,
       1,
@@ -683,6 +686,22 @@ def generateIndicesArrayRecursivelyUsingNonMinimumDistanceRanges(
         oneIndicesArray.append(numberOfPointsOfCurve-1)
         indicesArray.append(oneIndicesArray)
         oneIndicesArray = oneIndicesArray[0:-2]
+      newAdditionsIndicesArray = indicesArray[-(nextPossiblePointBackward+1-nextPossiblePointForward):]
+      #count = 0
+      for i in range(len(newAdditionsIndicesArray)):
+        for j in range(0,(numberOfSegments-3)+1):
+          if not ((newAdditionsIndicesArray[i][-(numberOfSegments-j)],numberOfSegments-j-1) in partial_indices_cache):
+            partial_indices_cache[(newAdditionsIndicesArray[i][-(numberOfSegments-j)],numberOfSegments-j-1)] = [newAdditionsIndicesArray[i][-(numberOfSegments-j+1-2):]]
+          else:
+            partial_indices_cache[(newAdditionsIndicesArray[i][-(numberOfSegments-j)],numberOfSegments-j-1)].append(newAdditionsIndicesArray[i][-(numberOfSegments-j+1-2):])
+          #count += 1
+          #if count >= 200:
+          #  print(partial_indices_cache)
+          #  raise Exception('test code till 20 executions')
+
+    if (index,rootCrescentLevel) in partial_indices_cache:
+      startingIndicesArray = [oneIndicesArray]*len(partial_indices_cache[(index,rootCrescentLevel)])
+      resultIndicesArray += [x + y for x,y in zip(startingIndicesArray, partial_indices_cache[(index,rootCrescentLevel)])]
       return
     
     for i in range(nextPossiblePointForward,nextPossiblePointBackward+1):
@@ -692,7 +711,7 @@ def generateIndicesArrayRecursivelyUsingNonMinimumDistanceRanges(
 
   recursiveIndicesArrayCreationFunction(0,numberOfSegments)
 
-  return indicesArray
+  return resultIndicesArray
 
 def getNextPossiblePointForward(curvePointIndex,order,notMinimumDistancesRangesVector):
   result = curvePointIndex

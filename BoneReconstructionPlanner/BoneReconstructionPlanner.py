@@ -995,7 +995,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
             fibulaPlaneFrameMatricesList,
             fibulaFrameToMandibleFrameRegistrationTransformMatricesList,
             fibulaModelNode,
-            mandibleModelNode
+            mandibleModelNode,
+            (numberOfOptimizations-1) == i
           )
         )
 
@@ -1158,7 +1159,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaPlaneFrameMatricesList,
     fibulaFrameToMandibleFrameRegistrationTransformMatricesList,
     fibulaModelNode,
-    mandibleModelNode
+    mandibleModelNode,
+    lastExecution
   ):
     HALF_EXTRUSION_LENGTH = 7.5
 
@@ -1286,6 +1288,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         
         points = np.array([mandiblePoints[index0],mandiblePoints[index1]])
 
+        maximumMandibleDistance = np.linalg.norm(mandiblePoints[index0] - mandiblePoints[index1])
+
         nearestPointOfMandibleToCurvePoint, nearestPointOfMandibleToCurvePointIndex = (
           getPointOfArrayNearestToTestPoint(points,curvePoints[i])
         )
@@ -1301,11 +1305,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         )
         selectionArray.Fill(0)
 
+        if maximumMandibleDistance < maximumDistanceOnFibula:
+          maximumDistance = maximumMandibleDistance*0.8
+        else:
+          maximumDistance = maximumDistanceOnFibula*0.8
+
         for k in range(mandiblePlanesIntersectionsWithMandibleList[i].GetNumberOfPoints()):
           currentPosition = np.array(mandiblePoints_vtk.GetTuple3(k))
           if np.linalg.norm(
             currentPosition - nearestPointOfMandibleToCurvePoint
-          ) < maximumDistanceOnFibula:
+          ) < maximumDistance:
               selectionArray.SetTuple1(k,1)
 
         pointScalars = mandiblePlanesIntersectionsWithMandibleList[i].GetPointData()
@@ -1404,15 +1413,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           negativeAngleCount +=1
           negativeAngleSum += angleRad
 
-        modelsLogic = slicer.modules.models.logic()
-        model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[i])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
-        model = modelsLogic.AddModel(stripperMandible.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("cutMandibleIntersection"))
-        model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[i])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
-        model = modelsLogic.AddModel(transformerICPTransformedFibulaToMandible.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("registeredFibulaIntersection"))
+        if lastExecution:
+          modelsLogic = slicer.modules.models.logic()
+          model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[i])
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+          model = modelsLogic.AddModel(stripperMandible.GetOutput())
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("cutMandibleIntersection"))
+          model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[i])
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
+          model = modelsLogic.AddModel(transformerICPTransformedFibulaToMandible.GetOutput())
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("registeredFibulaIntersection"))
 
         newMandiblePlaneOrigin = deltaPosition
 
@@ -1438,6 +1448,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         
         points = np.array([mandiblePoints[index0],mandiblePoints[index1]])
 
+        maximumMandibleDistance = np.linalg.norm(mandiblePoints[index0] - mandiblePoints[index1])
+
         nearestPointOfMandibleToCurvePoint, nearestPointOfMandibleToCurvePointIndex = (
           getPointOfArrayNearestToTestPoint(points,curvePoints[-1])
         )
@@ -1451,11 +1463,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         )
         selectionArray.Fill(0)
 
+        if maximumMandibleDistance < maximumDistanceOnFibula:
+          maximumDistance = maximumMandibleDistance*0.8
+        else:
+          maximumDistance = maximumDistanceOnFibula*0.8
+
         for k in range(mandiblePlanesIntersectionsWithMandibleList[-1].GetNumberOfPoints()):
           currentPosition = np.array(mandiblePoints_vtk.GetTuple3(k))
           if np.linalg.norm(
             currentPosition - nearestPointOfMandibleToCurvePoint
-          ) < maximumDistanceOnFibula:
+          ) < maximumDistance:
               selectionArray.SetTuple1(k,1)
 
         pointScalars = mandiblePlanesIntersectionsWithMandibleList[-1].GetPointData()
@@ -1549,15 +1566,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           negativeAngleCount +=1
           negativeAngleSum += angleRad
 
-        modelsLogic = slicer.modules.models.logic()
-        model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[-1])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
-        model = modelsLogic.AddModel(stripperMandible.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("cutMandibleIntersection"))
-        model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[-1])
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
-        model = modelsLogic.AddModel(transformerICPTransformedFibulaToMandible.GetOutput())
-        model.SetName(slicer.mrmlScene.GetUniqueNameByString("registeredFibulaIntersection"))
+        if lastExecution:
+          modelsLogic = slicer.modules.models.logic()
+          model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[-1])
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+          model = modelsLogic.AddModel(stripperMandible.GetOutput())
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("cutMandibleIntersection"))
+          model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[-1])
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
+          model = modelsLogic.AddModel(transformerICPTransformedFibulaToMandible.GetOutput())
+          model.SetName(slicer.mrmlScene.GetUniqueNameByString("registeredFibulaIntersection"))
 
         newMandiblePlaneOrigin = deltaPosition
 
@@ -1585,6 +1603,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           
           points = np.array([mandiblePoints[index0],mandiblePoints[index1]])
 
+          maximumMandibleDistance = np.linalg.norm(mandiblePoints[index0] - mandiblePoints[index1])
+
           nearestPointOfMandibleToCurvePoint, nearestPointOfMandibleToCurvePointIndex = (
             getPointOfArrayNearestToTestPoint(points,curvePoints[i])
           )
@@ -1598,11 +1618,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           )
           selectionArray.Fill(0)
 
+          if maximumMandibleDistance < maximumDistanceOnFibula:
+            maximumDistance = maximumMandibleDistance*0.8
+          else:
+            maximumDistance = maximumDistanceOnFibula*0.8
+
           for k in range(mandiblePlanesIntersectionsWithMandibleList[i].GetNumberOfPoints()):
             currentPosition = np.array(mandiblePoints_vtk.GetTuple3(k))
             if np.linalg.norm(
               currentPosition - nearestPointOfMandibleToCurvePoint
-            ) < maximumDistanceOnFibula:
+            ) < maximumDistance:
                 selectionArray.SetTuple1(k,1)
 
           pointScalars = mandiblePlanesIntersectionsWithMandibleList[i].GetPointData()
@@ -1696,15 +1721,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
             negativeAngleCount +=1
             negativeAngleSum += angleRad
 
-          modelsLogic = slicer.modules.models.logic()
-          model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[2*i-1+j])
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
-          model = modelsLogic.AddModel(stripperMandible.GetOutput())
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("cutMandibleIntersection"))
-          model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[i])
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
-          model = modelsLogic.AddModel(transformerICPTransformedFibulaToMandible.GetOutput())
-          model.SetName(slicer.mrmlScene.GetUniqueNameByString("registeredFibulaIntersection"))
+          if lastExecution:
+            modelsLogic = slicer.modules.models.logic()
+            model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[2*i-1+j])
+            model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+            model = modelsLogic.AddModel(stripperMandible.GetOutput())
+            model.SetName(slicer.mrmlScene.GetUniqueNameByString("cutMandibleIntersection"))
+            model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[i])
+            model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
+            model = modelsLogic.AddModel(transformerICPTransformedFibulaToMandible.GetOutput())
+            model.SetName(slicer.mrmlScene.GetUniqueNameByString("registeredFibulaIntersection"))
          
           newMandiblePlaneOrigin = deltaPosition
           newMandiblePlaneOriginsToAverage.append(newMandiblePlaneOrigin)
@@ -2596,6 +2622,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     )
     #print(indicesArray)
 
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
+    
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
     if metric == 'MaxError':
       calculateMetricForPolyline = calculateMaxDistanceMetricForPolyline
     else:
