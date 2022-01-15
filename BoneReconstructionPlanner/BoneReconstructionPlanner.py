@@ -2573,6 +2573,34 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       minimalLengthOfSegments
     )
 
+    filteredNormalDistanceMetricsTensor = []
+    normalDistanceMetricsTensor_np = np.array(normalDistanceMetricsTensor)
+    for i in range(numberOfPointsOfCurve):
+      filteredNormalDistanceMetricsMatrix = []
+      for j in range(numberOfPointsOfCurve):
+        filteredNormalDistanceMetricsRow_np = normalDistanceMetricsTensor_np[:,i,j][
+          normalDistanceMetricsTensor_np[:,i,j] > (-1 + 1e-5)]
+        if filteredNormalDistanceMetricsRow_np.size != 0:
+          filteredNormalDistanceMetricsMatrix.append(filteredNormalDistanceMetricsRow_np)
+        else:
+          filteredNormalDistanceMetricsMatrix.append([])
+      filteredNormalDistanceMetricsTensor.append(filteredNormalDistanceMetricsMatrix)
+
+    print(normalDistanceMetricsTensor_np[:,0,20])
+    print(normalDistanceMetricsTensor_np[:,0,20][
+          normalDistanceMetricsTensor_np[:,0,20] > (-1 + 1e-5)])
+    #print(filteredNormalDistanceMetricsTensor)
+
+    maxDistancesMatrixDict = {}
+    meanDistancesMatrixDict = {}
+    for i in range(len(filteredNormalDistanceMetricsTensor)):
+      for j in range(len(filteredNormalDistanceMetricsTensor[i])):
+        if filteredNormalDistanceMetricsTensor[i][j] != []:
+          maxDistancesMatrixDict[(i,j)] = filteredNormalDistanceMetricsTensor[i][j].max()
+          meanDistancesMatrixDict[(i,j)] = np.sum(filteredNormalDistanceMetricsTensor[i][j])
+
+    #print(maxDistancesMatrixDict)
+
     notMinimumDistanceRangesVector = []
     notMinimumDistanceIndicesVectorSorted = notMinimumDistanceIndicesVector.copy()
     notMinimumDistanceIndicesVectorSorted.sort(key = lambda item : item[0])
@@ -2630,12 +2658,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     logging.info('Processing started')
     if metric == 'MaxError':
       calculateMetricForPolyline = calculateMaxDistanceMetricForPolyline
+      distanceMetricsMatrix = maxDistancesMatrixDict
     else:
       calculateMetricForPolyline = calculateMeanDistanceMetricForPolyline
+      distanceMetricsMatrix = meanDistancesMatrixDict
 
     indicesAndMetricsVector = []
     for i in range(len(indicesArray)):
-      metric = calculateMetricForPolyline(normalDistanceMetricsTensor,indicesArray[i])
+      metric = calculateMetricForPolyline(distanceMetricsMatrix,indicesArray[i],numberOfPointsOfCurve)
       indicesAndMetricsVector.append([indicesArray[i],metric])
 
     stopTime = time.time()

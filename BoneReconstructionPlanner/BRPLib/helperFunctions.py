@@ -277,23 +277,30 @@ def distanceToSegment(point0, linePointA, linePointB):
   vtk.vtkMath.Cross(vectorAB, vectorA0, cross)
   return np.linalg.norm(cross)/np.linalg.norm(vectorAB)
 
-def distanceToSegmentAndSegmentLength(point0, linePointA, linePointB):
+def distanceToSegmentAndSegmentLength(point0, linePointA, linePointB, i, j, k):
+  returnMinusOneDistance = False
+  if i<j or i>k:
+    returnMinusOneDistance = True
+  
   vectorAB = linePointB - linePointA
   segmentABLength = np.linalg.norm(vectorAB)
   vectorA0 = point0 - linePointA
   #
   if (vectorA0 @ vectorAB.T) <= 0.0:
-    return np.linalg.norm(vectorA0), segmentABLength
+    return -1, segmentABLength
   #
   vectorB0 = point0 - linePointB
   #
   if (vectorB0 @ vectorAB.T) >= 0.0:
-    return np.linalg.norm(vectorB0), segmentABLength
+    return -1, segmentABLength
   #
   cross = [0,0,0]
   vtk.vtkMath.Cross(vectorAB, vectorA0, cross)
   distance = np.linalg.norm(cross)/segmentABLength
-  return distance, segmentABLength
+  if not returnMinusOneDistance:
+    return distance, segmentABLength
+  else: 
+    return -1, segmentABLength
 
 def validDistancesBetweenPointsOfIndices(indices,minimalDistance,pointToPointDistanceMatrix):
   for i in range(len(indices)-1):
@@ -410,32 +417,22 @@ def calculateMetricsForPolylineV4(normalDistanceMetricsTensor,indices):
   #
   return maxL1Distance, meanL1Distance, meanL2Distance
 
-def calculateMaxDistanceMetricForPolyline(normalDistanceMetricsTensor,indices):
+def calculateMaxDistanceMetricForPolyline(maxDistancesMatrixDict,indices,numberOfCurvePoints):
   maxL1Distance = 0
-  distances = []
   for j in range(len(indices)-1):
-    for i in range(indices[j],indices[j+1]):
-      distanceOfPointToSegments = normalDistanceMetricsTensor[i][indices[j]][indices[j+1]]
+      distanceOfPointToSegments = maxDistancesMatrixDict[(indices[j],indices[j+1])]
       if distanceOfPointToSegments > maxL1Distance:
-        maxL1Distance = distanceOfPointToSegments
-
-  distanceOfPointToSegments = normalDistanceMetricsTensor[indices[-1]][indices[-2]][indices[-1]]
-  if distanceOfPointToSegments > maxL1Distance:
         maxL1Distance = distanceOfPointToSegments
 
   return maxL1Distance
 
-def calculateMeanDistanceMetricForPolyline(normalDistanceMetricsTensor,indices):
+def calculateMeanDistanceMetricForPolyline(meanDistancesMatrixDict,indices,numberOfCurvePoints):
   meanL1Distance = 0
   for j in range(len(indices)-1):
-    for i in range(indices[j],indices[j+1]):
-      distanceOfPointToSegments = normalDistanceMetricsTensor[i][indices[j]][indices[j+1]]
-      meanL1Distance += distanceOfPointToSegments
-
-  distanceOfPointToSegments = normalDistanceMetricsTensor[indices[-1]][indices[-2]][indices[-1]]
-  meanL1Distance += distanceOfPointToSegments
+    distanceOfPointToSegments = meanDistancesMatrixDict[(indices[j],indices[j+1])]
+    meanL1Distance += distanceOfPointToSegments
   
-  meanL1Distance = meanL1Distance/len(normalDistanceMetricsTensor)
+  meanL1Distance = meanL1Distance/numberOfCurvePoints
 
   return meanL1Distance
 
@@ -461,18 +458,18 @@ def calculateNormalDistanceMetricsTensorAndNotMinimumDistancesVector(
   indicesOfNotMinimumDistanceVector = []
   for i in range(len(curvePoints)):
     normalDistanceMetricsMatrix = []
-    for j in range(len(curvePoints)-1):
+    for j in range(len(curvePoints)):
       normalDistanceMetricsVector = []
       for k in range(len(curvePoints)):
         if k > j:
-          distance,segmentLength = distanceToSegmentAndSegmentLength(curvePoints[i],curvePoints[j],curvePoints[k])
+          distance,segmentLength = distanceToSegmentAndSegmentLength(curvePoints[i],curvePoints[j],curvePoints[k],i,j,k)
           if i == 0:
             if segmentLength < minimunDistanceBetweenSegments:
               indicesOfNotMinimumDistanceVector.append([j,k])
           
           normalDistanceMetricsVector.append(distance)
         else:
-          normalDistanceMetricsVector.append(1e5)
+          normalDistanceMetricsVector.append(-1)
       
       normalDistanceMetricsMatrix.append(normalDistanceMetricsVector)
     
