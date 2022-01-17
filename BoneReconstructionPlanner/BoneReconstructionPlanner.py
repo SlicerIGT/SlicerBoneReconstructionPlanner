@@ -1417,12 +1417,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           modelsLogic = slicer.modules.models.logic()
           model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[i])
           model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+          model.GetDisplayNode().SetColor(0,0.5,0)
           model = modelsLogic.AddModel(stripperMandible.GetOutput())
           model.SetName(slicer.mrmlScene.GetUniqueNameByString("cutMandibleIntersection"))
+          model.GetDisplayNode().SetColor(1,0,0)
           model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[i])
           model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
+          model.GetDisplayNode().SetColor(0.5,0,0)
           model = modelsLogic.AddModel(transformerICPTransformedFibulaToMandible.GetOutput())
           model.SetName(slicer.mrmlScene.GetUniqueNameByString("registeredFibulaIntersection"))
+          model.GetDisplayNode().SetColor(0,1,0)
 
         newMandiblePlaneOrigin = deltaPosition
 
@@ -1570,12 +1574,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           modelsLogic = slicer.modules.models.logic()
           model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[-1])
           model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+          model.GetDisplayNode().SetColor(0,0.5,0)
           model = modelsLogic.AddModel(stripperMandible.GetOutput())
           model.SetName(slicer.mrmlScene.GetUniqueNameByString("cutMandibleIntersection"))
+          model.GetDisplayNode().SetColor(1,0,0)
           model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[-1])
           model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
+          model.GetDisplayNode().SetColor(0.5,0,0)
           model = modelsLogic.AddModel(transformerICPTransformedFibulaToMandible.GetOutput())
           model.SetName(slicer.mrmlScene.GetUniqueNameByString("registeredFibulaIntersection"))
+          model.GetDisplayNode().SetColor(0,1,0)
 
         newMandiblePlaneOrigin = deltaPosition
 
@@ -1725,12 +1733,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
             modelsLogic = slicer.modules.models.logic()
             model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[2*i-1+j])
             model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
+            model.GetDisplayNode().SetColor(0,0.5,0)
             model = modelsLogic.AddModel(stripperMandible.GetOutput())
             model.SetName(slicer.mrmlScene.GetUniqueNameByString("cutMandibleIntersection"))
+            model.GetDisplayNode().SetColor(1,0,0)
             model = modelsLogic.AddModel(mandiblePlanesIntersectionsWithMandibleList[i])
             model.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleIntersection"))
+            model.GetDisplayNode().SetColor(0.5,0,0)
             model = modelsLogic.AddModel(transformerICPTransformedFibulaToMandible.GetOutput())
             model.SetName(slicer.mrmlScene.GetUniqueNameByString("registeredFibulaIntersection"))
+            model.GetDisplayNode().SetColor(0,1,0)
          
           newMandiblePlaneOrigin = deltaPosition
           newMandiblePlaneOriginsToAverage.append(newMandiblePlaneOrigin)
