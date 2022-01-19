@@ -3056,6 +3056,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(intersectionsFolder)
 
   def create3DModelOfTheReconstruction(self):
+    import time
+    startTime = time.time()
+    logging.info('Processing started')
+
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
@@ -3085,7 +3089,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       scaleTransform.PostMultiply()
       scaleTransform.Translate(-origin)
       #Just scale them enough so that boolean union is successful
-      scaleTransform.Scale(1.0001, 1.0001, 1.0001)
+      scaleTransform.Scale(1.001, 1.001, 1.001)
       scaleTransform.Translate(origin)
 
       scaleTransformNode.SetMatrixTransformToParent(scaleTransform.GetMatrix())
@@ -3111,16 +3115,111 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     scaledFibulaPiecesList = createListFromFolderID(scaledFibulaPiecesFolder)
 
-    mandibleReconstructionModel = slicer.modules.models.logic().AddModel(cutBonesList[-1].GetPolyData())
+    mandiblePlaneOrigin = np.zeros(3)
+    planeList[0].GetOrigin(mandiblePlaneOrigin)
+    sideOneConnectivityFilter = vtk.vtkConnectivityFilter()
+    sideOneConnectivityFilter.SetInputData(cutBonesList[-1].GetPolyData())
+    sideOneConnectivityFilter.SetExtractionModeToClosestPointRegion()
+    sideOneConnectivityFilter.SetClosestPoint(mandiblePlaneOrigin)
+    sideOneConnectivityFilter.Update()
+
+    sideOneFillHolesFilter = vtk.vtkFillHolesFilter()
+    sideOneFillHolesFilter.SetInputData(sideOneConnectivityFilter.GetOutput())
+    sideOneFillHolesFilter.SetHoleSize(50)
+    sideOneFillHolesFilter.Update()
+
+    mandiblePlaneOrigin = np.zeros(3)
+    planeList[-1].GetOrigin(mandiblePlaneOrigin)
+    sideTwoConnectivityFilter = vtk.vtkConnectivityFilter()
+    sideTwoConnectivityFilter.SetInputData(cutBonesList[-1].GetPolyData())
+    sideTwoConnectivityFilter.SetExtractionModeToClosestPointRegion()
+    sideTwoConnectivityFilter.SetClosestPoint(mandiblePlaneOrigin)
+    sideTwoConnectivityFilter.Update()
+
+    sideTwoFillHolesFilter = vtk.vtkFillHolesFilter()
+    sideTwoFillHolesFilter.SetInputData(sideTwoConnectivityFilter.GetOutput())
+    sideTwoFillHolesFilter.SetHoleSize(50)
+    sideTwoFillHolesFilter.Update()
+
+    startingObject = sideOneFillHolesFilter.GetOutput()
+    #startingObject = calculateNormals(startingObject)
+    scaledFibulaPiecesListPolyData = [i.GetPolyData() for i in scaledFibulaPiecesList]
+    listOfObjectsToUnite = scaledFibulaPiecesListPolyData + [sideTwoFillHolesFilter.GetOutput()]
+
+    mandibleReconstructionModel = slicer.modules.models.logic().AddModel(startingObject)
     mandibleReconstructionModel.SetName('Mandible Reconstruction')
     mandibleReconstructionModelItemID = shNode.GetItemByDataNode(mandibleReconstructionModel)
     shNode.SetItemParent(mandibleReconstructionModelItemID, self.getParentFolderItemID())
 
-    combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
-    for i in range(len(scaledFibulaPiecesList)):
-      combineModelsLogic.process(mandibleReconstructionModel, scaledFibulaPiecesList[i], mandibleReconstructionModel, 'union')
+    currentResult = None
+    for i in range(len(listOfObjectsToUnite)):
+      tempResultsList = []
+      booleanFilter = slicer.vtkPolyDataBooleanFilter()
+      booleanFilter.SetOperModeToUnion()
+      if i==0:
+        firstObjectWithNormals = calculateNormals(startingObject)
+        booleanFilter.SetInputData(0, firstObjectWithNormals)
+        #model = slicer.modules.models.logic().AddModel(firstObjectWithNormals)
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString('firstObjectWithNormals'))
+      else:
+        firstObjectWithNormals = calculateNormals(currentResult)
+        booleanFilter.SetInputData(0, firstObjectWithNormals)
+        #model = slicer.modules.models.logic().AddModel(firstObjectWithNormals)
+        #model.SetName(slicer.mrmlScene.GetUniqueNameByString('firstObjectWithNormals'))
+      secondObjectWithNormals = calculateNormals(listOfObjectsToUnite[i])
+      booleanFilter.SetInputData(1, secondObjectWithNormals)
+      #model = slicer.modules.models.logic().AddModel(secondObjectWithNormals)
+      #model.SetName(slicer.mrmlScene.GetUniqueNameByString('secondObjectWithNormals'))
+      booleanFilter.Update()
+      #model = slicer.modules.models.logic().AddModel(booleanFilter.GetOutput())
+      #model.SetName(slicer.mrmlScene.GetUniqueNameByString('union'))
+
+      resultPolydata = vtk.vtkPolyData()
+      resultPolydata.ShallowCopy(booleanFilter.GetOutput())
+      tempResultsList.append([resultPolydata,calculateVolume(resultPolydata)])
+      
+      booleanFilter.SetOperModeToIntersection()
+      secondObjectWithNormals = calculateNormals(listOfObjectsToUnite[i],flip=True)
+      booleanFilter.SetInputData(1, secondObjectWithNormals)
+      #model = slicer.modules.models.logic().AddModel(secondObjectWithNormals)
+      #model.SetName(slicer.mrmlScene.GetUniqueNameByString('secondObjectWithNormalsInverted'))
+      booleanFilter.Update()
+      #model = slicer.modules.models.logic().AddModel(booleanFilter.GetOutput())
+      #model.SetName(slicer.mrmlScene.GetUniqueNameByString('intersection'))
+      
+      resultPolydata = vtk.vtkPolyData()
+      resultPolydata.ShallowCopy(booleanFilter.GetOutput())
+      tempResultsList.append([resultPolydata,calculateVolume(resultPolydata)])
+
+      booleanFilter.SetOperModeToIntersection()
+      if i == 0:
+        firstObjectWithNormals = calculateNormals(startingObject,flip=True)
+        booleanFilter.SetInputData(0, firstObjectWithNormals)
+      else:
+        firstObjectWithNormals = calculateNormals(currentResult,flip=True)
+        booleanFilter.SetInputData(0, firstObjectWithNormals)
+      secondObjectWithNormals = calculateNormals(listOfObjectsToUnite[i])
+      booleanFilter.SetInputData(1, secondObjectWithNormals)
+      #model = slicer.modules.models.logic().AddModel(secondObjectWithNormals)
+      #model.SetName(slicer.mrmlScene.GetUniqueNameByString('secondObjectWithNormalsInverted'))
+      booleanFilter.Update()
+      #model = slicer.modules.models.logic().AddModel(booleanFilter.GetOutput())
+      #model.SetName(slicer.mrmlScene.GetUniqueNameByString('intersection'))
+      
+      resultPolydata = vtk.vtkPolyData()
+      resultPolydata.ShallowCopy(booleanFilter.GetOutput())
+      tempResultsList.append([resultPolydata,calculateVolume(resultPolydata)])
+
+      tempResultsList.sort(key = lambda item : item[1],reverse=True)
+
+      currentResult = tempResultsList[0][0]
+
+    mandibleReconstructionModel.SetAndObservePolyData(currentResult)
 
     shNode.RemoveItem(scaledFibulaPiecesFolder)
+
+    stopTime = time.time()
+    logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
     
 #
 # BoneReconstructionPlannerTest
