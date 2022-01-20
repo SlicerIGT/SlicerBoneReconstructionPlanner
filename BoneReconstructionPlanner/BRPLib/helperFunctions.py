@@ -209,7 +209,7 @@ def getBestFittingPlaneNormalFromPoints(points):
   # the corresponding left singular vector is the normal vector of the best-fitting plane
   return left[:, -1]
 
-def calculateVolume(polydata):
+def calculateSurfaceArea(polydata):
   triangleFilter = vtk.vtkTriangleFilter()
   triangleFilter.SetInputData(polydata)
   triangleFilter.SetPassLines(0)
@@ -217,7 +217,7 @@ def calculateVolume(polydata):
   
   massProperties = vtk.vtkMassProperties()
   massProperties.SetInputData(triangleFilter.GetOutput())
-  return massProperties.GetVolume()
+  return massProperties.GetSurfaceArea()
 
 def calculateNormals(polydata,flip=False):
   normalsFilter = vtk.vtkPolyDataNormals()
