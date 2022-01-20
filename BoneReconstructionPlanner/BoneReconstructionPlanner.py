@@ -872,6 +872,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.SetItemParent(planeNodeItemID, mandibularFolderID)
     planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
     planeNode.SetAttribute("isMandibularPlane","True")
+    if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+      planeNode.SetSize(50,50)
+      planeNode.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
     aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
     colorTable = aux.GetLookupTable()
@@ -883,6 +886,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode = planeNode.GetDisplayNode()
     displayNode.SetGlyphScale(2.5)
     displayNode.SetSelectedColor(color)
+    if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+      displayNode.HandlesInteractiveOn()
+      displayNode.RotationHandleVisibilityOn()
+      displayNode.TranslationHandleVisibilityOn()
+      displayNode.ScaleHandleVisibilityOff()
 
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
@@ -1631,11 +1639,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       fibulaPlaneA = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        fibulaPlaneA.SetSize(50,50)
 
       displayNode = fibulaPlaneA.GetDisplayNode()
       fibulaViewNode = slicer.mrmlScene.GetSingletonNode("2", "vtkMRMLViewNode")
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
       displayNode.SetPropertiesLabelVisibility(False)
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        displayNode.HandlesInteractiveOff()
 
       fibulaPlaneAItemID = shNode.GetItemByDataNode(fibulaPlaneA)
       shNode.SetItemParent(fibulaPlaneAItemID, fibulaPlanesFolder)
@@ -1648,10 +1660,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneB)
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        fibulaPlaneB.SetSize(50,50)
 
       displayNode = fibulaPlaneB.GetDisplayNode()
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
       displayNode.SetPropertiesLabelVisibility(False)
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        displayNode.HandlesInteractiveOff()
 
       fibulaPlaneBItemID = shNode.GetItemByDataNode(fibulaPlaneB)
       shNode.SetItemParent(fibulaPlaneBItemID, fibulaPlanesFolder)
@@ -1852,6 +1868,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         displayNode = planeToFixCutGoesThroughTheMandibleTwice.GetDisplayNode()
         displayNode.SetVisibility(False)
+        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+          displayNode.HandlesInteractiveOff()
 
         rightDirection = np.array([1,0,0])
         centerBetweenStartAndEndPlanes = (planeOriginStart + planeOriginEnd)/2
@@ -2875,6 +2893,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetGlyphScale(2.5)
       displayNode.SetOpacity(0)
       displayNode.HandlesInteractiveOn()
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        displayNode.RotationHandleVisibilityOn()
+        displayNode.TranslationHandleVisibilityOn()
+        displayNode.ScaleHandleVisibilityOff()
 
       mandiblePlaneMatrix = vtk.vtkMatrix4x4()
       if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
