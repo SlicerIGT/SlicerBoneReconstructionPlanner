@@ -2954,15 +2954,22 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           slicer.modules.markups.logic().SetActiveListID(planeNode)
           interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
           interactionNode.SwitchToSinglePlaceMode()
+
+          self.planeNodeObserver = planeNode.AddObserver(
+            slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+            lambda sourceNode,event,dontCreateModifiedEventObserver=dontCreateModifiedEventObserver,
+            keepOriginalOrigin=False: 
+            self.onPlanePointAdded(sourceNode,event,dontCreateModifiedEventObserver,keepOriginalOrigin)
+          )
         else:
           planeNode.SetOrigin(point)
 
-        self.planeNodeObserver = planeNode.AddObserver(
-          slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
-          lambda sourceNode,event,dontCreateModifiedEventObserver=dontCreateModifiedEventObserver,
-          keepOriginalOrigin=True: 
-          self.onPlanePointAdded(sourceNode,event,dontCreateModifiedEventObserver,keepOriginalOrigin)
-        )
+          self.planeNodeObserver = planeNode.AddObserver(
+            slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+            lambda sourceNode,event,dontCreateModifiedEventObserver=dontCreateModifiedEventObserver,
+            keepOriginalOrigin=True: 
+            self.onPlanePointAdded(sourceNode,event,dontCreateModifiedEventObserver,keepOriginalOrigin)
+          )
     elif planeType == 'fibula':
       colorIndexStr = parameterNode.GetParameter("colorIndex")
       colorIndex = int(colorIndexStr)
