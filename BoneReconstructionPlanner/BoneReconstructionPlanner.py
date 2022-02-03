@@ -200,7 +200,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.fixCutGoesThroughTheMandibleTwiceCheckBox.connect('stateChanged(int)', self.onFixCutGoesThroughTheMandibleTwiceCheckBox)
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
-    self.ui.correctBonePositionsByNormalsOfTheMandibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.correctFibulaPiecesPositionsWithICPCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
 
     #comboBoxes
     self.ui.metricSelectionComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
@@ -422,7 +422,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
-    self.ui.correctBonePositionsByNormalsOfTheMandibleCheckBox.checked = self._parameterNode.GetParameter("correctBonePositionsByNormalsOfTheMandible") == "True"
+    self.ui.correctFibulaPiecesPositionsWithICPCheckBox.checked = self._parameterNode.GetParameter("correctFibulaPiecesPositionsWithICP") == "True"
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked = self._parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") != "False"
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
@@ -484,10 +484,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","True")
     else:
       self._parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","False")
-    if self.ui.correctBonePositionsByNormalsOfTheMandibleCheckBox.checked:
-      self._parameterNode.SetParameter("correctBonePositionsByNormalsOfTheMandible","True")
+    if self.ui.correctFibulaPiecesPositionsWithICPCheckBox.checked:
+      self._parameterNode.SetParameter("correctFibulaPiecesPositionsWithICP","True")
     else:
-      self._parameterNode.SetParameter("correctBonePositionsByNormalsOfTheMandible","False")
+      self._parameterNode.SetParameter("correctFibulaPiecesPositionsWithICP","False")
     if self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked:
       self._parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm","True")
     else:
@@ -798,8 +798,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether", "True")
     if not parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact"):
       parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact", "True")
-    if not parameterNode.GetParameter("correctBonePositionsByNormalsOfTheMandible"):
-      parameterNode.SetParameter("correctBonePositionsByNormalsOfTheMandible", "True")
+    if not parameterNode.GetParameter("correctFibulaPiecesPositionsWithICP"):
+      parameterNode.SetParameter("correctFibulaPiecesPositionsWithICP", "True")
     if not parameterNode.GetParameter("metric"):
       parameterNode.SetParameter("metric", "MaxError")
 
@@ -891,7 +891,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
     initialSpace = float(parameterNode.GetParameter("initialSpace"))
     additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
-    correctBonePositionsByNormalsOfTheMandible = parameterNode.GetParameter("correctBonePositionsByNormalsOfTheMandible") == 'True'
+    correctFibulaPiecesPositionsWithICP = parameterNode.GetParameter("correctFibulaPiecesPositionsWithICP") == 'True'
     numberOfSegments = int(parameterNode.GetParameter("numberOfSegmentsOfAutomaticReconstruction"))
     minimalBoneSegmentLength = float(parameterNode.GetParameter("minimalBoneSegmentLength"))
     metric = parameterNode.GetParameter("metric")
@@ -900,10 +900,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaModelNode = decimatedFibulaModelNode
     mandibleModelNode = decimatedMandibleModelNode
 
-    if correctBonePositionsByNormalsOfTheMandible:
-      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV5(mandibularCurve,numberOfSegments,minimalBoneSegmentLength,metric)
-    else:
-      pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV4(mandibularCurve,numberOfSegments,minimalBoneSegmentLength)
+    pointsToCreatePlanesAndMask = self.getPointsForOptimalReconstructionV5(mandibularCurve,numberOfSegments,minimalBoneSegmentLength,metric)
 
     if pointsToCreatePlanesAndMask == []:
       slicer.util.errorDisplay(
@@ -945,6 +942,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     )
 
     correctedMandibularPlaneFrameMatricesList = mandibularPlaneFrameMatricesList
+
+    if not correctFibulaPiecesPositionsWithICP:
+      numberOfOptimizations = 0
 
     for i in range(numberOfOptimizations+1):
       #Create mandible frames
@@ -1163,6 +1163,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     lastExecution
   ):
     HALF_EXTRUSION_LENGTH = 7.5
+    DEBUG_INTERSECTIONS = False
 
     mandiblePlanesIntersectionsWithMandibleList = []
     mandiblePlaneNormals = []
@@ -1413,7 +1414,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           negativeAngleCount +=1
           negativeAngleSum += angleRad
 
-        if lastExecution:
+        if lastExecution and DEBUG_INTERSECTIONS:
           modelsLogic = slicer.modules.models.logic()
           model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[i])
           model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
@@ -1570,7 +1571,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           negativeAngleCount +=1
           negativeAngleSum += angleRad
 
-        if lastExecution:
+        if lastExecution and DEBUG_INTERSECTIONS:
           modelsLogic = slicer.modules.models.logic()
           model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[-1])
           model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))
@@ -1729,7 +1730,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
             negativeAngleCount +=1
             negativeAngleSum += angleRad
 
-          if lastExecution:
+          if lastExecution and DEBUG_INTERSECTIONS:
             modelsLogic = slicer.modules.models.logic()
             model = modelsLogic.AddModel(transformedFibulaPlaneIntersectionWithFibulaList[2*i-1+j])
             model.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaIntersection"))

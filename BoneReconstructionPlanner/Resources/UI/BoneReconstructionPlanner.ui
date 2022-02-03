@@ -390,9 +390,9 @@ segment length</string>
           </layout>
          </item>
          <item>
-          <widget class="QCheckBox" name="correctBonePositionsByNormalsOfTheMandibleCheckBox">
+          <widget class="QCheckBox" name="correctFibulaPiecesPositionsWithICPCheckBox">
            <property name="text">
-            <string>Correct fibula pieces positions to be on the border of the mandible</string>
+            <string>Correct fibula pieces positions with ICP</string>
            </property>
           </widget>
          </item>
