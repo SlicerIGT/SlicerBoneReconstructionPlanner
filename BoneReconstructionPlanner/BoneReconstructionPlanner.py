@@ -1,5 +1,4 @@
 import os
-from typing_extensions import Concatenate
 import unittest
 import logging
 import vtk, qt, ctk, slicer, math
