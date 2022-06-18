@@ -171,8 +171,8 @@ def createBox(X, Y, Z, name):
   miterBoxSource.SetZLength(Z)
   triangleFilter = vtk.vtkTriangleFilter()
   triangleFilter.SetInputConnection(miterBoxSource.GetOutputPort())
-  triangleFilter.Update()
-  miterBox.SetAndObservePolyData(triangleFilter.GetOutput())
+  #triangleFilter.Update()
+  miterBox.SetPolyDataConnection(triangleFilter.GetOutputPort())
   return miterBox
 
 def createCylinder(name,R,H=50):
@@ -188,8 +188,8 @@ def createCylinder(name,R,H=50):
   tubeFilter.SetRadius(R)
   tubeFilter.SetNumberOfSides(50)
   tubeFilter.CappingOn()
-  tubeFilter.Update()
-  cylinder.SetAndObservePolyData(tubeFilter.GetOutput())
+  #tubeFilter.Update()
+  cylinder.SetPolyDataConnection(tubeFilter.GetOutputPort())
   cylinder.SetAttribute('radius',str(R))
   cylinder.SetAttribute('height',str(H))
   return cylinder
