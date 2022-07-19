@@ -30,7 +30,9 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 
 # Use Cases
 [First clinical use (Stonia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40)
+
 [Use case by Manjula Herath (Sri Lanka)](https://discourse.slicer.org/t/bone-reconstruction-planner/19289)
+
 [This one will be published as part of a case series next year (Malaysia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/58)
 
 # Sample Data
