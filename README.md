@@ -29,24 +29,25 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 - [High-level design overview](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/raw/main/Docs/Design.pptx)
 
 # Use Cases
-[First clinical use](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40)
+[First clinical use (Stonia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40)
+[Use case by Manjula Herath (Sri Lanka)](https://discourse.slicer.org/t/bone-reconstruction-planner/19289)
+[This one will be published as part of a case series next year (Malaysia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/58)
 
 # Sample Data
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/Fibula.nrrd" >Fibula Scalar Volume</a>
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/ResectedMandible.nrrd" >Mandible Scalar Volume</a>
 
-# Instructions
+# Instructions (last updated 07/19/2022)
 
 ## Installing BoneReconstructionPlanner
 
-1. Download Slicer Stable Release from here: https://download.slicer.org/ It's version is 4.11.20210226
+1. Download Slicer Preview Release from here: https://download.slicer.org/ It's version is 5.1.0 of that day.
 2. Install Slicer
 3. Open Slicer
 4. Press Ctrl+4 to open the extension manager. Or click the upper-right icon with the letter 'E'
 5. Go to 'Install Extensions' tab
 6. On the upper-right search box write "BoneReconstructionPlanner"
-7. Click install and give okay to install other extensions if asked.
-8. Tell me if there are some errors till here.
+7. Click install and give okay to install other extensions if asked (wait till ALL dependencies are installed completely).
 
 
 ## Segmentation (Preparation for Virtual Surgical Planning)
@@ -77,7 +78,41 @@ Example:
 9. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" to make the reconstruction and create the fibula cut planes.
 10. Move the mandible planes as desired to change the position/orientation of the cuts.
 11. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" again. And repeat as many times as needed.
+If you tick the button it will react on plane movements and update automatically.
 
+## Personalized Fibula Guide Generation
+
+1. Press shift over some fibula piece on the corresponding 3D view. The model should be visible on the 2D slice with the corresponding color as an edge. Create a line over the 2D slice of the fibula that will set the direction of the miterBoxes (with this you select, for example, lateral approach or posterior approach). The line should me drawn from the centerline of the fibula to a point that is distal from the first one on the 2D slice of the fibula.
+2. Click "Create miter boxes from fibula planes". The yellow miterBoxes will appear, each one with a long box that will create the slit for the saw to go through.
+
+# Create the Fibula Guide Base
+3. Go to the segment editor, add a new segment and create a copy (using the copy-logical-operator) of the fibula segment, rename it to "fibGuideBase".
+4. Use Hollow tool with "inside surface" option and some "shell thickness" between 3 to 6mm. The number should be decision of the user. Usually more thickness makes the contact between the miterBoxes and the guideBase easier to achieve but sometimes the guideBase ends up too big wasting material or being uncomfortable. You can solve this, using a smaller shell if you do "masked painting" in the areas that need filling.
+[Here is explained how to do it](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40#discussioncomment-1607995)
+5. Go to the data module and leave only the fibGuideBase segment visible on its segmentation, right-click it and press "Export visible segments to models"
+
+# Finish the Fibula Surgical Guide
+6. On the "Fibula Surgical Guide Generation" layout of BRP click on the button "Create fiducial list" and position around one point per segment were you want the screw-hole to be (the fibGuideBase model should be visible).
+7. Select the fibula guide base model that you exported on the corresponding model selector. Be sure the correct pointList is selected on the corresponding point selector. If you go by defaults it should work fine.
+8. Click "Create cylinder from fiducial list and fibula surgical guide base". Some cylinders should appear over the fibula guide base.
+9. Congratulations: You are ready to execute boolean operations to create the guide. Click on "Make boolean operations to surgical guide base with screwHolesCylinders and miterBoxes". The guide will be created, you can be sure by using the NodeControlBox that is above and hiding everything else by clicking each "eye icon" of the component objects. The name of the guide will end with the word "Prototype". If you execute this button again after you did some changes to the plan (e.g. changed miterBoxes position) a new prototype will be created.
+
+## Personalized Mandible Surgical Guide.
+
+The workflow doesn't differ much from fibula guide creation.
+Except that:
+- The sawBoxes are movable and you should only move them inside the cut plane, to correct automatic mispositioning. After that hide the "biggerSawBoxes interaction handles" so you have a comfortable experience on later steps.
+- You need to segment two guide bases, one for each planar cut, and copy them together to the same segment. Then export them as a unique model as explained on the earlier section.
+- You may like to create a bridge between both mandibleGuides to make a rigid connection between them. This is done with the module "MarkupsToModel" and it's very easy to use.
+- You need to put the correct models on the corresponding selectors on "Mandible Surgical Guide Generation" panel
+
+## Mandible Reconstruction Simulation
+1. Do a Virtual Surgical Plan
+2. Click "Create 3D model of the reconstruction for 3D printing". This button maybe useful for users that want to prebent plates.
+
+## User contributions and feedback
+
+Fell free to open an [issue](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/new) (yes, you need a Github account) if you find the instructions or the videotutorial inaccurate, or if you need help finishing the workflow
 
 # License
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/LICENSE" >Read license</a>
