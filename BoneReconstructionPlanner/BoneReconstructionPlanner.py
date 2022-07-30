@@ -923,25 +923,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     observer = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer)
     self.mandiblePlaneObserversAndNodeIDList.append([observer,sourceNode.GetID()])
 
-    mandiblePlaneAndCurvePointIndexList = []
-    for i in range(len(mandibularPlanesList)):
-      origin = [0,0,0]
-      mandibularPlanesList[i].GetNthControlPointPosition(0,origin)
-      closestCurvePoint = [0,0,0]
-      closestCurvePointIndex = mandibleCurve.GetClosestPointPositionAlongCurveWorld(origin,closestCurvePoint)
-      mandiblePlaneAndCurvePointIndexList.append([mandibularPlanesList[i],closestCurvePointIndex])
-    
-    mandiblePlaneAndCurvePointIndexList.sort(key = lambda item : item[1])
-
-    mandibularPlanesFolder2 = shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandibular planes 2")
-    
-    for i in range(len(mandiblePlaneAndCurvePointIndexList)):
-      mandiblePlane = mandiblePlaneAndCurvePointIndexList[i][0]
-      mandiblePlaneItemID = shNode.GetItemByDataNode(mandiblePlane)
-      shNode.SetItemParent(mandiblePlaneItemID, mandibularPlanesFolder2)
-
-    shNode.RemoveItem(mandibularPlanesFolder)
-    shNode.SetItemName(mandibularPlanesFolder2,"Mandibular planes")
+    self.reorderMandiblePlanes()
   
   def onPlaneModifiedTimer(self,sourceNode,event):
     parameterNode = self.getParameterNode()
@@ -968,6 +950,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     makeAllMandiblePlanesRotateTogetherChecked = parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     mandiblePlaneOfRotation = parameterNode.GetNodeReference("mandiblePlaneOfRotation")
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+
+    self.reorderMandiblePlanes()
 
     if len(mandibularPlanesList):
       if makeAllMandiblePlanesRotateTogetherChecked and mandiblePlanesPositioningForMaximumBoneContactChecked:
@@ -1797,25 +1781,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
         modelDisplayNode.SetColor(color)
 
-        #Determinate plane creation direction and set up dynamic modeler
-        planeOriginStart = np.zeros(3)
-        planeOriginEnd = np.zeros(3)
-        planeList[0].GetNthControlPointPosition(0,planeOriginStart)
-        planeList[len(planeList)-1].GetNthControlPointPosition(0,planeOriginEnd)
-        closestCurvePointStart = [0,0,0]
-        closestCurvePointEnd = [0,0,0]
-        closestCurvePointIndexStart = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOriginStart,closestCurvePointStart)
-        closestCurvePointIndexEnd = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOriginEnd,closestCurvePointEnd)
-
         dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
         dynamicModelerNode.SetToolName("Plane cut")
         dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", fibulaModelNode.GetID())
-        if closestCurvePointIndexStart > closestCurvePointIndexEnd:
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID())
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
-        else:
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
-          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
         dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
         dynamicModelerNode.SetAttribute("OperationType", "Difference")
         #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
@@ -1848,12 +1818,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
       dynamicModelerNode.SetToolName("Plane cut")
       dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", mandibleModelNode.GetID())
-      if closestCurvePointIndexStart > closestCurvePointIndexEnd:
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID())
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
-      else:
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID()) 
+      dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
+      dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID()) 
       
       if fixCutGoesThroughTheMandibleTwiceChecked:
         #if planeToFixCutGoesThroughTheMandibleTwice == None:
@@ -1876,6 +1842,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         displayNode.SetVisibility(False)
         if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
           displayNode.HandlesInteractiveOff()
+
+        planeOriginStart = np.zeros(3)
+        planeOriginEnd = np.zeros(3)
+        planeList[0].GetNthControlPointPosition(0,planeOriginStart)
+        planeList[len(planeList)-1].GetNthControlPointPosition(0,planeOriginEnd)
 
         rightDirection = np.array([1,0,0])
         centerBetweenStartAndEndPlanes = (planeOriginStart + planeOriginEnd)/2
@@ -1910,6 +1881,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           dynamicModelerNodesList[i].SetNodeReferenceID("PlaneCut.InputModel", fibulaModelNode.GetID())
         else:
           dynamicModelerNodesList[i].SetNodeReferenceID("PlaneCut.InputModel", mandibleModelNode.GetID())
+          dynamicModelerNodesList[i].RemoveNodeReferenceIDs("PlaneCut.InputPlane")
+          dynamicModelerNodesList[i].AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
+          dynamicModelerNodesList[i].AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID()) 
 
   def generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible(self):
     parameterNode = self.getParameterNode()
@@ -1965,6 +1939,78 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.tranformBonePiecesToMandible()
 
     self.setRedSliceForDisplayNodes()
+
+  def reorderMandiblePlanes(self):
+    mandibularPlanesFolder = self.getMandiblePlanesFolderItemID()
+    planeList = createListFromFolderID(mandibularPlanesFolder)
+    parameterNode = self.getParameterNode()
+    mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
+
+    if len(planeList) < 2:
+      return
+    
+    reverseOrder = False
+    mandiblePlanesIndicesList = []
+    if len(planeList) == 2:
+      #Determinate plane creation direction and set up dynamic modeler
+      planeOriginStart = np.zeros(3)
+      planeOriginEnd = np.zeros(3)
+      planeList[0].GetNthControlPointPosition(0,planeOriginStart)
+      planeList[1].GetNthControlPointPosition(0,planeOriginEnd)
+      closestCurvePointStart = [0,0,0]
+      closestCurvePointEnd = [0,0,0]
+      closestCurvePointIndexStart = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOriginStart,closestCurvePointStart)
+      closestCurvePointIndexEnd = mandibularCurve.GetClosestPointPositionAlongCurveWorld(planeOriginEnd,closestCurvePointEnd)
+      mandiblePlanesIndicesList.append([
+        planeList[0],
+        closestCurvePointIndexStart
+      ])
+      mandiblePlanesIndicesList.append([
+        planeList[1],
+        closestCurvePointIndexEnd
+      ])
+    else:
+      #there are n mandible planes
+      originsList = []
+      mandiblePlanesIndicesList = []
+      for i in range(len(planeList)):
+        planeOrigin = np.zeros(3)
+        planeList[i].GetNthControlPointPosition(0,planeOrigin)
+        originsList.append(planeOrigin)
+        closestCurvePoint = [0,0,0]
+        closestCurvePointIndex = mandibularCurve.GetClosestPointPositionAlongCurveWorld(
+          planeOrigin,closestCurvePoint
+        )
+        mandiblePlanesIndicesList.append([
+          planeList[i],
+          closestCurvePointIndex
+        ])
+
+      normalOfPoints = getBestFittingPlaneNormalFromPoints(
+        np.array(
+            originsList
+        )
+      )
+
+      curvePoints = slicer.util.arrayFromMarkupsCurvePoints(mandibularCurve)
+      bestFittingPlaneNormalOfCurvePoints = getBestFittingPlaneNormalFromPoints(curvePoints)
+      
+      reverseOrder = vtk.vtkMath.Dot(normalOfPoints,bestFittingPlaneNormalOfCurvePoints) < 0
+
+      mandiblePlanesIndicesList.sort(key=lambda item: item[1], reverse=reverseOrder)
+
+    #print(mandiblePlanesIndicesList)
+
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    mandibularPlanesFolder2 = shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandibular planes 2")
+
+    for i in range(len(mandiblePlanesIndicesList)):
+      mandiblePlane = mandiblePlanesIndicesList[i][0]
+      mandiblePlaneItemID = shNode.GetItemByDataNode(mandiblePlane)
+      shNode.SetItemParent(mandiblePlaneItemID, mandibularPlanesFolder2)
+
+    shNode.RemoveItem(mandibularPlanesFolder)
+    shNode.SetItemName(mandibularPlanesFolder2,"Mandibular planes")
 
   def setRedSliceForDisplayNodes(self):
     parameterNode = self.getParameterNode()
