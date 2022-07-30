@@ -72,7 +72,7 @@ Example:
 1. Click the search icon on the left of the module selector and write 'BoneReconstructionPlanner'. Click switch to module.
 2. Select the mandibular segmentation and the fibula segmentation.
 3. Click "Create bone models from segmentations"
-4. Click "Add mandibular curve" and create a curve along the mandible. This will help giving the cut planes their initial position.
+4. Click "Add mandibular curve" and create a curve along the mandible. This will help giving the cut planes their initial position. It's a bit important to make it quite similar to the ideal mandible curve the patient would have if he was healthy because the plane positioning algorithms depend on it.
 5. Click "Add cut plane" and click where you want plane. Add as many planes as needed. There will be a bone piece between every two adjacent planes. So the number of mandible planes should be the desired number of bone pieces for the reconstruction plus one. The first and the last mandible planes will be the mandible resection cuts.
 6. Click "Add fibula line". Draw a line over the fibula on the 3D view. First point distal, last point proximal.
 7. Click "Center fibula line using fibula model" to make the line be similar to the anatomical axis of the fibula.
