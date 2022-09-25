@@ -40,6 +40,7 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/ResectedMandible.nrrd" >Mandible Scalar Volume</a>
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaSeg.seg.nrrd" >Fibula Segmentation</a>
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/MandibleSeg.seg.nrrd" >Mandible Segmentation</a>
+- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP.mrb" >Example Virtual Surgical Plan with Patient-Specific Surgical Guides</a>
 
 # Instructions (last updated 07/19/2022)
 
