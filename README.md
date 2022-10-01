@@ -42,7 +42,7 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/MandibleSeg.seg.nrrd" >Mandible Segmentation</a>
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP.mrb" >Example Virtual Surgical Plan with Patient-Specific Surgical Guides</a>
 
-# Instructions (last updated 07/19/2022)
+# Instructions (last updated 09/30/2022)
 
 ## Installing BoneReconstructionPlanner
 
@@ -66,9 +66,12 @@ Example:
 2. Use threshold effect to select bone but not connecting tissue (like ligaments). Check if your selected threshold value is okay if there is no connection of the segmented bones near the joint. Threshold value should not be too low to not lose detail. Suggested value: 200
 3. Use Islands effect, select 'keep selected island' and click over the fibula to keep it.
 4. If successful continue. If not start over and use a higher threshold value or use scissors to isolate the fibula
-5. Go to Wrap Solidify effect and click apply. (This is needed because it is recommended that bone segmentations have no holes inside so the assisted miterBox positioning algorithms work well)
-6. Correct errors on segmentations with scissors if needed.
-7. The bone segment (fibula or mandible) should be the first of the segment-list of the segmentation. In other words the bone segment should be in position zero of the list.
+5. Go to Wrap Solidify effect, on Advanced button set the suggested configuration below (by @SteveMaisi) and click apply. (This is needed because it is recommended that bone segmentations have no holes inside so the assisted miterBox positioning algorithms work well)
+![192679644-995cbed7-9732-4f87-a936-55e000179fc4](https://user-images.githubusercontent.com/19158307/193409717-40605b9b-e48f-4a51-8332-967a08a9e30c.png)
+6. Restore the segmentation smoothing factor to 0.5
+![4350535f4e0b0d5738701e8257e30728b26b0b96](https://user-images.githubusercontent.com/19158307/193409905-5479f1bb-5fe0-4954-83e7-932cc295bd02.png)
+7. Correct errors on segmentations with scissors if needed.
+8. The bone segment (fibula or mandible) should be the first of the segment-list of the segmentation. In other words the bone segment should be in position zero of the list.
 
 ## Virtual Surgical Planning
 
