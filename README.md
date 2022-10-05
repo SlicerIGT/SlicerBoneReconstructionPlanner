@@ -75,6 +75,7 @@ Example:
 
 ## Virtual Surgical Planning
 
+0. [Save](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#non-dicom-data) frequently as the surgical plan can be reopened from where you left it if there is a crash (software malfunction). We are trying to fix a bug that makes Slicer close unexpectedly ([more info here](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/63))
 1. Click the search icon on the left of the module selector and write 'BoneReconstructionPlanner'. Click switch to module.
 2. Select the mandibular segmentation and the fibula segmentation.
 3. Click "Create bone models from segmentations"
