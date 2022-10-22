@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>434</width>
-    <height>1855</height>
+    <width>443</width>
+    <height>1917</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -397,6 +397,30 @@ bone pieces and transform them to mandible</string>
          <string>Create 3D model of the reconstruction for 3D printing</string>
         </property>
        </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QPushButton" name="automaticDoubleBarrelButton">
+          <property name="text">
+           <string>Automatic double-barrel</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="addDoubleBarrelPlaneButton">
+          <property name="text">
+           <string>Add DB plane</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
        <widget class="qMRMLSubjectHierarchyTreeView" name="planesTreeView">
