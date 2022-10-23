@@ -227,6 +227,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
               observerIndex = i
           callData.RemoveObserver(self.logic.mandiblePlaneObserversAndNodeIDList.pop(observerIndex)[0])
         self.logic.onPlaneModifiedTimer(None,None)
+      if callData.GetAttribute("isDoubleBarrelPlane") == 'True':
+        self.logic.onPlaneModifiedTimer(None,None)
       if callData.GetAttribute("isSawBoxPlane") == 'True':
         if len(self.logic.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList) > 0:
           for i in range(len(self.logic.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList)):
@@ -878,7 +880,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeNodeItemID = shNode.GetItemByDataNode(planeNode)
     shNode.SetItemParent(planeNodeItemID, mandibularFolderID)
     planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
-    planeNode.SetAttribute("isMandibularPlane","True")
+    planeNode.SetAttribute("isDoubleBarrelPlane","True")
     if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
       planeNode.SetSize(50,50)
       planeNode.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
@@ -1190,7 +1192,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         numberOfSeparationCalculations = len(planeList) - 1
 
       for i in range(numberOfSeparationCalculations):
-        print(i)
+        print("")
+        print("iteration %d" % i)
+        print("")
         if i < (len(planeList)-1):
           mandiblePlane0 = planeList[i]
           mandiblePlane1 = planeList[i+1]
@@ -1199,7 +1203,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           mandiblePlane1 = doubleBarrelPlaneList[i-len(planeList)+1]
         else:
           continue
-        print(mandiblePlane0.GetName())
+
         mandiblePlane0X = [0,0,0]
         mandiblePlane0Y = [0,0,0]
         mandiblePlane0Z = [0,0,0]
@@ -1689,12 +1693,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
     planeList = mandiblePlanesList + doubleBarrelPlaneList
     for i in range(len(planeList)-1):
-      if i < (len(mandiblePlanesList)-1):
-          mandiblePlane0 = planeList[i]
-          mandiblePlane1 = planeList[i+1]
-      elif i > (len(mandiblePlanesList)-1):
-        mandiblePlane0 = planeList[i-1]
-        mandiblePlane1 = planeList[i]
+      if i != (len(mandiblePlanesList)-1):
+        mandiblePlane0 = planeList[i]
+        mandiblePlane1 = planeList[i+1]
       else:
         continue
       mandiblePlane0X = [0,0,0]
@@ -1783,29 +1784,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         for i in range(3):
           newPlanes[j].SetNthControlPointVisibility(i,False)
 
-    #Set up color for fibula planes
-    for i in range(len(planeList)-1):
-      if i == 0:
-        oldDisplayNode = planeList[i].GetDisplayNode()
+        #Set up color for fibula planes
+        oldDisplayNode = oldPlanes[j].GetDisplayNode()
         color = oldDisplayNode.GetSelectedColor()
-
-        displayNode = fibulaPlanesList[0].GetDisplayNode()
+        displayNode = newPlanes[j].GetDisplayNode()
         displayNode.SetSelectedColor(color)
-      else:
-        if i == (len(planeList)-2):
-          oldDisplayNode = planeList[i].GetDisplayNode()
-          color = oldDisplayNode.GetSelectedColor()
-
-          displayNode = fibulaPlanesList[len(fibulaPlanesList)-1].GetDisplayNode()
-          displayNode.SetSelectedColor(color)
-        else:
-          oldDisplayNode = planeList[i].GetDisplayNode()
-          color = oldDisplayNode.GetSelectedColor()
-
-          displayNode1 = fibulaPlanesList[2*i-1].GetDisplayNode()
-          displayNode1.SetSelectedColor(color)
-          displayNode2 = fibulaPlanesList[2*i].GetDisplayNode()
-          displayNode2.SetSelectedColor(color)
 
   def createAndUpdateDynamicModelerNodes(self):
     parameterNode = self.getParameterNode()
@@ -2010,9 +1993,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #delete all the folders that are not updated
     if (
-        (len(fibulaPlanesList) != ((2*len(planeList) - 2))) ^ 
-        (len(fibulaPlanesList) != ((2*len(planeList) - 2) + (2*len(doubleBarrelPlaneList) - 2)))
-      ) or not fibulaPlanesFolder:
+          (
+              (
+                  (len(fibulaPlanesList) != ((2*len(planeList) - 2))) or
+                  (len(doubleBarrelPlaneList) >= 2)
+              )
+          ) and 
+          (len(fibulaPlanesList) != ((2*len(planeList) - 2) + (2*len(doubleBarrelPlaneList) - 2)))
+      ):
       shNode.RemoveItem(fibulaPlanesFolder)
       planeCutsFolder = shNode.GetItemByName("Plane Cuts")
       shNode.RemoveItem(planeCutsFolder)
@@ -2368,21 +2356,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaOrigin = lineStartPos
     fibulaZ = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
 
+    numberOfMandibleSegments = (len(mandibularPlaneList)-1)
     cutBonesList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
     for i in range(len(cutBonesList)-1):
       or0 = np.zeros(3)
       or1 = np.zeros(3)
-      if len(doubleBarrelPlaneList) >= 2:
-        numberOfMandibleSegments = (len(mandibularPlaneList)-1)
-        if i < numberOfMandibleSegments:
-          planeList[i].GetOrigin(or0)
-          planeList[i+1].GetOrigin(or1)
-        else:
-          planeList[i+1].GetOrigin(or0)
-          planeList[i+2].GetOrigin(or1)
+      if i < numberOfMandibleSegments:
+        planeList[i].GetOrigin(or0)
+        planeList[i+1].GetOrigin(or1)
       else:
-          planeList[i].GetOrigin(or0)
-          planeList[i+1].GetOrigin(or1)
+        planeList[i+1].GetOrigin(or0)
+        planeList[i+2].GetOrigin(or1)
       origin = (or0+or1)/2
 
       inverseRotationMatrix = vtk.vtkMatrix4x4()
@@ -3668,8 +3652,8 @@ Then click 'Create 3D model of reconstruction...' again.""")
 
       doubleBarrelPlaneNode.SetAxes(-mandiblePlaneX,mandiblePlaneY,-mandiblePlaneZ)
 
-    #shNode.RemoveItem(mandibleReconstructionIntersections)
-    #shNode.RemoveItem(twoPointsIntersectionsFolder)
+    shNode.RemoveItem(mandibleReconstructionIntersections)
+    shNode.RemoveItem(twoPointsIntersectionsFolder)
 
     doubleBarrelPlanesList = createListFromFolderID(doubleBarrelPlanesFolder)
 
