@@ -59,76 +59,76 @@ def registerSampleData():
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
     # Category and sample name displayed in Sample Data module
     category='BoneReconstructionPlanner',
-    sampleName='FibulaCropped',
+    sampleName='CTFibulaCropped',
     # Thumbnail should have size of approximately 260x280 pixels and stored in Resources/Icons folder.
     # It can be created by Screen Capture module, "Capture all views" option enabled, "Number of images" set to "Single".
-    thumbnailFileName=os.path.join(iconsPath, 'iconFibulaCropped.png'),
+    thumbnailFileName=os.path.join(iconsPath, 'iconCTFibulaCropped.png'),
     # Download URL and target file name
-    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaCropped.nrrd",
-    fileNames='FibulaCropped.nrrd',
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/CTFibulaCropped.nrrd",
+    fileNames='CTFibulaCropped.nrrd',
     # Checksum to ensure file integrity. Can be computed by this command:
     #  import hashlib; print(hashlib.sha256(open(filename, "rb").read()).hexdigest())
     checksums = 'SHA256:5febc47a8fba6b43440be2b475f9defadffe9b47b1316d04217208b4497a4f72',
     # This node name will be used when the data set is loaded
-    nodeNames='FibulaCropped'
+    nodeNames='CTFibulaCropped'
   )
 
   # BoneReconstructionPlanner2
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
     # Category and sample name displayed in Sample Data module
     category='BoneReconstructionPlanner',
-    sampleName='Fibula',
-    thumbnailFileName=os.path.join(iconsPath, 'iconFibula.png'),
+    sampleName='CTFibula',
+    thumbnailFileName=os.path.join(iconsPath, 'iconCTFibula.png'),
     # Download URL and target file name
-    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/Fibula.nrrd",
-    fileNames='Fibula.nrrd',
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/CTFibula.nrrd",
+    fileNames='CTFibula.nrrd',
     checksums = 'SHA256:715ae01091b642677e6065b8d7bb4d15ed9adaf31c057f4b53ea70a425bba7a4',
     # This node name will be used when the data set is loaded
-    nodeNames='Fibula'
+    nodeNames='CTFibula'
   )
 
   # BoneReconstructionPlanner3
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
     # Category and sample name displayed in Sample Data module
     category='BoneReconstructionPlanner',
-    sampleName='ResectedMandible',
-    thumbnailFileName=os.path.join(iconsPath, 'iconResectedMandible.png'),
+    sampleName='CTMandible',
+    thumbnailFileName=os.path.join(iconsPath, 'iconCTMandible.png'),
     # Download URL and target file name
-    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/ResectedMandible.nrrd",
-    fileNames='ResectedMandible.nrrd',
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/CTMandible.nrrd",
+    fileNames='CTMandible.nrrd',
     checksums = 'SHA256:352aefed1905bd2ad7373972a6bb115bd494e26e4fc438d2c8679384dcfd2654',
     # This node name will be used when the data set is loaded
-    nodeNames='ResectedMandible'
+    nodeNames='CTMandible'
   )
 
   # BoneReconstructionPlanner4
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
     # Category and sample name displayed in Sample Data module
     category='BoneReconstructionPlanner',
-    sampleName='Fibula Segmentation',
-    thumbnailFileName=os.path.join(iconsPath, 'iconFibulaSeg.png'),
+    sampleName='FibulaSegmentation',
+    thumbnailFileName=os.path.join(iconsPath, 'iconFibulaSegmentation.png'),
     loadFileType='SegmentationFile',
     # Download URL and target file name
-    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaSeg.seg.nrrd",
-    fileNames='FibulaSeg.seg.nrrd',
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaSegmentation.seg.nrrd",
+    fileNames='FibulaSegmentation.seg.nrrd',
     checksums = 'SHA256:517bfe11a87b709cb8aa6d4187f41d8c86a8d9a033667a4fc8c8b95bf3eeb99d',
     # This node name will be used when the data set is loaded
-    nodeNames='FibulaSeg'
+    nodeNames='FibulaSegmentation'
   )
 
   # BoneReconstructionPlanner5
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
     # Category and sample name displayed in Sample Data module
     category='BoneReconstructionPlanner',
-    sampleName='Mandible Segmentation',
-    thumbnailFileName=os.path.join(iconsPath, 'iconMandibleSeg.png'),
+    sampleName='MandibleSegmentation',
+    thumbnailFileName=os.path.join(iconsPath, 'iconMandibleSegmentation.png'),
     loadFileType='SegmentationFile',
     # Download URL and target file name
-    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/MandibleSeg.seg.nrrd",
-    fileNames='MandibleSeg.seg.nrrd',
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/MandibleSegmentation.seg.nrrd",
+    fileNames='MandibleSegmentation.seg.nrrd',
     checksums = 'SHA256:d815406843f7945997c8eee6d7cd906e707ed5a1a6aabb2787c5203297e3ef01',
     # This node name will be used when the data set is loaded
-    nodeNames='MandibleSeg'
+    nodeNames='MandibleSegmentation'
   )
 
 #
