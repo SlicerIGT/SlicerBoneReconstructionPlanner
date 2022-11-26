@@ -77,6 +77,20 @@ def registerSampleData():
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
     # Category and sample name displayed in Sample Data module
     category='BoneReconstructionPlanner',
+    sampleName='Fibula',
+    thumbnailFileName=os.path.join(iconsPath, 'iconFibula.png'),
+    # Download URL and target file name
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/Fibula.nrrd",
+    fileNames='Fibula.nrrd',
+    checksums = 'SHA256:715ae01091b642677e6065b8d7bb4d15ed9adaf31c057f4b53ea70a425bba7a4',
+    # This node name will be used when the data set is loaded
+    nodeNames='Fibula'
+  )
+
+  # BoneReconstructionPlanner3
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    # Category and sample name displayed in Sample Data module
+    category='BoneReconstructionPlanner',
     sampleName='ResectedMandible',
     thumbnailFileName=os.path.join(iconsPath, 'iconResectedMandible.png'),
     # Download URL and target file name
@@ -85,6 +99,36 @@ def registerSampleData():
     checksums = 'SHA256:352aefed1905bd2ad7373972a6bb115bd494e26e4fc438d2c8679384dcfd2654',
     # This node name will be used when the data set is loaded
     nodeNames='ResectedMandible'
+  )
+
+  # BoneReconstructionPlanner4
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    # Category and sample name displayed in Sample Data module
+    category='BoneReconstructionPlanner',
+    sampleName='Fibula Segmentation',
+    thumbnailFileName=os.path.join(iconsPath, 'iconFibulaSeg.png'),
+    loadFileType='SegmentationFile',
+    # Download URL and target file name
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaSeg.seg.nrrd",
+    fileNames='FibulaSeg.seg.nrrd',
+    checksums = 'SHA256:517bfe11a87b709cb8aa6d4187f41d8c86a8d9a033667a4fc8c8b95bf3eeb99d',
+    # This node name will be used when the data set is loaded
+    nodeNames='FibulaSeg'
+  )
+
+  # BoneReconstructionPlanner5
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    # Category and sample name displayed in Sample Data module
+    category='BoneReconstructionPlanner',
+    sampleName='Mandible Segmentation',
+    thumbnailFileName=os.path.join(iconsPath, 'iconMandibleSeg.png'),
+    loadFileType='SegmentationFile',
+    # Download URL and target file name
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/MandibleSeg.seg.nrrd",
+    fileNames='MandibleSeg.seg.nrrd',
+    checksums = 'SHA256:d815406843f7945997c8eee6d7cd906e707ed5a1a6aabb2787c5203297e3ef01',
+    # This node name will be used when the data set is loaded
+    nodeNames='MandibleSeg'
   )
 
 #
