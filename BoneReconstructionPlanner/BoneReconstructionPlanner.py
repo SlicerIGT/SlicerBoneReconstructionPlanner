@@ -3427,10 +3427,16 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def runTest(self):
     """Run as few or as many tests as needed here.
     """
-    self.setUp()
-    self.test_BoneReconstructionPlanner1()
+    #self.setUp()
+    #self.test_BoneReconstructionPlanner1()
 
-  def test_BoneReconstructionPlanner1(self):
+    #self.setUp()
+    #self.test_VirtualSurgicalPlanningBRP()
+
+    self.setUp()
+    self.test_MakeModels()
+
+  def test_MakeModels(self):
     """ Ideally you should have several levels of tests.  At the lowest level
     tests should exercise the functionality of the logic with different inputs
     (both valid and invalid).  At higher levels your tests should emulate the
@@ -3442,40 +3448,53 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     your test should break so they know that the feature is needed.
     """
 
-    self.delayDisplay("Starting the test")
+    self.delayDisplay("Starting the MakeModels test")
 
-    # Get/create input data
-
+    # Get input data
     import SampleData
     registerSampleData()
-    inputVolume = SampleData.downloadSample('BoneReconstructionPlanner1')
-    self.delayDisplay('Loaded test data set')
-
-    inputScalarRange = inputVolume.GetImageData().GetScalarRange()
-    self.assertEqual(inputScalarRange[0], 0)
-    self.assertEqual(inputScalarRange[1], 695)
-
-    outputVolume = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode")
-    threshold = 100
+    fibulaVolume = SampleData.downloadSample('CTFibula')
+    self.delayDisplay('Loaded CTFibula')
+    mandibleVolume = SampleData.downloadSample('CTMandible')
+    self.delayDisplay('Loaded CTMandible')
+    fibulaSegmentation = SampleData.downloadSample('FibulaSegmentation')
+    self.delayDisplay('Loaded FibulaSegmentation')
+    mandibleSegmentation = SampleData.downloadSample('MandibleSegmentation')
+    self.delayDisplay('Loaded MandibleSegmentation')
 
     # Test the module logic
-
     logic = BoneReconstructionPlannerLogic()
+    parameterNode = logic.getParameterNode()
+    parameterNode.SetNodeReferenceID("fibulaSegmentation", fibulaSegmentation.GetID())
+    parameterNode.SetNodeReferenceID("mandibularSegmentation", mandibleSegmentation.GetID())
 
-    # Test algorithm with non-inverted threshold
-    logic.process(inputVolume, outputVolume, threshold, True)
-    outputScalarRange = outputVolume.GetImageData().GetScalarRange()
-    self.assertEqual(outputScalarRange[0], inputScalarRange[0])
-    self.assertEqual(outputScalarRange[1], threshold)
+    logic.makeModels()
 
-    # Test algorithm with inverted threshold
-    logic.process(inputVolume, outputVolume, threshold, False)
-    outputScalarRange = outputVolume.GetImageData().GetScalarRange()
-    self.assertEqual(outputScalarRange[0], inputScalarRange[0])
-    self.assertEqual(outputScalarRange[1], inputScalarRange[1])
+    # Outputs
+    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
+    fibulaCentroidX = float(parameterNode.GetParameter("fibulaCentroidX"))
+    fibulaCentroidY = float(parameterNode.GetParameter("fibulaCentroidY"))
+    fibulaCentroidZ = float(parameterNode.GetParameter("fibulaCentroidZ"))
+    mandibleCentroidX = float(parameterNode.GetParameter("mandibleCentroidX"))
+    mandibleCentroidY = float(parameterNode.GetParameter("mandibleCentroidY"))
+    mandibleCentroidZ = float(parameterNode.GetParameter("mandibleCentroidZ"))
 
-    self.delayDisplay('Test passed')
-
+    # Assertions
+    self.assertEqual(fibulaModelNode.GetMesh().GetNumberOfPoints(), 197962)
+    self.assertEqual(mandibleModelNode.GetMesh().GetNumberOfPoints(), 109820)
+    self.assertEqual(decimatedFibulaModelNode.GetMesh().GetNumberOfPoints(), 9872)
+    self.assertEqual(decimatedMandibleModelNode.GetMesh().GetNumberOfPoints(), 5483)
+    
+    #np.testing.assert_almost_equal(actual,desired)
+    np.testing.assert_almost_equal(fibulaCentroidX,-95.32889)
+    np.testing.assert_almost_equal(fibulaCentroidY,-8.86916)
+    np.testing.assert_almost_equal(fibulaCentroidZ,-18.44151)
+    np.testing.assert_almost_equal(mandibleCentroidX,0.1073946)
+    np.testing.assert_almost_equal(mandibleCentroidY,65.49171)
+    np.testing.assert_almost_equal(mandibleCentroidZ,-57.415688)
 
 def createListFromFolderID(folderID):
   createdList = []
