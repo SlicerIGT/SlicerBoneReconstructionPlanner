@@ -3427,15 +3427,81 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def runTest(self):
     """Run as few or as many tests as needed here.
     """
-    #self.setUp()
-    #self.test_BoneReconstructionPlanner1()
-
-    #self.setUp()
-    #self.test_VirtualSurgicalPlanningBRP()
-
     self.setUp()
+    self.test_EnterBRP()
+    self.test_GetWidget()
+    self.test_GetLogic()
+    self.test_LoadSampleData()
     self.test_MakeModels()
+    #self.test_AddMandiblePlanes()
 
+  def test_EnterBRP(self):
+    try:
+      self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
+      slicer.util.selectModule('Data')
+      slicer.util.selectModule('BoneReconstructionPlanner')
+      self.assertEqual(slicer.util.selectedModule(),'BoneReconstructionPlanner')
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      logging.error('Test caused exception!\n' + str(e))
+  
+  def test_GetWidget(self):
+    try:
+      self.widgetBRP = slicer.modules.bonereconstructionplanner.widgetRepresentation()
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      logging.error('Test caused exception!\n' + str(e))
+      
+  def test_GetLogic(self):
+    try:
+      self.logicBRP = self.widgetBRP.self().logic  
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      logging.error('Test caused exception!\n' + str(e))
+      
+  def test_LoadSampleData(self):
+    try:
+      # Get input data
+      import SampleData
+      registerSampleData()
+      self.fibulaVolume = SampleData.downloadSample('CTFibula')
+      self.delayDisplay('Loaded CTFibula')
+      self.mandibleVolume = SampleData.downloadSample('CTMandible')
+      self.delayDisplay('Loaded CTMandible')
+      self.fibulaSegmentation = SampleData.downloadSample('FibulaSegmentation')
+      self.delayDisplay('Loaded FibulaSegmentation')
+      self.mandibleSegmentation = SampleData.downloadSample('MandibleSegmentation')
+      self.delayDisplay('Loaded MandibleSegmentation')
+
+      self.currentScalarVolume = self.fibulaVolume
+
+      parameterNode = self.logicBRP.getParameterNode()
+      parameterNode.SetNodeReferenceID("currentScalarVolume", self.currentScalarVolume.GetID())
+      parameterNode.SetNodeReferenceID("fibulaSegmentation", self.fibulaSegmentation.GetID())
+      parameterNode.SetNodeReferenceID("mandibularSegmentation", self.mandibleSegmentation.GetID())
+
+      self.assertEqual(
+        parameterNode.GetNodeReference("currentScalarVolume").GetID(),
+        self.currentScalarVolume.GetID()
+      )
+      self.assertEqual(
+        parameterNode.GetNodeReference("fibulaSegmentation").GetID(),
+        self.fibulaSegmentation.GetID()
+      )
+      self.assertEqual(
+        parameterNode.GetNodeReference("mandibularSegmentation").GetID(),
+        self.mandibleSegmentation.GetID()
+      )
+
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      logging.error('Test caused exception!\n' + str(e))
+
+      
   def test_MakeModels(self):
     """ Ideally you should have several levels of tests.  At the lowest level
     tests should exercise the functionality of the logic with different inputs
@@ -3447,55 +3513,85 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     module.  For example, if a developer removes a feature that you depend on,
     your test should break so they know that the feature is needed.
     """
+    try:
+      self.delayDisplay("Starting the MakeModelsTest")
 
-    self.delayDisplay("Starting the MakeModels test")
+      parameterNode = self.logicBRP.getParameterNode()
 
-    # Get input data
-    import SampleData
-    registerSampleData()
-    fibulaVolume = SampleData.downloadSample('CTFibula')
-    self.delayDisplay('Loaded CTFibula')
-    mandibleVolume = SampleData.downloadSample('CTMandible')
-    self.delayDisplay('Loaded CTMandible')
-    fibulaSegmentation = SampleData.downloadSample('FibulaSegmentation')
-    self.delayDisplay('Loaded FibulaSegmentation')
-    mandibleSegmentation = SampleData.downloadSample('MandibleSegmentation')
-    self.delayDisplay('Loaded MandibleSegmentation')
+      self.logicBRP.makeModels()
 
-    # Test the module logic
-    logic = BoneReconstructionPlannerLogic()
-    parameterNode = logic.getParameterNode()
-    parameterNode.SetNodeReferenceID("fibulaSegmentation", fibulaSegmentation.GetID())
-    parameterNode.SetNodeReferenceID("mandibularSegmentation", mandibleSegmentation.GetID())
+      fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+      mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+      decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+      decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
 
-    logic.makeModels()
+      self.assertEqual(fibulaModelNode.GetMesh().GetNumberOfPoints(), 197962)
+      self.assertEqual(mandibleModelNode.GetMesh().GetNumberOfPoints(), 109820)
+      self.assertEqual(decimatedFibulaModelNode.GetMesh().GetNumberOfPoints(), 9872)
+      self.assertEqual(decimatedMandibleModelNode.GetMesh().GetNumberOfPoints(), 5483)
+      
+      fibulaCentroidX = float(parameterNode.GetParameter("fibulaCentroidX"))
+      fibulaCentroidY = float(parameterNode.GetParameter("fibulaCentroidY"))
+      fibulaCentroidZ = float(parameterNode.GetParameter("fibulaCentroidZ"))
+      mandibleCentroidX = float(parameterNode.GetParameter("mandibleCentroidX"))
+      mandibleCentroidY = float(parameterNode.GetParameter("mandibleCentroidY"))
+      mandibleCentroidZ = float(parameterNode.GetParameter("mandibleCentroidZ"))
 
-    # Outputs
-    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
-    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
-    decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
-    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
-    fibulaCentroidX = float(parameterNode.GetParameter("fibulaCentroidX"))
-    fibulaCentroidY = float(parameterNode.GetParameter("fibulaCentroidY"))
-    fibulaCentroidZ = float(parameterNode.GetParameter("fibulaCentroidZ"))
-    mandibleCentroidX = float(parameterNode.GetParameter("mandibleCentroidX"))
-    mandibleCentroidY = float(parameterNode.GetParameter("mandibleCentroidY"))
-    mandibleCentroidZ = float(parameterNode.GetParameter("mandibleCentroidZ"))
+      #np.testing.assert_almost_equal(actual,desired)
+      np.testing.assert_almost_equal(fibulaCentroidX,-95.32889)
+      np.testing.assert_almost_equal(fibulaCentroidY,-8.86916)
+      np.testing.assert_almost_equal(fibulaCentroidZ,-18.44151)
+      np.testing.assert_almost_equal(mandibleCentroidX,0.1073946)
+      np.testing.assert_almost_equal(mandibleCentroidY,65.49171)
+      np.testing.assert_almost_equal(mandibleCentroidZ,-57.415688)
 
-    # Assertions
-    self.assertEqual(fibulaModelNode.GetMesh().GetNumberOfPoints(), 197962)
-    self.assertEqual(mandibleModelNode.GetMesh().GetNumberOfPoints(), 109820)
-    self.assertEqual(decimatedFibulaModelNode.GetMesh().GetNumberOfPoints(), 9872)
-    self.assertEqual(decimatedMandibleModelNode.GetMesh().GetNumberOfPoints(), 5483)
+      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+      BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
+      segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
+      fibulaModelItemID = shNode.GetItemByDataNode(fibulaModelNode)
+      mandibleModelItemID = shNode.GetItemByDataNode(mandibleModelNode)
+      decimatedFibulaModelItemID = shNode.GetItemByDataNode(decimatedFibulaModelNode)
+      decimatedMandibleModelItemID = shNode.GetItemByDataNode(decimatedMandibleModelNode)
+
+      self.assertNotEqual(BRPFolder,shNode.GetInvalidItemID())
+      self.assertNotEqual(segmentationModelsFolder,shNode.GetInvalidItemID())
+
+      self.assertEqual(
+        BRPFolder,
+        shNode.GetItemParent(segmentationModelsFolder)
+      )
+      self.assertEqual(
+        segmentationModelsFolder,
+        shNode.GetItemParent(fibulaModelItemID)
+      )
+      self.assertEqual(
+        segmentationModelsFolder,
+        shNode.GetItemParent(mandibleModelItemID)
+      )
+      self.assertEqual(
+        segmentationModelsFolder,
+        shNode.GetItemParent(decimatedFibulaModelItemID)
+      )
+      self.assertEqual(
+        segmentationModelsFolder,
+        shNode.GetItemParent(decimatedMandibleModelItemID)
+      )
+
+      self.delayDisplay("MakeModelsTest successful")
     
-    #np.testing.assert_almost_equal(actual,desired)
-    np.testing.assert_almost_equal(fibulaCentroidX,-95.32889)
-    np.testing.assert_almost_equal(fibulaCentroidY,-8.86916)
-    np.testing.assert_almost_equal(fibulaCentroidZ,-18.44151)
-    np.testing.assert_almost_equal(mandibleCentroidX,0.1073946)
-    np.testing.assert_almost_equal(mandibleCentroidY,65.49171)
-    np.testing.assert_almost_equal(mandibleCentroidZ,-57.415688)
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      logging.error('Test caused exception!\n' + str(e))
 
+  def test_AddMandiblePlanes(self):
+    pass
+    #addCutPlane
+    #[40.50773239135742, 68.05767059326172, -63.920616149902344]
+    
+    
+
+    
 def createListFromFolderID(folderID):
   createdList = []
   shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
