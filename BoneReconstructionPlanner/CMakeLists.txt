@@ -9,8 +9,11 @@ set(MODULE_PYTHON_SCRIPTS
 
 set(MODULE_PYTHON_RESOURCES
   Resources/Icons/${MODULE_NAME}.png
-  Resources/Icons/iconFibulaCropped.png
-  Resources/Icons/iconResectedMandible.png
+  Resources/Icons/iconCTFibula.png
+  Resources/Icons/iconCTFibulaCropped.png
+  Resources/Icons/iconCTMandible.png
+  Resources/Icons/iconFibulaSegmentation.png
+  Resources/Icons/iconMandibleSegmentation.png
   Resources/UI/${MODULE_NAME}.ui
   )
 
