@@ -131,6 +131,22 @@ def registerSampleData():
     nodeNames='MandibleSegmentation'
   )
 
+  # BoneReconstructionPlanner6
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    # Category and sample name displayed in Sample Data module
+    category='BoneReconstructionPlanner',
+    sampleName='TestPlanBRP',
+    thumbnailFileName=os.path.join(iconsPath, 'iconTestPlanBRP.png'),
+    loadFileType='SceneFile',
+    loadFiles="True",
+    # Download URL and target file name
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP.mrb",
+    fileNames='TestPlanBRP.mrb',
+    checksums = 'SHA256:92ace5d23218e74a7deb04f78afa22e49ed98be6951ef4202ac9f26a8f79190b',
+    # This node name will be used when the data set is loaded
+    nodeNames='TestPlanBRP'
+  )
+
 #
 # BoneReconstructionPlannerWidget
 #
@@ -3437,10 +3453,16 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.test_EnterBRP()
     self.test_GetWidget()
     self.test_GetLogic()
+    self.test_LoadFinishedPlanSampleData()
+
+    self.setUp()
+    self.test_EnterBRP()
+    self.test_GetWidget()
+    self.test_GetLogic()
     self.test_LoadSampleData()
     self.test_MakeModels()
     self.test_AddMandibularCurve()
-    #self.test_AddMandiblePlanes()
+    self.test_AddMandiblePlanes()
 
   def test_EnterBRP(self):
     try:
@@ -3469,6 +3491,58 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       traceback.print_exc()
       logging.error('Test caused exception!\n' + str(e))
       
+  def test_LoadFinishedPlanSampleData(self):
+    self.delayDisplay("Started loading TestPlanBRP scene")
+    import SampleData
+    registerSampleData()
+    SampleData.downloadSample('TestPlanBRP')
+    self.delayDisplay('Loaded TestPlanBRP scene')
+
+
+    self.delayDisplay('Checking correct import')
+
+    expecterNumberOfNodesByClass = {
+      'vtkMRMLScalarVolumeNode': 2,
+      'vtkMRMLSegmentationNode': 2,
+      'vtkMRMLModelNode': 42,
+      'vtkMRMLMarkupsCurveNode': 4,
+      'vtkMRMLMarkupsPlaneNode': 12,
+      'vtkMRMLMarkupsLineNode': 5,
+      'vtkMRMLDynamicModelerNode': 4,
+      'vtkMRMLMarkupsFiducialNode': 3,
+      'vtkMRMLLinearTransformNode': 14
+    }
+
+    for nodeClass, expectedNumberOfNodesInScene in expecterNumberOfNodesByClass.items():
+      self.assertEqual(
+        slicer.mrmlScene.GetNumberOfNodesByClass(nodeClass),
+        expectedNumberOfNodesInScene
+      )
+
+
+    # weak test to ensure integrity of the folder hierarchy, 
+    #   just check if the number of leaf/one-level-below-BRPFolder items is okay
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    sceneItemId = shNode.GetSceneItemID()
+    leafIdList = vtk.vtkIdList()
+    shNode.GetItemChildren(sceneItemId,leafIdList,True)
+
+    self.assertEqual(
+      leafIdList.GetNumberOfIds(),
+      110
+    )
+
+    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
+    oneLevelBelowBRPIdList = vtk.vtkIdList()
+    shNode.GetItemChildren(BRPFolder,oneLevelBelowBRPIdList,False)
+
+    self.assertEqual(
+      oneLevelBelowBRPIdList.GetNumberOfIds(),
+      27
+    )
+
+    self.delayDisplay('Test data imported correctly')
+
   def test_LoadSampleData(self):
     try:
       # Get input data

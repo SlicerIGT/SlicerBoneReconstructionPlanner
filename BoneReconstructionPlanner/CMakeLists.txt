@@ -14,6 +14,7 @@ set(MODULE_PYTHON_RESOURCES
   Resources/Icons/iconCTMandible.png
   Resources/Icons/iconFibulaSegmentation.png
   Resources/Icons/iconMandibleSegmentation.png
+  Resources/Icons/iconTestPlanBRP.png
   Resources/UI/${MODULE_NAME}.ui
   )
 
