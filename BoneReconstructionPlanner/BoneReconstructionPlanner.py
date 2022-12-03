@@ -3465,6 +3465,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.test_MakeModels()
     self.test_AddMandibularCurve()
     self.test_AddMandiblePlanes()
+    self.test_AddFibulaLineAndCenterIt()
 
   def test_EnterBRP(self):
     try:
@@ -3704,6 +3705,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       shNode.GetItemParent(mandibularCurveItemID)
     )
 
+    #the mandibleCurveSelector autopopulates and updates the parameterNode
     parameterNode = self.logicBRP.getParameterNode()
     mandibleCurveFromParameterNode = parameterNode.GetNodeReference("mandibleCurve")
     self.assertEqual(
@@ -3820,6 +3822,64 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         smallerCurvePointIndex = curvePointIndex
 
     self.delayDisplay("AddMandibularPlanesTest successful")
+
+  def test_AddFibulaLineAndCenterIt(self):
+    self.delayDisplay("Starting the AddFibulaLineAndCenterItTest")
+
+    fibulaLinePoints = [
+      [-91.39446258544922, -12.100865364074707, -90.508544921875],
+      [-104.19928741455078, -9.48827075958252, 47.4937744140625],
+    ]
+
+    self.logicBRP.addFibulaLine()
+    selectionNode = slicer.app.applicationLogic().GetSelectionNode()
+    fibulaLineNode = slicer.mrmlScene.GetNodeByID(
+      selectionNode.GetActivePlaceNodeID()
+    )
+    for point in fibulaLinePoints:
+      fibulaLineNode.AddControlPoint(*point)
+    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+    interactionNode.SwitchToViewTransformMode()
+
+    self.assertEqual(
+      len(fibulaLinePoints),
+      fibulaLineNode.GetNumberOfControlPoints()
+    )
+
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
+    fibulaLineItemID = shNode.GetItemByDataNode(fibulaLineNode)
+    self.assertEqual(
+      BRPFolder,
+      shNode.GetItemParent(fibulaLineItemID)
+    )
+
+    #the fibulaLineSelector autopopulates and updates the parameterNode
+    parameterNode = self.logicBRP.getParameterNode()
+    fibulaLineFromParameterNode = parameterNode.GetNodeReference("fibulaLine")
+    self.assertEqual(
+      fibulaLineNode.GetID(),
+      fibulaLineFromParameterNode.GetID()
+    )
+
+    self.logicBRP.centerFibulaLine()
+
+    centeredLinePoints = np.array(
+      [
+        [ -88.24621582,  -10.96450806,  -90.23794556],
+        [-100.49311066,   -9.26262665,   47.83334351]
+      ]
+    )
+
+    for i in range(2):
+      self.assertTrue(
+        np.allclose(
+          fibulaLineNode.GetNthControlPointPosition(i),
+          centeredLinePoints[i]
+        )
+      )
+
+    self.delayDisplay("AddFibulaLineAndCenterItTest successful")
     
 def createListFromFolderID(folderID):
   createdList = []
