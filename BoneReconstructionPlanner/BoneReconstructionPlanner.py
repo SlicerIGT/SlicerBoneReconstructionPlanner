@@ -2219,6 +2219,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       cameraNode.SetPosition(centroid-cameraDirection*300)
       cameraNode.SetFocalPoint(centroid)
       cameraNode.SetViewUp(viewUpDirection)
+      cameraNode.ResetClippingRange()
 
       if i==0:
         parameterNode.SetParameter("fibulaCentroidX",str(centroid[0]))
