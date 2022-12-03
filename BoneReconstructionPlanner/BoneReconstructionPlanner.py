@@ -785,6 +785,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.generateFibulaPlanesTimer.connect('timeout()', self.onGenerateFibulaPlanesTimerTimeout)
     self.MANDIBLE_VIEW_SINGLETON_TAG = "1"
     self.FIBULA_VIEW_SINGLETON_TAG = "2"
+    self.PLANE_SIDE_SIZE = 50.
+    self.PLANE_GLYPH_SCALE = 2.5
 
     customLayout = f"""
       <layout type="vertical">
@@ -935,7 +937,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
     planeNode.SetAttribute("isMandibularPlane","True")
     if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-      planeNode.SetSize(50,50)
+      planeNode.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
       planeNode.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
     aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
@@ -946,7 +948,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #display node of the plane
     displayNode = planeNode.GetDisplayNode()
-    displayNode.SetGlyphScale(2.5)
+    displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
     displayNode.SetSelectedColor(color)
     if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
       displayNode.HandlesInteractiveOn()
@@ -1692,7 +1694,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneA = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
       if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        fibulaPlaneA.SetSize(50,50)
+        fibulaPlaneA.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
 
       displayNode = fibulaPlaneA.GetDisplayNode()
       fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
@@ -1713,7 +1715,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneB)
       if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        fibulaPlaneB.SetSize(50,50)
+        fibulaPlaneB.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
 
       displayNode = fibulaPlaneB.GetDisplayNode()
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
@@ -3021,7 +3023,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode = sawBoxPlane.GetDisplayNode()
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       displayNode.AddViewNodeID(mandibleViewNode.GetID())
-      displayNode.SetGlyphScale(2.5)
+      displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
       displayNode.SetOpacity(0)
       displayNode.HandlesInteractiveOn()
       if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
@@ -3702,13 +3704,122 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       shNode.GetItemParent(mandibularCurveItemID)
     )
 
+    parameterNode = self.logicBRP.getParameterNode()
+    mandibleCurveFromParameterNode = parameterNode.GetNodeReference("mandibleCurve")
+    self.assertEqual(
+      mandibularCurveNode.GetID(),
+      mandibleCurveFromParameterNode.GetID()
+    )
+
     self.delayDisplay("AddMandibularCurveTest successful")
   
   def test_AddMandiblePlanes(self):
-    pass
-    
+    self.delayDisplay("Starting the AddMandibularPlanesTest")
+
+    planeOrigins = [
+      [38.89806365966797, 71.97505950927734, -65.15746307373047],
+      [-28.70669174194336, 81.52465057373047, -75.59122467041016],
+      [21.20140266418457, 100.38216400146484, -73.75139617919922],
+      [-9.514277458190918, 105.30805969238281, -79.4371337890625],
+    ]
+
+    for origin in planeOrigins:
+      self.logicBRP.addCutPlane()
+      selectionNode = slicer.app.applicationLogic().GetSelectionNode()
+      mandibularPlaneNode = slicer.mrmlScene.GetNodeByID(
+        selectionNode.GetActivePlaceNodeID()
+      )
+      mandibularPlaneNode.AddControlPoint(*origin)
+      interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+      interactionNode.SwitchToViewTransformMode()
     
 
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+
+    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
+    mandibularPlanesFolderItemID = shNode.GetItemByName("Mandibular planes")
+
+    self.assertEqual(
+      BRPFolder,
+      shNode.GetItemParent(mandibularPlanesFolderItemID)
+    )
+
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolderItemID)
+    self.assertEqual(
+      len(mandibularPlanesList),
+      4
+    )
+
+    colorArray = []
+
+    for planeNode in mandibularPlanesList:
+      self.assertEqual(
+        planeNode.GetNumberOfControlPoints(),
+        3
+      )
+      self.assertTrue(
+        planeNode.GetAttribute("isMandibularPlane") == "True"
+      )
+      self.assertTrue(
+        np.allclose(
+          np.array(planeNode.GetSize()),
+          np.array([self.logicBRP.PLANE_SIDE_SIZE,self.logicBRP.PLANE_SIDE_SIZE])
+        )
+      )
+      self.assertEqual(
+        planeNode.GetPlaneType(),
+        slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points
+      )
+      
+      displayNode = planeNode.GetDisplayNode()
+      self.assertEqual(
+        displayNode.GetGlyphScale(),
+        self.logicBRP.PLANE_GLYPH_SCALE
+      )
+      self.assertTrue(
+        displayNode.GetHandlesInteractive(),
+      )
+      self.assertTrue(
+        displayNode.GetTranslationHandleVisibility(),
+      )
+      self.assertTrue(
+        displayNode.GetRotationHandleVisibility(),
+      )
+      self.assertFalse(
+        displayNode.GetScaleHandleVisibility(),
+      )
+
+      colorArray.append(displayNode.GetSelectedColor())
+    
+    colorArray = np.array(colorArray)
+
+    # check that plane colors do not repeat
+    for i in range(len(colorArray)):
+      for j in range(len(colorArray)):
+        if i!=j:
+          self.assertFalse(
+            np.allclose(
+              colorArray[i],
+              colorArray[j]
+            )
+          )
+    
+    # check planes order
+    parameterNode = self.logicBRP.getParameterNode()
+    mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
+    closestCurvePoint = [0,0,0]
+    smallerCurvePointIndex = 0
+    for i in range(len(mandibularPlanesList)):
+      origin = [0,0,0]
+      mandibularPlanesList[i].GetOrigin(origin)
+      curvePointIndex = mandibleCurve.GetClosestPointPositionAlongCurveWorld(
+        origin,closestCurvePoint
+      )
+      self.assertLessEqual(smallerCurvePointIndex, curvePointIndex)
+      if smallerCurvePointIndex <= curvePointIndex:
+        smallerCurvePointIndex = curvePointIndex
+
+    self.delayDisplay("AddMandibularPlanesTest successful")
     
 def createListFromFolderID(folderID):
   createdList = []
