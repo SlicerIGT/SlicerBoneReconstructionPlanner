@@ -3452,22 +3452,22 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     """Run as few or as many tests as needed here.
     """
     self.setUp()
-    self.test_EnterBRP()
-    self.test_GetWidget()
-    self.test_GetLogic()
-    self.test_LoadFinishedPlanSampleData()
+    self.section_EnterBRP()
+    self.section_GetWidget()
+    self.section_GetLogic()
+    self.section_LoadFinishedPlanSampleData()
 
     self.setUp()
-    self.test_EnterBRP()
-    self.test_GetWidget()
-    self.test_GetLogic()
-    self.test_LoadSampleData()
-    self.test_MakeModels()
-    self.test_AddMandibularCurve()
-    self.test_AddMandiblePlanes()
-    self.test_AddFibulaLineAndCenterIt()
+    self.section_EnterBRP()
+    self.section_GetWidget()
+    self.section_GetLogic()
+    self.section_LoadSampleData()
+    self.section_MakeModels()
+    self.section_AddMandibularCurve()
+    self.section_AddMandiblePlanes()
+    self.section_AddFibulaLineAndCenterIt()
 
-  def test_EnterBRP(self):
+  def section_EnterBRP(self):
     try:
       self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
       slicer.util.selectModule('Data')
@@ -3478,7 +3478,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       traceback.print_exc()
       logging.error('Test caused exception!\n' + str(e))
   
-  def test_GetWidget(self):
+  def section_GetWidget(self):
     try:
       self.widgetBRP = slicer.modules.bonereconstructionplanner.widgetRepresentation()
     except Exception as e:
@@ -3486,7 +3486,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       traceback.print_exc()
       logging.error('Test caused exception!\n' + str(e))
       
-  def test_GetLogic(self):
+  def section_GetLogic(self):
     try:
       self.logicBRP = self.widgetBRP.self().logic  
     except Exception as e:
@@ -3494,7 +3494,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       traceback.print_exc()
       logging.error('Test caused exception!\n' + str(e))
       
-  def test_LoadFinishedPlanSampleData(self):
+  def section_LoadFinishedPlanSampleData(self):
     self.delayDisplay("Started loading TestPlanBRP scene")
     import SampleData
     registerSampleData()
@@ -3546,7 +3546,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay('Test data imported correctly')
 
-  def test_LoadSampleData(self):
+  def section_LoadSampleData(self):
     try:
       # Get input data
       import SampleData
@@ -3586,7 +3586,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       logging.error('Test caused exception!\n' + str(e))
 
       
-  def test_MakeModels(self):
+  def section_MakeModels(self):
     """ Ideally you should have several levels of tests.  At the lowest level
     tests should exercise the functionality of the logic with different inputs
     (both valid and invalid).  At higher levels your tests should emulate the
@@ -3669,7 +3669,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       logging.error('Test caused exception!\n' + str(e))
 
   
-  def test_AddMandibularCurve(self):
+  def section_AddMandibularCurve(self):
     self.delayDisplay("Starting the AddMandibularCurveTest")
 
     mandibularCurvePoints = [
@@ -3715,7 +3715,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("AddMandibularCurveTest successful")
   
-  def test_AddMandiblePlanes(self):
+  def section_AddMandiblePlanes(self):
     self.delayDisplay("Starting the AddMandibularPlanesTest")
 
     planeOrigins = [
@@ -3823,7 +3823,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("AddMandibularPlanesTest successful")
 
-  def test_AddFibulaLineAndCenterIt(self):
+  def section_AddFibulaLineAndCenterIt(self):
     self.delayDisplay("Starting the AddFibulaLineAndCenterItTest")
 
     fibulaLinePoints = [
