@@ -597,14 +597,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     scalarVolume = self.ui.scalarVolumeSelector.currentNode()
     if scalarVolume != None:
       scalarVolumeID = scalarVolume.GetID()
-      redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
-      redSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
-      greenSliceLogic = slicer.app.layoutManager().sliceWidget('Green').sliceLogic()
-      greenSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
-      yellowSliceLogic = slicer.app.layoutManager().sliceWidget('Yellow').sliceLogic()
-      yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
 
-      slicer.util.resetSliceViews()
+      if not slicer.app.commandOptions().noMainWindow:
+        redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
+        redSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+        greenSliceLogic = slicer.app.layoutManager().sliceWidget('Green').sliceLogic()
+        greenSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+        yellowSliceLogic = slicer.app.layoutManager().sliceWidget('Yellow').sliceLogic()
+        yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+
+        slicer.util.resetSliceViews()
 
       fibulaCentroidX = self._parameterNode.GetParameter("fibulaCentroidX")
       fibulaCentroidY = self._parameterNode.GetParameter("fibulaCentroidY")
@@ -788,6 +790,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.PLANE_SIDE_SIZE = 50.
     self.PLANE_GLYPH_SCALE = 2.5
 
+    if not slicer.app.commandOptions().noMainWindow:
+      self.addCustomLayout()
+
+  def addCustomLayout(self):
     customLayout = f"""
       <layout type="vertical">
       <item>
@@ -2150,10 +2156,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     return axes1ToAxes2RotationMatrix
 
   def makeModels(self):
-    layoutManager = slicer.app.layoutManager()
-    layoutManager.setLayout(self.customLayoutId)
+    if not slicer.app.commandOptions().noMainWindow:
+      layoutManager = slicer.app.layoutManager()
+      layoutManager.setLayout(self.customLayoutId)
 
-    slicer.util.resetSliceViews()
+      slicer.util.resetSliceViews()
 
     parameterNode = self.getParameterNode()
     fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
@@ -2253,7 +2260,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode.SetNodeReferenceID("decimatedFibulaModelNode", decimatedFibulaModelNode.GetID())
     parameterNode.SetNodeReferenceID("decimatedMandibleModelNode", decimatedMandibleModelNode.GetID())
 
-    slicer.util.forceRenderAllViews()
+    if not slicer.app.commandOptions().noMainWindow:
+      slicer.util.forceRenderAllViews()
 
   def updateFibulaPieces(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
