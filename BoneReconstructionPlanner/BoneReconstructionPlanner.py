@@ -317,8 +317,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     fibulaCylindersFiducialsListsFolder = shNode.GetItemByName("Fibula Cylinders Fiducials Lists")
     mandibleCylindersFiducialsListsFolder = shNode.GetItemByName("Mandible Cylinders Fiducials Lists")
 
-    if segmentationModelsFolder:
-      self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.enabled = True
     if fibulaCylindersFiducialsListsFolder:
       self.ui.createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton.enabled = True
     if mandibleCylindersFiducialsListsFolder:
@@ -675,7 +673,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onMakeModelsButton(self):
     self.logic.makeModels()
-    self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.enabled = True
 
   def onCreateMiterBoxesFromFibulaPlanesButton(self):
     self.logic.createMiterBoxesFromFibulaPlanes()

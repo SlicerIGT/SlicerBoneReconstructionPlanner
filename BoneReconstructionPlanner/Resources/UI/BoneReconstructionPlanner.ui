@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>434</width>
-    <height>1855</height>
+    <width>530</width>
+    <height>2009</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -376,7 +376,7 @@
       <item>
        <widget class="ctkCheckablePushButton" name="generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="text">
          <string>Update fibula planes over fibula line; update fibula 
