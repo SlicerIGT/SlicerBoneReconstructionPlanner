@@ -1698,6 +1698,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
       if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
         fibulaPlaneA.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
+        fibulaPlaneA.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = fibulaPlaneA.GetDisplayNode()
       fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
@@ -1719,6 +1720,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneB)
       if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
         fibulaPlaneB.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
+        fibulaPlaneB.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = fibulaPlaneB.GetDisplayNode()
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
