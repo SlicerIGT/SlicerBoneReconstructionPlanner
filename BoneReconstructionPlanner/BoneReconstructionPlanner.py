@@ -3505,7 +3505,6 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def section_LoadFinishedPlanSampleData(self):
     self.delayDisplay("Started loading TestPlanBRP scene")
     import SampleData
-    registerSampleData()
     SampleData.downloadSample('TestPlanBRP')
     self.delayDisplay('Loaded TestPlanBRP scene')
 
@@ -3558,7 +3557,6 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     try:
       # Get input data
       import SampleData
-      registerSampleData()
       self.fibulaVolume = SampleData.downloadSample('CTFibula')
       self.delayDisplay('Loaded CTFibula')
       self.mandibleVolume = SampleData.downloadSample('CTMandible')
