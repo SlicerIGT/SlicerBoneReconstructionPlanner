@@ -3511,17 +3511,30 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay('Checking correct import')
 
-    expecterNumberOfNodesByClass = {
-      'vtkMRMLScalarVolumeNode': 2,
-      'vtkMRMLSegmentationNode': 2,
-      'vtkMRMLModelNode': 42,
-      'vtkMRMLMarkupsCurveNode': 4,
-      'vtkMRMLMarkupsPlaneNode': 12,
-      'vtkMRMLMarkupsLineNode': 5,
-      'vtkMRMLDynamicModelerNode': 4,
-      'vtkMRMLMarkupsFiducialNode': 3,
-      'vtkMRMLLinearTransformNode': 14
-    }
+    if int(slicer.app.revision) >= 31454:
+      expecterNumberOfNodesByClass = {
+        'vtkMRMLScalarVolumeNode': 2,
+        'vtkMRMLSegmentationNode': 2,
+        'vtkMRMLModelNode': 45,
+        'vtkMRMLMarkupsCurveNode': 4,
+        'vtkMRMLMarkupsPlaneNode': 12,
+        'vtkMRMLMarkupsLineNode': 5,
+        'vtkMRMLDynamicModelerNode': 4,
+        'vtkMRMLMarkupsFiducialNode': 3,
+        'vtkMRMLLinearTransformNode': 17
+      }
+    else:
+      expecterNumberOfNodesByClass = {
+        'vtkMRMLScalarVolumeNode': 2,
+        'vtkMRMLSegmentationNode': 2,
+        'vtkMRMLModelNode': 42,
+        'vtkMRMLMarkupsCurveNode': 4,
+        'vtkMRMLMarkupsPlaneNode': 12,
+        'vtkMRMLMarkupsLineNode': 5,
+        'vtkMRMLDynamicModelerNode': 4,
+        'vtkMRMLMarkupsFiducialNode': 3,
+        'vtkMRMLLinearTransformNode': 14
+      }
 
     for nodeClass, expectedNumberOfNodesInScene in expecterNumberOfNodesByClass.items():
       self.assertEqual(
