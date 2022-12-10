@@ -635,11 +635,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         transformedFibulaPiecesList = createListFromFolderID(transformedFibulaPiecesFolder)
         redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
 
-        fibulaDisplayNodesWereUpdatedFlag = self._parameterNode.GetParameter("fibulaDisplayNodesWereUpdatedFlag")
+        redSliceVisibleNodesOnFibula = self._parameterNode.GetParameter("redSliceVisibleNodesOnFibula")
 
         if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
           #When fibulaScalarVolume:
-          if fibulaDisplayNodesWereUpdatedFlag == "" or fibulaDisplayNodesWereUpdatedFlag == "False":
+          if redSliceVisibleNodesOnFibula == "" or redSliceVisibleNodesOnFibula == "False":
             addIterationList = biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
             removeIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
 
@@ -651,10 +651,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
               displayNode = removeIterationList[i].GetDisplayNode()
               displayNode.RemoveViewNodeID(redSliceNode.GetID())
             
-            self._parameterNode.SetParameter("fibulaDisplayNodesWereUpdatedFlag","True")
+            self._parameterNode.SetParameter("redSliceVisibleNodesOnFibula","True")
         else:
           #When mandibleScalarVolume:
-          if fibulaDisplayNodesWereUpdatedFlag == "" or fibulaDisplayNodesWereUpdatedFlag == "True":
+          if redSliceVisibleNodesOnFibula == "" or redSliceVisibleNodesOnFibula == "True":
             addIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
             removeIterationList = biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
             
@@ -666,7 +666,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
               displayNode = removeIterationList[i].GetDisplayNode()
               displayNode.RemoveViewNodeID(redSliceNode.GetID())
             
-            self._parameterNode.SetParameter("fibulaDisplayNodesWereUpdatedFlag","False")
+            self._parameterNode.SetParameter("redSliceVisibleNodesOnFibula","False")
     
   def onAddCutPlaneButton(self):
     self.logic.addCutPlane()
