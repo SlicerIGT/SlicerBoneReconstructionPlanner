@@ -22,6 +22,11 @@ set(EXTENSION_STATUS "Beta")
 find_package(Slicer REQUIRED)
 include(${Slicer_USE_FILE})
 
+find_package(SurfaceWrapSolidify REQUIRED)
+find_package(MarkupsToModel REQUIRED)
+find_package(Sandbox REQUIRED)
+find_package(SlicerRT REQUIRED)
+
 #-----------------------------------------------------------------------------
 # Extension modules
 add_subdirectory(BoneReconstructionPlanner)
