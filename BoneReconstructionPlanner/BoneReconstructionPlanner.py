@@ -3736,6 +3736,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       logging.error('Test caused exception!\n' + str(e))
       
   def test_LoadFinishedPlanSampleData(self):
+    # this test should be updated with a new TestPlanBRP sample data.
     self.section_EnterBRP()
     self.section_GetWidget()
     self.section_GetLogic()
