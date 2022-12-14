@@ -3459,12 +3459,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     """Run as few or as many tests as needed here.
     """
     self.setUp()
-    self.section_EnterBRP()
-    self.section_GetWidget()
-    self.section_GetLogic()
-    self.section_LoadFinishedPlanSampleData()
-
-    self.setUp()
+    slicer.util.mainWindow().enabled = False
     self.section_EnterBRP()
     self.section_GetWidget()
     self.section_GetLogic()
@@ -3473,6 +3468,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_AddMandibularCurve()
     self.section_AddMandiblePlanes()
     self.section_AddFibulaLineAndCenterIt()
+    slicer.util.mainWindow().enabled = True
 
   def section_EnterBRP(self):
     try:
@@ -3501,7 +3497,11 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       traceback.print_exc()
       logging.error('Test caused exception!\n' + str(e))
       
-  def section_LoadFinishedPlanSampleData(self):
+  def test_LoadFinishedPlanSampleData(self):
+    self.section_EnterBRP()
+    self.section_GetWidget()
+    self.section_GetLogic()
+
     self.delayDisplay("Started loading TestPlanBRP scene")
     import SampleData
     SampleData.downloadSample('TestPlanBRP')
