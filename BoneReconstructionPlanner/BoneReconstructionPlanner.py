@@ -1165,6 +1165,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
 
+    if len(self.mandiblePlaneObserversAndNodeIDList) == 0:
+      return
+
     for i in range(len(mandibularPlanesList)):
       mandiblePlane = slicer.mrmlScene.GetNodeByID(self.mandiblePlaneObserversAndNodeIDList[i][1])
       mandiblePlane.RemoveObserver(self.mandiblePlaneObserversAndNodeIDList[i][0])
