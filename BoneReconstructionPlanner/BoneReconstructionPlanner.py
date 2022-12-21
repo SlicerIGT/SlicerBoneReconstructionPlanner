@@ -3705,6 +3705,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_AddMandiblePlanes()
     self.section_AddFibulaLineAndCenterIt()
     self.section_SimulateAndImproveMandibleReconstruction()
+    self.section_createMiterBoxesFromCorrespondingLine()
     slicer.util.mainWindow().enabled = True
 
   def section_EnterBRP(self):
@@ -4220,6 +4221,40 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("SimulateAndImproveMandibleReconstruction test successful")
     
+  def section_createMiterBoxesFromCorrespondingLine(self):
+    self.delayDisplay("Starting the createMiterBoxesFromCorrespondingLine test")
+
+    sliceOffset = -38.08869552612305
+    miterBoxLinePoints = [
+      [-92.47185918150018, -10.999045106771323, sliceOffset],
+      [-104.08360013902106, -12.657865243560021, sliceOffset],
+    ]
+    
+    if not slicer.app.commandOptions().noMainWindow:
+      redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+      redSliceNode.SetSliceOffset(sliceOffset)
+
+    miterBoxLine = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode", "miterBoxLine")
+    miterBoxLine.CreateDefaultDisplayNodes()
+    
+    for point in miterBoxLinePoints:
+      miterBoxLine.AddControlPoint(*point)
+
+    self.assertEqual(
+      len(miterBoxLinePoints),
+      miterBoxLine.GetNumberOfControlPoints()
+    )
+
+    parameterNode = self.logicBRP.getParameterNode()
+    wasModified = parameterNode.StartModify()
+    parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","False")
+    parameterNode.SetNodeReferenceID("miterBoxDirectionLine",miterBoxLine.GetID())
+    parameterNode.EndModify(wasModified)
+    self.logicBRP.createMiterBoxesFromFibulaPlanes()
+
+    # asserts below
+
+
 def createListFromFolderID(folderID):
   createdList = []
   shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
