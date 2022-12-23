@@ -204,7 +204,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaFiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.miterBoxDirectionLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.scalarVolumeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onScalarVolumeChanged)
+    self.ui.scalarVolumeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleBridgeModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleFiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -411,6 +411,26 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Make sure GUI changes do not call updateParameterNodeFromGUI (it could cause infinite loop)
     self._updatingGUIFromParameterNode = True
 
+    # The lines below are for parameterNode updates
+    scalarVolumeChangedThroughSelector = (
+      self._parameterNode.GetNodeReference("currentScalarVolume") != self.ui.scalarVolumeSelector.currentNode()
+    )
+    scalarVolumeChangedThroughParameterNode = (
+      self._parameterNode.GetParameter("scalarVolumeChangedThroughParameterNode") == "True"
+    )
+    if (
+      scalarVolumeChangedThroughSelector or
+      scalarVolumeChangedThroughParameterNode
+      ):
+      if not slicer.app.commandOptions().noMainWindow:
+        scalarVolumeID = self._parameterNode.GetNodeReference("currentScalarVolume").GetID()
+        self.logic.setBackgroundVolumeFromID(scalarVolumeID)
+        self.logic.setRedSliceForBoneModelsDisplayNodes()
+        self.logic.setRedSliceForBoxModelsDisplayNodes()
+      self._parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode","False")
+      # The line below is for selector updates
+      self.ui.scalarVolumeSelector.setCurrentNode(self._parameterNode.GetNodeReference("currentScalarVolume"))
+
     # Update node selectors and sliders
     self.ui.fibulaLineSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaLine"))
     self.ui.mandibleCurveSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleCurve"))
@@ -422,7 +442,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibleBridgeModelSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleBridgeModel"))
     self.ui.mandibleSurgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel"))
     self.ui.mandibleFiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleFiducialList"))
-    self.ui.scalarVolumeSelector.setCurrentNode(self._parameterNode.GetNodeReference("currentScalarVolume"))
 
     if self._parameterNode.GetParameter("initialSpace") != '':
       self.ui.initialSpinBox.setValue(float(self._parameterNode.GetParameter("initialSpace")))
@@ -485,6 +504,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       return
 
     wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
+
+    previousScalarVolume = self._parameterNode.GetNodeReference("currentScalarVolume")
+    self._parameterNode.SetNodeReferenceID("currentScalarVolume", self.ui.scalarVolumeSelector.currentNodeID)
+    currentScalarVolumeChanged = str(
+      not(self.ui.scalarVolumeSelector.currentNode() == previousScalarVolume)
+    )
+    if currentScalarVolumeChanged == "True":
+      self._parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode", "True")
 
     self._parameterNode.SetNodeReferenceID("mandibleCurve", self.ui.mandibleCurveSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibularSegmentation", self.ui.mandibularSegmentationSelector.currentNodeID)
@@ -585,88 +612,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onAddFibulaLineButton(self):
     self.logic.addFibulaLine()
-
-  def onScalarVolumeChanged(self):
-    if self._parameterNode is None or self._updatingGUIFromParameterNode:
-      return
-
-    self._parameterNode.SetNodeReferenceID("currentScalarVolume", self.ui.scalarVolumeSelector.currentNodeID)
-
-    scalarVolume = self.ui.scalarVolumeSelector.currentNode()
-    if scalarVolume != None:
-      scalarVolumeID = scalarVolume.GetID()
-
-      if not slicer.app.commandOptions().noMainWindow:
-        redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
-        redSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
-        greenSliceLogic = slicer.app.layoutManager().sliceWidget('Green').sliceLogic()
-        greenSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
-        yellowSliceLogic = slicer.app.layoutManager().sliceWidget('Yellow').sliceLogic()
-        yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
-
-        slicer.util.resetSliceViews()
-
-      fibulaCentroidX = self._parameterNode.GetParameter("fibulaCentroidX")
-      fibulaCentroidY = self._parameterNode.GetParameter("fibulaCentroidY")
-      fibulaCentroidZ = self._parameterNode.GetParameter("fibulaCentroidZ")
-      mandibleCentroidX = self._parameterNode.GetParameter("mandibleCentroidX")
-      mandibleCentroidY = self._parameterNode.GetParameter("mandibleCentroidY")
-      mandibleCentroidZ = self._parameterNode.GetParameter("mandibleCentroidZ")
-      
-      if fibulaCentroidX != "":
-        fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
-        mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
-
-        bounds = [0,0,0,0,0,0]
-        scalarVolume.GetBounds(bounds)
-        bounds = np.array(bounds)
-        centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
-      
-        shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
-        mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
-        fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
-        biggerMiterBoxesFolder = shNode.GetItemByName("biggerMiterBoxes Models")
-        cutBonesFolder = shNode.GetItemByName("Cut Bones")
-        transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
-        mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
-        fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
-        biggerMiterBoxesList = createListFromFolderID(biggerMiterBoxesFolder)
-        cutBonesList = createListFromFolderID(cutBonesFolder)
-        transformedFibulaPiecesList = createListFromFolderID(transformedFibulaPiecesFolder)
-        redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
-
-        redSliceVisibleNodesOnFibula = self._parameterNode.GetParameter("redSliceVisibleNodesOnFibula")
-
-        if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
-          #When fibulaScalarVolume:
-          if redSliceVisibleNodesOnFibula == "" or redSliceVisibleNodesOnFibula == "False":
-            addIterationList = biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
-            removeIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
-
-            for i in range(len(addIterationList)):
-              displayNode = addIterationList[i].GetDisplayNode()
-              displayNode.AddViewNodeID(redSliceNode.GetID())
-            
-            for i in range(len(removeIterationList)):
-              displayNode = removeIterationList[i].GetDisplayNode()
-              displayNode.RemoveViewNodeID(redSliceNode.GetID())
-            
-            self._parameterNode.SetParameter("redSliceVisibleNodesOnFibula","True")
-        else:
-          #When mandibleScalarVolume:
-          if redSliceVisibleNodesOnFibula == "" or redSliceVisibleNodesOnFibula == "True":
-            addIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList
-            removeIterationList = biggerMiterBoxesList + cutBonesList[0:(len(cutBonesList)-1)]
-            
-            for i in range(len(addIterationList)):
-              displayNode = addIterationList[i].GetDisplayNode()
-              displayNode.AddViewNodeID(redSliceNode.GetID())
-            
-            for i in range(len(removeIterationList)):
-              displayNode = removeIterationList[i].GetDisplayNode()
-              displayNode.RemoveViewNodeID(redSliceNode.GetID())
-            
-            self._parameterNode.SetParameter("redSliceVisibleNodesOnFibula","False")
     
   def onAddCutPlaneButton(self):
     self.logic.addCutPlane()
@@ -836,10 +781,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     """
     Initialize parameter node with default settings.
     """
-    if not parameterNode.GetParameter("Threshold"):
-      parameterNode.SetParameter("Threshold", "100.0")
-    if not parameterNode.GetParameter("Invert"):
-      parameterNode.SetParameter("Invert", "false")
+    if not parameterNode.GetParameter("scalarVolumeChangedThroughParameterNode"):
+      parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode","False")
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -2229,13 +2172,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
       #When fibulaScalarVolume:
-      addIterationList = cutBonesList[0:(len(cutBonesList)-1)] + transformedMandiblePiecesList + transformedFullMandiblesList
-      removeIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList + cutMandiblePiecesList
+      addIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList
+      removeIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList
       
     else:
       #When mandibleScalarVolume:
-      addIterationList = [cutBonesList[len(cutBonesList)-1]] + transformedFibulaPiecesList + cutMandiblePiecesList
-      removeIterationList = cutBonesList[0:(len(cutBonesList)-1)] + transformedMandiblePiecesList + transformedFullMandiblesList
+      addIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList
+      removeIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList
     
     for i in range(len(removeIterationList)):
       displayNode = removeIterationList[i].GetDisplayNode()
@@ -2324,7 +2267,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if not slicer.app.commandOptions().noMainWindow:
       layoutManager = slicer.app.layoutManager()
       layoutManager.setLayout(self.customLayoutId)
-
       slicer.util.resetSliceViews()
 
     parameterNode = self.getParameterNode()
@@ -3453,6 +3395,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     shNode.RemoveItem(intersectionsFolder)
 
+  def setBackgroundVolumeFromID(self,scalarVolumeID):
+    redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
+    redSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+    greenSliceLogic = slicer.app.layoutManager().sliceWidget('Green').sliceLogic()
+    greenSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+    yellowSliceLogic = slicer.app.layoutManager().sliceWidget('Yellow').sliceLogic()
+    yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
+
+    slicer.util.resetSliceViews()
+
   def create3DModelOfTheReconstruction(self):
     import time
     startTime = time.time()
@@ -3694,7 +3646,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def runTest(self):
     """Run as few or as many tests as needed here.
     """
-    slicer.util.mainWindow().enabled = False
+    #slicer.util.mainWindow().enabled = False
     self.setUp()
     self.section_EnterBRP()
     self.section_GetWidget()
@@ -3706,34 +3658,19 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_AddFibulaLineAndCenterIt()
     self.section_SimulateAndImproveMandibleReconstruction()
     self.section_createMiterBoxesFromCorrespondingLine()
-    slicer.util.mainWindow().enabled = True
+    #slicer.util.mainWindow().enabled = True
 
   def section_EnterBRP(self):
-    try:
-      self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
-      slicer.util.selectModule('Data')
-      slicer.util.selectModule('BoneReconstructionPlanner')
-      self.assertEqual(slicer.util.selectedModule(),'BoneReconstructionPlanner')
-    except Exception as e:
-      import traceback
-      traceback.print_exc()
-      logging.error('Test caused exception!\n' + str(e))
+    self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
+    slicer.util.selectModule('Data')
+    slicer.util.selectModule('BoneReconstructionPlanner')
+    self.assertEqual(slicer.util.selectedModule(),'BoneReconstructionPlanner')
   
   def section_GetWidget(self):
-    try:
-      self.widgetBRP = slicer.modules.bonereconstructionplanner.widgetRepresentation()
-    except Exception as e:
-      import traceback
-      traceback.print_exc()
-      logging.error('Test caused exception!\n' + str(e))
+    self.widgetBRP = slicer.modules.bonereconstructionplanner.widgetRepresentation()
       
   def section_GetLogic(self):
-    try:
-      self.logicBRP = self.widgetBRP.self().logic  
-    except Exception as e:
-      import traceback
-      traceback.print_exc()
-      logging.error('Test caused exception!\n' + str(e))
+    self.logicBRP = self.widgetBRP.self().logic  
       
   def test_LoadFinishedPlanSampleData(self):
     # this test should be updated with a new TestPlanBRP sample data.
@@ -3805,43 +3742,37 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.delayDisplay('Test data imported correctly')
 
   def section_LoadSampleData(self):
-    try:
-      # Get input data
-      import SampleData
-      self.fibulaVolume = SampleData.downloadSample('CTFibula')
-      self.delayDisplay('Loaded CTFibula')
-      self.mandibleVolume = SampleData.downloadSample('CTMandible')
-      self.delayDisplay('Loaded CTMandible')
-      self.fibulaSegmentation = SampleData.downloadSample('FibulaSegmentation')
-      self.delayDisplay('Loaded FibulaSegmentation')
-      self.mandibleSegmentation = SampleData.downloadSample('MandibleSegmentation')
-      self.delayDisplay('Loaded MandibleSegmentation')
+    # Get input data
+    import SampleData
+    self.fibulaVolume = SampleData.downloadSample('CTFibula')
+    self.delayDisplay('Loaded CTFibula')
+    self.mandibleVolume = SampleData.downloadSample('CTMandible')
+    self.delayDisplay('Loaded CTMandible')
+    self.fibulaSegmentation = SampleData.downloadSample('FibulaSegmentation')
+    self.delayDisplay('Loaded FibulaSegmentation')
+    self.mandibleSegmentation = SampleData.downloadSample('MandibleSegmentation')
+    self.delayDisplay('Loaded MandibleSegmentation')
 
-      self.currentScalarVolume = self.fibulaVolume
+    parameterNode = self.logicBRP.getParameterNode()
+    wasModified = parameterNode.StartModify()
+    parameterNode.SetNodeReferenceID("currentScalarVolume", self.mandibleVolume.GetID())
+    parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode", "True")
+    parameterNode.SetNodeReferenceID("fibulaSegmentation", self.fibulaSegmentation.GetID())
+    parameterNode.SetNodeReferenceID("mandibularSegmentation", self.mandibleSegmentation.GetID())
+    parameterNode.EndModify(wasModified)
 
-      parameterNode = self.logicBRP.getParameterNode()
-      parameterNode.SetNodeReferenceID("currentScalarVolume", self.currentScalarVolume.GetID())
-      parameterNode.SetNodeReferenceID("fibulaSegmentation", self.fibulaSegmentation.GetID())
-      parameterNode.SetNodeReferenceID("mandibularSegmentation", self.mandibleSegmentation.GetID())
-
-      self.assertEqual(
-        parameterNode.GetNodeReference("currentScalarVolume").GetID(),
-        self.currentScalarVolume.GetID()
-      )
-      self.assertEqual(
-        parameterNode.GetNodeReference("fibulaSegmentation").GetID(),
-        self.fibulaSegmentation.GetID()
-      )
-      self.assertEqual(
-        parameterNode.GetNodeReference("mandibularSegmentation").GetID(),
-        self.mandibleSegmentation.GetID()
-      )
-
-    except Exception as e:
-      import traceback
-      traceback.print_exc()
-      logging.error('Test caused exception!\n' + str(e))
-
+    self.assertEqual(
+      parameterNode.GetNodeReference("currentScalarVolume").GetID(),
+      self.mandibleVolume.GetID()
+    )
+    self.assertEqual(
+      parameterNode.GetNodeReference("fibulaSegmentation").GetID(),
+      self.fibulaSegmentation.GetID()
+    )
+    self.assertEqual(
+      parameterNode.GetNodeReference("mandibularSegmentation").GetID(),
+      self.mandibleSegmentation.GetID()
+    )
       
   def section_MakeModels(self):
     """ Ideally you should have several levels of tests.  At the lowest level
@@ -3854,78 +3785,71 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     module.  For example, if a developer removes a feature that you depend on,
     your test should break so they know that the feature is needed.
     """
-    try:
-      self.delayDisplay("Starting the MakeModelsTest")
+    self.delayDisplay("Starting the MakeModelsTest")
 
-      parameterNode = self.logicBRP.getParameterNode()
+    parameterNode = self.logicBRP.getParameterNode()
 
-      self.logicBRP.makeModels()
+    self.logicBRP.makeModels()
 
-      fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
-      mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
-      decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
-      decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
+    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
 
-      self.assertEqual(fibulaModelNode.GetMesh().GetNumberOfPoints(), 197962)
-      self.assertEqual(mandibleModelNode.GetMesh().GetNumberOfPoints(), 109820)
-      self.assertEqual(decimatedFibulaModelNode.GetMesh().GetNumberOfPoints(), 9872)
-      self.assertEqual(decimatedMandibleModelNode.GetMesh().GetNumberOfPoints(), 5483)
-      
-      fibulaCentroidX = float(parameterNode.GetParameter("fibulaCentroidX"))
-      fibulaCentroidY = float(parameterNode.GetParameter("fibulaCentroidY"))
-      fibulaCentroidZ = float(parameterNode.GetParameter("fibulaCentroidZ"))
-      mandibleCentroidX = float(parameterNode.GetParameter("mandibleCentroidX"))
-      mandibleCentroidY = float(parameterNode.GetParameter("mandibleCentroidY"))
-      mandibleCentroidZ = float(parameterNode.GetParameter("mandibleCentroidZ"))
-
-      #np.testing.assert_almost_equal(actual,desired)
-      np.testing.assert_almost_equal(fibulaCentroidX,-95.32889)
-      np.testing.assert_almost_equal(fibulaCentroidY,-8.86916)
-      np.testing.assert_almost_equal(fibulaCentroidZ,-18.44151)
-      np.testing.assert_almost_equal(mandibleCentroidX,0.1073946)
-      np.testing.assert_almost_equal(mandibleCentroidY,65.49171)
-      np.testing.assert_almost_equal(mandibleCentroidZ,-57.415688)
-
-      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
-      segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
-      fibulaModelItemID = shNode.GetItemByDataNode(fibulaModelNode)
-      mandibleModelItemID = shNode.GetItemByDataNode(mandibleModelNode)
-      decimatedFibulaModelItemID = shNode.GetItemByDataNode(decimatedFibulaModelNode)
-      decimatedMandibleModelItemID = shNode.GetItemByDataNode(decimatedMandibleModelNode)
-
-      self.assertNotEqual(BRPFolder,shNode.GetInvalidItemID())
-      self.assertNotEqual(segmentationModelsFolder,shNode.GetInvalidItemID())
-
-      self.assertEqual(
-        BRPFolder,
-        shNode.GetItemParent(segmentationModelsFolder)
-      )
-      self.assertEqual(
-        segmentationModelsFolder,
-        shNode.GetItemParent(fibulaModelItemID)
-      )
-      self.assertEqual(
-        segmentationModelsFolder,
-        shNode.GetItemParent(mandibleModelItemID)
-      )
-      self.assertEqual(
-        segmentationModelsFolder,
-        shNode.GetItemParent(decimatedFibulaModelItemID)
-      )
-      self.assertEqual(
-        segmentationModelsFolder,
-        shNode.GetItemParent(decimatedMandibleModelItemID)
-      )
-
-      self.delayDisplay("MakeModelsTest successful")
+    self.assertEqual(fibulaModelNode.GetMesh().GetNumberOfPoints(), 197962)
+    self.assertEqual(mandibleModelNode.GetMesh().GetNumberOfPoints(), 109820)
+    self.assertEqual(decimatedFibulaModelNode.GetMesh().GetNumberOfPoints(), 9872)
+    self.assertEqual(decimatedMandibleModelNode.GetMesh().GetNumberOfPoints(), 5483)
     
-    except Exception as e:
-      import traceback
-      traceback.print_exc()
-      logging.error('Test caused exception!\n' + str(e))
+    fibulaCentroidX = float(parameterNode.GetParameter("fibulaCentroidX"))
+    fibulaCentroidY = float(parameterNode.GetParameter("fibulaCentroidY"))
+    fibulaCentroidZ = float(parameterNode.GetParameter("fibulaCentroidZ"))
+    mandibleCentroidX = float(parameterNode.GetParameter("mandibleCentroidX"))
+    mandibleCentroidY = float(parameterNode.GetParameter("mandibleCentroidY"))
+    mandibleCentroidZ = float(parameterNode.GetParameter("mandibleCentroidZ"))
 
-  
+    #np.testing.assert_almost_equal(actual,desired)
+    np.testing.assert_almost_equal(fibulaCentroidX,-95.32889)
+    np.testing.assert_almost_equal(fibulaCentroidY,-8.86916)
+    np.testing.assert_almost_equal(fibulaCentroidZ,-18.44151)
+    np.testing.assert_almost_equal(mandibleCentroidX,0.1073946)
+    np.testing.assert_almost_equal(mandibleCentroidY,65.49171)
+    np.testing.assert_almost_equal(mandibleCentroidZ,-57.415688)
+
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
+    segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
+    fibulaModelItemID = shNode.GetItemByDataNode(fibulaModelNode)
+    mandibleModelItemID = shNode.GetItemByDataNode(mandibleModelNode)
+    decimatedFibulaModelItemID = shNode.GetItemByDataNode(decimatedFibulaModelNode)
+    decimatedMandibleModelItemID = shNode.GetItemByDataNode(decimatedMandibleModelNode)
+
+    self.assertNotEqual(BRPFolder,shNode.GetInvalidItemID())
+    self.assertNotEqual(segmentationModelsFolder,shNode.GetInvalidItemID())
+
+    self.assertEqual(
+      BRPFolder,
+      shNode.GetItemParent(segmentationModelsFolder)
+    )
+    self.assertEqual(
+      segmentationModelsFolder,
+      shNode.GetItemParent(fibulaModelItemID)
+    )
+    self.assertEqual(
+      segmentationModelsFolder,
+      shNode.GetItemParent(mandibleModelItemID)
+    )
+    self.assertEqual(
+      segmentationModelsFolder,
+      shNode.GetItemParent(decimatedFibulaModelItemID)
+    )
+    self.assertEqual(
+      segmentationModelsFolder,
+      shNode.GetItemParent(decimatedMandibleModelItemID)
+    )
+
+    self.delayDisplay("MakeModelsTest successful")
+
   def section_AddMandibularCurve(self):
     self.delayDisplay("Starting the AddMandibularCurveTest")
 
@@ -4224,16 +4148,22 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def section_createMiterBoxesFromCorrespondingLine(self):
     self.delayDisplay("Starting the createMiterBoxesFromCorrespondingLine test")
 
+    parameterNode = self.logicBRP.getParameterNode()
+    wasModified = parameterNode.StartModify()
+    parameterNode.SetNodeReferenceID("currentScalarVolume", self.fibulaVolume.GetID())
+    parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode", "True")
+    parameterNode.EndModify(wasModified)
+
     sliceOffset = -38.08869552612305
+    if not slicer.app.commandOptions().noMainWindow:
+      redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+      redSliceNode.SetSliceOffset(sliceOffset)
+
     miterBoxLinePoints = [
       [-92.47185918150018, -10.999045106771323, sliceOffset],
       [-104.08360013902106, -12.657865243560021, sliceOffset],
     ]
     
-    if not slicer.app.commandOptions().noMainWindow:
-      redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
-      redSliceNode.SetSliceOffset(sliceOffset)
-
     miterBoxLine = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode", "miterBoxLine")
     miterBoxLine.CreateDefaultDisplayNodes()
     
@@ -4245,7 +4175,6 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       miterBoxLine.GetNumberOfControlPoints()
     )
 
-    parameterNode = self.logicBRP.getParameterNode()
     wasModified = parameterNode.StartModify()
     parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","False")
     parameterNode.SetNodeReferenceID("miterBoxDirectionLine",miterBoxLine.GetID())
@@ -4254,6 +4183,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     # asserts below
 
+    self.delayDisplay("CreateMiterBoxesFromCorrespondingLine test successful")
 
 def createListFromFolderID(folderID):
   createdList = []
