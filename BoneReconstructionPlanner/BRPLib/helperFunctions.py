@@ -71,12 +71,22 @@ def getIntersectionBetweenModelAnd1TransformedPlane(modelNode,transform,planeNod
   plane = vtk.vtkPlane()
   origin = [0,0,0]
   normal = [0,0,0]
-  transformedOrigin = [0,0,0]
-  transformedNormal = [0,0,0]
   planeNode.GetOrigin(origin)
   planeNode.GetNormal(normal)
-  transform.TransformPoint(origin,transformedOrigin)
-  transform.TransformNormal(normal,transformedNormal)
+
+  if transform.IsA("vtkMatrix4x4"):
+    transformedOrigin = [0,0,0,0]
+    transformedNormal = [0,0,0,0]
+    transform.MultiplyPoint(np.append(origin,1.0),transformedOrigin)
+    transformedOrigin = transformedOrigin[0:3]
+    transform.MultiplyPoint(np.append(normal,0.0),transformedNormal)
+    transformedNormal = transformedNormal[0:3]
+  else:
+    transformedOrigin = [0,0,0]
+    transformedNormal = [0,0,0]
+    transform.TransformPoint(origin,transformedOrigin)
+    transform.TransformNormal(normal,transformedNormal)
+  
   plane.SetOrigin(transformedOrigin)
   plane.SetNormal(transformedNormal)
 
