@@ -4142,6 +4142,31 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       self.delayDisplay("Update successful")
     
     if not slicer.app.commandOptions().noMainWindow:
+      # hide original mandible
+      self.widgetBRP.onShowHideOriginalMandibleButton()
+      # hide mandible plane handles
+      self.widgetBRP.onShowHideMandiblePlanesInteractionHandlesButton()
+    
+    self.delayDisplay("Optimize bones contact in reconstruction")
+    parameterNode = self.logicBRP.getParameterNode()
+    parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","True")
+    self.logicBRP.onGenerateFibulaPlanesTimerTimeout()
+    self.delayDisplay("Bones contact optimized")
+
+    if not slicer.app.commandOptions().noMainWindow:
+      layoutManager = slicer.app.layoutManager()
+      layoutManager.setMaximizedViewNode(None)
+      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.logicBRP.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      layoutManager.setMaximizedViewNode(fibulaViewNode)
+
+    # solve rotation about the anatomical axis of the grafted bone-pieces
+    self.delayDisplay("Make between-bone-pieces relative rotation zero")
+    parameterNode = self.logicBRP.getParameterNode()
+    parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","True")
+    self.logicBRP.onGenerateFibulaPlanesTimerTimeout()
+    self.delayDisplay("Achieved zero relative rotation")
+
+    if not slicer.app.commandOptions().noMainWindow:
       layoutManager = slicer.app.layoutManager()
       layoutManager.setMaximizedViewNode(None)
 
@@ -4194,8 +4219,6 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       layoutManager = slicer.app.layoutManager()
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.logicBRP.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       layoutManager.setMaximizedViewNode(mandibleViewNode)
-      # hide mandible plane handles
-      self.widgetBRP.onShowHideMandiblePlanesInteractionHandlesButton()
 
     self.logicBRP.createSawBoxesFromFirstAndLastMandiblePlanes()
 
