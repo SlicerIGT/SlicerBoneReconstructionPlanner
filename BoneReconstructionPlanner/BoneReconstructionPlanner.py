@@ -3202,6 +3202,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       sawBoxPlane.SetAxes([1,0,0],[0,1,0],[0,0,1])
       sawBoxPlane.SetOrigin([0,0,0])
       sawBoxPlane.SetAttribute("isSawBoxPlane","True")
+      sawBoxPlane.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = sawBoxPlane.GetDisplayNode()
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
@@ -3646,7 +3647,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def runTest(self):
     """Run as few or as many tests as needed here.
     """
-    #slicer.util.mainWindow().enabled = False
+    slicer.util.mainWindow().enabled = False
     self.setUp()
     self.section_EnterBRP()
     self.section_GetWidget()
@@ -3658,7 +3659,8 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_AddFibulaLineAndCenterIt()
     self.section_SimulateAndImproveMandibleReconstruction()
     self.section_createMiterBoxesFromCorrespondingLine()
-    #slicer.util.mainWindow().enabled = True
+    self.section_createAndUpdateSawBoxesFromMandiblePlanes()
+    slicer.util.mainWindow().enabled = True
 
   def section_EnterBRP(self):
     self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
@@ -3667,10 +3669,10 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.assertEqual(slicer.util.selectedModule(),'BoneReconstructionPlanner')
   
   def section_GetWidget(self):
-    self.widgetBRP = slicer.modules.bonereconstructionplanner.widgetRepresentation()
+    self.widgetBRP = slicer.modules.bonereconstructionplanner.widgetRepresentation().self()
       
   def section_GetLogic(self):
-    self.logicBRP = self.widgetBRP.self().logic  
+    self.logicBRP = self.widgetBRP.logic  
       
   def test_LoadFinishedPlanSampleData(self):
     # this test should be updated with a new TestPlanBRP sample data.
@@ -4184,6 +4186,89 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     # asserts below
 
     self.delayDisplay("CreateMiterBoxesFromCorrespondingLine test successful")
+
+  def section_createAndUpdateSawBoxesFromMandiblePlanes(self):
+    self.delayDisplay("Starting the createAndUpdateSawBoxesFromMandiblePlanes test")
+
+    if not slicer.app.commandOptions().noMainWindow:
+      layoutManager = slicer.app.layoutManager()
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.logicBRP.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      layoutManager.setMaximizedViewNode(mandibleViewNode)
+      # hide mandible plane handles
+      self.widgetBRP.onShowHideMandiblePlanesInteractionHandlesButton()
+
+    self.logicBRP.createSawBoxesFromFirstAndLastMandiblePlanes()
+
+    # # generate saw boxes movements with this code:
+    # def createListFromFolderID(folderID):
+    #   createdList = []
+    #   shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    #   myList = vtk.vtkIdList()
+    #   shNode.GetItemChildren(folderID,myList)
+    #   for i in range(myList.GetNumberOfIds()):
+    #     createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
+    #   return createdList
+    # def updateSawBoxesMovementsList(caller=None,event=None,movementsList=[]):
+    #   plane = caller
+    #   planeMatrix = vtk.vtkMatrix4x4()
+    #   plane.GetObjectToWorldMatrix(planeMatrix)
+    #   movementsList.append([plane.GetID(),slicer.util.arrayFromVTKMatrix(planeMatrix).tolist()])
+    # shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    # sawBoxesPlanesFolder = shNode.GetItemByName("sawBoxes Planes")
+    # sawBoxesPlanes = createListFromFolderID(mandiblePlanesFolder)
+    # # list to save the movements for the test
+    # movementsList = []
+    # # set observers
+    # planesAndObserversList = []
+    # for plane in sawBoxesPlanes:
+    #   planesAndObserversList.append(
+    #     [
+    #         plane.GetID(),
+    #         plane.AddObserver(
+    #             slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+    #             lambda caller,event,movementsList=movementsList: updateSawBoxesMovementsList(caller,event,movementsList)
+    #         )
+    #     ]
+    #  )
+    # 
+    # 
+
+    movementsList = [['vtkMRMLMarkupsPlaneNode11', [[-0.10858201072394683, 0.9292904853485047, -0.3530285268754998, 42.21461987204822], [0.39399905998699103, 0.3662746931765254, 0.8429754384724443, 76.13834598713792], [0.9126744697188107, -0.04756093963730036, -0.40591042034456926, -52.639932827421404], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode11', [[-0.10858201072394683, 0.9292904853485047, -0.3530285268754998, 43.024681091308594], [0.39399905998699103, 0.3662746931765254, 0.8429754384724443, 73.1989517211914], [0.9126744697188107, -0.04756093963730036, -0.40591042034456926, -59.4488639831543], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode11', [[-0.10858201072394683, 0.9292904853485047, -0.3530285268754998, 47.28470993041992], [0.39399905998699103, 0.3662746931765254, 0.8429754384724443, 74.87801361083984], [0.9126744697188107, -0.04756093963730036, -0.40591042034456926, -59.66689682006836], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode12', [[0.1458282507662034, -0.8995217903481598, -0.4118187343568899, -35.072343539111024], [0.24624056084596485, 0.4361708279869181, -0.8655175301560744, 90.12325764191597], [0.9581751966486786, 0.024810431315229024, 0.28510477902907616, -73.89405603129094], [0.0, 0.0, 0.0, 1.0]]]]
+
+    for item in movementsList:
+      self.delayDisplay("Move saw box")
+      nodeID = item[0]
+      newPlaneToWorldMatrix = slicer.util.vtkMatrixFromArray(np.array(item[1]))
+      planeNode = slicer.mrmlScene.GetNodeByID(nodeID)
+      oldPlaneToWorld = vtk.vtkMatrix4x4()
+      planeNode.GetObjectToNodeMatrix(oldPlaneToWorld)
+      worldToOldPlane = vtk.vtkMatrix4x4()
+      vtk.vtkMatrix4x4.Invert(oldPlaneToWorld, worldToOldPlane)
+      transform = vtk.vtkTransform()
+      transform.PostMultiply()
+      transform.Concatenate(worldToOldPlane)
+      transform.Concatenate(newPlaneToWorldMatrix)
+      wasModified = planeNode.StartModify()
+      for i in range(3):
+        oldPos = planeNode.GetNthControlPointPosition(i)
+        newPos = [0,0,0]
+        transform.TransformPoint(oldPos,newPos)
+        planeNode.SetNthControlPointPosition(i,newPos)
+      planeNode.EndModify(wasModified)
+      self.delayDisplay("Saw box moved")
+
+    if not slicer.app.commandOptions().noMainWindow:
+      layoutManager = slicer.app.layoutManager()
+      layoutManager.setMaximizedViewNode(None)
+      # show mandible plane handles
+      self.widgetBRP.onShowHideMandiblePlanesInteractionHandlesButton()
+      # hide saw boxes handles
+      self.widgetBRP.onShowHideBiggerSawBoxesInteractionHandlesButton()
+
+    # asserts below
+
+
+    self.delayDisplay("CreateAndUpdateSawBoxesFromMandiblePlanes test successful")
 
 def createListFromFolderID(folderID):
   createdList = []
