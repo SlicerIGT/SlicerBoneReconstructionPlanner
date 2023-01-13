@@ -412,16 +412,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._updatingGUIFromParameterNode = True
 
     # The lines below are for parameterNode updates
-    scalarVolumeChangedThroughSelector = (
-      self._parameterNode.GetNodeReference("currentScalarVolume") != self.ui.scalarVolumeSelector.currentNode()
-    )
     scalarVolumeChangedThroughParameterNode = (
       self._parameterNode.GetParameter("scalarVolumeChangedThroughParameterNode") == "True"
     )
-    if (
-      scalarVolumeChangedThroughSelector or
-      scalarVolumeChangedThroughParameterNode
-      ):
+    if (scalarVolumeChangedThroughParameterNode):
       if not slicer.app.commandOptions().noMainWindow:
         scalarVolumeID = self._parameterNode.GetNodeReference("currentScalarVolume").GetID()
         self.logic.setBackgroundVolumeFromID(scalarVolumeID)
