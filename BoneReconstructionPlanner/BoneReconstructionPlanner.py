@@ -2944,7 +2944,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for i in range(fibulaFiducialList.GetNumberOfFiducials()):
       pos = [0,0,0]
-      fibulaFiducialList.GetNthFiducialPosition(i,pos)
+      fibulaFiducialList.GetNthControlPointPosition(i,pos)
 
       pointID = surgicalGuideBaseMesh.FindPoint(pos)
 
@@ -3009,7 +3009,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for i in range(mandibleFiducialList.GetNumberOfFiducials()):
       pos = [0,0,0]
-      mandibleFiducialList.GetNthFiducialPosition(i,pos)
+      mandibleFiducialList.GetNthControlPointPosition(i,pos)
 
       pointID = surgicalGuideBaseMesh.FindPoint(pos)
 
