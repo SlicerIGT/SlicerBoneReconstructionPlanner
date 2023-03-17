@@ -1771,6 +1771,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       decimatedFibulaModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
       decimatedFibulaModelDisplayNode.SetVisibility(False)
 
+      nonDecimatedMandibleModelDisplayNode =  nonDecimatedMandibleModelNode.GetDisplayNode()
+      nonDecimatedMandibleModelDisplayNode.SetVisibility(True)
+      decimatedMandibleModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
+      decimatedMandibleModelDisplayNode.SetVisibility(False)
+
       fibulaModelNode = nonDecimatedFibulaModelNode
       mandibleModelNode = nonDecimatedMandibleModelNode
     else:
@@ -1778,6 +1783,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       nonDecimatedFibulaModelDisplayNode.SetVisibility(False)
       decimatedFibulaModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
       decimatedFibulaModelDisplayNode.SetVisibility(True)
+
+      nonDecimatedMandibleModelDisplayNode =  nonDecimatedMandibleModelNode.GetDisplayNode()
+      nonDecimatedMandibleModelDisplayNode.SetVisibility(False)
+      decimatedMandibleModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
+      decimatedMandibleModelDisplayNode.SetVisibility(True)
 
       fibulaModelNode = decimatedFibulaModelNode
       mandibleModelNode = decimatedMandibleModelNode
