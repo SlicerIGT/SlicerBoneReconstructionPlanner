@@ -49,11 +49,12 @@ Patient-specific guides dramatically improve the success rate and efficiency. 3D
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP.mrb" >Example Virtual Surgical Plan with Patient-Specific Surgical Guides</a>
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TheoreticalPlanBRP_rib.mrb" >Theoretical Virtual Surgical Plan with a rib (Toy-example)</a>
 
-# Instructions (last updated 09/30/2022)
+# Instructions
+([last updated 03/19/2023](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/96))
 
 ## Installing BoneReconstructionPlanner
 
-1. Download Slicer Preview Release from here: https://download.slicer.org/ It's version is 5.1.0 of that day.
+1. Download Slicer Stable Release from here: https://download.slicer.org/ It's version is 5.2.2
 2. Install Slicer
 3. Open Slicer
 4. Press Ctrl+4 to open the extension manager. Or click the upper-right icon with the letter 'E'
