@@ -1,25 +1,72 @@
-# Bone Reconstruction Planner
 
+<!--
+![3DSlicerLogo-HorizontalF](https://user-images.githubusercontent.com/19158307/224816407-62cc7791-743c-4c4c-a1fe-32f753553ab1.svg)
 ![](BoneReconstructionPlanner.jpg)
+-->
+<table style="border:hidden">
+<tr>
+<td><img src="https://user-images.githubusercontent.com/19158307/224816407-62cc7791-743c-4c4c-a1fe-32f753553ab1.svg" width="500"/></td>
+<td><img src="BoneReconstructionPlanner.jpg" width="500"/></td>
+</tr>
+</table>
 
-A 3D Slicer extension for virtual surgical planning of mandibular reconstruction with vascularized fibula free flap and generation of patient-specific surgical guides. 
+# BoneReconstructionPlanner
+
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+A [3D Slicer](https://www.slicer.org/) extension for virtual surgical planning of mandibular reconstruction with vascularized fibula free flap and generation of patient-specific surgical guides. 
+
+
+<table>
+<tr>
+<td align ="center">Virtual Surgery Planning</td>
+<td align ="center">Patient-specific Surgical Guides</td>
+</tr>
+<tr>
+<td><img src="BoneReconstructionPlanner/Resources/Pictures/screenshotPlanning.png" width="500"/></td>
+<td><img src="BoneReconstructionPlanner/Resources/Pictures/screenshotPatientSpecificSurgicalGuides.png" width="500"/></td>
+</tr>
+<tr>
+<td align ="center">Custom Fibula Guide Use</td>
+<td align ="center">Neo Mandible</td>
+</tr>
+<tr>
+<td><img src="BoneReconstructionPlanner/Resources/Pictures/photo3DPrintedFibulaGuideUse.png" width="500"/></td>
+<td><img src="BoneReconstructionPlanner/Resources/Pictures/photoNeoMandible.png" width="500"/></td>
+</tr>
+<tr>
+<td align ="center" colspan="2">Pre Surgery Photo (left) and Post Surgery Photo (right) [*]</td>
+</tr>
+<tr>
+<td align ="center" colspan="2"><img src="BoneReconstructionPlanner/Resources/Pictures/photoPreAndPostSurgery.jpg" width="800"/></td>
+</tr>
+<tr>
+<td align ="center">Pre Surgery Orthopantomogram [*]</td>
+<td align ="center">Post Surgery Orthopantomogram [*]</td>
+</tr>
+<tr>
+<td><img src="BoneReconstructionPlanner/Resources/Pictures/preSurgeryOrthopantomogram.jpg" width="500"/></td>
+<td><img src="BoneReconstructionPlanner/Resources/Pictures/postSurgeryOrthopantomogram.jpg" width="600"/></td>
+</tr>
+<td align ="right" colspan="2">[*]: marked pictures belong to the same surgery and patient</td>
+</tr>
+</table>
+
+# Citations
+
+If you use BoneReconstructionPlanner please cite our paper: https://www.sciencedirect.com/science/article/pii/S2666964123000103
+
+# Description
+
+Patient-specific guides dramatically improve the success rate and efficiency. 3D printing is revolutionizing reconstructive surgery by making it possible to construct patient-specific guides that are anatomically customized for each patient's need. Unfortunately, this technology is out of reach of most surgeons across the world due to the complexity and costs of existing solutions. The added cost of this technology, per case, is estimated to be around USD 3000 to USD 5000. Our ambition is to disrupt this market by providing an all-in-one cost-efficient and easy-to-use, open-source, and customizable software solution based on 3D Slicer, a free and open-source software package for image analysis and scientific visualization. The successful creation of this technology will enable the development of “patient and site-specific surgical guides”, manufactured through a combination of 3D planning and CAD/CAM. This solution will have the capacity to meet the complex needs of craniofacial reconstruction in a controlled manner. The outcome of the project will be an open-source solution that can make a 3D digital surgical plan that is transferred to the operating room via 3D-printed, patient-specific models, guides, and plates.
+
+From the engineering point of view this project attemps to be a What You See Is What You Get (WYSIWYG) editor
 
 # Interactive 3D demo
 
-[Link here](https://3dviewer.net/index.html#model=https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/BoneReconstructionPlanner.gltf). See a finished Virtual Surgical Plan of a mandibular reconstruction (i.e. 3D report).
+[Link here](https://3dviewer.net/index.html#model=https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/BoneReconstructionPlanner.gltf). See a finished Virtual Surgical Plan of a Mandibular Reconstruction using Fibula Pieces.
 
 ![](BoneReconstructionPlanner/Resources/Screenshots/screenshot3DDemo.png)
-
-# Screenshots
-
-- Virtual Surgery Planning:
-
-![](BoneReconstructionPlanner/Resources/Screenshots/screenshotPlanning.png)
-
-- Patient-specific Surgical Guides:
-
-![](BoneReconstructionPlanner/Resources/Screenshots/screenshotPatientSpecificSurgicalGuides.png)
-
 
 # Preview Video
  [![Mandible Reconstruction Preview Video on Slicer](https://img.youtube.com/vi/wsr_g_1E_pw/0.jpg)](https://www.youtube.com/watch?v=wsr_g_1E_pw)
@@ -36,10 +83,6 @@ A 3D Slicer extension for virtual surgical planning of mandibular reconstruction
 [Use case by Manjula Herath (Sri Lanka)](https://discourse.slicer.org/t/bone-reconstruction-planner/19289)
 
 [This one will be published as part of a case series next year (Malaysia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/58)
-
-# Description
-
-Patient-specific guides dramatically improve the success rate and efficiency. 3D printing is revolutionizing reconstructive surgery by making it possible to construct patient-specific guides that are anatomically customized for each patient's need. Unfortunately, this technology is out of reach of most surgeons across the world due to the complexity and costs of existing solutions. The added cost of this technology, per case, is estimated to be around USD 3000 to USD 5000. Our ambition is to disrupt this market by providing an all-in-one cost-efficient and easy-to-use, open-source, and customizable software solution based on 3D Slicer, a free and open-source software package for image analysis and scientific visualization. The successful creation of this technology will enable the development of “patient and site-specific surgical guides”, manufactured through a combination of 3D planning and CAD/CAM. This solution will have the capacity to meet the complex needs of craniofacial reconstruction in a controlled manner. The outcome of the project will be an open-source solution that can make a 3D digital surgical plan that is transferred to the operating room via 3D-printed, patient-specific models, guides, and plates.
 
 # Sample Data
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/CTFibula.nrrd" >Fibula Scalar Volume</a>
