@@ -54,7 +54,7 @@ A [3D Slicer](https://www.slicer.org/) extension for virtual surgical planning o
 
 # Citations
 
-If you use BoneReconstructionPlanner please cite our paper: 
+If you use BoneReconstructionPlanner please cite our paper:
 https://www.sciencedirect.com/science/article/pii/S2666964123000103
 
 # Table of Contents
@@ -68,13 +68,30 @@ https://www.sciencedirect.com/science/article/pii/S2666964123000103
 - [Teaser and Tutorial Videos](#teaser-and-tutorial-videos)
 - [Documentation](#documentation)
 - [Reported Use Cases](#reported-use-cases)
+- [Sample Data](#sample-data)
+- [Instructions](#instructions)
+  - [Installing BoneReconstructionPlanner](#installing-bonereconstructionplanner)
+  - [Segmentation (Preparation for Virtual Surgical Planning)](#segmentation-preparation-for-virtual-surgical-planning)
+  - [Virtual Surgical Planning](#virtual-surgical-planning)
+  - [Personalized Fibula Guide Generation](#personalized-fibula-guide-generation)
+  - [Create the Fibula Guide Base](#create-the-fibula-guide-base)
+  - [Finish the Fibula Surgical Guide](#finish-the-fibula-surgical-guide)
+  - [Personalized Mandible Surgical Guide](#personalized-mandible-surgical-guide)
+  - [Mandible Reconstruction Simulation](#mandible-reconstruction-simulation)
 - [Contributing](#Contributing)
 - [Community](#Community)
 - [Additional Resources](#Additional-Resources)
+- [License](#license)
 
 # Description
 
-From the engineering point of view this project attemps to be a What You See Is What You Get (WYSIWYG) editor. Its math is so sharp that you can zoom indefinitely on the axial slides viewer and you'll find perfect fit between the fibula pieces and the resected mandible that form the neomandible. 
+From the engineering point of view this project attemps to be a What You See Is What You Get (WYSIWYG) editor. 
+
+Its math is robust so you should be able to correctly modify the reconstruction digitally at submillimeter scales (i.e. at features-sizes your eyes will not be able to distinguish). 
+
+Digital means ideal but real-world objects are not, and neither are our inputs (e.g. CT slice thickness, bone models triangle density, smoothing factor, fibula centerline, etc). In addition to that have in mind that other sources of errors (printer resolution, printing orientation, anatomic fit considerations, etc) will add up although most of the time they'll be negligible, that is assumed because complaints have not been [reported](#reported-use-cases).
+
+As far as we know our BoneReconstructionPlanner custom surgical guides will be accurate and effective enough to be adequate tools. Although, you are invited to do a mock surgery to sawbones using BoneReconstructionPlanner designed instruments yourself and weight the results before attempting their use on a IRB-approved case.
 
 ## Benefits:
 - less operation time
@@ -95,7 +112,7 @@ qualified technician
 
 ## User Considerations:
 - There are some parameters like the distance between faces of the closing-wedge osteotomies of fibula that can be increased if desired.
-- Deviations from the Virtual Surgical Plan could come from big slice thickness CTs, suboptimal segmentation to 3D model convertions, big extrusion layers while 3D printing the guides, not accounting for tool fitting (e.g. periosteum remainings over bone, boneSurface2guideSurface fitting, etc) 
+- Deviations from the Virtual Surgical Plan could come from big slice thickness CTs, suboptimal segmentation to 3D model convertions, big extrusion layers while 3D printing the guides, not accounting for tool fitting (e.g. periosteum remainings over bone, boneSurface2guideSurface fitting, etc) and other reasons.
 
 # Interactive VSP demo
 
@@ -137,12 +154,12 @@ Link: https://3dviewer.net/index.html#model=https://github.com/SlicerIGT/SlicerB
 # Reported Use Cases
 See the results of other users:
 - [More than 20 informally documented uses (Stonia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40)
-- [One of the use cases by Manjula Herath (Sri Lanka)](https://discourse.slicer.org/t/bone-reconstruction-planner/19289)
-- [One of the use cases by Steve Maisi (Malaysia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/58). Link to the [corresponding paper](https://www.sciencedirect.com/science/article/pii/S2666964123000103).
+- [One of the use cases by Dr. Manjula Herath (Sri Lanka)](https://discourse.slicer.org/t/bone-reconstruction-planner/19289)
+- [One of the use cases by Dr. Steve Maisi (Malaysia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/58). Link to the [corresponding paper](https://www.sciencedirect.com/science/article/pii/S2666964123000103).
 
 # Sample Data
 
-- Example of minimum data needed for making [segmentations](#segmentation-preparation-for-virtual-surgical-planning) of bones (i.e. mandible CT and fibula CT with 1mm or less slice thinkness):
+- Example of minimum data needed for making [segmentations](#segmentation-preparation-for-virtual-surgical-planning) of bones (i.e. mandible CT and fibula CT with 1mm or less axial slice thinkness):
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/CTFibula.nrrd" >Fibula Scalar Volume</a>
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/CTMandible.nrrd" >Mandible Scalar Volume</a>
 
@@ -150,7 +167,7 @@ See the results of other users:
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaSegmentation.seg.nrrd" >Fibula Segmentation</a>
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/MandibleSegmentation.seg.nrrd" >Mandible Segmentation</a>
 
-- Finished VSP and guides design using above data. It can be already be loaded to Slicer and modified further:
+- Finished VSP and guides design using above data that can already be loaded to Slicer and modified further:
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP.mrb" >Example Virtual Surgical Plan with Patient-Specific Surgical Guides</a>
 
 - Toy VSP using a rib because a user wondered if it could be possible:
@@ -249,19 +266,19 @@ clearanceFitPrintingTolerance = 0.4mm
 
 3. Click "Create miter boxes from fibula planes". The yellow miterBoxes will appear, each one with a long box that will create the slit for the saw to go through.
 
-# Create the Fibula Guide Base
+## Create the Fibula Guide Base
 3. Go to the segment editor, add a new segment and create a copy (using the copy-logical-operator) of the fibula segment, rename it to "fibGuideBase".
 4. Use Hollow tool with "inside surface" option and some "shell thickness" between 3 to 6mm. The number should be decision of the user. Usually more thickness makes the contact between the miterBoxes and the guideBase easier to achieve but sometimes the guideBase ends up too big wasting material or being uncomfortable. You can solve this, using a smaller shell if you do "masked painting" in the areas that need filling.
 [Here is explained how to do it](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40#discussioncomment-1607995)
 5. Go to the data module and leave only the fibGuideBase segment visible on its segmentation, right-click it and press "Export visible segments to models"
 
-# Finish the Fibula Surgical Guide
+## Finish the Fibula Surgical Guide
 6. On the "Fibula Surgical Guide Generation" layout of BRP click on the button "Create fiducial list" and position around one point per segment were you want the screw-hole to be (the fibGuideBase model should be visible).
 7. Select the fibula guide base model that you exported on the corresponding model selector. Be sure the correct pointList is selected on the corresponding point selector. If you go by defaults it should work fine.
 8. Click "Create cylinder from fiducial list and fibula surgical guide base". Some cylinders should appear over the fibula guide base.
 9. Congratulations: You are ready to execute boolean operations to create the guide. Click on "Make boolean operations to surgical guide base with screwHolesCylinders and miterBoxes". The guide will be created, you can be sure by using the NodeControlBox that is above and hiding everything else by clicking each "eye icon" of the component objects. The name of the guide will end with the word "Prototype". If you execute this button again after you did some changes to the plan (e.g. changed miterBoxes position) a new prototype will be created.
 
-## Personalized Mandible Surgical Guide.
+## Personalized Mandible Surgical Guide
 
 The workflow doesn't differ much from fibula guide creation.
 Except that:
@@ -274,7 +291,7 @@ Except that:
 1. Do a Virtual Surgical Plan
 2. Click "Create 3D model of the reconstruction for 3D printing". This button maybe useful for users that want to prebent plates.
 
-## User contributions and feedback
+# User contributions and feedback
 
 Fell free to open an [issue](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/new) (yes, you need a Github account) if you find the instructions or the videotutorial inaccurate, or if you need help finishing the workflow
 
