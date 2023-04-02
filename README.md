@@ -54,25 +54,80 @@ A [3D Slicer](https://www.slicer.org/) extension for virtual surgical planning o
 
 # Citations
 
-If you use BoneReconstructionPlanner please cite our paper: https://www.sciencedirect.com/science/article/pii/S2666964123000103
+If you use BoneReconstructionPlanner please cite our paper: 
+https://www.sciencedirect.com/science/article/pii/S2666964123000103
+
+# Table of Contents
+- [Overview](#bonereconstructionplanner)
+- [Citations](#citations)
+- [Description](#description)
+  - [Benefits](#benefits)
+  - [Cons](#cons)
+  - [User Considerations](#user-considerations)
+- [Interactive VSP Demo](#interactive-vsp-demo)
+- [Teaser and Tutorial Videos](#teaser-and-tutorial-videos)
+- [Contributing](#Contributing)
+- [Community](#Community)
+- [Additional Resources](#Additional-Resources)
 
 # Description
 
-Patient-specific guides dramatically improve the success rate and efficiency. 3D printing is revolutionizing reconstructive surgery by making it possible to construct patient-specific guides that are anatomically customized for each patient's need. Unfortunately, this technology is out of reach of most surgeons across the world due to the complexity and costs of existing solutions. The added cost of this technology, per case, is estimated to be around USD 3000 to USD 5000. Our ambition is to disrupt this market by providing an all-in-one cost-efficient and easy-to-use, open-source, and customizable software solution based on 3D Slicer, a free and open-source software package for image analysis and scientific visualization. The successful creation of this technology will enable the development of “patient and site-specific surgical guides”, manufactured through a combination of 3D planning and CAD/CAM. This solution will have the capacity to meet the complex needs of craniofacial reconstruction in a controlled manner. The outcome of the project will be an open-source solution that can make a 3D digital surgical plan that is transferred to the operating room via 3D-printed, patient-specific models, guides, and plates.
+From the engineering point of view this project attemps to be a What You See Is What You Get (WYSIWYG) editor. Its math is so sharp that you can zoom indefinitely on the axial slides viewer and you'll find perfect fit between the fibula pieces and the resected mandible that form the neomandible. 
 
-From the engineering point of view this project attemps to be a What You See Is What You Get (WYSIWYG) editor
+## Benefits:
+- less operation time
+- less ischemic time
+- less length of hospital stay after surgery
+- better osteotomies accuracy
+- better neomandible contour, more aesthetic
 
-# Interactive 3D demo
+## Cons:
+- VSP software license (free if using BoneReconstructionPlanner,
+15k USD annual license if using commercial software)
+- 3D printer, biocompatible material, sterilization (can be done
+on an in-house 3D printing lab or outsourced)
+- needs research-review-board or FDA approval
+- half an hour preoperative plan (plenty net time is still saved)
+- learning curve for new user or need of biomedical engineer or
+qualified technician
 
-[Link here](https://3dviewer.net/index.html#model=https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/BoneReconstructionPlanner.gltf). See a finished Virtual Surgical Plan of a Mandibular Reconstruction using Fibula Pieces.
+## User Considerations:
+- There are some parameters like the distance between faces of the closing-wedge osteotomies of fibula that can be increased if desired.
+- Deviations from the Virtual Surgical Plan could come from big slice thickness CTs, suboptimal segmentation to 3D model convertions, big extrusion layers while 3D printing the guides, not accounting for tool fitting (e.g. periosteum remainings over bone, boneSurface2guideSurface fitting, etc) 
 
-![](BoneReconstructionPlanner/Resources/Screenshots/screenshot3DDemo.png)
+# Interactive VSP demo
 
-# Preview Video
- [![Mandible Reconstruction Preview Video on Slicer](https://img.youtube.com/vi/wsr_g_1E_pw/0.jpg)](https://www.youtube.com/watch?v=wsr_g_1E_pw)
+<table>
+<tr>
+<td align ="center">See a finished Virtual Surgical Plan of a Mandibular Reconstruction using Fibula Pieces.
+</td>
+</tr>
+<tr>
+<td align ="center">
+Link: https://3dviewer.net/index.html#model=https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/BoneReconstructionPlanner.gltf
+</td>
+</tr>
+<tr>
+<td align ="center"><img src="BoneReconstructionPlanner/Resources/Pictures/screenshot3DDemo.png" width="1000"/></td>
+</tr>
+</table>
 
-# Videotutorial
-[![Mandible Reconstruction Tutorial on Slicer](https://img.youtube.com/vi/g9Vql5h6uHM/0.jpg)](https://www.youtube.com/watch?v=g9Vql5h6uHM)
+# Teaser and Tutorial Videos
+
+<table>
+<tr>
+<td align ="center">Teaser</td>
+<td align ="center">Tutorial</td>
+</tr>
+<tr>
+<td align ="center"><img src="https://img.youtube.com/vi/wsr_g_1E_pw/0.jpg" width="500"/></td>
+<td align ="center"><img src="https://img.youtube.com/vi/g9Vql5h6uHM/0.jpg" width="500"/></td>
+</tr>
+<tr>
+<td align ="center">https://www.youtube.com/watch?v=wsr_g_1E_pw</td>
+<td align ="center">https://www.youtube.com/watch?v=g9Vql5h6uHM</td>
+</tr>
+</table>
 
 # Documentation
 - [High-level design overview](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/raw/main/Docs/Design.pptx)
