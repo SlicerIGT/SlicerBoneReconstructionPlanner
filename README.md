@@ -66,6 +66,8 @@ https://www.sciencedirect.com/science/article/pii/S2666964123000103
   - [User Considerations](#user-considerations)
 - [Interactive VSP Demo](#interactive-vsp-demo)
 - [Teaser and Tutorial Videos](#teaser-and-tutorial-videos)
+- [Documentation](#documentation)
+- [Reported Use Cases](#reported-use-cases)
 - [Contributing](#Contributing)
 - [Community](#Community)
 - [Additional Resources](#Additional-Resources)
@@ -130,22 +132,29 @@ Link: https://3dviewer.net/index.html#model=https://github.com/SlicerIGT/SlicerB
 </table>
 
 # Documentation
-- [High-level design overview](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/raw/main/Docs/Design.pptx)
+- [White Paper (pdf)](https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/Docs/BoneReconstructionPlannerSlides.pdf)
 
-# Use Cases
-[First clinical use (Stonia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40)
-
-[Use case by Manjula Herath (Sri Lanka)](https://discourse.slicer.org/t/bone-reconstruction-planner/19289)
-
-[This one will be published as part of a case series next year (Malaysia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/58)
+# Reported Use Cases
+See the results of other users:
+- [More than 20 informally documented uses (Stonia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40)
+- [One of the use cases by Manjula Herath (Sri Lanka)](https://discourse.slicer.org/t/bone-reconstruction-planner/19289)
+- [One of the use cases by Steve Maisi (Malaysia)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/58). Link to the [corresponding paper](https://www.sciencedirect.com/science/article/pii/S2666964123000103).
 
 # Sample Data
-- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/CTFibula.nrrd" >Fibula Scalar Volume</a>
-- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/CTMandible.nrrd" >Mandible Scalar Volume</a>
-- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaSegmentation.seg.nrrd" >Fibula Segmentation</a>
-- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/MandibleSegmentation.seg.nrrd" >Mandible Segmentation</a>
-- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP.mrb" >Example Virtual Surgical Plan with Patient-Specific Surgical Guides</a>
-- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TheoreticalPlanBRP_rib.mrb" >Theoretical Virtual Surgical Plan with a rib (Toy-example)</a>
+
+- Example of minimum data needed for making [segmentations](#segmentation-preparation-for-virtual-surgical-planning) of bones (i.e. mandible CT and fibula CT with 1mm or less slice thinkness):
+  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/CTFibula.nrrd" >Fibula Scalar Volume</a>
+  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/CTMandible.nrrd" >Mandible Scalar Volume</a>
+
+- Example of minimum data needed for a [VSP](#virtual-surgical-planning) (mandible CT, fibula CT, mandible segmentation and fibula segmentation):
+  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaSegmentation.seg.nrrd" >Fibula Segmentation</a>
+  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/MandibleSegmentation.seg.nrrd" >Mandible Segmentation</a>
+
+- Finished VSP and guides design using above data. It can be already be loaded to Slicer and modified further:
+  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP.mrb" >Example Virtual Surgical Plan with Patient-Specific Surgical Guides</a>
+
+- Toy VSP using a rib because a user wondered if it could be possible:
+  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TheoreticalPlanBRP_rib.mrb" >Theoretical Virtual Surgical Plan with a rib (Toy-example)</a>
 
 # Instructions
 ([last updated 03/19/2023](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/96))
