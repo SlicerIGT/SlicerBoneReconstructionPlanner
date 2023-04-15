@@ -27,6 +27,14 @@ A [3D Slicer](https://www.slicer.org/) extension for virtual surgical planning o
 <td><img src="BoneReconstructionPlanner/Resources/Pictures/screenshotPatientSpecificSurgicalGuides.png" width="500"/></td>
 </tr>
 <tr>
+<td align ="center">Custom Fibula Guide Use (link below)</td>
+<td align ="center">Neo Mandible (link below)</td>
+</tr>
+<tr>
+<td align ="center"><a href="BoneReconstructionPlanner/Resources/Pictures/photo3DPrintedFibulaGuideUse.png">GRAPHIC EXPLICIT PHOTO</a></td>
+<td align ="center"><a href="BoneReconstructionPlanner/Resources/Pictures/photoNeoMandible.png">GRAPHIC EXPLICIT PHOTO</a></td>
+</tr>
+<tr>
 <td align ="center" colspan="2">Pre Surgery Photo (left) and Post Surgery Photo (right) [*]</td>
 </tr>
 <tr>
