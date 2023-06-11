@@ -2664,11 +2664,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       collisionDetected = False
       for i in range(0,len(duplicateFibulaBonePiecesList) -1):
-        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-          collisionDetection = vtk.vtkCollisionDetectionFilter()
-        else:
-          import vtkSlicerRtCommonPython
-          collisionDetection = vtkSlicerRtCommonPython.vtkCollisionDetectionFilter()
+        collisionDetection = vtk.vtkCollisionDetectionFilter()
         collisionDetection.SetInputData(0, duplicateFibulaBonePiecesList[i].GetPolyData())
         collisionDetection.SetInputData(1, duplicateFibulaBonePiecesList[i+1].GetPolyData())
         matrix1 = vtk.vtkMatrix4x4()
