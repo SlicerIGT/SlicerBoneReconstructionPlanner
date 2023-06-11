@@ -379,14 +379,32 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    sawBoxesPlanesFolder = shNode.GetItemByName("sawBoxes Planes")
+    dentalImplantsPlanesFolder = shNode.GetItemByName("dentalImplants Planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+    sawBoxesPlanesList = createListFromFolderID(sawBoxesPlanesFolder)
+    dentalImplantsPlanesList = createListFromFolderID(dentalImplantsPlanesFolder)
 
-    for i in range(len(mandibularPlanesList)):
-      mandibularPlanesList[i].SetLocked(1)
-      displayNode = mandibularPlanesList[i].GetDisplayNode()
-      displayNode.HandlesInteractiveOff()
-    
-    self.logic.removeMandiblePlanesObservers()
+    self.logic.setInteractiveHandlesVisibilityOfMarkups(
+      mandibularPlanesList,
+      visibility=False
+    )
+    self.logic.setMarkupsListLocked(mandibularPlanesList,locked=True)
+    self.logic.removeMandiblePlaneObservers()
+
+    self.logic.setInteractiveHandlesVisibilityOfMarkups(
+      sawBoxesPlanesList,
+      visibility=False
+    )
+    self.logic.setMarkupsListLocked(sawBoxesPlanesList,locked=True)
+    self.logic.removeSawBoxPlaneObservers()
+
+    self.logic.setInteractiveHandlesVisibilityOfMarkups(
+      dentalImplantsPlanesList,
+      visibility=False
+    )
+    self.logic.setMarkupsListLocked(dentalImplantsPlanesList,locked=True)
+    self.logic.removeDentalImplantsPlaneObservers()
 
   def onSceneStartClose(self, caller, event):
     """
@@ -1089,7 +1107,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
       return    
   
-    self.removeMandiblePlanesObservers()
+    self.removeMandiblePlaneObservers()
     if makeAllMandiblePlanesRotateTogetherChecked and mandiblePlanesPositioningForMaximumBoneContactChecked:
       self.mandiblePlanesPositioningForMaximumBoneContact()
       self.transformMandiblePlanesZRotationToBeTheSameAsInputPlane(mandiblePlaneOfRotation)
@@ -1212,7 +1230,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       observer = mandibularPlanesList[i].AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer)
       self.mandiblePlaneObserversAndNodeIDList.append([observer,mandibularPlanesList[i].GetID()])
 
-  def removeMandiblePlanesObservers(self):
+  def removeMandiblePlaneObservers(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
@@ -3724,7 +3742,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         lastProblematicPlaneIndex = i
         lastSuccessfulUnionResult.ShallowCopy(currentResult)
 
-        self.removeMandiblePlanesObservers()
+        self.removeMandiblePlaneObservers()
         planeList[i].SetOrigin(origin)
         self.addMandiblePlaneObservers()
 
