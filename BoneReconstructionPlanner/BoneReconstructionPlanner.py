@@ -273,6 +273,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.fixCutGoesThroughTheMandibleTwiceCheckBox.connect('stateChanged(int)', self.onFixCutGoesThroughTheMandibleTwiceCheckBox)
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.customTitaniumPlateDesingCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -537,6 +539,23 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked = self._parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") != "False"
+
+    dentalImplantsPlanningAndFibulaDrillGuidesChecked = self._parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
+    customTitaniumPlateDesingChecked = self._parameterNode.GetParameter("customTitaniumPlateDesing") == "True"
+    self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.checked = dentalImplantsPlanningAndFibulaDrillGuidesChecked
+    self.ui.customTitaniumPlateDesingCheckBox.checked = customTitaniumPlateDesingChecked
+
+    if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
+      self.ui.dentalImplantsPlanningCollapsibleButton.show()
+    else:
+      self.ui.dentalImplantsPlanningCollapsibleButton.hide()
+    
+    if customTitaniumPlateDesingChecked:
+      self.ui.customTitaniumPlateGenerationCollapsibleButton.show()
+    else:
+      self.ui.customTitaniumPlateGenerationCollapsibleButton.hide()
+
+    
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
     else:
@@ -631,6 +650,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","True")
     else:
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","False")
+    if self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.checked:
+      self._parameterNode.SetParameter("dentalImplantsPlanningAndFibulaDrillGuides","True")
+    else:
+      self._parameterNode.SetParameter("dentalImplantsPlanningAndFibulaDrillGuides","False")
+    if self.ui.customTitaniumPlateDesingCheckBox.checked:
+      self._parameterNode.SetParameter("customTitaniumPlateDesing","True")
+    else:
+      self._parameterNode.SetParameter("customTitaniumPlateDesing","False")
 
     self._parameterNode.EndModify(wasModified)
 
@@ -3189,6 +3216,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def makeBooleanOperationsToFibulaSurgicalGuideBase(self):
     parameterNode = self.getParameterNode()
     fibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
+    dentalImplantsPlanningAndFibulaDrillGuidesChecked = self._parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaCylindersModelsFolder = shNode.GetItemByName("Fibula Cylinders Models")
@@ -3216,8 +3244,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(biggerMiterBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, biggerMiterBoxesModelsList[i], surgicalGuideModel, 'union')
 
-    for i in range(len(biggerFibulaDentalImplantsCylindersModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, biggerFibulaDentalImplantsCylindersModelsList[i], surgicalGuideModel, 'union')
+    if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
+      for i in range(len(biggerFibulaDentalImplantsCylindersModelsList)):
+        combineModelsLogic.process(surgicalGuideModel, biggerFibulaDentalImplantsCylindersModelsList[i], surgicalGuideModel, 'union')
 
     for i in range(len(cylindersModelsList)):
       combineModelsLogic.process(surgicalGuideModel, cylindersModelsList[i], surgicalGuideModel, 'difference')
@@ -3225,8 +3254,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(miterBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, miterBoxesModelsList[i], surgicalGuideModel, 'difference')
 
-    for i in range(len(fibulaDentalImplantsCylindersModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, fibulaDentalImplantsCylindersModelsList[i], surgicalGuideModel, 'difference')
+    if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
+      for i in range(len(fibulaDentalImplantsCylindersModelsList)):
+        combineModelsLogic.process(surgicalGuideModel, fibulaDentalImplantsCylindersModelsList[i], surgicalGuideModel, 'difference')
 
     if surgicalGuideModel.GetPolyData().GetNumberOfPoints() == 0:
       slicer.mrmlScene.RemoveNode(surgicalGuideModel)
