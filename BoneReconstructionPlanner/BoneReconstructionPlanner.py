@@ -2351,7 +2351,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       transformedMandiblePieceDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
-      transformedMandiblePiece.SetAndObserveTransformNodeID(mandible2FibulaTransformsList[2*i].GetID())
+      transformedMandiblePiece.SetAndObserveTransformNodeID(mandible2FibulaTransformsList[i].GetID())
       transformedMandiblePieceTransformationSuccess = transformedMandiblePiece.HardenTransform()
       if not (transformedMandiblePieceTransformationSuccess):
         Exception('Hardening transforms was not successful')
@@ -2371,7 +2371,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       transformedMandibleDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
-      transformedMandible.SetAndObserveTransformNodeID(mandible2FibulaTransformsList[2*i].GetID())
+      transformedMandible.SetAndObserveTransformNodeID(mandible2FibulaTransformsList[i].GetID())
       transformedMandibleTransformationSuccess = transformedMandible.HardenTransform()
       if not (transformedMandibleTransformationSuccess):
         Exception('Hardening transforms was not successful')
@@ -2405,30 +2405,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     cutBonesList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
     for i in range(len(cutBonesList)-1):
-
-      or0 = np.zeros(3)
-      planeList[i].GetOrigin(or0)
-      or1 = np.zeros(3)
-      planeList[i+1].GetOrigin(or1)
-      origin = (or0+or1)/2
-
-      inverseRotationMatrix = vtk.vtkMatrix4x4()
-      inverseRotationMatrix.DeepCopy(self.mandibleToFibulaRegistrationTransformMatricesList[i])
-      inverseRotationMatrix.Invert()
+      fibulaToMandibleRegistrationTransformMatrix = vtk.vtkMatrix4x4()
+      fibulaToMandibleRegistrationTransformMatrix.DeepCopy(self.mandibleToFibulaRegistrationTransformMatricesList[i])
+      fibulaToMandibleRegistrationTransformMatrix.Invert()
 
       fibulaPieceToMandibleAxisTransformNode = slicer.vtkMRMLLinearTransformNode()
       fibulaPieceToMandibleAxisTransformNode.SetName("Fibula Segment {0} Transform".format(i))
       slicer.mrmlScene.AddNode(fibulaPieceToMandibleAxisTransformNode)
 
-      oldOrigin = (self.fibulaPlanesPositionA[i] + self.fibulaPlanesPositionB[i])/2
-
-      fibulaPieceToMandibleAxisTransform = vtk.vtkTransform()
-      fibulaPieceToMandibleAxisTransform.PostMultiply()
-      fibulaPieceToMandibleAxisTransform.Translate(-oldOrigin[0],-oldOrigin[1],-oldOrigin[2])
-      fibulaPieceToMandibleAxisTransform.Concatenate(inverseRotationMatrix)
-      fibulaPieceToMandibleAxisTransform.Translate(origin)
-
-      fibulaPieceToMandibleAxisTransformNode.SetMatrixTransformToParent(fibulaPieceToMandibleAxisTransform.GetMatrix())
+      fibulaPieceToMandibleAxisTransformNode.SetMatrixTransformToParent(fibulaToMandibleRegistrationTransformMatrix)
       fibulaPieceToMandibleAxisTransformNode.UpdateScene(slicer.mrmlScene)
 
       transformedFibulaPiece = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode',slicer.mrmlScene.GetUniqueNameByString('Transformed ' + cutBonesList[i].GetName()))
