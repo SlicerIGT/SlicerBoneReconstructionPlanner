@@ -2413,7 +2413,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       origin = (or0+or1)/2
 
       inverseRotationMatrix = vtk.vtkMatrix4x4()
-      inverseRotationMatrix.DeepCopy(self.mandibleAxisToFibulaRotationMatrixesList[i])
+      inverseRotationMatrix.DeepCopy(self.mandibleToFibulaRegistrationTransformMatricesList[i])
       inverseRotationMatrix.Invert()
 
       fibulaPieceToMandibleAxisTransformNode = slicer.vtkMRMLLinearTransformNode()
