@@ -685,16 +685,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.EndModify(wasModified)
 
-  def onFibulaPlanesCreationParametersChanged(self, caller=None, event=None):
-    if self._parameterNode is None or self._updatingGUIFromParameterNode:
-      return
-
-    wasModified = self._parameterNode.StartModify()
-    self._parameterNode.SetParameter("fibulaPlanesCreationParametersChanged", "True")
-    
-
-    self._parameterNode.EndModify(wasModified)
-
   def onFixCutGoesThroughTheMandibleTwiceCheckBox(self):
     if self._parameterNode is None or self._updatingGUIFromParameterNode:
       return
@@ -1299,7 +1289,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
     notLeftFibulaChecked = parameterNode.GetParameter("notLeftFibula") == "True"
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
-    fibulaPlanesCreationParametersChanged = parameterNode.GetParameter("fibulaPlanesCreationParametersChanged") == "True"
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
@@ -1529,10 +1518,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(mandibleToFibulaRegistrationTransformNodeItemID, mandible2FibulaTransformsFolder)
       
     shNode.RemoveItem(intersectionsFolder)
-
-
-    if fibulaPlanesCreationParametersChanged:
-      parameterNode.SetParameter("fibulaPlanesCreationParametersChanged","False")
 
     #Create measurement lines
     self.createFibulaSegmentsLengthsLines(self.fibulaPlanesPositionA,self.fibulaPlanesPositionB)
