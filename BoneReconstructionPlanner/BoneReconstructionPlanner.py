@@ -463,25 +463,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Make sure GUI changes do not call updateParameterNodeFromGUI (it could cause infinite loop)
     self._updatingGUIFromParameterNode = True
 
-    # The lines below are for parameterNode updates
-    scalarVolumeChangedThroughSelector = (
-      self._parameterNode.GetNodeReference("currentScalarVolume") != self.ui.scalarVolumeSelector.currentNode()
-    )
-    scalarVolumeChangedThroughParameterNode = (
-      self._parameterNode.GetParameter("scalarVolumeChangedThroughParameterNode") == "True"
-    )
-    if (
-      scalarVolumeChangedThroughSelector or
-      scalarVolumeChangedThroughParameterNode
-      ):
+    # The line below is for selector updates
+    currentScalarVolume = self._parameterNode.GetNodeReference("currentScalarVolume")
+    self.ui.scalarVolumeSelector.setCurrentNode(currentScalarVolume)
+    if currentScalarVolume is not None:
+      scalarVolumeID = currentScalarVolume.GetID()
       if not slicer.app.commandOptions().noMainWindow:
-        scalarVolumeID = self._parameterNode.GetNodeReference("currentScalarVolume").GetID()
-        self.logic.setBackgroundVolumeFromID(scalarVolumeID)
-        self.logic.setRedSliceForBoneModelsDisplayNodes()
-        self.logic.setRedSliceForBoxModelsDisplayNodes()
-      self._parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode","False")
-      # The line below is for selector updates
-      self.ui.scalarVolumeSelector.setCurrentNode(self._parameterNode.GetNodeReference("currentScalarVolume"))
+        if scalarVolumeID:
+          self.logic.setBackgroundVolumeFromID(scalarVolumeID)
+          self.logic.setRedSliceForBoneModelsDisplayNodes()
+          self.logic.setRedSliceForBoxModelsDisplayNodes()
 
     # Update node selectors and sliders
     self.ui.fibulaLineSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaLine"))
@@ -2232,6 +2223,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     segmentations = [fibulaSegmentation,mandibularSegmentation]
     models = [fibulaModelNode,mandibleModelNode]
     decimatedModels = [decimatedFibulaModelNode,decimatedMandibleModelNode]
+
+    wasModified = parameterNode.StartModify()
+
     for i in range(2):
       slicer.mrmlScene.AddNode(models[i])
       models[i].CreateDefaultDisplayNodes()
@@ -2308,6 +2302,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode.SetNodeReferenceID("mandibleModelNode", mandibleModelNode.GetID())
     parameterNode.SetNodeReferenceID("decimatedFibulaModelNode", decimatedFibulaModelNode.GetID())
     parameterNode.SetNodeReferenceID("decimatedMandibleModelNode", decimatedMandibleModelNode.GetID())
+
+    parameterNode.EndModify(wasModified)
 
     if not slicer.app.commandOptions().noMainWindow:
       slicer.util.forceRenderAllViews()
