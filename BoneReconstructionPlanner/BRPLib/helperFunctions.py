@@ -98,6 +98,9 @@ def getIntersectionBetweenModelAnd1TransformedPlane(modelNode,transform,planeNod
   intersectionModel.SetAndObservePolyData(cutter.GetOutput())
 
 def getAverageNormalFromModel(model):
+  if model.GetMesh().GetPoints() is None:
+    return None
+  
   pointsOfModel = slicer.util.arrayFromModelPoints(model)
   normalsOfModel = slicer.util.arrayFromModelPointData(model, 'Normals')
   modelMesh = model.GetMesh()
@@ -112,6 +115,7 @@ def getAverageNormalFromModel(model):
   return averageNormal
 
 def getAverageNormalFromModelPoint(model,point):
+  print("This is a new line")
   normalsOfModel = slicer.util.arrayFromModelPointData(model, 'Normals')
   
   modelMesh = model.GetMesh()
@@ -137,13 +141,140 @@ def getAverageNormalFromModelPoint(model,point):
 
   cylinderIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','cylinderIntersection')
   cylinderIntersectionModel.CreateDefaultDisplayNodes()
-  cylinderIntersectionModel.SetAndObservePolyData(connectivityFilter.GetOutput())
+  cylinderIntersectionModel.SetAndObservePolyData(
+    calculateNormals(connectivityFilter.GetOutput())
+  )
 
   averageNormal = getAverageNormalFromModel(cylinderIntersectionModel)
 
   slicer.mrmlScene.RemoveNode(cylinderIntersectionModel)
 
+  if averageNormal is None:
+    return None
+
+  if vtk.vtkMath.Dot(averageNormal, normalAtPointID) < 0:
+    averageNormal *= -1
+
   return averageNormal
+
+def getAverageNormalFromModelPoint2(model,point):
+  print("This is a new line")
+  cropRadius = 2
+  geodesicCropRadius = cropRadius*2
+
+  normalsOfModel = slicer.util.arrayFromModelPointData(model, 'Normals')
+  
+  modelMesh = model.GetMesh()
+  pointID = modelMesh.FindPoint(point)
+  normalAtPointID = normalsOfModel[pointID]
+
+  """
+
+  // Update outputSelectionArray
+  outputSelectionArray->SetNumberOfValues(inputMesh_World->GetNumberOfPoints());
+  outputSelectionArray->Fill(0);
+  for (int fiducialIndex = 0; fiducialIndex < fiducialNode->GetNumberOfControlPoints(); fiducialIndex++)
+    {
+    double position[3] = { 0.0, 0.0, 0.0 };
+    fiducialNode->GetNthControlPointPositionWorld(fiducialIndex,position);
+    vtkNew<vtkIdList> pointIdsWithinRadius;
+    this->InputMeshLocator_World->FindPointsWithinRadius(selectionDistance, position, pointIdsWithinRadius);
+    const vtkIdType numberOfPointIdsWithinRadius = pointIdsWithinRadius->GetNumberOfIds();
+    for (vtkIdType pointIdIndex = 0; pointIdIndex < numberOfPointIdsWithinRadius; pointIdIndex++)
+      {
+      outputSelectionArray->SetValue(pointIdsWithinRadius->GetId(pointIdIndex), 1);
+      }
+    }
+
+  if (computeSelectedFacesModel)
+    {
+    // Create shallow copy of the input model (in world coordinate system) that will contain selection scalars
+    vtkNew<vtkPolyData> inputMesh_WorldWithSelection;
+    inputMesh_WorldWithSelection->ShallowCopy(inputMesh_World);
+
+    vtkPointData* pointScalars = vtkPointData::SafeDownCast(inputMesh_WorldWithSelection->GetPointData());
+    pointScalars->AddArray(outputSelectionArray);
+
+    vtkNew<vtkThreshold> thresholdFilter;
+    thresholdFilter->SetInputData(inputMesh_WorldWithSelection);
+    thresholdFilter->SetUpperThreshold(0.5);
+    thresholdFilter->SetThresholdFunction(vtkThreshold::THRESHOLD_UPPER);
+    thresholdFilter->SetInputArrayToProcess(0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, SELECTION_ARRAY_NAME);
+    thresholdFilter->Update();
+    vtkNew<vtkGeometryFilter> geometryFilter;
+    geometryFilter->SetInputData(vtkUnstructuredGrid::SafeDownCast(thresholdFilter->GetOutput()));
+    geometryFilter->Update();
+
+    selectedFacesMesh_World = geometryFilter->GetOutput();
+    }
+
+
+  """
+
+  geodesicCroppedModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','geodesicCroppedModel')
+  geodesicCroppedModel.CreateDefaultDisplayNodes()
+
+  auxiliarFiducial = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLMarkupsFiducialNode','auxiliarGeodesicCropFiducial')
+  auxiliarFiducial.CreateDefaultDisplayNodes()
+  auxiliarFiducial.AddFiducialFromArray(point)
+
+  dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
+  dynamicModelerNode.SetToolName("Select by points")
+  dynamicModelerNode.SetNodeReferenceID("SelectByPoints.InputModel", model.GetID())
+  dynamicModelerNode.SetNodeReferenceID("SelectByPoints.InputFiducial", auxiliarFiducial.GetID())
+  dynamicModelerNode.SetNodeReferenceID("SelectByPoints.SelectedFacesModel", geodesicCroppedModel.GetID())
+  dynamicModelerNode.SetAttribute("SelectionDistance",str(geodesicCropRadius))
+  dynamicModelerNode.SetAttribute("SelectionAlgorithm","SphereRadius")
+
+  slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
+
+  cylinder = vtk.vtkCylinder()
+  cylinder.SetRadius(cropRadius)
+  cylinder.SetCenter(point)
+  cylinder.SetAxis(normalAtPointID)
+
+  clipper = vtk.vtkClipPolyData()
+  clipper.SetInputData(geodesicCroppedModel.GetPolyData())
+  clipper.InsideOutOn()
+  clipper.SetClipFunction(cylinder)
+  clipper.Update()
+
+  connectivityFilter = vtk.vtkConnectivityFilter()
+  connectivityFilter.SetInputData(clipper.GetOutput())
+  connectivityFilter.SetClosestPoint(point)
+  connectivityFilter.SetExtractionModeToClosestPointRegion()
+  connectivityFilter.Update()
+
+  cylinderIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','cylinderIntersection')
+  cylinderIntersectionModel.CreateDefaultDisplayNodes()
+  cylinderIntersectionModel.SetAndObservePolyData(
+    calculateNormals(connectivityFilter.GetOutput())
+  )
+
+  averageNormal = getAverageNormalFromModel(cylinderIntersectionModel)
+
+  slicer.mrmlScene.RemoveNode(geodesicCroppedModel)
+  slicer.mrmlScene.RemoveNode(auxiliarFiducial)
+  slicer.mrmlScene.RemoveNode(dynamicModelerNode)
+  slicer.mrmlScene.RemoveNode(cylinderIntersectionModel)
+
+  if averageNormal is None:
+    return None
+
+  if vtk.vtkMath.Dot(averageNormal, normalAtPointID) < 0:
+    averageNormal *= -1
+
+  return averageNormal
+
+
+def getClosestModelPointToPosition(model,position):
+  pointsLocator = vtk.vtkPointLocator()
+  pointsLocator.SetDataSet(model.GetPolyData())
+  pointsLocator.BuildLocator()
+  
+  pointIDOfClosestPoint = pointsLocator.FindClosestPoint(position)
+  result = np.array(model.GetPolyData().GetPoints().GetPoint(pointIDOfClosestPoint))
+  return result
 
 def getCentroid(model):
   pd = model.GetPolyData().GetPoints().GetData()
