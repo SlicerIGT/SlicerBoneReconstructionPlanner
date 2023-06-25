@@ -787,7 +787,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         decimatedMandibleModelDisplayNode.SetVisibility(True)
 
   def onUpdateFibulaDentalImplantCylindersButton(self):
-    self.logic.updateFibulaDentalImplantCylinders()
+    self.logic.onUpdateFibuladentalImplantsTimerTimeout()
 
   def onCreatePlateCurveButton(self):
     self.logic.createPlateCurve()
@@ -814,6 +814,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     Called when the logic class is instantiated. Can be used for initializing member variables.
     """
     ScriptedLoadableModuleLogic.__init__(self)
+    self.mandibleToFibulaRegistrationTransformMatricesList = []
     self.mandiblePlaneObserversAndNodeIDList = []
     self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList = []
     self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList = []
@@ -2984,7 +2985,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(cylindersTransformsFolder)
 
   def createCylindersFromFiducialListAndMandibleReconstruction(self):
-    self.create3DModelOfTheReconstruction()
+    #self.create3DModelOfTheReconstruction()
 
     parameterNode = self.getParameterNode()
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
@@ -2994,8 +2995,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     dentalImplantCylinderHeight = float(parameterNode.GetParameter("dentalImplantCylinderHeight"))
     dentalImplantDrillGuideWall = float(parameterNode.GetParameter("dentalImplantDrillGuideWall"))
 
-    mandibleReconstructionModelDisplayNode = mandibleReconstructionModel.GetDisplayNode()
-    mandibleReconstructionModelDisplayNode.SetVisibility(False)
+    #mandibleReconstructionModelDisplayNode = mandibleReconstructionModel.GetDisplayNode()
+    #mandibleReconstructionModelDisplayNode.SetVisibility(False)
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     dentalImplantsCylindersModelsFolder = shNode.GetItemByName("Dental Implants Cylinders Models")
@@ -3005,6 +3006,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerFibulaDentalImplantsCylindersModelsFolder = shNode.GetItemByName("Bigger Fibula Dental Implants Cylinders Models")
     shNode.RemoveItem(dentalImplantsCylindersModelsFolder)
     shNode.RemoveItem(dentalImplantsPlanesFolder)
+    shNode.RemoveItem(dentalImplantsCylindersTransformsFolder)
     shNode.RemoveItem(fibulaDentalImplantsCylindersModelsFolder)
     shNode.RemoveItem(biggerFibulaDentalImplantsCylindersModelsFolder)
     dentalImplantsCylindersModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Dental Implants Cylinders Models")
@@ -3013,6 +3015,32 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaDentalImplantsCylindersModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula Dental Implants Cylinders Models")
     biggerFibulaDentalImplantsCylindersModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Bigger Fibula Dental Implants Cylinders Models")
 
+    transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+    transformedFibulaPiecesList = createListFromFolderID(transformedFibulaPiecesFolder)
+
+    noCapsTransformedFibulaPiecesFolder = shNode.GetItemByName("No Caps Transformed Fibula Pieces")
+    shNode.RemoveItem(noCapsTransformedFibulaPiecesFolder)
+    noCapsTransformedFibulaPiecesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"No Caps Transformed Fibula Pieces")
+
+    #create noCapsTransformedFibulaPieces
+    for i in range(len(transformedFibulaPiecesList)):
+      noCapsTransformedFibulaPiece = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+      noCapsTransformedFibulaPiece.SetName(f"noCapsTransformedFibulaPiece {i}")
+      slicer.mrmlScene.AddNode(noCapsTransformedFibulaPiece)
+      noCapsTransformedFibulaPiece.CreateDefaultDisplayNodes()
+      noCapsTransformedFibulaPiece.GetDisplayNode().SetVisibility(False)
+
+      connectivityFilter = vtk.vtkConnectivityFilter()
+      connectivityFilter.SetInputData(transformedFibulaPiecesList[i].GetMesh())
+      connectivityFilter.SetExtractionModeToLargestRegion()
+      connectivityFilter.Update()
+
+      noCapsTransformedFibulaPiece.SetAndObserveMesh(calculateNormals(connectivityFilter.GetOutput()))
+      noCapsTransformedFibulaPieceItemID = shNode.GetItemByDataNode(noCapsTransformedFibulaPiece)
+      shNode.SetItemParent(noCapsTransformedFibulaPieceItemID, noCapsTransformedFibulaPiecesFolder)
+
+    noCapsTransformedFibulaPiecesList = createListFromFolderID(noCapsTransformedFibulaPiecesFolder)
+    
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
 
@@ -3058,35 +3086,72 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       dentalImplantPlane.SetAxes([1,0,0],[0,1,0],[0,0,1])
       dentalImplantPlane.SetOrigin([0,0,0])
       dentalImplantPlane.SetAttribute("isDentalImplantPlane","True")
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        dentalImplantPlane.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = dentalImplantPlane.GetDisplayNode()
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       displayNode.AddViewNodeID(mandibleViewNode.GetID())
-      displayNode.SetGlyphScale(2.5)
+      displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
       displayNode.SetOpacity(0)
       displayNode.HandlesInteractiveOn()
+      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
+        displayNode.RotationHandleVisibilityOn()
+        displayNode.TranslationHandleVisibilityOn()
+        displayNode.ScaleHandleVisibilityOff()
+        displayNode.SetRotationHandleComponentVisibility(True,True,False,False)
 
+      print("")
+      print("i ",i)
       pos = [0,0,0]
       dentalImplantsFiducialList.GetNthFiducialPosition(i,pos)
+      pos = np.array(pos)
+      print("pos ",pos)
 
-      dentalImplantAxisZ = getAverageNormalFromModelPoint(mandibleReconstructionModel,pos,radius=1.5)
+      # searchModelClosestToPointFromList
+      nearestPieceIndex = 0
+      nearestDistance = 1e5
+      for j in range(1,len(noCapsTransformedFibulaPiecesList)):
+        currentDistance = np.linalg.norm(
+          pos - getClosestModelPointToPosition(noCapsTransformedFibulaPiecesList[j],pos)
+        )
+        
+        if currentDistance < nearestDistance:
+          nearestPieceIndex = j
+          nearestDistance = currentDistance
+
+      dentalImplantAxisZ = getAverageNormalFromModelPoint2(
+        noCapsTransformedFibulaPiecesList[nearestPieceIndex],
+        pos
+      )
+
+      if dentalImplantAxisZ is None:
+        dentalImplantAxisZ = np.zeros(3)
+        dentalImplantAxisZ[2] = 1
+
       dentalImplantAxisZ = dentalImplantAxisZ/np.linalg.norm(dentalImplantAxisZ)
+      print("dentalImplantAxisZ ",dentalImplantAxisZ)
 
       closestCurvePoint = [0,0,0]
       closestCurvePointIndex = mandibularCurve.GetClosestPointPositionAlongCurveWorld(pos,closestCurvePoint)
       matrix = vtk.vtkMatrix4x4()
       mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(closestCurvePointIndex,matrix)
       mandibularCurveX = np.array([matrix.GetElement(0,0),matrix.GetElement(1,0),matrix.GetElement(2,0)])
+      print("mandibularCurveX ",mandibularCurveX)
       normalToDentalImplantAxisZAndMandibularCurveX = [0,0,0]
       vtk.vtkMath.Cross(dentalImplantAxisZ, mandibularCurveX, normalToDentalImplantAxisZAndMandibularCurveX)
       normalToDentalImplantAxisZAndMandibularCurveX = normalToDentalImplantAxisZAndMandibularCurveX/np.linalg.norm(normalToDentalImplantAxisZAndMandibularCurveX)
+      print("normalToDentalImplantAxisZAndMandibularCurveX ",normalToDentalImplantAxisZAndMandibularCurveX)
+
 
       dentalImplantAxisX = [0,0,0]
       dentalImplantAxisY =  [0,0,0]
       vtk.vtkMath.Cross(normalToDentalImplantAxisZAndMandibularCurveX, dentalImplantAxisZ, dentalImplantAxisX)
       dentalImplantAxisX = dentalImplantAxisX/np.linalg.norm(dentalImplantAxisX)
+      print("dentalImplantAxisX ",dentalImplantAxisX)
       vtk.vtkMath.Cross(dentalImplantAxisZ, dentalImplantAxisX, dentalImplantAxisY)
       dentalImplantAxisY = dentalImplantAxisY/np.linalg.norm(dentalImplantAxisY)
+      print("dentalImplantAxisY ",dentalImplantAxisY)
 
       dentalImplantPlane.SetAxes(dentalImplantAxisX,dentalImplantAxisY,dentalImplantAxisZ)
       dentalImplantPlane.SetOrigin(pos)
@@ -3100,6 +3165,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dentalImplantPlane.GetObjectToWorldMatrix(dentalImplantPlaneToWorldMatrix)
       else:
         dentalImplantPlane.GetPlaneToWorldMatrix(dentalImplantPlaneToWorldMatrix)
+      print("dentalImplantPlaneToWorldMatrix")
+      print(dentalImplantPlaneToWorldMatrix)
       dentalImplantCylinderTransformNode.SetMatrixTransformToParent(dentalImplantPlaneToWorldMatrix)
 
       dentalImplantCylinderTransformNode.UpdateScene(slicer.mrmlScene)
@@ -3111,6 +3178,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       observer = dentalImplantPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onDentalImplantPlaneMoved)
       self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList.append([observer,dentalImplantPlane.GetID(),dentalImplantCylinderTransformNode.GetID()])
+
+    self.onUpdateFibuladentalImplantsTimerTimeout()
 
   def onUpdateFibuladentalImplantsTimerTimeout(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
@@ -3187,7 +3256,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       biggerFibulaDentalImplantCylinderAxisZ = np.array([biggerFibulaDentalImplantCylinderTransformMatrix.GetElement(0,2),
         biggerFibulaDentalImplantCylinderTransformMatrix.GetElement(1,2),biggerFibulaDentalImplantCylinderTransformMatrix.GetElement(2,2)])
       heightOfBiggerFibulaDentalImplantCylinder = float(biggerFibulaDentalImplantCylinderModel.GetAttribute('height'))
-      fibulaDentalImplantCylinderTransform.Translate(heightOfBiggerFibulaDentalImplantCylinder/2*biggerFibulaDentalImplantCylinderAxisZ)
+      #fibulaDentalImplantCylinderTransform.Translate(heightOfBiggerFibulaDentalImplantCylinder/2*biggerFibulaDentalImplantCylinderAxisZ)
 
       fibulaDentalImplantCylinderTransformNode.SetMatrixTransformToParent(fibulaDentalImplantCylinderTransform.GetMatrix())
 
@@ -3378,6 +3447,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         displayNode.RotationHandleVisibilityOn()
         displayNode.TranslationHandleVisibilityOn()
         displayNode.ScaleHandleVisibilityOff()
+        displayNode.SetTranslationHandleComponentVisibility(True,True,False,False)
+        displayNode.SetRotationHandleComponentVisibility(False,False,True,False)
 
       mandiblePlaneMatrix = vtk.vtkMatrix4x4()
       if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
@@ -3414,7 +3485,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(pointsIntersectionModelItemID, pointsIntersectionsFolder)
 
       if intersectionModel.GetPolyData().GetNumberOfPoints() != 0:
-        sawBoxDirection = getAverageNormalFromModelPoint(mandibleModelNode,pointOfIntersection)
+        sawBoxDirection = getAverageNormalFromModelPoint2(mandibleModelNode,pointOfIntersection)
+        if sawBoxDirection is None:
+          sawBoxDirection = np.zeros(3)
+          sawBoxDirection[1] = 1
         #sawBoxDirection = (pointOfIntersection-intersectionModelCentroid)/np.linalg.norm(pointOfIntersection-intersectionModelCentroid)
       else:
         sawBoxDirection = curvePlanarConvexityDirection
@@ -3481,9 +3555,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def onDentalImplantPlaneMoved(self,sourceNode,event):
     for i in range(len(self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList)):
-      if self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][2] == sourceNode.GetID():
-        dentalImplantPlane = slicer.mrmlScene.GetNodeByID(self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][2])
-        transformNode = slicer.mrmlScene.GetNodeByID(self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][3])
+      if self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][1] == sourceNode.GetID():
+        dentalImplantPlane = slicer.mrmlScene.GetNodeByID(self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][1])
+        transformNode = slicer.mrmlScene.GetNodeByID(self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][2])
         dentalImplantPlaneToWorldMatrix = vtk.vtkMatrix4x4()
         if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
           dentalImplantPlane.GetObjectToWorldMatrix(dentalImplantPlaneToWorldMatrix)
@@ -3492,9 +3566,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         transformNode.SetMatrixTransformToParent(dentalImplantPlaneToWorldMatrix)
     
     parameterNode = self.getParameterNode()
-    settingsDentalImplantsEnabled = parameterNode.GetParameter("settingsDentalImplantsEnabled") == "True"
+    dentalImplantsPlanningAndFibulaDrillGuidesEnabled = parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
 
-    if settingsDentalImplantsEnabled:
+    if dentalImplantsPlanningAndFibulaDrillGuidesEnabled:
       self.updateFibuladentalImplantsTimer.start()
 
   def makeBooleanOperationsToMandibleSurgicalGuideBase(self):
@@ -3743,7 +3817,7 @@ Please try changing the position of {planeList[lastProblematicPlaneIndex].GetNam
 Then click the update button so the fibulaPieces and resected mandible are recalculated.
 Then click 'Create 3D model of reconstruction...' again.""")
     else:
-      mandibleReconstructionModel.SetAndObservePolyData(currentResult)
+      mandibleReconstructionModel.SetAndObservePolyData(calculateNormals(currentResult))
 
   def getReconstructionObjectsPreparedForBooleanUnion(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
