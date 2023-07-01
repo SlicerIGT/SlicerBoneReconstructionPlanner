@@ -275,7 +275,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.customTitaniumPlateDesingCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
-    
+    self.ui.makeAllDentalImplanCylindersParallelCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
 
@@ -557,8 +558,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     dentalImplantsPlanningAndFibulaDrillGuidesChecked = self._parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
     customTitaniumPlateDesingChecked = self._parameterNode.GetParameter("customTitaniumPlateDesing") == "True"
+    makeAllDentalImplanCylindersParallelChecked = self._parameterNode.GetParameter("makeAllDentalImplanCylindersParallel") == "True"
     self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.checked = dentalImplantsPlanningAndFibulaDrillGuidesChecked
     self.ui.customTitaniumPlateDesingCheckBox.checked = customTitaniumPlateDesingChecked
+    self.ui.makeAllDentalImplanCylindersParallelCheckBox.checked = makeAllDentalImplanCylindersParallelChecked
 
     if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
       self.ui.dentalImplantsPlanningCollapsibleButton.show()
@@ -575,6 +578,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
     else:
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 0
+
+    if self._parameterNode.GetParameter("updateOnDentalImplantPlanesMovement") == "True":
+      self.ui.updateFibulaDentalImplantCylindersButton.checkState = 2
+    else:
+      self.ui.updateFibulaDentalImplantCylindersButton.checkState = 0
 
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
@@ -665,6 +673,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","True")
     else:
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","False")
+    if self.ui.updateFibulaDentalImplantCylindersButton.checkState == qt.Qt.Checked:
+      self._parameterNode.SetParameter("updateOnDentalImplantPlanesMovement","True")
+    else:
+      self._parameterNode.SetParameter("updateOnDentalImplantPlanesMovement","False")
     if self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.checked:
       self._parameterNode.SetParameter("dentalImplantsPlanningAndFibulaDrillGuides","True")
     else:
@@ -673,6 +685,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("customTitaniumPlateDesing","True")
     else:
       self._parameterNode.SetParameter("customTitaniumPlateDesing","False")
+    if self.ui.makeAllDentalImplanCylindersParallelCheckBox.checked:
+      self._parameterNode.SetParameter("makeAllDentalImplanCylindersParallel","True")
+    else:
+      self._parameterNode.SetParameter("makeAllDentalImplanCylindersParallel","False")
 
     self._parameterNode.EndModify(wasModified)
 
@@ -3554,8 +3570,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         transformNode.SetMatrixTransformToParent(sawBoxPlaneToWorldMatrix)
 
   def onDentalImplantPlaneMoved(self,sourceNode,event):
+    parameterNode = self.getParameterNode()
+    makeAllDentalImplanCylindersParallelChecked = parameterNode.GetParameter("makeAllDentalImplanCylindersParallel") == "True"
+
+    orientationToCopyIndex = 0
+    copyOrientationIndices = []
+    
     for i in range(len(self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList)):
       if self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][1] == sourceNode.GetID():
+        orientationToCopyIndex = i
         dentalImplantPlane = slicer.mrmlScene.GetNodeByID(self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][1])
         transformNode = slicer.mrmlScene.GetNodeByID(self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][2])
         dentalImplantPlaneToWorldMatrix = vtk.vtkMatrix4x4()
@@ -3564,11 +3587,75 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         else:
           dentalImplantPlane.GetPlaneToWorldMatrix(dentalImplantPlaneToWorldMatrix)
         transformNode.SetMatrixTransformToParent(dentalImplantPlaneToWorldMatrix)
-    
-    parameterNode = self.getParameterNode()
-    dentalImplantsPlanningAndFibulaDrillGuidesEnabled = parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
+      else:
+        copyOrientationIndices.append(i)
 
-    if dentalImplantsPlanningAndFibulaDrillGuidesEnabled:
+    
+    if makeAllDentalImplanCylindersParallelChecked:
+      copyFromPlane = slicer.mrmlScene.GetNodeByID(
+          self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[orientationToCopyIndex][1]
+      )
+      copyFromPlaneObserverTag = (
+          self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[orientationToCopyIndex][0]
+      )
+
+      #copyFromPlane.RemoveObserver(copyFromPlaneObserverTag)
+
+      orientationToCopyMatrix = vtk.vtkMatrix4x4()
+      copyFromPlane.GetObjectToNodeMatrix(orientationToCopyMatrix)
+
+      for i in range(len(copyOrientationIndices)):
+        copyToIndex = copyOrientationIndices[i]
+        observerTag = self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[copyToIndex][0]
+        currentDentalImplantPlane = slicer.mrmlScene.GetNodeByID(
+          self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[copyToIndex][1]
+        )
+        transformNode = slicer.mrmlScene.GetNodeByID(
+          self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[copyToIndex][2]
+        )
+
+        currentDentalImplantPlane.RemoveObserver(observerTag)
+
+        currentPlaneToWorld = vtk.vtkMatrix4x4()
+        currentDentalImplantPlane.GetObjectToNodeMatrix(currentPlaneToWorld)
+        origin = [0,0,0]
+        currentPlanePos = [0,0,0,0]
+        currentPlaneToWorld.MultiplyPoint(np.append(origin,1.0),currentPlanePos)
+        currentPlanePos = currentPlanePos[0:3]
+
+        worldToCurrentPlane = vtk.vtkMatrix4x4()
+        vtk.vtkMatrix4x4.Invert(currentPlaneToWorld, worldToCurrentPlane)
+
+        parallelTransform = vtk.vtkTransform()
+        parallelTransform.PostMultiply()
+        parallelTransform.Concatenate(orientationToCopyMatrix)
+        oldTranslation = [0,0,0]
+        parallelTransform.GetPosition(oldTranslation)
+        parallelTransform.Translate(-oldTranslation[0],-oldTranslation[1],-oldTranslation[2])
+        parallelTransform.Translate(currentPlanePos[0],currentPlanePos[1],currentPlanePos[2])
+
+        transformForCurrentDentalImplantPlane = vtk.vtkTransform()
+        transformForCurrentDentalImplantPlane.PostMultiply()
+        transformForCurrentDentalImplantPlane.Concatenate(worldToCurrentPlane)
+        transformForCurrentDentalImplantPlane.Concatenate(parallelTransform)
+
+        for j in range(3):
+          oldPos = currentDentalImplantPlane.GetNthControlPointPosition(j)
+          newPos = [0,0,0]
+          transformForCurrentDentalImplantPlane.TransformPoint(oldPos,newPos)
+          currentDentalImplantPlane.SetNthControlPointPosition(j,newPos)
+
+        observerTag = currentDentalImplantPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onDentalImplantPlaneMoved)
+        self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[copyToIndex][0] = observerTag
+
+        transformNode.SetMatrixTransformToParent(parallelTransform.GetMatrix())
+
+      #observerTag = copyFromPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onDentalImplantPlaneMoved)
+      #self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[orientationToCopyIndex][0] = observerTag
+    
+    updateOnDentalImplantPlanesMovement = parameterNode.GetParameter("updateOnDentalImplantPlanesMovement") == "True"
+
+    if updateOnDentalImplantPlanesMovement:
       self.updateFibuladentalImplantsTimer.start()
 
   def makeBooleanOperationsToMandibleSurgicalGuideBase(self):
