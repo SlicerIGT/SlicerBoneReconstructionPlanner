@@ -3591,7 +3591,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       #copyFromPlane.RemoveObserver(copyFromPlaneObserverTag)
 
       orientationToCopyMatrix = vtk.vtkMatrix4x4()
-      copyFromPlane.GetObjectToNodeMatrix(orientationToCopyMatrix)
+      copyFromPlane.GetObjectToWorldMatrix(orientationToCopyMatrix)
 
       for i in range(len(copyOrientationIndices)):
         copyToIndex = copyOrientationIndices[i]
@@ -3606,7 +3606,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         currentDentalImplantPlane.RemoveObserver(observerTag)
 
         currentPlaneToWorld = vtk.vtkMatrix4x4()
-        currentDentalImplantPlane.GetObjectToNodeMatrix(currentPlaneToWorld)
+        currentDentalImplantPlane.GetObjectToWorldMatrix(currentPlaneToWorld)
         origin = [0,0,0]
         currentPlanePos = [0,0,0,0]
         currentPlaneToWorld.MultiplyPoint(np.append(origin,1.0),currentPlanePos)
@@ -4774,7 +4774,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       newPlaneToWorldMatrix = slicer.util.vtkMatrixFromArray(np.array(item[1]))
       planeNode = slicer.mrmlScene.GetNodeByID(nodeID)
       oldPlaneToWorld = vtk.vtkMatrix4x4()
-      planeNode.GetObjectToNodeMatrix(oldPlaneToWorld)
+      planeNode.GetObjectToWorldMatrix(oldPlaneToWorld)
       worldToOldPlane = vtk.vtkMatrix4x4()
       vtk.vtkMatrix4x4.Invert(oldPlaneToWorld, worldToOldPlane)
       transform = vtk.vtkTransform()
