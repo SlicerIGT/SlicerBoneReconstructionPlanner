@@ -1095,14 +1095,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandiblePlaneOfRotation = parameterNode.GetNodeReference("mandiblePlaneOfRotation")
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
 
-    self.reorderMandiblePlanes()
-
     if len(mandibularPlanesList) == 0:
       stopTime = time.time()
       logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
       return    
   
     self.removeMandiblePlaneObservers()
+
+    self.reorderMandiblePlanes()
+
     if makeAllMandiblePlanesRotateTogetherChecked and mandiblePlanesPositioningForMaximumBoneContactChecked:
       self.mandiblePlanesPositioningForMaximumBoneContact()
       self.transformMandiblePlanesZRotationToBeTheSameAsInputPlane(mandiblePlaneOfRotation)
@@ -1110,6 +1111,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.mandiblePlanesPositioningForMaximumBoneContact()
     elif makeAllMandiblePlanesRotateTogetherChecked:
       self.transformMandiblePlanesZRotationToBeTheSameAsInputPlane(mandiblePlaneOfRotation)
+    
     self.addMandiblePlaneObservers()
 
     if fibulaLine != None:
