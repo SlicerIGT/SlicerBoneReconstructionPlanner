@@ -11,7 +11,6 @@ from BRPLib.helperFunctions import *
 # BoneReconstructionPlanner
 #
 
-SLICER_CHANGE_OF_API_REVISION = '29927'
 SLICER_STABLE_RELEASE_REVISION = '29738'
 
 class BoneReconstructionPlanner(ScriptedLoadableModule):
@@ -1019,9 +1018,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.SetItemParent(planeNodeItemID, mandibularFolderID)
     planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
     planeNode.SetAttribute("isMandibularPlane","True")
-    if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-      planeNode.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
-      planeNode.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
+    planeNode.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
+    planeNode.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
     aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
     colorTable = aux.GetLookupTable()
@@ -1033,11 +1031,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode = planeNode.GetDisplayNode()
     displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
     displayNode.SetSelectedColor(color)
-    if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-      displayNode.HandlesInteractiveOn()
-      displayNode.RotationHandleVisibilityOn()
-      displayNode.TranslationHandleVisibilityOn()
-      displayNode.ScaleHandleVisibilityOff()
+    displayNode.HandlesInteractiveOn()
+    displayNode.RotationHandleVisibilityOn()
+    displayNode.TranslationHandleVisibilityOn()
+    displayNode.ScaleHandleVisibilityOff()
 
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
@@ -1138,10 +1135,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandiblePlaneOfRotation = mandibularPlanesList[0]
 
     mandiblePlaneOfRotationMatrix = vtk.vtkMatrix4x4()
-    if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-      mandiblePlaneOfRotation.GetObjectToWorldMatrix(mandiblePlaneOfRotationMatrix)
-    else:
-      mandiblePlaneOfRotation.GetPlaneToWorldMatrix(mandiblePlaneOfRotationMatrix)
+    mandiblePlaneOfRotation.GetObjectToWorldMatrix(mandiblePlaneOfRotationMatrix)
     mandiblePlaneOfRotationX = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,0),mandiblePlaneOfRotationMatrix.GetElement(1,0),mandiblePlaneOfRotationMatrix.GetElement(2,0)])
     mandiblePlaneOfRotationY = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,1),mandiblePlaneOfRotationMatrix.GetElement(1,1),mandiblePlaneOfRotationMatrix.GetElement(2,1)])
     mandiblePlaneOfRotationZ = np.array([mandiblePlaneOfRotationMatrix.GetElement(0,2),mandiblePlaneOfRotationMatrix.GetElement(1,2),mandiblePlaneOfRotationMatrix.GetElement(2,2)])
@@ -1149,10 +1143,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(mandibularPlanesList)):
       if mandiblePlaneOfRotation.GetID() != mandibularPlanesList[i].GetID():
         mandiblePlaneMatrix = vtk.vtkMatrix4x4()
-        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-          mandibularPlanesList[i].GetObjectToWorldMatrix(mandiblePlaneMatrix)
-        else:
-          mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
+        mandibularPlanesList[i].GetObjectToWorldMatrix(mandiblePlaneMatrix)
         mandiblePlaneX = np.array([mandiblePlaneMatrix.GetElement(0,0),mandiblePlaneMatrix.GetElement(1,0),mandiblePlaneMatrix.GetElement(2,0)])
         mandiblePlaneY = np.array([mandiblePlaneMatrix.GetElement(0,1),mandiblePlaneMatrix.GetElement(1,1),mandiblePlaneMatrix.GetElement(2,1)])
         mandiblePlaneZ = np.array([mandiblePlaneMatrix.GetElement(0,2),mandiblePlaneMatrix.GetElement(1,2),mandiblePlaneMatrix.GetElement(2,2)])
@@ -1377,10 +1368,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       
       #Get Y component of mandiblePlane0
       mandiblePlane0matrix = vtk.vtkMatrix4x4()
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        mandiblePlane0.GetObjectToWorldMatrix(mandiblePlane0matrix)
-      else:
-        mandiblePlane0.GetPlaneToWorldMatrix(mandiblePlane0matrix)
+      mandiblePlane0.GetObjectToWorldMatrix(mandiblePlane0matrix)
       mandiblePlane0Y = np.array([mandiblePlane0matrix.GetElement(0,1),mandiblePlane0matrix.GetElement(1,1),mandiblePlane0matrix.GetElement(2,1)])
       
       mandibleAxisX = [0,0,0]
@@ -1575,16 +1563,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       fibulaPlaneA = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        fibulaPlaneA.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
-        fibulaPlaneA.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
+      fibulaPlaneA.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
+      fibulaPlaneA.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = fibulaPlaneA.GetDisplayNode()
       fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
       displayNode.SetPropertiesLabelVisibility(False)
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        displayNode.HandlesInteractiveOff()
+      displayNode.HandlesInteractiveOff()
 
       fibulaPlaneAItemID = shNode.GetItemByDataNode(fibulaPlaneA)
       shNode.SetItemParent(fibulaPlaneAItemID, fibulaPlanesFolder)
@@ -1597,15 +1583,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneB)
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        fibulaPlaneB.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
-        fibulaPlaneB.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
+      fibulaPlaneB.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
+      fibulaPlaneB.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = fibulaPlaneB.GetDisplayNode()
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
       displayNode.SetPropertiesLabelVisibility(False)
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        displayNode.HandlesInteractiveOff()
+      displayNode.HandlesInteractiveOff()
 
       fibulaPlaneBItemID = shNode.GetItemByDataNode(fibulaPlaneB)
       shNode.SetItemParent(fibulaPlaneBItemID, fibulaPlanesFolder)
@@ -1788,8 +1772,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         displayNode = planeToFixCutGoesThroughTheMandibleTwice.GetDisplayNode()
         displayNode.SetVisibility(False)
-        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-          displayNode.HandlesInteractiveOff()
+        displayNode.HandlesInteractiveOff()
 
         planeOriginStart = np.zeros(3)
         planeOriginEnd = np.zeros(3)
@@ -2470,10 +2453,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       #Get X, Y, Z components of mandiblePlane1
       mandiblePlane1matrix = vtk.vtkMatrix4x4()
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        planeList[i+1].GetObjectToWorldMatrix(mandiblePlane1matrix)
-      else:
-        planeList[i+1].GetPlaneToWorldMatrix(mandiblePlane1matrix)
+      planeList[i+1].GetObjectToWorldMatrix(mandiblePlane1matrix)
       mandiblePlane1X = np.array([mandiblePlane1matrix.GetElement(0,0),mandiblePlane1matrix.GetElement(1,0),mandiblePlane1matrix.GetElement(2,0)])
       mandiblePlane1Y = np.array([mandiblePlane1matrix.GetElement(0,1),mandiblePlane1matrix.GetElement(1,1),mandiblePlane1matrix.GetElement(2,1)])
       mandiblePlane1Z = np.array([mandiblePlane1matrix.GetElement(0,2),mandiblePlane1matrix.GetElement(1,2),mandiblePlane1matrix.GetElement(2,2)])
@@ -2740,10 +2720,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
 
       fibulaPlaneMatrix = vtk.vtkMatrix4x4()
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        fibulaPlanesList[i].GetObjectToWorldMatrix(fibulaPlaneMatrix)
-      else:
-        fibulaPlanesList[i].GetPlaneToWorldMatrix(fibulaPlaneMatrix)
+      fibulaPlanesList[i].GetObjectToWorldMatrix(fibulaPlaneMatrix)
       fibulaPlaneZ = np.array([fibulaPlaneMatrix.GetElement(0,2),fibulaPlaneMatrix.GetElement(1,2),fibulaPlaneMatrix.GetElement(2,2)])
       fibulaPlaneOrigin = np.array([fibulaPlaneMatrix.GetElement(0,3),fibulaPlaneMatrix.GetElement(1,3),fibulaPlaneMatrix.GetElement(2,3)])
 
@@ -3092,8 +3069,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       dentalImplantPlane.SetAxes([1,0,0],[0,1,0],[0,0,1])
       dentalImplantPlane.SetOrigin([0,0,0])
       dentalImplantPlane.SetAttribute("isDentalImplantPlane","True")
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        dentalImplantPlane.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
+      dentalImplantPlane.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = dentalImplantPlane.GetDisplayNode()
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
@@ -3101,11 +3077,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
       displayNode.SetOpacity(0)
       displayNode.HandlesInteractiveOn()
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        displayNode.RotationHandleVisibilityOn()
-        displayNode.TranslationHandleVisibilityOn()
-        displayNode.ScaleHandleVisibilityOff()
-        displayNode.SetRotationHandleComponentVisibility(True,True,False,False)
+      displayNode.RotationHandleVisibilityOn()
+      displayNode.TranslationHandleVisibilityOn()
+      displayNode.ScaleHandleVisibilityOff()
+      displayNode.SetRotationHandleComponentVisibility(True,True,False,False)
 
       print("")
       print("i ",i)
@@ -3167,10 +3142,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(dentalImplantCylinderTransformNode)
 
       dentalImplantPlaneToWorldMatrix = vtk.vtkMatrix4x4()
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        dentalImplantPlane.GetObjectToWorldMatrix(dentalImplantPlaneToWorldMatrix)
-      else:
-        dentalImplantPlane.GetPlaneToWorldMatrix(dentalImplantPlaneToWorldMatrix)
+      dentalImplantPlane.GetObjectToWorldMatrix(dentalImplantPlaneToWorldMatrix)
       print("dentalImplantPlaneToWorldMatrix")
       print(dentalImplantPlaneToWorldMatrix)
       dentalImplantCylinderTransformNode.SetMatrixTransformToParent(dentalImplantPlaneToWorldMatrix)
@@ -3448,18 +3420,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
       displayNode.SetOpacity(0)
       displayNode.HandlesInteractiveOn()
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        displayNode.RotationHandleVisibilityOn()
-        displayNode.TranslationHandleVisibilityOn()
-        displayNode.ScaleHandleVisibilityOff()
-        displayNode.SetTranslationHandleComponentVisibility(True,True,False,False)
-        displayNode.SetRotationHandleComponentVisibility(False,False,True,False)
+      displayNode.RotationHandleVisibilityOn()
+      displayNode.TranslationHandleVisibilityOn()
+      displayNode.ScaleHandleVisibilityOff()
+      displayNode.SetTranslationHandleComponentVisibility(True,True,False,False)
+      displayNode.SetRotationHandleComponentVisibility(False,False,True,False)
 
       mandiblePlaneMatrix = vtk.vtkMatrix4x4()
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        mandibularPlanesList[i].GetObjectToWorldMatrix(mandiblePlaneMatrix)
-      else:
-        mandibularPlanesList[i].GetPlaneToWorldMatrix(mandiblePlaneMatrix)
+      mandibularPlanesList[i].GetObjectToWorldMatrix(mandiblePlaneMatrix)
       mandiblePlaneZ = np.array([mandiblePlaneMatrix.GetElement(0,2),mandiblePlaneMatrix.GetElement(1,2),mandiblePlaneMatrix.GetElement(2,2)])
       
       if i == 0:
@@ -3524,10 +3492,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(transformNode)
 
       sawBoxPlaneToWorldMatrix = vtk.vtkMatrix4x4()
-      if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-        sawBoxPlane.GetObjectToWorldMatrix(sawBoxPlaneToWorldMatrix)
-      else:
-        sawBoxPlane.GetPlaneToWorldMatrix(sawBoxPlaneToWorldMatrix)
+      sawBoxPlane.GetObjectToWorldMatrix(sawBoxPlaneToWorldMatrix)
       transformNode.SetMatrixTransformToParent(sawBoxPlaneToWorldMatrix)
 
       transformNode.UpdateScene(slicer.mrmlScene)
@@ -3552,10 +3517,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         sawBoxPlane = slicer.mrmlScene.GetNodeByID(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][1])
         transformNode = slicer.mrmlScene.GetNodeByID(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][2])
         sawBoxPlaneToWorldMatrix = vtk.vtkMatrix4x4()
-        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-          sawBoxPlane.GetObjectToWorldMatrix(sawBoxPlaneToWorldMatrix)
-        else:
-          sawBoxPlane.GetPlaneToWorldMatrix(sawBoxPlaneToWorldMatrix)
+        sawBoxPlane.GetObjectToWorldMatrix(sawBoxPlaneToWorldMatrix)
         transformNode.SetMatrixTransformToParent(sawBoxPlaneToWorldMatrix)
 
   def onDentalImplantPlaneMoved(self,sourceNode,event):
@@ -3571,10 +3533,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dentalImplantPlane = slicer.mrmlScene.GetNodeByID(self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][1])
         transformNode = slicer.mrmlScene.GetNodeByID(self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][2])
         dentalImplantPlaneToWorldMatrix = vtk.vtkMatrix4x4()
-        if int(slicer.app.revision) > int(SLICER_CHANGE_OF_API_REVISION):
-          dentalImplantPlane.GetObjectToWorldMatrix(dentalImplantPlaneToWorldMatrix)
-        else:
-          dentalImplantPlane.GetPlaneToWorldMatrix(dentalImplantPlaneToWorldMatrix)
+        dentalImplantPlane.GetObjectToWorldMatrix(dentalImplantPlaneToWorldMatrix)
         transformNode.SetMatrixTransformToParent(dentalImplantPlaneToWorldMatrix)
       else:
         copyOrientationIndices.append(i)
