@@ -916,6 +916,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       qt.QTimer.singleShot(0, lambda: folderPlugin.setDisplayVisibility(inverseMandibleReconstructionFolder, 0))
       return inverseMandibleReconstructionFolder
 
+  def getDentalImplantsPlanningFolderItemID(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    parentItemID = self.getParentFolderItemID()
+    folderSubjectHierarchyID = shNode.GetItemByName("Dental Implants planning")
+    if folderSubjectHierarchyID:
+      return folderSubjectHierarchyID
+    else:
+      return shNode.CreateFolderItem(parentItemID,"Dental Implants planning")
+
   def getMandiblePlanesFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     folderSubjectHierarchyID = shNode.GetItemByName("Mandibular planes")
@@ -2981,18 +2990,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.RemoveItem(dentalImplantsCylindersTransformsFolder)
     shNode.RemoveItem(fibulaDentalImplantsCylindersModelsFolder)
     shNode.RemoveItem(biggerFibulaDentalImplantsCylindersModelsFolder)
-    dentalImplantsCylindersModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Dental Implants Cylinders Models")
-    dentalImplantsPlanesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"dentalImplants Planes")
-    dentalImplantsCylindersTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Dental Implants Cylinders Transforms")
-    fibulaDentalImplantsCylindersModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula Dental Implants Cylinders Models")
-    biggerFibulaDentalImplantsCylindersModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Bigger Fibula Dental Implants Cylinders Models")
+    dentalImplantsCylindersModelsFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"Dental Implants Cylinders Models")
+    dentalImplantsPlanesFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"dentalImplants Planes")
+    dentalImplantsCylindersTransformsFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"Dental Implants Cylinders Transforms")
+    fibulaDentalImplantsCylindersModelsFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"Fibula Dental Implants Cylinders Models")
+    biggerFibulaDentalImplantsCylindersModelsFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"Bigger Fibula Dental Implants Cylinders Models")
 
     transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
     transformedFibulaPiecesList = createListFromFolderID(transformedFibulaPiecesFolder)
 
     noCapsTransformedFibulaPiecesFolder = shNode.GetItemByName("No Caps Transformed Fibula Pieces")
     shNode.RemoveItem(noCapsTransformedFibulaPiecesFolder)
-    noCapsTransformedFibulaPiecesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"No Caps Transformed Fibula Pieces")
+    noCapsTransformedFibulaPiecesFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"No Caps Transformed Fibula Pieces")
 
     #create noCapsTransformedFibulaPieces
     for i in range(len(transformedFibulaPiecesList)):
@@ -3164,7 +3173,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #Check collision of dentalImplantCylinder with cutBones, create/update a transform and apply it to cylinders
     fibulaDentalImplantsCylindersTransformsFolder = shNode.GetItemByName("Fibula Dental Implants Cylinders Transforms")
     shNode.RemoveItem(fibulaDentalImplantsCylindersTransformsFolder)
-    fibulaDentalImplantsCylindersTransformsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula Dental Implants Cylinders Transforms")
+    fibulaDentalImplantsCylindersTransformsFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"Fibula Dental Implants Cylinders Transforms")
 
     transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
     dentalImplantsCylindersModelsFolder = shNode.GetItemByName("Dental Implants Cylinders Models")
