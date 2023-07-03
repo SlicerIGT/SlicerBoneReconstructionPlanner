@@ -3940,7 +3940,12 @@ Then click 'Create 3D model of reconstruction...' again.""")
 
     parameterNode = self.getParameterNode()
     plateCurve = parameterNode.GetNodeReference("plateCurve")
+
     mandibleReconstructionModel = parameterNode.GetNodeReference("mandibleReconstructionModel")
+    if mandibleReconstructionModel is None:
+      self.create3DModelOfTheReconstruction()
+      mandibleReconstructionModel = parameterNode.GetNodeReference("mandibleReconstructionModel")
+
     plateCrossSectionalWidth = float(parameterNode.GetParameter("plateCrossSectionalWidth"))
     plateCrossSectionalLength = float(parameterNode.GetParameter("plateCrossSectionalLength"))
     plateCrossSectionalBevelRadiusPorcentage = float(parameterNode.GetParameter("plateCrossSectionalBevelRadiusPorcentage"))
