@@ -261,7 +261,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showHideFibulaSegmentsLengthsButton.connect('clicked(bool)', self.onShowHideFibulaSegmentsLengthsButton)
     self.ui.showHideOriginalMandibleButton.connect('clicked(bool)', self.onShowHideOriginalMandibleButton)
     self.ui.createDentalImplantCylindersFiducialListButton.connect('clicked(bool)', self.onCreateDentalImplantCylindersFiducialListButton)
-    self.ui.createCylindersFromFiducialListAndMandibleReconstructionButton.connect('clicked(bool)', self.onCreateCylindersFromFiducialListAndMandibleReconstructionButton)
+    self.ui.createCylindersFromFiducialListAndNeomandiblePiecesButton.connect('clicked(bool)', self.onCreateCylindersFromFiducialListAndNeomandiblePiecesButton)
     self.ui.createPlateCurveButton.connect('clicked(bool)', self.onCreatePlateCurveButton)
     self.ui.createCustomPlateButton.connect('clicked(bool)', self.onCreateCustomPlateButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -720,8 +720,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onCreateDentalImplantCylindersFiducialListButton(self):
     self.logic.createDentalImplantCylindersFiducialList()
 
-  def onCreateCylindersFromFiducialListAndMandibleReconstructionButton(self):
-    self.logic.createCylindersFromFiducialListAndMandibleReconstruction()
+  def onCreateCylindersFromFiducialListAndNeomandiblePiecesButton(self):
+    self.logic.createCylindersFromFiducialListAndNeomandiblePieces()
 
   def onCreateSawBoxesFromFirstAndLastMandiblePlanesButton(self):
     self.logic.createSawBoxesFromFirstAndLastMandiblePlanes()
@@ -2956,7 +2956,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     shNode.RemoveItem(cylindersTransformsFolder)
 
-  def createCylindersFromFiducialListAndMandibleReconstruction(self):
+  def createCylindersFromFiducialListAndNeomandiblePieces(self):
     #self.create3DModelOfTheReconstruction()
 
     parameterNode = self.getParameterNode()

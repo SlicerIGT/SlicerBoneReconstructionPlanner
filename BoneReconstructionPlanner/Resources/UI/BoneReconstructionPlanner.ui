@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>524</width>
-    <height>2635</height>
+    <height>2662</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -443,7 +443,7 @@ bone pieces and transform them to mandible</string>
        </layout>
       </item>
       <item>
-       <widget class="QPushButton" name="createCylindersFromFiducialListAndMandibleReconstructionButton">
+       <widget class="QPushButton" name="createCylindersFromFiducialListAndNeomandiblePiecesButton">
         <property name="text">
          <string>Create cylinders from fiducial list and mandible reconstruction</string>
         </property>
