@@ -115,7 +115,6 @@ def getAverageNormalFromModel(model):
   return averageNormal
 
 def getAverageNormalFromModelPoint(model,point):
-  print("This is a new line")
   normalsOfModel = slicer.util.arrayFromModelPointData(model, 'Normals')
   
   modelMesh = model.GetMesh()
@@ -158,7 +157,6 @@ def getAverageNormalFromModelPoint(model,point):
   return averageNormal
 
 def getAverageNormalFromModelPoint2(model,point):
-  print("This is a new line")
   cropRadius = 2
   geodesicCropRadius = cropRadius*2
 
@@ -167,49 +165,6 @@ def getAverageNormalFromModelPoint2(model,point):
   modelMesh = model.GetMesh()
   pointID = modelMesh.FindPoint(point)
   normalAtPointID = normalsOfModel[pointID]
-
-  """
-
-  // Update outputSelectionArray
-  outputSelectionArray->SetNumberOfValues(inputMesh_World->GetNumberOfPoints());
-  outputSelectionArray->Fill(0);
-  for (int fiducialIndex = 0; fiducialIndex < fiducialNode->GetNumberOfControlPoints(); fiducialIndex++)
-    {
-    double position[3] = { 0.0, 0.0, 0.0 };
-    fiducialNode->GetNthControlPointPositionWorld(fiducialIndex,position);
-    vtkNew<vtkIdList> pointIdsWithinRadius;
-    this->InputMeshLocator_World->FindPointsWithinRadius(selectionDistance, position, pointIdsWithinRadius);
-    const vtkIdType numberOfPointIdsWithinRadius = pointIdsWithinRadius->GetNumberOfIds();
-    for (vtkIdType pointIdIndex = 0; pointIdIndex < numberOfPointIdsWithinRadius; pointIdIndex++)
-      {
-      outputSelectionArray->SetValue(pointIdsWithinRadius->GetId(pointIdIndex), 1);
-      }
-    }
-
-  if (computeSelectedFacesModel)
-    {
-    // Create shallow copy of the input model (in world coordinate system) that will contain selection scalars
-    vtkNew<vtkPolyData> inputMesh_WorldWithSelection;
-    inputMesh_WorldWithSelection->ShallowCopy(inputMesh_World);
-
-    vtkPointData* pointScalars = vtkPointData::SafeDownCast(inputMesh_WorldWithSelection->GetPointData());
-    pointScalars->AddArray(outputSelectionArray);
-
-    vtkNew<vtkThreshold> thresholdFilter;
-    thresholdFilter->SetInputData(inputMesh_WorldWithSelection);
-    thresholdFilter->SetUpperThreshold(0.5);
-    thresholdFilter->SetThresholdFunction(vtkThreshold::THRESHOLD_UPPER);
-    thresholdFilter->SetInputArrayToProcess(0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, SELECTION_ARRAY_NAME);
-    thresholdFilter->Update();
-    vtkNew<vtkGeometryFilter> geometryFilter;
-    geometryFilter->SetInputData(vtkUnstructuredGrid::SafeDownCast(thresholdFilter->GetOutput()));
-    geometryFilter->Update();
-
-    selectedFacesMesh_World = geometryFilter->GetOutput();
-    }
-
-
-  """
 
   geodesicCroppedModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','geodesicCroppedModel')
   geodesicCroppedModel.CreateDefaultDisplayNodes()

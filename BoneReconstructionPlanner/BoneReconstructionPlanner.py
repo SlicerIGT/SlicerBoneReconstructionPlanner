@@ -3086,12 +3086,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.ScaleHandleVisibilityOff()
       displayNode.SetRotationHandleComponentVisibility(True,True,False,False)
 
-      print("")
-      print("i ",i)
       pos = [0,0,0]
       dentalImplantsFiducialList.GetNthFiducialPosition(i,pos)
       pos = np.array(pos)
-      print("pos ",pos)
 
       # searchModelClosestToPointFromList
       nearestPieceIndex = 0
@@ -3115,28 +3112,23 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dentalImplantAxisZ[2] = 1
 
       dentalImplantAxisZ = dentalImplantAxisZ/np.linalg.norm(dentalImplantAxisZ)
-      print("dentalImplantAxisZ ",dentalImplantAxisZ)
 
       closestCurvePoint = [0,0,0]
       closestCurvePointIndex = mandibularCurve.GetClosestPointPositionAlongCurveWorld(pos,closestCurvePoint)
       matrix = vtk.vtkMatrix4x4()
       mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(closestCurvePointIndex,matrix)
       mandibularCurveX = np.array([matrix.GetElement(0,0),matrix.GetElement(1,0),matrix.GetElement(2,0)])
-      print("mandibularCurveX ",mandibularCurveX)
       normalToDentalImplantAxisZAndMandibularCurveX = [0,0,0]
       vtk.vtkMath.Cross(dentalImplantAxisZ, mandibularCurveX, normalToDentalImplantAxisZAndMandibularCurveX)
       normalToDentalImplantAxisZAndMandibularCurveX = normalToDentalImplantAxisZAndMandibularCurveX/np.linalg.norm(normalToDentalImplantAxisZAndMandibularCurveX)
-      print("normalToDentalImplantAxisZAndMandibularCurveX ",normalToDentalImplantAxisZAndMandibularCurveX)
 
 
       dentalImplantAxisX = [0,0,0]
       dentalImplantAxisY =  [0,0,0]
       vtk.vtkMath.Cross(normalToDentalImplantAxisZAndMandibularCurveX, dentalImplantAxisZ, dentalImplantAxisX)
       dentalImplantAxisX = dentalImplantAxisX/np.linalg.norm(dentalImplantAxisX)
-      print("dentalImplantAxisX ",dentalImplantAxisX)
       vtk.vtkMath.Cross(dentalImplantAxisZ, dentalImplantAxisX, dentalImplantAxisY)
       dentalImplantAxisY = dentalImplantAxisY/np.linalg.norm(dentalImplantAxisY)
-      print("dentalImplantAxisY ",dentalImplantAxisY)
 
       dentalImplantPlane.SetAxes(dentalImplantAxisX,dentalImplantAxisY,dentalImplantAxisZ)
       dentalImplantPlane.SetOrigin(pos)
@@ -3147,8 +3139,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       dentalImplantPlaneToWorldMatrix = vtk.vtkMatrix4x4()
       dentalImplantPlane.GetObjectToWorldMatrix(dentalImplantPlaneToWorldMatrix)
-      print("dentalImplantPlaneToWorldMatrix")
-      print(dentalImplantPlaneToWorldMatrix)
       dentalImplantCylinderTransformNode.SetMatrixTransformToParent(dentalImplantPlaneToWorldMatrix)
 
       dentalImplantCylinderTransformNode.UpdateScene(slicer.mrmlScene)
