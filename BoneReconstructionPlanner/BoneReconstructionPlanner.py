@@ -4193,6 +4193,8 @@ Then click 'Create 3D model of reconstruction...' again.""")
     extrusionModel.CreateDefaultDisplayNodes()
     extrusionModel.SetAndObservePolyData(triangleFilter.GetOutput())
 
+    slicer.mrmlScene.RemoveNode(plateCurveResampled)
+
   def pointsOverlap(self,firstPolygonPoints,secondPolygonPoints):
     firstPolygonPoints_np = np.array(firstPolygonPoints, dtype=np.float)
     secondPolygonPoints_np = np.array(secondPolygonPoints, dtype=np.float)
