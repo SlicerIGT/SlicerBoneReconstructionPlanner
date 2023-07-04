@@ -551,8 +551,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
       self.ui.dentalImplantsPlanningCollapsibleButton.show()
+      self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.text = (
+        "Make boolean operations to surgical\n guide base with screwHolesCylinders,\n fibulaDentalImplantCylinders and miterBoxes"
+      )
     else:
       self.ui.dentalImplantsPlanningCollapsibleButton.hide()
+      self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.text = (
+        "Make boolean operations to surgical\n guide base with screwHolesCylinders\n and miterBoxes"
+      )
     
     if customTitaniumPlateDesingChecked:
       self.ui.customTitaniumPlateGenerationCollapsibleButton.show()
@@ -3257,7 +3263,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def makeBooleanOperationsToFibulaSurgicalGuideBase(self):
     parameterNode = self.getParameterNode()
     fibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
-    dentalImplantsPlanningAndFibulaDrillGuidesChecked = self._parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
+    dentalImplantsPlanningAndFibulaDrillGuidesChecked = parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaCylindersModelsFolder = shNode.GetItemByName("Fibula Cylinders Models")
