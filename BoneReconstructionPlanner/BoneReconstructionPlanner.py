@@ -4196,7 +4196,7 @@ Then click 'Create 3D model of reconstruction...' again.""")
 
     extrusionModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
     slicer.mrmlScene.AddNode(extrusionModel)
-    extrusionModel.SetName(slicer.mrmlScene.GetUniqueNameByString('customPlateCrossSection'))
+    extrusionModel.SetName(slicer.mrmlScene.GetUniqueNameByString('customTitaniumPlatePrototype'))
     extrusionModel.CreateDefaultDisplayNodes()
     extrusionModel.SetAndObservePolyData(triangleFilter.GetOutput())
 
