@@ -9,7 +9,7 @@ set(EXTENSION_CATEGORY "Planning")
 set(EXTENSION_CONTRIBUTORS "MSc. Mauro I. Dominguez, PhD. Andras Lasso (PerkLab), Dr. Manjula Herath")
 set(EXTENSION_DESCRIPTION "A extension for virtual surgical planning of mandibular reconstruction with vascularized fibula free flap and generation of patient-specific surgical guides.  ")
 set(EXTENSION_ICONURL "https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner.jpg")
-set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/screenshotPlanning.png https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Screenshots/screenshotPatientSpecificSurgicalGuides.png")
+set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Pictures/screenshotPlanning.png https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Pictures/screenshotPatientSpecificSurgicalGuides.png")
 set(EXTENSION_DEPENDS "SurfaceWrapSolidify MarkupsToModel Sandbox") # Specified as a list or "NA" if no dependencies
 set(EXTENSION_SCM "git")
 set(EXTENSION_SCMURL "https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner.git")
