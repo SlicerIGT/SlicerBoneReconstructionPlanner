@@ -4203,8 +4203,8 @@ Then click 'Create 3D model of reconstruction...' again.""")
     slicer.mrmlScene.RemoveNode(plateCurveResampled)
 
   def pointsOverlap(self,firstPolygonPoints,secondPolygonPoints):
-    firstPolygonPoints_np = np.array(firstPolygonPoints, dtype=np.float)
-    secondPolygonPoints_np = np.array(secondPolygonPoints, dtype=np.float)
+    firstPolygonPoints_np = np.array(firstPolygonPoints, dtype="float")
+    secondPolygonPoints_np = np.array(secondPolygonPoints, dtype="float")
     centroidFirstPolygonPoints = np.average(firstPolygonPoints_np, axis=0)
     centroidSecondPolygonPoints = np.average(firstPolygonPoints_np, axis=0)
     defaultDirection = (
