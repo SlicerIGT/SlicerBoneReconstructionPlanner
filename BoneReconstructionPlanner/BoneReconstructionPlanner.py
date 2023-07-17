@@ -1200,7 +1200,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         transformNodeItemID = shNode.GetItemByDataNode(transformNode)
         shNode.SetItemParent(transformNodeItemID, mandiblePlanesTransformsFolder)
       
-    shNode.RemoveItem(mandiblePlanesTransformsFolder)
+    if mandiblePlanesTransformsFolder:
+      shNode.RemoveItem(mandiblePlanesTransformsFolder)
 
   def setInteractiveHandlesVisibilityOfMarkups(self,markupsList,visibility):
     for i in range(len(markupsList)):
@@ -1301,7 +1302,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     #Delete old fibulaPlanesTransforms
     mandible2FibulaTransformsFolder = shNode.GetItemByName("Mandible2Fibula transforms")
-    shNode.RemoveItem(mandible2FibulaTransformsFolder)
+    if mandible2FibulaTransformsFolder:
+      shNode.RemoveItem(mandible2FibulaTransformsFolder)
     mandible2FibulaTransformsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Mandible2Fibula transforms")
     
     #Improve code readability by deleting if-else block that avoided recalculation if mandiblePlane rotated
@@ -1493,7 +1495,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         self.fibulaPlanesPositionA.append(lineStartPos)
         self.fibulaPlanesPositionB.append(lineEndPos)
 
-        shNode.RemoveItem(intersectionsForCentroidCalculationFolder)
+        if intersectionsForCentroidCalculationFolder:
+          shNode.RemoveItem(intersectionsForCentroidCalculationFolder)
 
       mandibleToFibulaRegistrationTransformNode = slicer.vtkMRMLLinearTransformNode()
       mandibleToFibulaRegistrationTransformNode.SetName("Mandible2Fibula Registration Transform%d" % i)
@@ -1517,7 +1520,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandibleToFibulaRegistrationTransformNodeItemID = shNode.GetItemByDataNode(mandibleToFibulaRegistrationTransformNode)
       shNode.SetItemParent(mandibleToFibulaRegistrationTransformNodeItemID, mandible2FibulaTransformsFolder)
       
-    shNode.RemoveItem(intersectionsFolder)
+    if intersectionsFolder:
+      shNode.RemoveItem(intersectionsFolder)
 
     #Create measurement lines
     self.createFibulaSegmentsLengthsLines(self.fibulaPlanesPositionA,self.fibulaPlanesPositionB)
@@ -1525,7 +1529,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def createFibulaSegmentsLengthsLines(self,fibulaPlanesAPosition,fibulaPlanesBPosition):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaSegmentsLengthsFolder = shNode.GetItemByName("Fibula Segments Lengths")
-    shNode.RemoveItem(fibulaSegmentsLengthsFolder)
+    if fibulaSegmentsLengthsFolder:
+      shNode.RemoveItem(fibulaSegmentsLengthsFolder)
     fibulaSegmentsLengthsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula Segments Lengths")
     
     for i in range(len(fibulaPlanesAPosition)):
@@ -1701,9 +1706,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     planeCutsFolder = shNode.GetItemByName("Plane Cuts")
     if planeCutsFolder == 0 or fixCutGoesThroughTheMandibleTwiceCheckBoxChanged:
-      shNode.RemoveItem(planeCutsFolder)
+      if planeCutsFolder:
+        shNode.RemoveItem(planeCutsFolder)
       cutBonesFolder = shNode.GetItemByName("Cut Bones")
-      shNode.RemoveItem(cutBonesFolder)
+      if cutBonesFolder:
+        shNode.RemoveItem(cutBonesFolder)
       planeCutsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Plane Cuts")
       cutBonesFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Cut Bones")
 
@@ -1842,12 +1849,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       (len(inversePlaneCutsList) != numberOfFibulaPieces) or
       (len(inverseAppendList) != numberOfFibulaPieces)
       ):
-      shNode.RemoveItem(inversePlaneCutsFolder)
-      shNode.RemoveItem(inverseAppendFolder)
+      if inversePlaneCutsFolder:
+        shNode.RemoveItem(inversePlaneCutsFolder)
+      if inverseAppendFolder:
+        shNode.RemoveItem(inverseAppendFolder)
       cutMandiblePiecesFolder = shNode.GetItemByName("Cut Mandible Pieces")
-      shNode.RemoveItem(cutMandiblePiecesFolder)
+      if cutMandiblePiecesFolder:
+        shNode.RemoveItem(cutMandiblePiecesFolder)
       fullMandiblesFolder = shNode.GetItemByName("Full Mandibles")
-      shNode.RemoveItem(fullMandiblesFolder)
+      if fullMandiblesFolder:
+        shNode.RemoveItem(fullMandiblesFolder)
       inversePlaneCutsFolder = shNode.CreateFolderItem(self.getInverseMandibleReconstructionFolderItemID(),"Inverse Plane Cuts")
       inverseAppendFolder = shNode.CreateFolderItem(self.getInverseMandibleReconstructionFolderItemID(),"Inverse Append")
       cutMandiblePiecesFolder = shNode.CreateFolderItem(self.getInverseMandibleReconstructionFolderItemID(),"Cut Mandible Pieces")
@@ -1940,13 +1951,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #delete all folders because there is only one plane and show mandible model
     if len(planeList) <= 1:
-      shNode.RemoveItem(fibulaPlanesFolder)
+      if fibulaPlanesFolder:
+        shNode.RemoveItem(fibulaPlanesFolder)
       planeCutsFolder = shNode.GetItemByName("Plane Cuts")
-      shNode.RemoveItem(planeCutsFolder)
+      if planeCutsFolder:
+        shNode.RemoveItem(planeCutsFolder)
       cutBonesFolder = shNode.GetItemByName("Cut Bones")
-      shNode.RemoveItem(cutBonesFolder)
+      if cutBonesFolder:
+        shNode.RemoveItem(cutBonesFolder)
       transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
-      shNode.RemoveItem(transformedFibulaPiecesFolder)
+      if transformedFibulaPiecesFolder:
+        shNode.RemoveItem(transformedFibulaPiecesFolder)
       mandibleDisplayNode = mandibleModelNode.GetDisplayNode()
       mandibleDisplayNode.SetVisibility(True)
       return
@@ -1956,13 +1971,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #delete all the folders that are not updated
     if (len(fibulaPlanesList) != (2*len(planeList) - 2)) or not fibulaPlanesFolder:
-      shNode.RemoveItem(fibulaPlanesFolder)
+      if fibulaPlanesFolder:
+        shNode.RemoveItem(fibulaPlanesFolder)
       planeCutsFolder = shNode.GetItemByName("Plane Cuts")
-      shNode.RemoveItem(planeCutsFolder)
+      if planeCutsFolder:
+        shNode.RemoveItem(planeCutsFolder)
       cutBonesFolder = shNode.GetItemByName("Cut Bones")
-      shNode.RemoveItem(cutBonesFolder)
+      if cutBonesFolder:
+        shNode.RemoveItem(cutBonesFolder)
       transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
-      shNode.RemoveItem(transformedFibulaPiecesFolder)
+      if transformedFibulaPiecesFolder:
+        shNode.RemoveItem(transformedFibulaPiecesFolder)
       fibulaPlanesFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula planes")
       fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
       #Create fibula planes and set their size
@@ -2051,7 +2070,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandiblePlaneItemID = shNode.GetItemByDataNode(mandiblePlane)
       shNode.SetItemParent(mandiblePlaneItemID, mandibularPlanesFolder2)
 
-    shNode.RemoveItem(mandibularPlanesFolder)
+    if mandibularPlanesFolder:
+      shNode.RemoveItem(mandibularPlanesFolder)
     shNode.SetItemName(mandibularPlanesFolder2,"Mandibular planes")
 
   def setRedSliceForBoneModelsDisplayNodes(self):
@@ -2224,7 +2244,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
     if segmentationModelsFolder:
-      shNode.RemoveItem(segmentationModelsFolder)
+      if segmentationModelsFolder:
+        shNode.RemoveItem(segmentationModelsFolder)
       segmentationModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Segmentation Models")
     else:
       segmentationModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Segmentation Models")
@@ -2344,8 +2365,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandible2FibulaTransformsList = createListFromFolderID(mandible2FibulaTransformsFolder)
     transformedMandiblePiecesFolder = shNode.GetItemByName("Transformed Mandible Pieces")
     transformedFullMandiblesFolder = shNode.GetItemByName("Transformed Full Mandible")
-    shNode.RemoveItem(transformedMandiblePiecesFolder)
-    shNode.RemoveItem(transformedFullMandiblesFolder)
+    if transformedMandiblePiecesFolder:
+      shNode.RemoveItem(transformedMandiblePiecesFolder)
+    if transformedFullMandiblesFolder:
+      shNode.RemoveItem(transformedFullMandiblesFolder)
     transformedMandiblePiecesFolder = shNode.CreateFolderItem(self.getInverseMandibleReconstructionFolderItemID(),"Transformed Mandible Pieces")
     transformedFullMandiblesFolder = shNode.CreateFolderItem(self.getInverseMandibleReconstructionFolderItemID(),"Transformed Full Mandible")
 
@@ -2400,10 +2423,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     bonePiecesTransformFolder = shNode.GetItemByName("Bone Pieces Transforms")
-    shNode.RemoveItem(bonePiecesTransformFolder)
+    if bonePiecesTransformFolder:
+      shNode.RemoveItem(bonePiecesTransformFolder)
     bonePiecesTransformFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Bone Pieces Transforms")
     transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
-    shNode.RemoveItem(transformedFibulaPiecesFolder)
+    if transformedFibulaPiecesFolder:
+      shNode.RemoveItem(transformedFibulaPiecesFolder)
     transformedFibulaPiecesFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Transformed Fibula Pieces")
 
     lineStartPos = np.zeros(3)
@@ -2507,7 +2532,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformNodeItemID = shNode.GetItemByDataNode(transformNode)
       shNode.SetItemParent(transformNodeItemID, mandiblePlaneTransformsFolder)
     
-    shNode.RemoveItem(mandiblePlaneTransformsFolder)
+    if mandiblePlaneTransformsFolder:
+      shNode.RemoveItem(mandiblePlaneTransformsFolder)
   
   def setupMandiblePlaneStraightOverMandibleCurve(self,planeNode,temporalOrigin, mandibleCurve, planeNodeObserver):
     closestCurvePoint = [0,0,0]
@@ -2609,9 +2635,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
     fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
     miterBoxesModelsFolder = shNode.GetItemByName("miterBoxes Models")
-    shNode.RemoveItem(miterBoxesModelsFolder)
+    if miterBoxesModelsFolder:
+      shNode.RemoveItem(miterBoxesModelsFolder)
     biggerMiterBoxesModelsFolder = shNode.GetItemByName("biggerMiterBoxes Models")
-    shNode.RemoveItem(biggerMiterBoxesModelsFolder)
+    if biggerMiterBoxesModelsFolder:
+      shNode.RemoveItem(biggerMiterBoxesModelsFolder)
 
     if checkSecurityMarginOnMiterBoxCreationChecked:
       cutBonesList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
@@ -2671,8 +2699,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           collisionDetected = True
           break
       
-      shNode.RemoveItem(duplicateFibulaBonePiecesTransformsFolder)
-      shNode.RemoveItem(duplicateFibulaBonePiecesModelsFolder)
+      if duplicateFibulaBonePiecesTransformsFolder:
+        shNode.RemoveItem(duplicateFibulaBonePiecesTransformsFolder)
+      if duplicateFibulaBonePiecesModelsFolder:
+        shNode.RemoveItem(duplicateFibulaBonePiecesModelsFolder)
       if collisionDetected:
         slicer.util.errorDisplay(f"Planned fibula segments could overlap each other (the distance in between them do not satisfy the security margin of {securityMarginOfFibulaPieces}mm). " +
             "You can fix this by increasing 'intersection distance multiplier' or 'between space' and pressing the update button")
@@ -2817,9 +2847,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxToWorldChangeOfFrameTransformNodeItemID = shNode.GetItemByDataNode(miterBoxToWorldChangeOfFrameTransformNode)
       shNode.SetItemParent(miterBoxToWorldChangeOfFrameTransformNodeItemID, miterBoxesTransformsFolder)
     
-    shNode.RemoveItem(miterBoxesTransformsFolder)
-    shNode.RemoveItem(intersectionsFolder)
-    shNode.RemoveItem(pointsIntersectionsFolder)
+    if miterBoxesTransformsFolder:
+      shNode.RemoveItem(miterBoxesTransformsFolder)
+    if intersectionsFolder:
+      shNode.RemoveItem(intersectionsFolder)
+    if pointsIntersectionsFolder:
+      shNode.RemoveItem(pointsIntersectionsFolder)
 
     self.setRedSliceForBoxModelsDisplayNodes()
 
@@ -2874,7 +2907,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def createCylindersFromFiducialListAndFibulaSurgicalGuideBase(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaCylindersModelsFolder = shNode.GetItemByName("Fibula Cylinders Models")
-    shNode.RemoveItem(fibulaCylindersModelsFolder)
+    if fibulaCylindersModelsFolder:
+      shNode.RemoveItem(fibulaCylindersModelsFolder)
     fibulaCylindersModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Fibula Cylinders Models")
     cylindersTransformsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Cylinders Transforms")
     
@@ -2924,12 +2958,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       cylinderToWorldChangeOfFrameTransformNodeItemID = shNode.GetItemByDataNode(cylinderToWorldChangeOfFrameTransformNode)
       shNode.SetItemParent(cylinderToWorldChangeOfFrameTransformNodeItemID, cylindersTransformsFolder)
     
-    shNode.RemoveItem(cylindersTransformsFolder)
+    if cylindersTransformsFolder:
+      shNode.RemoveItem(cylindersTransformsFolder)
   
   def createCylindersFromFiducialListAndMandibleSurgicalGuideBase(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandibleCylindersModelsFolder = shNode.GetItemByName("Mandible Cylinders Models")
-    shNode.RemoveItem(mandibleCylindersModelsFolder)
+    if mandibleCylindersModelsFolder:
+      shNode.RemoveItem(mandibleCylindersModelsFolder)
     mandibleCylindersModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Mandible Cylinders Models")
     cylindersTransformsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Cylinders Transforms")
     
@@ -2979,7 +3015,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       cylinderToWorldChangeOfFrameTransformNodeItemID = shNode.GetItemByDataNode(cylinderToWorldChangeOfFrameTransformNode)
       shNode.SetItemParent(cylinderToWorldChangeOfFrameTransformNodeItemID, cylindersTransformsFolder)
 
-    shNode.RemoveItem(cylindersTransformsFolder)
+    if cylindersTransformsFolder:
+      shNode.RemoveItem(cylindersTransformsFolder)
 
   def createCylindersFromFiducialListAndNeomandiblePieces(self):
     #self.create3DModelOfTheReconstruction()
@@ -3001,11 +3038,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     dentalImplantsCylindersTransformsFolder = shNode.GetItemByName("Dental Implants Cylinders Transforms")
     fibulaDentalImplantsCylindersModelsFolder = shNode.GetItemByName("Fibula Dental Implants Cylinders Models")
     biggerFibulaDentalImplantsCylindersModelsFolder = shNode.GetItemByName("Bigger Fibula Dental Implants Cylinders Models")
-    shNode.RemoveItem(dentalImplantsCylindersModelsFolder)
-    shNode.RemoveItem(dentalImplantsPlanesFolder)
-    shNode.RemoveItem(dentalImplantsCylindersTransformsFolder)
-    shNode.RemoveItem(fibulaDentalImplantsCylindersModelsFolder)
-    shNode.RemoveItem(biggerFibulaDentalImplantsCylindersModelsFolder)
+    if dentalImplantsCylindersModelsFolder:
+      shNode.RemoveItem(dentalImplantsCylindersModelsFolder)
+    if dentalImplantsPlanesFolder:
+      shNode.RemoveItem(dentalImplantsPlanesFolder)
+    if dentalImplantsCylindersTransformsFolder:
+      shNode.RemoveItem(dentalImplantsCylindersTransformsFolder)
+    if fibulaDentalImplantsCylindersModelsFolder:
+      shNode.RemoveItem(fibulaDentalImplantsCylindersModelsFolder)
+    if biggerFibulaDentalImplantsCylindersModelsFolder:
+      shNode.RemoveItem(biggerFibulaDentalImplantsCylindersModelsFolder)
     dentalImplantsCylindersModelsFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"Dental Implants Cylinders Models")
     dentalImplantsPlanesFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"dentalImplants Planes")
     dentalImplantsCylindersTransformsFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"Dental Implants Cylinders Transforms")
@@ -3016,7 +3058,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     transformedFibulaPiecesList = createListFromFolderID(transformedFibulaPiecesFolder)
 
     noCapsTransformedFibulaPiecesFolder = shNode.GetItemByName("No Caps Transformed Fibula Pieces")
-    shNode.RemoveItem(noCapsTransformedFibulaPiecesFolder)
+    if noCapsTransformedFibulaPiecesFolder:
+      shNode.RemoveItem(noCapsTransformedFibulaPiecesFolder)
     noCapsTransformedFibulaPiecesFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"No Caps Transformed Fibula Pieces")
 
     #create noCapsTransformedFibulaPieces
@@ -3180,7 +3223,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #Check collision of dentalImplantCylinder with cutBones, create/update a transform and apply it to cylinders
     fibulaDentalImplantsCylindersTransformsFolder = shNode.GetItemByName("Fibula Dental Implants Cylinders Transforms")
-    shNode.RemoveItem(fibulaDentalImplantsCylindersTransformsFolder)
+    if fibulaDentalImplantsCylindersTransformsFolder:
+      shNode.RemoveItem(fibulaDentalImplantsCylindersTransformsFolder)
     fibulaDentalImplantsCylindersTransformsFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"Fibula Dental Implants Cylinders Transforms")
 
     transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
@@ -3340,13 +3384,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
     sawBoxesModelsFolder = shNode.GetItemByName("sawBoxes Models")
-    shNode.RemoveItem(sawBoxesModelsFolder)
+    if sawBoxesModelsFolder:
+      shNode.RemoveItem(sawBoxesModelsFolder)
     biggerSawBoxesModelsFolder = shNode.GetItemByName("biggerSawBoxes Models")
-    shNode.RemoveItem(biggerSawBoxesModelsFolder)
+    if biggerSawBoxesModelsFolder:
+      shNode.RemoveItem(biggerSawBoxesModelsFolder)
     sawBoxesPlanesFolder = shNode.GetItemByName("sawBoxes Planes")
-    shNode.RemoveItem(sawBoxesPlanesFolder)
+    if sawBoxesPlanesFolder:
+      shNode.RemoveItem(sawBoxesPlanesFolder)
     sawBoxesTransformsFolder = shNode.GetItemByName("sawBoxes Transforms")
-    shNode.RemoveItem(sawBoxesTransformsFolder)
+    if sawBoxesTransformsFolder:
+      shNode.RemoveItem(sawBoxesTransformsFolder)
     sawBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"sawBoxes Models")
     biggerSawBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"biggerSawBoxes Models")
     sawBoxesPlanesFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"sawBoxes Planes")
@@ -3513,8 +3561,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       observer = sawBoxPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onSawBoxPlaneMoved)
       self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList.append([observer,sawBoxPlane.GetID(),transformNode.GetID()])
 
-    shNode.RemoveItem(intersectionsFolder)
-    shNode.RemoveItem(pointsIntersectionsFolder)
+    if intersectionsFolder:
+      shNode.RemoveItem(intersectionsFolder)
+    if pointsIntersectionsFolder:
+      shNode.RemoveItem(pointsIntersectionsFolder)
     
     self.setRedSliceForBoxModelsDisplayNodes()
     
@@ -3691,7 +3741,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaLine.SetNthControlPointPosition(0,lineStartPos)
     fibulaLine.SetNthControlPointPosition(1,lineEndPos)
 
-    shNode.RemoveItem(intersectionsFolder)
+    if intersectionsFolder:
+      shNode.RemoveItem(intersectionsFolder)
 
   def setBackgroundVolumeFromID(self,scalarVolumeID):
     redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
@@ -4955,10 +5006,13 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.delayDisplay("CreateAndUpdateSawBoxesFromMandiblePlanes test successful")
 
 def createListFromFolderID(folderID):
-  createdList = []
   shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-  myList = vtk.vtkIdList()
-  shNode.GetItemChildren(folderID,myList)
-  for i in range(myList.GetNumberOfIds()):
-    createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
+  createdList = []
+
+  if folderID != shNode.GetInvalidItemID():
+    myList = vtk.vtkIdList()
+    shNode.GetItemChildren(folderID,myList)
+    for i in range(myList.GetNumberOfIds()):
+      createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
+  
   return createdList
