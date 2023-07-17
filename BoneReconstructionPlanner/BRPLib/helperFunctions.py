@@ -171,7 +171,7 @@ def getAverageNormalFromModelPoint2(model,point):
 
   auxiliarFiducial = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLMarkupsFiducialNode','auxiliarGeodesicCropFiducial')
   auxiliarFiducial.CreateDefaultDisplayNodes()
-  auxiliarFiducial.AddFiducialFromArray(point)
+  auxiliarFiducial.AddControlPoint(point)
 
   dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
   dynamicModelerNode.SetToolName("Select by points")
