@@ -2825,9 +2825,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def createDentalImplantCylindersFiducialList(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    dentalImplantCylindersFiducialsListsFolder = shNode.GetItemByName("Dental Implants Cylinders Fiducials Lists")
+    dentalImplantCylindersFiducialsListsFolder = shNode.GetItemByName("Dental Implants Cylinders Fiducials")
     if not dentalImplantCylindersFiducialsListsFolder:
-      dentalImplantCylindersFiducialsListsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Dental Implants Cylinders Fiducials Lists")
+      dentalImplantCylindersFiducialsListsFolder = shNode.CreateFolderItem(self.getDentalImplantsPlanningFolderItemID(),"Dental Implants Cylinders Fiducials")
     
     dentalImplantFiducialListNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")
     dentalImplantFiducialListNode.SetName("temp")
