@@ -2887,9 +2887,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     surgicalGuideBaseMesh = fibulaSurgicalGuideBaseModel.GetMesh()
 
-    for i in range(fibulaFiducialList.GetNumberOfFiducials()):
+    for i in range(fibulaFiducialList.GetNumberOfControlPoints()):
       cylinderOrigin = [0,0,0]
-      fibulaFiducialList.GetNthFiducialPosition(i,cylinderOrigin)
+      fibulaFiducialList.GetNthControlPointPosition(i,cylinderOrigin)
 
       pointID = surgicalGuideBaseMesh.FindPoint(cylinderOrigin)
 
@@ -2942,9 +2942,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     surgicalGuideBaseMesh = mandibleSurgicalGuideBaseModel.GetMesh()
 
-    for i in range(mandibleFiducialList.GetNumberOfFiducials()):
+    for i in range(mandibleFiducialList.GetNumberOfControlPoints()):
       cylinderOrigin = [0,0,0]
-      mandibleFiducialList.GetNthFiducialPosition(i,cylinderOrigin)
+      mandibleFiducialList.GetNthControlPointPosition(i,cylinderOrigin)
 
       pointID = surgicalGuideBaseMesh.FindPoint(cylinderOrigin)
 
@@ -3047,7 +3047,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     colorwithalpha = colorTable.GetTableValue(ind)
     color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
 
-    for i in range(dentalImplantsFiducialList.GetNumberOfFiducials()):
+    for i in range(dentalImplantsFiducialList.GetNumberOfControlPoints()):
       dentalImplantCylinderModel = createCylinder("implantCylinder%d" % i,dentalImplantCylinderRadius,dentalImplantCylinderHeight)
       dentalImplantCylinderModelItemID = shNode.GetItemByDataNode(dentalImplantCylinderModel)
       shNode.SetItemParent(dentalImplantCylinderModelItemID, dentalImplantsCylindersModelsFolder)
@@ -3097,7 +3097,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetRotationHandleComponentVisibility(True,True,False,False)
 
       pos = [0,0,0]
-      dentalImplantsFiducialList.GetNthFiducialPosition(i,pos)
+      dentalImplantsFiducialList.GetNthControlPointPosition(i,pos)
       pos = np.array(pos)
 
       # searchModelClosestToPointFromList
@@ -3172,7 +3172,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandibleToFibulaRegistrationTransformNodesList = createListFromFolderID(mandible2FibulaTransformsFolder)
       if len(mandibleToFibulaRegistrationTransformNodesList) != 0:
         for i in range(len(mandibleToFibulaRegistrationTransformNodesList)):
-          self.mandibleToFibulaRegistrationTransformMatricesList.append(mandibleToFibulaRegistrationTransformNodesList[i].GetMatrixTransformToParent())
+          mandibleToFibulaRegistrationMatrix = vtk.vtkMatrix4x4()
+          mandibleToFibulaRegistrationTransformNodesList[i].GetMatrixTransformToParent(mandibleToFibulaRegistrationMatrix)
+          self.mandibleToFibulaRegistrationTransformMatricesList.append(mandibleToFibulaRegistrationMatrix)
       else:
         self.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible()
 
