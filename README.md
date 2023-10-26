@@ -57,6 +57,21 @@ A [3D Slicer](https://www.slicer.org/) extension for virtual surgical planning o
 If you use BoneReconstructionPlanner please cite our paper:
 https://www.sciencedirect.com/science/article/pii/S2666964123000103
 
+```bash
+@article{MAISI2023100109,
+   title = {In-house virtual surgical planning for mandibular reconstruction with fibula free flap: Case series and literature review},
+   author = {Steve Maisi and Mauro Dominguez and Peta Charmaine Gilong and Chung Tze Kiong and Syarfa Hajam and Ahmad Fadhli Ahmad Badruddin and Han Fong Siew and Saravanan Gopalan and Kok Tuck Choon},
+   journal = {Annals of 3D Printed Medicine},
+   volume = {10},
+   pages = {100109},
+   year = {2023},
+   issn = {2666-9641},
+   doi = {https://doi.org/10.1016/j.stlm.2023.100109},
+   url = {https://www.sciencedirect.com/science/article/pii/S2666964123000103},
+   keywords = {Virtual surgical planning, In-house VSP, Fibula free flap, Mandibular reconstruction},
+}
+```
+
 # Table of Contents
 - [Overview](#bonereconstructionplanner)
 - [Citations](#citations)
