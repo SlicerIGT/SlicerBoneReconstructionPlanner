@@ -191,7 +191,7 @@ See the results of other users:
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TheoreticalPlanBRP_rib.mrb" >Theoretical Virtual Surgical Plan with a rib (Toy-example)</a>
 
 # Instructions
-([last updated 03/19/2023](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/96))
+([last validated 11/20/2023](https://discourse.slicer.org/t/new-3d-slicer-extension-for-planning-and-surgical-guide-generation-for-mandibular-bone-reconstruction/17638/14))
 
 ## Installing BoneReconstructionPlanner
 
