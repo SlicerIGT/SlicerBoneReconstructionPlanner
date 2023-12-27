@@ -261,14 +261,22 @@ def createBox(X, Y, Z, name):
   miterBox.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
   slicer.mrmlScene.AddNode(miterBox)
   miterBox.CreateDefaultDisplayNodes()
+  miterBox.GetDisplayNode().SetInterpolation(slicer.vtkMRMLModelDisplayNode.FlatInterpolation)
+  #
   miterBoxSource = vtk.vtkCubeSource()
   miterBoxSource.SetXLength(X)
   miterBoxSource.SetYLength(Y)
   miterBoxSource.SetZLength(Z)
   triangleFilter = vtk.vtkTriangleFilter()
   triangleFilter.SetInputConnection(miterBoxSource.GetOutputPort())
-  #triangleFilter.Update()
-  miterBox.SetPolyDataConnection(triangleFilter.GetOutputPort())
+  #
+  maximumEdgeLengthMm = 1
+  adaptiveSubdivisionFilter = vtk.vtkAdaptiveSubdivisionFilter()
+  adaptiveSubdivisionFilter.SetInputConnection(triangleFilter.GetOutputPort())
+  adaptiveSubdivisionFilter.SetMaximumEdgeLength(maximumEdgeLengthMm)
+  adaptiveSubdivisionFilter.SetMaximumTriangleArea(adaptiveSubdivisionFilter.GetMaximumTriangleAreaMaxValue()) # set to infinity
+  #
+  miterBox.SetPolyDataConnection(adaptiveSubdivisionFilter.GetOutputPort())
   return miterBox
 
 def createCylinder(name,R,H=50):
@@ -276,16 +284,27 @@ def createCylinder(name,R,H=50):
   cylinder.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
   slicer.mrmlScene.AddNode(cylinder)
   cylinder.CreateDefaultDisplayNodes()
+  #
   lineSource = vtk.vtkLineSource()
   lineSource.SetPoint1(0, 0, H/2)
   lineSource.SetPoint2(0, 0, -H/2)
+  lineSource.SetUseRegularRefinement(True)
+  lineSource.SetResolution(H)
+  #
   tubeFilter = vtk.vtkTubeFilter()
   tubeFilter.SetInputConnection(lineSource.GetOutputPort())
   tubeFilter.SetRadius(R)
   tubeFilter.SetNumberOfSides(50)
   tubeFilter.CappingOn()
-  #tubeFilter.Update()
-  cylinder.SetPolyDataConnection(tubeFilter.GetOutputPort())
+  #
+  triangleFilter = vtk.vtkTriangleFilter()
+  triangleFilter.SetInputConnection(tubeFilter.GetOutputPort())
+  #
+  normalsFilter = vtk.vtkPolyDataNormals()
+  normalsFilter.SetInputConnection(triangleFilter.GetOutputPort())
+  #
+  #cylinder.SetPolyDataConnection(triangleFilter.GetOutputPort())
+  cylinder.SetPolyDataConnection(normalsFilter.GetOutputPort())
   cylinder.SetAttribute('radius',str(R))
   cylinder.SetAttribute('height',str(H))
   return cylinder
