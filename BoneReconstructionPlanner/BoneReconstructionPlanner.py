@@ -1679,27 +1679,35 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     if useNonDecimatedBoneModelsForPreviewChecked:
       nonDecimatedFibulaModelDisplayNode = nonDecimatedFibulaModelNode.GetDisplayNode()
-      nonDecimatedFibulaModelDisplayNode.SetVisibility(True)
       decimatedFibulaModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
+      nonDecimatedFibulaModelDisplayNode.SetVisibility(True)
       decimatedFibulaModelDisplayNode.SetVisibility(False)
 
       nonDecimatedMandibleModelDisplayNode =  nonDecimatedMandibleModelNode.GetDisplayNode()
-      nonDecimatedMandibleModelDisplayNode.SetVisibility(True)
       decimatedMandibleModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
+      previousMandibleModelVisibility = (
+        nonDecimatedMandibleModelDisplayNode.GetVisibility() or
+        decimatedMandibleModelDisplayNode.GetVisibility()
+      )
+      nonDecimatedMandibleModelDisplayNode.SetVisibility(True and previousMandibleModelVisibility)
       decimatedMandibleModelDisplayNode.SetVisibility(False)
 
       fibulaModelNode = nonDecimatedFibulaModelNode
       mandibleModelNode = nonDecimatedMandibleModelNode
     else:
       nonDecimatedFibulaModelDisplayNode = nonDecimatedFibulaModelNode.GetDisplayNode()
-      nonDecimatedFibulaModelDisplayNode.SetVisibility(False)
       decimatedFibulaModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
+      nonDecimatedFibulaModelDisplayNode.SetVisibility(False)
       decimatedFibulaModelDisplayNode.SetVisibility(True)
 
       nonDecimatedMandibleModelDisplayNode =  nonDecimatedMandibleModelNode.GetDisplayNode()
-      nonDecimatedMandibleModelDisplayNode.SetVisibility(False)
       decimatedMandibleModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
-      decimatedMandibleModelDisplayNode.SetVisibility(True)
+      previousMandibleModelVisibility = (
+        nonDecimatedMandibleModelDisplayNode.GetVisibility() or
+        decimatedMandibleModelDisplayNode.GetVisibility()
+      )
+      nonDecimatedMandibleModelDisplayNode.SetVisibility(False)
+      decimatedMandibleModelDisplayNode.SetVisibility(True and previousMandibleModelVisibility)
 
       fibulaModelNode = decimatedFibulaModelNode
       mandibleModelNode = decimatedMandibleModelNode
