@@ -3760,8 +3760,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     yellowSliceLogic = slicer.app.layoutManager().sliceWidget('Yellow').sliceLogic()
     yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
 
-    slicer.util.resetSliceViews()
-
   def create3DModelOfTheReconstruction(self):
     import time
     startTime = time.time()
