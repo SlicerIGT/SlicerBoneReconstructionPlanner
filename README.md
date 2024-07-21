@@ -247,48 +247,55 @@ If you tick the button it will react on plane movements and update automatically
 
 ## Personalized Fibula Guide Generation
 
-1. Press shift over some fibula piece on the corresponding 3D view. The model should be visible on the 2D slice with the corresponding color as an edge. Create a line over the 2D slice of the fibula that will set the direction of the miterBoxes (with this you select, for example, lateral approach or posterior approach). The line should me drawn from the centerline of the fibula to a point that is distal from the first one on the 2D slice of the fibula.
-2. Select the parameters of the miter boxes: lenght, width, height, wall thickness and tolerance (this last option is inside the Settings widget and it applies also to sawBoxes of the mandible). The combination of tolerance and the slot width suggested by most experienced user (@mrtig) is:
+0. Go to "Fibula Surgical Guide Creation" section of BoneReconstructionPlanner
+1. If "Check security margin on miter box creation" is checked each saw-cut (and the bone it eats) will be tested to not collide with others.
+2. Press shift over some fibula piece on the corresponding 3D view. The model should be visible on the 2D slice with the corresponding color as an edge. [Create a line](https://slicer.readthedocs.io/en/5.6/user_guide/modules/markups.html#place-new-markups) over the 2D slice of the fibula that will set the direction of the miterBoxes (with this you select, for example, lateral approach or posterior approach). The line should me drawn from the centerline of the fibula to a point that is distal from the first one on the 2D slice of the fibula.
+3. Select the parameters of the miter boxes: lenght, width, height, wall thickness and tolerance (this last option is inside the Settings widget and it applies also to sawBoxes of the mandible). The combination of tolerance and the slot width suggested by most experienced user (@mrtig) is:
 
+<details open>
+<summary>Summary</summary>
 ```
-It's easy to find out what good fit for the saw blade is by printing a few pockets with different widths. It depends on the printing technology. There is a summary at the end.
-
-The saw blade used on this example is 0.2mm. If I print using the SLA printer I make the pockets 0.3 mm. With the FDM printer the width needs to be 0.6 mm. And the default tolerance is 0.2mm
-
-These are the equations:
-
-Suggested sawBoxSlotWidths
-If SLA is used:
-sawBoxSlotWidth = sawBladeWidth + 0.1mm
-else if FDM is used:
-sawBoxSlotWidth = sawBladeWidth + 0.4mm
-
-realSawBoxWidth = sawBoxSlotWidth+2*clearanceFitPrintingTolerance
-
-So for this example we have:
-If SLA is used:
-realSawBoxWidth = sawBladeWidth + 0.1mm +2*clearanceFitPrintingTolerance = 0.2mm + 0.1mm + 2*0.2mm = 0.7mm
-else if FDM is used:
-realSawBoxWidth = sawBladeWidth + 0.4mm +2*clearanceFitPrintingTolerance = 0.2mm + 0.4mm + 2*0.2mm = 1.0mm
-
-From these we can find the realClearanceFitPrintingTolerance (that should be used with the realSawBoxWidth) as:
-If SLA is used:
-realClearanceFitPrintingTolerance = (realSawBoxWidth - sawBladeWidth)/2 = (0.7mm - 0.2mm)/2 = 0.25mm
-else if FDM is used:
-realClearanceFitPrintingTolerance = (realSawBoxWidth - sawBladeWidth)/2 = (1.0mm - 0.2mm)/2 = 0.4mm
-
-As a summary:
-You should use these equations
-- sawBoxWidth = sawBladeWidth
-- If SLA is used:
-clearanceFitPrintingTolerance = 0.25mm
-else if FDM is used:
-clearanceFitPrintingTolerance = 0.4mm
-
+  These equations:
+  - sawBoxWidth = sawBladeWidth
+  - If SLA is used:
+  clearanceFitPrintingTolerance = 0.25mm
+  else if FDM is used:
+  clearanceFitPrintingTolerance = 0.4mm
 ```
+</details>
 
+<details>
+<summary>Explanation</summary>
+```
+  It's easy to find out what good fit for the saw blade is by printing a few pockets with different widths. It depends on the printing technology. There is a summary at the end.
 
-3. Click "Create miter boxes from fibula planes". The yellow miterBoxes will appear, each one with a long box that will create the slit for the saw to go through.
+  The saw blade used on this example is 0.2mm. If I print using the SLA printer I make the pockets 0.3 mm. With the FDM printer the width needs to be 0.6 mm. And the default tolerance is 0.2mm
+
+  These are the equations:
+
+  Suggested sawBoxSlotWidths
+  If SLA is used:
+  sawBoxSlotWidth = sawBladeWidth + 0.1mm
+  else if FDM is used:
+  sawBoxSlotWidth = sawBladeWidth + 0.4mm
+
+  realSawBoxWidth = sawBoxSlotWidth+2*clearanceFitPrintingTolerance
+
+  So for this example we have:
+  If SLA is used:
+  realSawBoxWidth = sawBladeWidth + 0.1mm +2*clearanceFitPrintingTolerance = 0.2mm + 0.1mm + 2*0.2mm = 0.7mm
+  else if FDM is used:
+  realSawBoxWidth = sawBladeWidth + 0.4mm +2*clearanceFitPrintingTolerance = 0.2mm + 0.4mm + 2*0.2mm = 1.0mm
+
+  From these we can find the realClearanceFitPrintingTolerance (that should be used with the realSawBoxWidth) as:
+  If SLA is used:
+  realClearanceFitPrintingTolerance = (realSawBoxWidth - sawBladeWidth)/2 = (0.7mm - 0.2mm)/2 = 0.25mm
+  else if FDM is used:
+  realClearanceFitPrintingTolerance = (realSawBoxWidth - sawBladeWidth)/2 = (1.0mm - 0.2mm)/2 = 0.4mm
+```
+</details>
+
+4. Click "Create miter boxes from fibula planes". The yellow miterBoxes will appear, each one with a long box that will create the slit for the saw to go through.
 
 ## Create the Fibula Guide Base
 3. Go to the segment editor, add a new segment and create a copy (using the copy-logical-operator) of the fibula segment, rename it to "fibGuideBase".
