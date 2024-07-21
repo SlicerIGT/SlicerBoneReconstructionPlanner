@@ -217,7 +217,7 @@ Example of a fibula segmentation:
 
 0. CTs should have a recommended slice thickness of 0.65mm (or a maximum slice thickness of 1mm). Load the study to Slicer.
 1. Go to the segment editor. Create a new segmentation. Create a new segment, name it 'fibula'.
-2. Use threshold effect to select bone but not connecting tissue (like ligaments). Check if your selected threshold value is okay if there is no connection of the segmented bones near the joint. Threshold value should not be too low to not lose detail. Suggested value: 200
+2. Use threshold effect to select bone but not connecting tissue (like ligaments). Check if your selected threshold value is okay if there is no connection of the segmented bones near the joint. Threshold value should not be too low to not lose detail. Suggested value: 200. Avoid highlighting noise if possible as it will reduce the need for clean up later.
 3. Use Islands effect, select 'keep selected island' and click over the fibula to keep it. Click "Show 3D".
 4. If successful continue. If not start over and use a higher threshold value or use scissors to isolate the fibula
 5. Go to Wrap Solidify effect, on Advanced button set the suggested configuration below (by @SteveMaisi) and click apply. (This is needed because it is recommended that bone segmentations have no holes inside so the assisted miterBox positioning algorithms work well)
