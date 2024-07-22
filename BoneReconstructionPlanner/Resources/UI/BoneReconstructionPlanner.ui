@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>524</width>
-    <height>2662</height>
+    <width>650</width>
+    <height>3014</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -383,7 +383,7 @@ bone pieces and transform them to mandible</string>
         <property name="minimumSize">
          <size>
           <width>0</width>
-          <height>200</height>
+          <height>400</height>
          </size>
         </property>
         <property name="nodeTypes">
@@ -391,6 +391,12 @@ bone pieces and transform them to mandible</string>
           <string>vtkMRMLMarkupsNode</string>
           <string>vtkMRMLModelNode</string>
          </stringlist>
+        </property>
+        <property name="idColumnVisible">
+         <bool>false</bool>
+        </property>
+        <property name="transformColumnVisible">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
