@@ -379,7 +379,7 @@ bone pieces and transform them to mandible</string>
        </widget>
       </item>
       <item>
-       <widget class="qMRMLSubjectHierarchyTreeView" name="planesTreeView">
+       <widget class="qMRMLSubjectHierarchyTreeView" name="nodesControlView">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -1516,7 +1516,7 @@ Desing</string>
   <connection>
    <sender>BoneReconstructionPlanner</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>planesTreeView</receiver>
+   <receiver>nodesControlView</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
    <hints>
     <hint type="sourcelabel">
