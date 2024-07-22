@@ -184,21 +184,20 @@ See more than 40 plans of other users:
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaSegmentation.seg.nrrd" >Fibula Segmentation</a>
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/MandibleSegmentation.seg.nrrd" >Mandible Segmentation</a>
 
-NEED TO TEST THESE TWO BELOW
-- Finished VSP and guides design using above data that can already be loaded to Slicer and modified further:
-  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP.mrb" >Example Virtual Surgical Plan with Patient-Specific Surgical Guides</a>
+- Finished VSP and guides design (using data similar to the provided above) that can already be loaded to Slicer and modified further:
+  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP_5.6.2.mrb" >Example Virtual Surgical Plan with Patient-Specific Surgical Guides</a>
 
 - Toy VSP using a rib because a user wondered if it could be possible:
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TheoreticalPlanBRP_rib.mrb" >Theoretical Virtual Surgical Plan with a rib (Toy-example)</a>
 
 # Instructions
-([last validated 07/21/2024](https://discourse.slicer.org/t/new-3d-slicer-extension-for-planning-and-surgical-guide-generation-for-mandibular-bone-reconstruction/17638/17)) UPDATE LINK HERE TO A NEW SLICER POST
+(last validated 07/21/2024)
 
 ## Installing BoneReconstructionPlanner
 
 1. You need Slicer 5.6.2 Stable. You have 2 options to download it:
    - Use a download link provided by Kitware: [Windows](https://slicer-packages.kitware.com/api/v1/item/660fb6c930e435b0e3560453/download), [macOS](https://slicer-packages.kitware.com/api/v1/item/660fa2e930e435b0e355f67c/download), [Linux](https://slicer-packages.kitware.com/api/v1/item/660f92ed30e435b0e355f1a4/download)
-   - As time of the writing of this guide you are also able to go to: https://download.slicer.org/
+   - As time of the writing of this guide you are also able to go to: https://download.slicer.org/ and download the Stable release for your Operating System.
 2. Install Slicer
 3. Open Slicer
 4. Press Ctrl+4 to open the extension manager. Or click the upper-right icon with the letter 'E'
