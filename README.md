@@ -287,8 +287,8 @@ Except that:
 - You need to put the correct models on the corresponding selectors on "Mandible Surgical Guide Generation" panel
 
 ## Mandible Reconstruction Simulation
-1. Do a Virtual Surgical Plan
-2. Click "Create 3D model of the reconstruction for 3D printing". This button maybe useful for users that want to prebent plates.
+1. Do a [Virtual Surgical Plan](#virtual-surgical-planning)
+2. Click "Create 3D model of the reconstruction for 3D printing". This button maybe useful for users that want to prebend plates with a 3D printed model.
 
 # User contributions and feedback
 
