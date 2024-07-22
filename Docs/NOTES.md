@@ -25,4 +25,12 @@
   realClearanceFitPrintingTolerance = (realSawBoxWidth - sawBladeWidth)/2 = (0.7mm - 0.2mm)/2 = 0.25mm
   else if FDM is used:
   realClearanceFitPrintingTolerance = (realSawBoxWidth - sawBladeWidth)/2 = (1.0mm - 0.2mm)/2 = 0.4mm
+
+  As a summary:
+  You should use these equations
+  - sawBoxWidth = sawBladeWidth
+  - If SLA is used:
+  clearanceFitPrintingTolerance = 0.25mm
+  else if FDM is used:
+  clearanceFitPrintingTolerance = 0.4mm
 ```
