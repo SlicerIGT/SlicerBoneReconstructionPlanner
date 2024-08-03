@@ -34,6 +34,7 @@ Mauro I. Dominguez developed this module for his final project of engineering st
 
     # Additional initialization step after application startup is complete
     slicer.app.connect("startupCompleted()", registerSampleData)
+    slicer.app.connect("startupCompleted()", addBRPLayout)
 
 #
 # Register sample data sets in Sample Data module
@@ -143,6 +144,63 @@ def registerSampleData():
     # This node name will be used when the data set is loaded
     nodeNames='TestPlanBRP'
   )
+
+slicer.MANDIBLE_VIEW_SINGLETON_TAG = "1"
+slicer.FIBULA_VIEW_SINGLETON_TAG = "2"
+slicer.BRPLayoutId=101
+
+def addBRPLayout():
+  BRPLayout = f"""
+    <layout type="vertical">
+    <item>
+      <layout type="horizontal">
+      <item>
+        <view class="vtkMRMLViewNode" singletontag="{slicer.MANDIBLE_VIEW_SINGLETON_TAG}">
+        <property name="viewlabel" action="default">1</property>
+        </view>
+      </item>
+      <item>
+        <view class="vtkMRMLSliceNode" singletontag="Red">
+        <property name="orientation" action="default">Axial</property>
+        <property name="viewlabel" action="default">R</property>
+        <property name="viewcolor" action="default">#F34A33</property>
+        </view>
+      </item>
+      </layout>
+    </item>
+    <item>
+      <view class="vtkMRMLViewNode" singletontag="{slicer.FIBULA_VIEW_SINGLETON_TAG}">
+      <property name="viewlabel" action="default">2</property>
+      </view>
+    </item>
+    </layout>
+  """
+  # Built-in layout IDs are all below 100, so you can choose any large random number
+  # for your custom layout ID.
+
+  # Add button to layout selector toolbar for this custom layout
+  viewToolBar = slicer.util.mainWindow().findChild('QToolBar', 'ViewToolBar')
+  layoutMenu = viewToolBar.widgetForAction(viewToolBar.actions()[0]).menu()
+  layoutSwitchActionParent = layoutMenu  # use `layoutMenu` to add inside layout list, use `viewToolBar` to add next the standard layout list
+  BRPLayoutExists = False
+  for action in layoutSwitchActionParent.actions():
+    if action.data() == slicer.BRPLayoutId:
+      BRPLayoutExists = True
+      break
+  if not BRPLayoutExists:
+    layoutManager = slicer.app.layoutManager()
+    layoutManager.layoutLogic().GetLayoutNode().AddLayoutDescription(slicer.BRPLayoutId, BRPLayout)
+    # add it to layout menu
+    layoutSwitchAction = layoutSwitchActionParent.addAction("BoneReconstructionPlanner") # add inside layout list
+    layoutSwitchAction.setData(slicer.BRPLayoutId)
+    layoutSwitchAction.setIcon(qt.QIcon(':Icons/Go.png'))
+    layoutSwitchAction.setToolTip('3D Mandible View, Red Slice and 3D Fibula View')
+    return True
+  return False
+
+def setBRPLayout():
+  layoutManager = slicer.app.layoutManager()
+  layoutManager.setLayout(slicer.BRPLayoutId)
 
 #
 # BoneReconstructionPlannerWidget
@@ -322,9 +380,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Make sure parameter node exists and observed
     self.initializeParameterNode()
 
-    if not slicer.app.commandOptions().noMainWindow:
-      self.logic.addCustomLayout()
-    
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     sawBoxesPlanesFolder = shNode.GetItemByName("sawBoxes Planes")
@@ -834,55 +889,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.updateFibuladentalImplantsTimer.setInterval(300)
     self.updateFibuladentalImplantsTimer.setSingleShot(True)
     self.updateFibuladentalImplantsTimer.connect('timeout()', self.onUpdateFibuladentalImplantsTimerTimeout)
-    self.MANDIBLE_VIEW_SINGLETON_TAG = "1"
-    self.FIBULA_VIEW_SINGLETON_TAG = "2"
     self.PLANE_SIDE_SIZE = 50.
     self.PLANE_GLYPH_SCALE = 2.5
-
-    if not slicer.app.commandOptions().noMainWindow:
-      self.addCustomLayout()
-
-  def addCustomLayout(self):
-    customLayout = f"""
-      <layout type="vertical">
-      <item>
-        <layout type="horizontal">
-        <item>
-          <view class="vtkMRMLViewNode" singletontag="{self.MANDIBLE_VIEW_SINGLETON_TAG}">
-          <property name="viewlabel" action="default">1</property>
-          </view>
-        </item>
-        <item>
-          <view class="vtkMRMLSliceNode" singletontag="Red">
-          <property name="orientation" action="default">Axial</property>
-          <property name="viewlabel" action="default">R</property>
-          <property name="viewcolor" action="default">#F34A33</property>
-          </view>
-        </item>
-        </layout>
-      </item>
-      <item>
-        <view class="vtkMRMLViewNode" singletontag="{self.FIBULA_VIEW_SINGLETON_TAG}">
-        <property name="viewlabel" action="default">2</property>
-        </view>
-      </item>
-      </layout>
-    """
-    # Built-in layout IDs are all below 100, so you can choose any large random number
-    # for your custom layout ID.
-    self.customLayoutId=101
-
-    layoutManager = slicer.app.layoutManager()
-    layoutManager.layoutLogic().GetLayoutNode().AddLayoutDescription(self.customLayoutId, customLayout)
-
-    # Add button to layout selector toolbar for this custom layout
-    viewToolBar = slicer.util.mainWindow().findChild('QToolBar', 'ViewToolBar')
-    layoutMenu = viewToolBar.widgetForAction(viewToolBar.actions()[0]).menu()
-    layoutSwitchActionParent = layoutMenu  # use `layoutMenu` to add inside layout list, use `viewToolBar` to add next the standard layout list
-    layoutSwitchAction = layoutSwitchActionParent.addAction("BoneReconstructionPlanner") # add inside layout list
-    layoutSwitchAction.setData(self.customLayoutId)
-    layoutSwitchAction.setIcon(qt.QIcon(':Icons/Go.png'))
-    layoutSwitchAction.setToolTip('3D Mandible View, Red Slice and 3D Fibula View')
 
   def setDefaultParameters(self, parameterNode):
     """
@@ -950,7 +958,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     curveNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularCurve"))
 
     displayNode = curveNode.GetDisplayNode()
-    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
     #setup placement
@@ -987,7 +995,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     lineNode.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaLine"))
 
     displayNode = lineNode.GetDisplayNode()
-    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(fibulaViewNode.GetID())
 
     if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
@@ -1038,7 +1046,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode.TranslationHandleVisibilityOn()
     displayNode.ScaleHandleVisibilityOff()
 
-    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
     #conections
@@ -1542,7 +1550,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(lineNodeItemID, fibulaSegmentsLengthsFolder)
 
       displayNode = lineNode.GetDisplayNode()
-      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
       displayNode.SetOccludedVisibility(True)
       
@@ -1576,7 +1584,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneA.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = fibulaPlaneA.GetDisplayNode()
-      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
       displayNode.SetPropertiesLabelVisibility(False)
       displayNode.HandlesInteractiveOff()
@@ -1730,7 +1738,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         modelDisplayNode = modelNode.GetDisplayNode()
         modelDisplayNode.SetVisibility2D(True)
 
-        fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+        fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
         modelDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
         #Set color of the model
@@ -1764,7 +1772,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       modelDisplayNode = modelNode.GetDisplayNode()
       modelDisplayNode.SetVisibility2D(True)
 
-      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       modelDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
 
       #Set color of the model
@@ -1891,7 +1899,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         fullModelDisplayNode = fullModelNode.GetDisplayNode()
         fullModelDisplayNode.SetVisibility2D(True)
 
-        mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+        mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
         modelDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
         fullModelDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
 
@@ -2240,8 +2248,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def makeModels(self):
     if not slicer.app.commandOptions().noMainWindow:
-      layoutManager = slicer.app.layoutManager()
-      layoutManager.setLayout(self.customLayoutId)
+      setBRPLayout()
       slicer.util.resetSliceViews()
 
     parameterNode = self.getParameterNode()
@@ -2311,9 +2318,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(decimatedModelNodeItemID, segmentationModelsFolder)
 
       if i==0:
-        singletonTag = self.FIBULA_VIEW_SINGLETON_TAG
+        singletonTag = slicer.FIBULA_VIEW_SINGLETON_TAG
       else:
-        singletonTag = self.MANDIBLE_VIEW_SINGLETON_TAG
+        singletonTag = slicer.MANDIBLE_VIEW_SINGLETON_TAG
       viewNode = slicer.mrmlScene.GetSingletonNode(singletonTag, "vtkMRMLViewNode")
       cameraNode = slicer.modules.cameras.logic().GetViewActiveCameraNode(viewNode)
 
@@ -2389,7 +2396,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedMandiblePieceDisplayNode.SetColor(cutMandiblePiecesList[i].GetDisplayNode().GetColor())
       transformedMandiblePieceDisplayNode.SetVisibility2D(True)
 
-      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       transformedMandiblePieceDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
       transformedMandiblePiece.SetAndObserveTransformNodeID(mandible2FibulaTransformsList[i].GetID())
@@ -2409,7 +2416,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedMandibleDisplayNode.SetColor(mandibleList[i].GetDisplayNode().GetColor())
       transformedMandibleDisplayNode.SetVisibility2D(True)
 
-      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       transformedMandibleDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
       transformedMandible.SetAndObserveTransformNodeID(mandible2FibulaTransformsList[i].GetID())
@@ -2466,7 +2473,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedFibulaPieceDisplayNode.SetColor(cutBonesList[i].GetDisplayNode().GetColor())
       transformedFibulaPieceDisplayNode.SetVisibility2D(True)
 
-      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       transformedFibulaPieceDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
 
       transformedFibulaPiece.SetAndObserveTransformNodeID(fibulaPieceToMandibleAxisTransformNode.GetID())
@@ -2727,7 +2734,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       #Create fibula axis:
       fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndNotLeftChecked(fibulaLine,notLeftFibulaChecked) 
 
-    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
 
     for i in range(len(fibulaPlanesList)):
       if useMoreExactVersionOfPositioningAlgorithmChecked:
@@ -2880,7 +2887,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     dentalImplantFiducialListNode.SetName(slicer.mrmlScene.GetUniqueNameByString("dentalImplantCylindersFiducialsList"))
 
     displayNode = dentalImplantFiducialListNode.GetDisplayNode()
-    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
     #setup placement
@@ -2904,7 +2911,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaFiducialListNode.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaCylindersFiducialsList"))
 
     displayNode = fibulaFiducialListNode.GetDisplayNode()
-    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(fibulaViewNode.GetID())
 
     #setup placement
@@ -3089,8 +3096,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     noCapsTransformedFibulaPiecesList = createListFromFolderID(noCapsTransformedFibulaPiecesFolder)
     
-    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
 
     aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
     colorTable = aux.GetLookupTable()
@@ -3137,7 +3144,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       dentalImplantPlane.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = dentalImplantPlane.GetDisplayNode()
-      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       displayNode.AddViewNodeID(mandibleViewNode.GetID())
       displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
       displayNode.SetOpacity(0)
@@ -3329,7 +3336,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.SetItemParent(surgicalGuideModelItemID, self.getMandibleReconstructionFolderItemID())
 
     displayNode = surgicalGuideModel.GetDisplayNode()
-    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(fibulaViewNode.GetID())
 
     for i in range(len(biggerMiterBoxesModelsList)):
@@ -3369,7 +3376,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleFiducialListNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleCylindersFiducialsList"))
 
     displayNode = mandibleFiducialListNode.GetDisplayNode()
-    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
     #setup placement
@@ -3410,7 +3417,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     intersectionsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Intersections")
     pointsIntersectionsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Points Intersections")
 
-    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
 
     #get best fitting plane to curve with curveCrescent normal direction
     curvePoints = slicer.util.arrayFromMarkupsCurvePoints(mandibularCurve)
@@ -3478,7 +3485,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       sawBoxPlane.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = sawBoxPlane.GetDisplayNode()
-      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       displayNode.AddViewNodeID(mandibleViewNode.GetID())
       displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
       displayNode.SetOpacity(0)
@@ -3693,7 +3700,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.SetItemParent(surgicalGuideModelItemID, self.getMandibleReconstructionFolderItemID())
 
     displayNode = surgicalGuideModel.GetDisplayNode()
-    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
     for i in range(len(biggerSawBoxesModelsList)):
@@ -3787,7 +3794,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleReconstructionModel.CreateDefaultDisplayNodes()
 
     displayNode = mandibleReconstructionModel.GetDisplayNode()
-    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
     parameterNode.SetNodeReferenceID("mandibleReconstructionModel", mandibleReconstructionModel.GetID())
@@ -4809,7 +4816,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     if not slicer.app.commandOptions().noMainWindow:
       layoutManager = slicer.app.layoutManager()
-      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.logicBRP.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       if int(slicer.app.revision) >= 31524:
         layoutManager.addMaximizedViewNode(mandibleViewNode)
       else:
@@ -4859,7 +4866,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.delayDisplay("Bones contact optimized")
 
     if not slicer.app.commandOptions().noMainWindow:
-      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(self.logicBRP.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       layoutManager = slicer.app.layoutManager()
       if int(slicer.app.revision) >= 31524:
         layoutManager.removeMaximizedViewNode(mandibleViewNode)
@@ -4929,7 +4936,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     if not slicer.app.commandOptions().noMainWindow:
       layoutManager = slicer.app.layoutManager()
-      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(self.logicBRP.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       if int(slicer.app.revision) >= 31524:
         layoutManager.addMaximizedViewNode(mandibleViewNode)
       else:
