@@ -230,19 +230,20 @@ You'll have to do the same for mandible in another segmentation node.
 
 0. [Save](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#non-dicom-data) frequently as the surgical plan can be reopened from where you left it if there is a crash (software malfunction). We are trying to fix a bug that makes Slicer close unexpectedly during boolean operations ([more info here](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/118)) if you find any other problem please [report it here](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/new).
 1. Click the search icon on the left of the module selector and write 'BoneReconstructionPlanner'. Click "Switch to module".
-2. Select the mandibular segmentation and the fibula segmentation.
-3. Click "Create bone models from segmentations"
-4. Click "Add mandibular curve" and create a curve along the mandible. This will help giving the cut planes their initial position. It's a bit important to make it quite similar to the ideal mandible curve the patient would have if he was healthy because the algorithm that does initial planes positioning depend on it.
-5. Click "Add cut plane" and click where you want plane. Add as many planes as needed. There will be a bone piece between every two adjacent planes. So the number of mandible planes should be the desired number of bone pieces for the reconstruction plus one. The first and the last mandible planes will be the mandible resection cuts.
-6. Click "Add fibula line". Draw a line over the fibula on the 3D view. First point distal, last point proximal. Try to draw the line over the diaphysis.
-7. Click "Center fibula line using fibula model" to make the line be similar to the anatomical axis of the fibula.
-8. Tick these options: "Automatic mandibular planes positioning for maximum bones contact area", "Make all mandible planes rotate together"
-9. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" to make the reconstruction and create the fibula cut planes.
-10. Move the mandible planes as desired to change the position/orientation of the cuts.
-11. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" again. And repeat as many times as needed.
+2. If fibula is the one from the right leg tick "Right side leg" checkbox. This makes fibula coordinate system X axis be always medial independently of the which leg is used to harvest the fibula.
+3. Select the mandibular segmentation and the fibula segmentation.
+4. Click "Create bone models from segmentations"
+5. Click "Add mandibular curve" and create a curve along the mandible. This will help giving the cut planes their initial position. It's a bit important to make it quite similar to the ideal mandible curve the patient would have if he was healthy because the algorithm that does initial planes positioning depend on it.
+6. Click "Add cut plane" and click where you want plane. Add as many planes as needed. There will be a bone piece between every two adjacent planes. So the number of mandible planes should be the desired number of bone pieces for the reconstruction plus one. The first and the last mandible planes will be the mandible resection cuts.
+7. Click "Add fibula line". Draw a line over the fibula on the 3D view. First point distal, last point proximal. Try to draw the line over the diaphysis.
+8. Click "Center fibula line using fibula model" to make the line be similar to the anatomical axis of the fibula.
+9. Tick these options: "Automatic mandibular planes positioning for maximum bones contact area", "Make all mandible planes rotate together"
+10. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" to make the reconstruction and create the fibula cut planes.
+11. Move the mandible planes as desired to change the position/orientation of the cuts.
+12. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" again. And repeat as many times as needed.
 If you tick the button it will react on plane movements and update automatically.
-12. "Show/Hide original mandible model" button may be useful.
-13. Explore other parameters. For example: "Between space" will guarantee some space between each fibula plane that creates a closing-wedge.
+13. "Show/Hide original mandible model" button may be useful.
+14. Explore other parameters. For example: "Between space" will guarantee some space between each fibula plane that creates a closing-wedge.
 
 ## Personalized Fibula Guide Generation
 

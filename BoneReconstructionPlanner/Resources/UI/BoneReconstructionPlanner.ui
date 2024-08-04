@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>650</width>
-    <height>3014</height>
+    <height>3214</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -53,14 +53,14 @@
         <item row="2" column="0">
          <widget class="QLabel" name="label_10">
           <property name="text">
-           <string>Fibula Bone</string>
+           <string>Right side leg</string>
           </property>
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QCheckBox" name="notLeftFibulaCheckBox">
+         <widget class="QCheckBox" name="rightSideLegFibulaCheckBox">
           <property name="text">
-           <string>(tick if fibula is the one from the right side)</string>
+           <string>(tick if fibula is the one from the right leg)</string>
           </property>
           <property name="checked">
            <bool>false</bool>
