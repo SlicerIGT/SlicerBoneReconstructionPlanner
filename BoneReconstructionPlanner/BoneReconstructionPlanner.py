@@ -331,6 +331,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.customTitaniumPlateDesingCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.makeAllDentalImplanCylindersParallelCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.onOrientation3DCubeCheckBox)
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -739,6 +740,18 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.EndModify(wasModified)
 
+  def onOrientation3DCubeCheckBox(self):
+    threeDViewNodes = slicer.util.getNodesByClass("vtkMRMLViewNode")
+    if len(threeDViewNodes) == 0:
+      return
+    firstViewOrientationMarkerType = threeDViewNodes[0].GetOrientationMarkerType()
+    for viewNode in threeDViewNodes:
+      if firstViewOrientationMarkerType == slicer.vtkMRMLAbstractViewNode.OrientationMarkerTypeNone:
+        viewNode.SetOrientationMarkerType(slicer.vtkMRMLAbstractViewNode.OrientationMarkerTypeCube)
+      else:
+        viewNode.SetOrientationMarkerType(slicer.vtkMRMLAbstractViewNode.OrientationMarkerTypeNone)
+      viewNode.SetOrientationMarkerSize(slicer.vtkMRMLAbstractViewNode.OrientationMarkerSizeMedium)
+  
   def onFixCutGoesThroughTheMandibleTwiceCheckBox(self):
     if self._parameterNode is None or self._updatingGUIFromParameterNode:
       return
