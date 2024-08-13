@@ -342,3 +342,40 @@ def calculateNormals(polydata,flip=False):
     normalsFilter.FlipNormalsOn()
   normalsFilter.Update()
   return normalsFilter.GetOutput()
+
+def getIntersectionPointsOfEachModelByMode(intersectionA,intersectionB,measurementMode):
+  lineStartPos = getCentroid(intersectionA)
+  lineEndPos = getCentroid(intersectionB)
+
+  if measurementMode == "center2center":
+    return lineStartPos, lineEndPos
+  
+  directionLine = lineEndPos-lineStartPos
+  directionLine = directionLine/np.linalg.norm(directionLine)
+
+  intersectionAPoints = slicer.util.arrayFromModelPoints(intersectionA)
+  intersectionBPoints = slicer.util.arrayFromModelPoints(intersectionB)
+  intersectionAtoBSimilarVectors = []
+  for i in range(len(intersectionAPoints)):
+    pointOfA = intersectionAPoints[i]
+    intersectionAtoBVectorsArray = []
+    for j in range(len(intersectionBPoints)):
+      pointOfB = intersectionBPoints[j]
+      directionVector = pointOfB-pointOfA
+      directionNorm = np.linalg.norm(directionVector)
+      directionVector = directionVector/directionNorm
+      directionSimilarity = np.dot(directionLine,directionVector)
+      intersectionAtoBVectorsArray.append(
+        [directionSimilarity,directionNorm,pointOfA,pointOfB]
+      )
+    # save most similar points to vector
+    intersectionAtoBVectorsArray.sort(key=lambda x: x[0],reverse=True)
+    intersectionAtoBSimilarVectors.append(intersectionAtoBVectorsArray[0])
+  
+  # sort by norm
+  intersectionAtoBSimilarVectors.sort(key=lambda x: x[1],reverse=False)
+  
+  if measurementMode == "proximal2proximal":
+    return intersectionAtoBSimilarVectors[0][2], intersectionAtoBSimilarVectors[0][3]
+  elif measurementMode == "distal2distal":
+    return intersectionAtoBSimilarVectors[-1][2], intersectionAtoBSimilarVectors[-1][3]

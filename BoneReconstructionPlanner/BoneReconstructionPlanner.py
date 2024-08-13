@@ -295,6 +295,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.plateTipsBevelRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkBoxToggled.connect(self.updateParameterNodeFromGUI)
     self.ui.updateFibulaDentalImplantCylindersButton.checkBoxToggled.connect(self.updateParameterNodeFromGUI)
+    self.ui.fibulaSegmentsMeasurementModeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
     self.ui.rightSideLegFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -598,6 +599,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked = self._parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") != "False"
 
+    self.ui.fibulaSegmentsMeasurementModeComboBox.currentText = self._parameterNode.GetParameter("fibulaSegmentsMeasurementMode")
+
     dentalImplantsPlanningAndFibulaDrillGuidesChecked = self._parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
     customTitaniumPlateDesingChecked = self._parameterNode.GetParameter("customTitaniumPlateDesing") == "True"
     makeAllDentalImplanCylindersParallelChecked = self._parameterNode.GetParameter("makeAllDentalImplanCylindersParallel") == "True"
@@ -692,6 +695,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("plateCrossSectionalLength", str(self.ui.plateCrossSectionalLengthSpinBox.value))
     self._parameterNode.SetParameter("plateCrossSectionalBevelRadiusPorcentage", str(self.ui.plateCrossSectionalBevelRadiusPorcentageSpinBox.value))
     self._parameterNode.SetParameter("plateTipsBevelRadius", str(self.ui.plateTipsBevelRadiusSpinBox.value))
+
+    self._parameterNode.SetParameter("fibulaSegmentsMeasurementMode", self.ui.fibulaSegmentsMeasurementModeComboBox.currentText)
 
     if self.ui.rightSideLegFibulaCheckBox.checked:
       self._parameterNode.SetParameter("rightSideLegFibula","True")
@@ -911,6 +916,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     """
     if not parameterNode.GetParameter("scalarVolumeChangedThroughParameterNode"):
       parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode","False")
+    if not parameterNode.GetParameter("fibulaSegmentsMeasurementMode"):
+      parameterNode.SetParameter("fibulaSegmentsMeasurementMode","center2center")
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -1545,16 +1552,45 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.RemoveItem(intersectionsFolder)
 
     #Create measurement lines
-    self.createFibulaSegmentsLengthsLines(self.fibulaPlanesPositionA,self.fibulaPlanesPositionB)
+    self.createFibulaSegmentsLengthsLines()
   
-  def createFibulaSegmentsLengthsLines(self,fibulaPlanesAPosition,fibulaPlanesBPosition):
+  def createFibulaSegmentsLengthsLines(self):
+    parameterNode = self.getParameterNode()
+    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    fibulaSegmentsMeasurementMode = parameterNode.GetParameter("fibulaSegmentsMeasurementMode")
+    
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaSegmentsLengthsFolder = shNode.GetItemByName("Fibula Segments Lengths")
     if fibulaSegmentsLengthsFolder:
       shNode.RemoveItem(fibulaSegmentsLengthsFolder)
     fibulaSegmentsLengthsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Fibula Segments Lengths")
     
-    for i in range(len(fibulaPlanesAPosition)):
+    intersectionsFolder = shNode.GetItemByName("Intersections For Lines Calculation")
+    if intersectionsFolder:
+      shNode.RemoveItem(intersectionsFolder)
+    intersectionsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Intersections For Lines Calculation")
+
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
+    
+    for i in range(len(fibulaPlanesList)//2):
+      intersectionA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection A %d' % i)
+      intersectionB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection B %d' % i)
+      intersectionA.CreateDefaultDisplayNodes()
+      intersectionB.CreateDefaultDisplayNodes()
+      
+      intersectionAModelItemID = shNode.GetItemByDataNode(intersectionA)
+      shNode.SetItemParent(intersectionAModelItemID, intersectionsFolder)
+      intersectionBModelItemID = shNode.GetItemByDataNode(intersectionB)
+      shNode.SetItemParent(intersectionBModelItemID, intersectionsFolder)
+
+      getIntersectionBetweenModelAnd1Plane(fibulaModelNode,fibulaPlanesList[2*i],intersectionA)
+      getIntersectionBetweenModelAnd1Plane(fibulaModelNode,fibulaPlanesList[2*i+1],intersectionB)
+
+      positionA, positionB = (
+        getIntersectionPointsOfEachModelByMode(intersectionA,intersectionB,fibulaSegmentsMeasurementMode)
+      )
+
       lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
       lineNode.SetName("S%d" %i)
       slicer.mrmlScene.AddNode(lineNode)
@@ -1567,10 +1603,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.AddViewNodeID(fibulaViewNode.GetID())
       displayNode.SetOccludedVisibility(True)
       
-      lineNode.AddControlPoint(vtk.vtkVector3d(fibulaPlanesAPosition[i]))
-      lineNode.AddControlPoint(vtk.vtkVector3d(fibulaPlanesBPosition[i]))
+      lineNode.AddControlPoint(vtk.vtkVector3d(positionA))
+      lineNode.AddControlPoint(vtk.vtkVector3d(positionB))
 
       lineNode.SetLocked(True)
+      
+    shNode.RemoveItem(intersectionsFolder)
   
   def createFibulaPlanesFromMandiblePlanesAndFibulaAxis(self,mandiblePlanesList,fibulaPlanesList):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()

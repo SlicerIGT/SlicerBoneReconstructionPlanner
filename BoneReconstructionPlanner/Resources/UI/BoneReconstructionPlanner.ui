@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>650</width>
-    <height>3214</height>
+    <height>3239</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -1225,7 +1225,7 @@ bone pieces and transform them to mandible</string>
         <property name="topMargin">
          <number>0</number>
         </property>
-        <item row="1" column="0">
+        <item row="2" column="0">
          <widget class="QLabel" name="label_15">
           <property name="toolTip">
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -1239,7 +1239,7 @@ p, li { white-space: pre-wrap; }
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
+        <item row="2" column="1">
          <widget class="ctkDoubleSpinBox" name="clearanceFitPrintingToleranceSpinBox">
           <property name="toolTip">
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -1259,14 +1259,14 @@ p, li { white-space: pre-wrap; }
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="3" column="0">
          <widget class="QLabel" name="label_43">
           <property name="text">
            <string>Experimental Feature:</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
+        <item row="3" column="1">
          <widget class="QCheckBox" name="dentalImplantsPlanningAndFibulaDrillGuidesCheckBox">
           <property name="text">
            <string>Dental Implants Planning
@@ -1274,14 +1274,14 @@ and Fibula Drill Guides</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
+        <item row="4" column="0">
          <widget class="QLabel" name="label_44">
           <property name="text">
            <string>Experimental Feature:</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="1">
+        <item row="4" column="1">
          <widget class="QCheckBox" name="customTitaniumPlateDesingCheckBox">
           <property name="text">
            <string>Custom Titanium Plate
@@ -1289,18 +1289,45 @@ Desing</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="0">
+        <item row="1" column="0">
          <widget class="QLabel" name="label_35">
           <property name="text">
            <string>Orientation 3D Cube</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
+        <item row="1" column="1">
          <widget class="QCheckBox" name="orientation3DCubeCheckBox">
           <property name="text">
            <string/>
           </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_45">
+          <property name="text">
+           <string>Fibula segments
+measurement mode</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="fibulaSegmentsMeasurementModeComboBox">
+          <item>
+           <property name="text">
+            <string>center2center</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>proximal2proximal</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>distal2distal</string>
+           </property>
+          </item>
          </widget>
         </item>
        </layout>
