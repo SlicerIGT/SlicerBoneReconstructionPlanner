@@ -3443,7 +3443,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerFibulaDentalImplantsCylindersModelsFolder = shNode.GetItemByName("Bigger Fibula Dental Implants Cylinders Models")
     biggerFibulaDentalImplantsCylindersModelsList = createListFromFolderID(biggerFibulaDentalImplantsCylindersModelsFolder)
 
-    combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
+    combineModelsLogic = combineModelsRobustLogic
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(fibulaSurgicalGuideBaseModel.GetPolyData())
     surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibulaSurgicalGuidePrototype'))
@@ -3823,7 +3823,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerSawBoxesModelsFolder = shNode.GetItemByName("biggerSawBoxes Models")
     biggerSawBoxesModelsList = createListFromFolderID(biggerSawBoxesModelsFolder)
 
-    combineModelsLogic = slicer.modules.combinemodels.widgetRepresentation().self().logic
+    combineModelsLogic = combineModelsRobustLogic
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(mandibleSurgicalGuideBaseModel.GetPolyData())
     surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('MandibleSurgicalGuidePrototype'))
