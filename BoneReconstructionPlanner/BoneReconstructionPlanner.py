@@ -296,6 +296,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkBoxToggled.connect(self.updateParameterNodeFromGUI)
     self.ui.updateFibulaDentalImplantCylindersButton.checkBoxToggled.connect(self.updateParameterNodeFromGUI)
     self.ui.fibulaSegmentsMeasurementModeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.kindOfMandibleResectionComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.mandibleSideToRemoveComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
     self.ui.rightSideLegFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -600,6 +602,24 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked = self._parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") != "False"
 
     self.ui.fibulaSegmentsMeasurementModeComboBox.currentText = self._parameterNode.GetParameter("fibulaSegmentsMeasurementMode")
+    
+    self.ui.mandibleSideToRemoveComboBox.removeItem(2)
+    kindOfMandibleResection = self._parameterNode.GetParameter("kindOfMandibleResection")
+    self.ui.kindOfMandibleResectionComboBox.currentText = kindOfMandibleResection
+    if kindOfMandibleResection == "Segmental Mandibulectomy":
+      self.ui.mandibleBridgeModelSelector.enabled = True
+      self.ui.mandibleBridgeModelSelector.toolTip = "Bridge model to connect both mandible guides (optional)."
+
+      self.ui.mandibleSideToRemoveComboBox.enabled = False
+      self.ui.mandibleSideToRemoveComboBox.addItem("")
+      self.ui.mandibleSideToRemoveComboBox.currentText = ""
+    else:
+      self.ui.mandibleBridgeModelSelector.enabled = False
+      self.ui.mandibleBridgeModelSelector.toolTip = "Bridge model will not be used since you selected an hemimandibulectomy."
+
+      self.ui.mandibleSideToRemoveComboBox.enabled = True
+      self.ui.mandibleSideToRemoveComboBox.removeItem(2)
+      self.ui.mandibleSideToRemoveComboBox.currentText = self._parameterNode.GetParameter("mandibleSideToRemove")
 
     dentalImplantsPlanningAndFibulaDrillGuidesChecked = self._parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
     customTitaniumPlateDesingChecked = self._parameterNode.GetParameter("customTitaniumPlateDesing") == "True"
@@ -697,6 +717,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("plateTipsBevelRadius", str(self.ui.plateTipsBevelRadiusSpinBox.value))
 
     self._parameterNode.SetParameter("fibulaSegmentsMeasurementMode", self.ui.fibulaSegmentsMeasurementModeComboBox.currentText)
+    self._parameterNode.SetParameter("kindOfMandibleResection", self.ui.kindOfMandibleResectionComboBox.currentText)
+    if self.ui.mandibleSideToRemoveComboBox.currentText != "":
+      self._parameterNode.SetParameter("mandibleSideToRemove", self.ui.mandibleSideToRemoveComboBox.currentText)
 
     if self.ui.rightSideLegFibulaCheckBox.checked:
       self._parameterNode.SetParameter("rightSideLegFibula","True")
@@ -918,6 +941,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode","False")
     if not parameterNode.GetParameter("fibulaSegmentsMeasurementMode"):
       parameterNode.SetParameter("fibulaSegmentsMeasurementMode","center2center")
+    if not parameterNode.GetParameter("kindOfMandibleResection"):
+      parameterNode.SetParameter("kindOfMandibleResection","Segmental Mandibulectomy")
+    if not parameterNode.GetParameter("mandibleSideToRemove"):
+      parameterNode.SetParameter("mandibleSideToRemove","Removing right side")
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -1822,6 +1849,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       modelNode.CreateDefaultDisplayNodes()
       modelDisplayNode = modelNode.GetDisplayNode()
       modelDisplayNode.SetVisibility2D(True)
+      modelNode.SetAttribute("isResectedMandibleModel","True")
 
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       modelDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
@@ -2414,6 +2442,40 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeCutsList = createListFromFolderID(shNode.GetItemByName("Plane Cuts"))
     for i in range(len(planeCutsList)):
       slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(planeCutsList[i])
+    
+    # update resected mandible model according to the kindOfMandibleResection
+    resectedMandibleModel = None
+    planeCutsList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
+    for i in range(len(planeCutsList)):
+      if planeCutsList[i].GetAttribute("isResectedMandibleModel") == "True":
+        resectedMandibleModel = planeCutsList[i]
+        break
+    if not resectedMandibleModel:
+      return
+    
+    self.filterOutUnconnectedModelPiecesAccordingToKindOfMandibleResection(resectedMandibleModel)
+
+  def filterOutUnconnectedModelPiecesAccordingToKindOfMandibleResection(self, modelPieces):
+    parameterNode = self.getParameterNode()
+    kindOfMandibleResection = parameterNode.GetParameter("kindOfMandibleResection")
+    if kindOfMandibleResection == "Segmental Mandibulectomy":
+      return
+    elif kindOfMandibleResection == "Hemimandibulectomy":
+      rightMandiblePlane, leftMandiblePlane = self.getRightAndLeftMandibleResectionPlanes()
+      mandibleSideToRemove = parameterNode.GetParameter("mandibleSideToRemove")
+      if mandibleSideToRemove == "Removing right side":
+        nearestPlane = leftMandiblePlane
+      elif mandibleSideToRemove == "Removing left side":
+        nearestPlane = rightMandiblePlane
+      nearestPlaneOrigin = np.zeros(3)
+      nearestPlane.GetNthControlPointPosition(0,nearestPlaneOrigin)
+      # connectivity filter with point seed
+      connectivityFilter = vtk.vtkPolyDataConnectivityFilter()
+      connectivityFilter.SetInputData(modelPieces.GetPolyData())
+      connectivityFilter.SetExtractionModeToClosestPointRegion()
+      connectivityFilter.SetClosestPoint(nearestPlaneOrigin)
+      connectivityFilter.Update()
+      modelPieces.SetAndObservePolyData(connectivityFilter.GetOutput())
 
   def updateInverseMandiblePieces(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
@@ -3447,10 +3509,25 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     clearanceFitPrintingTolerance = float(parameterNode.GetParameter("clearanceFitPrintingTolerance"))
     biggerSawBoxDistanceToMandible = float(parameterNode.GetParameter("biggerSawBoxDistanceToMandible"))
     mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    kindOfMandibleResection = parameterNode.GetParameter("kindOfMandibleResection")
     
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
+    if len(mandibularPlanesList) < 2:
+      return
+    
+    if kindOfMandibleResection == "Segmental Mandibulectomy":
+      resectionPlanesList = [mandibularPlanesList[0],mandibularPlanesList[-1]]
+    elif kindOfMandibleResection == "Hemimandibulectomy":
+      rightMandiblePlane, leftMandiblePlane = self.getRightAndLeftMandibleResectionPlanes()
+      mandibleSideToRemove = parameterNode.GetParameter("mandibleSideToRemove")
+      if mandibleSideToRemove == "Removing right side":
+        resectionPlanesList = [leftMandiblePlane]
+      elif mandibleSideToRemove == "Removing left side":
+        resectionPlanesList = [rightMandiblePlane]
+    
     sawBoxesModelsFolder = shNode.GetItemByName("sawBoxes Models")
     if sawBoxesModelsFolder:
       shNode.RemoveItem(sawBoxesModelsFolder)
@@ -3496,7 +3573,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       bestFittingPlaneNormalOfCurvePoints *= -1
 
 
-    for i in range(0,len(mandibularPlanesList),len(mandibularPlanesList)-1):
+    for i in range(len(resectionPlanesList)):
       #sawBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
       if i == 0:
         sawBoxName = "sawBox_%d" % i
@@ -3550,7 +3627,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetRotationHandleComponentVisibility(False,False,True,False)
 
       mandiblePlaneMatrix = vtk.vtkMatrix4x4()
-      mandibularPlanesList[i].GetObjectToWorldMatrix(mandiblePlaneMatrix)
+      resectionPlanesList[i].GetObjectToWorldMatrix(mandiblePlaneMatrix)
       mandiblePlaneZ = np.array([mandiblePlaneMatrix.GetElement(0,2),mandiblePlaneMatrix.GetElement(1,2),mandiblePlaneMatrix.GetElement(2,2)])
       
       if i == 0:
@@ -3558,7 +3635,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d' % (len(mandibularPlanesList)-1))
       intersectionModel.CreateDefaultDisplayNodes()
-      getNearestIntersectionBetweenModelAnd1Plane(mandibleModelNode,mandibularPlanesList[i],intersectionModel)
+      getNearestIntersectionBetweenModelAnd1Plane(mandibleModelNode,resectionPlanesList[i],intersectionModel)
       
       curvePlanarConvexityDirection = [0,0,0]
       vtk.vtkMath.Cross(mandiblePlaneZ, bestFittingPlaneNormalOfCurvePoints, curvePlanarConvexityDirection)
@@ -3574,7 +3651,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,curvePlanarConvexityDirection)
       else:
         pointOfIntersection = [0,0,0]
-        mandibularPlanesList[i].GetOrigin(pointOfIntersection)
+        resectionPlanesList[i].GetOrigin(pointOfIntersection)
       intersectionModelItemID = shNode.GetItemByDataNode(intersectionModel)
       shNode.SetItemParent(intersectionModelItemID, intersectionsFolder)
       pointsIntersectionModelItemID = shNode.GetItemByDataNode(pointsIntersectionModel)
@@ -3736,6 +3813,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleSurgicalGuideBaseModel = parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel")
     mandibleBridgeModel = parameterNode.GetNodeReference("mandibleBridgeModel")
     
+    kindOfMandibleResection = parameterNode.GetParameter("kindOfMandibleResection")
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandibleCylindersModelsFolder = shNode.GetItemByName("Mandible Cylinders Models")
@@ -3756,15 +3834,20 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
+    self.filterOutUnconnectedModelPiecesAccordingToKindOfMandibleResection(surgicalGuideModel)
+
     for i in range(len(biggerSawBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, biggerSawBoxesModelsList[i], surgicalGuideModel, 'union')
     
-    if mandibleBridgeModel:
+    if (
+      mandibleBridgeModel and 
+      (kindOfMandibleResection == "Segmental Mandibulectomy")
+    ):
       combineModelsLogic.process(surgicalGuideModel, mandibleBridgeModel, surgicalGuideModel, 'union')
-
+    
     for i in range(len(cylindersModelsList)):
       combineModelsLogic.process(surgicalGuideModel, cylindersModelsList[i], surgicalGuideModel, 'difference')
-
+    
     for i in range(len(sawBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, sawBoxesModelsList[i], surgicalGuideModel, 'difference')
 
@@ -3772,6 +3855,42 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.RemoveNode(surgicalGuideModel)
       slicer.util.errorDisplay("ERROR: Boolean operations to make mandible surgical failed")
 
+  def getRightAndLeftMandibleResectionPlanes(self):
+    parameterNode = self.getParameterNode()
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    mandibleCentroid = getCentroid(mandibleModelNode)
+
+    mandibularPlanesFolder = self.getMandiblePlanesFolderItemID()
+    planeList = createListFromFolderID(mandibularPlanesFolder)
+    
+    firstMandiblePlaneOrigin = np.zeros(3)
+    planeList[0].GetNthControlPointPosition(0,firstMandiblePlaneOrigin)
+    lastMandiblePlaneOrigin = np.zeros(3)
+    planeList[-1].GetNthControlPointPosition(0,lastMandiblePlaneOrigin)
+    centroidToFirstPlane = firstMandiblePlaneOrigin - mandibleCentroid
+    centroidToLastPlane = lastMandiblePlaneOrigin - mandibleCentroid
+    crossProductResult = np.zeros(3)
+    vtk.vtkMath.Cross(centroidToFirstPlane,centroidToLastPlane,crossProductResult)
+    crossProductResult = crossProductResult/np.linalg.norm(crossProductResult)
+    
+    superiorDirection = np.zeros(3)
+    superiorDirection[2] = 1
+
+    mandiblePlanesDrawnRightToLeft = (crossProductResult @ superiorDirection) > 0
+
+    if mandiblePlanesDrawnRightToLeft:
+      rightPlaneOrigin = firstMandiblePlaneOrigin
+      leftPlaneOrigin = lastMandiblePlaneOrigin
+      rightPlane = planeList[0]
+      leftPlane = planeList[-1]
+    else:
+      rightPlaneOrigin = lastMandiblePlaneOrigin
+      leftPlaneOrigin = firstMandiblePlaneOrigin
+      rightPlane = planeList[-1]
+      leftPlane = planeList[0]
+
+    #return rightPlaneOrigin, leftPlaneOrigin
+    return rightPlane, leftPlane
 
   def centerFibulaLine(self):
     parameterNode = self.getParameterNode()
