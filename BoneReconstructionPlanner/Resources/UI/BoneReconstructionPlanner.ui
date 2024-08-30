@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>688</width>
-    <height>3323</height>
+    <width>642</width>
+    <height>3325</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -397,15 +397,50 @@
        </widget>
       </item>
       <item>
-       <widget class="ctkCheckablePushButton" name="generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton">
-        <property name="enabled">
-         <bool>true</bool>
+       <layout class="QFormLayout" name="formLayout_10">
+        <property name="leftMargin">
+         <number>0</number>
         </property>
-        <property name="text">
-         <string>Update fibula planes over fibula line; update fibula 
-bone pieces and transform them to mandible</string>
+        <property name="topMargin">
+         <number>0</number>
         </property>
-       </widget>
+        <item row="0" column="0">
+         <widget class="ctkCheckablePushButton" name="generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+            <horstretch>3</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Update fibula planes over fibula line; update fibula bone pieces 
+and transform them to mandible</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QToolButton" name="hardVSPUpdateButton">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="toolTip">
+           <string>Hard-update (use when normal update does not work correctly)</string>
+          </property>
+          <property name="autoFillBackground">
+           <bool>true</bool>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
        <widget class="QPushButton" name="showHideFibulaSegmentsLengthsButton">

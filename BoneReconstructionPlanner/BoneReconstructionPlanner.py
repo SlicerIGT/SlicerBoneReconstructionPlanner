@@ -325,6 +325,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.createCylindersFromFiducialListAndNeomandiblePiecesButton.connect('clicked(bool)', self.onCreateCylindersFromFiducialListAndNeomandiblePiecesButton)
     self.ui.createPlateCurveButton.connect('clicked(bool)', self.onCreatePlateCurveButton)
     self.ui.createCustomPlateButton.connect('clicked(bool)', self.onCreateCustomPlateButton)
+    self.ui.hardVSPUpdateButton.connect('clicked(bool)', self.onHardVSPUpdateButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -335,6 +336,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.customTitaniumPlateDesingCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.makeAllDentalImplanCylindersParallelCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.onOrientation3DCubeCheckBox)
+
+    import os
+    recycleIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/recycle_48.svg')
+    self.ui.hardVSPUpdateButton.setIcon(qt.QIcon(recycleIconPath))
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -839,6 +844,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   def onCenterFibulaLineButton(self):
     self.logic.centerFibulaLine()
+  
+  def onHardVSPUpdateButton(self):
+    self.logic.hardVSPUpdate()
   
   def onShowHideBiggerSawBoxesInteractionHandlesButton(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -2028,6 +2036,25 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       for i in range(len(dynamicModelerNodesList)):
         dynamicModelerNodesList[i].SetNodeReferenceID("Append.InputModel", mandibleModelNode.GetID())
 
+  def resetPlan(self):
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    #
+    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
+    if fibulaPlanesFolder:
+      shNode.RemoveItem(fibulaPlanesFolder)
+    planeCutsFolder = shNode.GetItemByName("Plane Cuts")
+    if planeCutsFolder:
+      shNode.RemoveItem(planeCutsFolder)
+    cutBonesFolder = shNode.GetItemByName("Cut Bones")
+    if cutBonesFolder:
+      shNode.RemoveItem(cutBonesFolder)
+    transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
+    if transformedFibulaPiecesFolder:
+      shNode.RemoveItem(transformedFibulaPiecesFolder)
+  
+  def hardVSPUpdate(self):
+    self.resetPlan()
+    self.onGenerateFibulaPlanesTimerTimeout()
 
   def generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible(self):
     parameterNode = self.getParameterNode()
@@ -2036,9 +2063,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
-
     if useNonDecimatedBoneModelsForPreviewChecked:
       mandibleModelNode = nonDecimatedMandibleModelNode
     else:
@@ -2046,21 +2070,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #delete all folders because there is only one plane and show mandible model
     if len(planeList) <= 1:
-      if fibulaPlanesFolder:
-        shNode.RemoveItem(fibulaPlanesFolder)
-      planeCutsFolder = shNode.GetItemByName("Plane Cuts")
-      if planeCutsFolder:
-        shNode.RemoveItem(planeCutsFolder)
-      cutBonesFolder = shNode.GetItemByName("Cut Bones")
-      if cutBonesFolder:
-        shNode.RemoveItem(cutBonesFolder)
-      transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
-      if transformedFibulaPiecesFolder:
-        shNode.RemoveItem(transformedFibulaPiecesFolder)
+      self.resetPlan()
       mandibleDisplayNode = mandibleModelNode.GetDisplayNode()
       mandibleDisplayNode.SetVisibility(True)
       return
 
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaPlanesFolder = shNode.GetItemByName("Fibula planes")
     fibulaPlanesList = createListFromFolderID(fibulaPlanesFolder)
 

@@ -242,7 +242,7 @@ You'll have to do the same for mandible in another segmentation node.
 7. Click "Add fibula line". Draw a line over the fibula on the 3D view. First point distal, last point proximal. Try to draw the line over the diaphysis.
 8. Click "Center fibula line using fibula model" to make the line be similar to the anatomical axis of the fibula.
 9. Tick these options: "Automatic mandibular planes positioning for maximum bones contact area", "Make all mandible planes rotate together"
-10. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" to make the reconstruction and create the fibula cut planes.
+10. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" to make the reconstruction and create the fibula cut planes. If VSP visualization is not working correctly you can try a hard-update using the button with recycle arrows, this will not change the objects used to create the VSP only the outputs.
 11. Move the mandible planes as desired to change the position/orientation of the cuts.
 12. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" again. And repeat as many times as needed.
 If you tick the button it will react on plane movements and update automatically.
