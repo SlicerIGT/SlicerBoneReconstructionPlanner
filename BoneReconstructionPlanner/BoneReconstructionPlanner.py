@@ -341,6 +341,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     recycleIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/recycle_48.svg')
     self.ui.hardVSPUpdateButton.setIcon(qt.QIcon(recycleIconPath))
 
+    booleanOperationsIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/construction_48.svg')
+    self.ui.create3DModelOfTheReconstructionButton.setIcon(qt.QIcon(booleanOperationsIconPath))
+    self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.setIcon(qt.QIcon(booleanOperationsIconPath))
+    self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.setIconSize(qt.QSize(48,48))
+    self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.setIcon(qt.QIcon(booleanOperationsIconPath))
+    self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.setIconSize(qt.QSize(48,48))
+
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
 
