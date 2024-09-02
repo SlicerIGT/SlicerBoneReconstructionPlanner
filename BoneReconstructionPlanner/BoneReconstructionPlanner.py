@@ -987,9 +987,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       return folderSubjectHierarchyID
     else:
       inverseMandibleReconstructionFolder = shNode.CreateFolderItem(parentItemID,"Inverse mandible reconstruction")
-      pluginHandler = slicer.qSlicerSubjectHierarchyPluginHandler().instance()
-      folderPlugin = pluginHandler.pluginByName("Folder")
-      qt.QTimer.singleShot(0, lambda: folderPlugin.setDisplayVisibility(inverseMandibleReconstructionFolder, 0))
+      qt.QTimer.singleShot(0, lambda: setFolderItemVisibility(inverseMandibleReconstructionFolder, 0))
       return inverseMandibleReconstructionFolder
 
   def getDentalImplantsPlanningFolderItemID(self):
@@ -1974,9 +1972,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       cutMandiblePiecesFolder = shNode.CreateFolderItem(self.getInverseMandibleReconstructionFolderItemID(),"Cut Mandible Pieces")
       fullMandiblesFolder = shNode.CreateFolderItem(self.getInverseMandibleReconstructionFolderItemID(),"Full Mandibles")
 
-      pluginHandler = slicer.qSlicerSubjectHierarchyPluginHandler().instance()
-      folderPlugin = pluginHandler.pluginByName("Folder")
-      qt.QTimer.singleShot(0, lambda: folderPlugin.setDisplayVisibility(fullMandiblesFolder, 0))
+      qt.QTimer.singleShot(0, lambda: setFolderItemVisibility(fullMandiblesFolder, 0))
 
       for i in range(len(planeList)-1):
         modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -2562,9 +2558,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformedMandibleItemID = shNode.GetItemByDataNode(transformedMandible)
       shNode.SetItemParent(transformedMandibleItemID, transformedFullMandiblesFolder)
 
-    pluginHandler = slicer.qSlicerSubjectHierarchyPluginHandler().instance()
-    folderPlugin = pluginHandler.pluginByName("Folder")
-    qt.QTimer.singleShot(0, lambda: folderPlugin.setDisplayVisibility(transformedFullMandiblesFolder, 1))
+    qt.QTimer.singleShot(0, lambda: setFolderItemVisibility(transformedFullMandiblesFolder, 1))
 
   def tranformFibulaPiecesToMandible(self):
     parameterNode = self.getParameterNode()
@@ -5223,3 +5217,8 @@ def createListFromFolderID(folderID):
       createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
   
   return createdList
+
+def setFolderItemVisibility(folderItemID, visibility):
+  pluginHandler = slicer.qSlicerSubjectHierarchyPluginHandler().instance()
+  folderPlugin = pluginHandler.pluginByName("Folder")
+  folderPlugin.setDisplayVisibility(folderItemID, visibility)
