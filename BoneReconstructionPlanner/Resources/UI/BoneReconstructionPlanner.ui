@@ -1370,7 +1370,7 @@ and transform them to mandible</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
+        <item row="2" column="0">
          <widget class="QLabel" name="label_15">
           <property name="toolTip">
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -1384,7 +1384,7 @@ p, li { white-space: pre-wrap; }
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
+        <item row="2" column="1">
          <widget class="ctkDoubleSpinBox" name="clearanceFitPrintingToleranceSpinBox">
           <property name="toolTip">
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -1404,14 +1404,14 @@ p, li { white-space: pre-wrap; }
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="4" column="0">
          <widget class="QLabel" name="label_43">
           <property name="text">
            <string>Experimental Feature:</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
+        <item row="4" column="1">
          <widget class="QCheckBox" name="dentalImplantsPlanningAndFibulaDrillGuidesCheckBox">
           <property name="text">
            <string>Dental Implants Planning
@@ -1419,19 +1419,50 @@ and Fibula Drill Guides</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
+        <item row="5" column="0">
          <widget class="QLabel" name="label_44">
           <property name="text">
            <string>Experimental Feature:</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="1">
+        <item row="5" column="1">
          <widget class="QCheckBox" name="customTitaniumPlateDesingCheckBox">
           <property name="text">
            <string>Custom Titanium Plate
 Desing</string>
           </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_45">
+          <property name="text">
+           <string>Lights rendering:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QComboBox" name="lightsRenderingComboBox">
+          <item>
+           <property name="text">
+            <string>Lamp</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Lamp and Shadows</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>MultiLamp</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>MultiLamp and Shadows</string>
+           </property>
+          </item>
          </widget>
         </item>
        </layout>

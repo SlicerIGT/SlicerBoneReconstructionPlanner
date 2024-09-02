@@ -294,6 +294,10 @@ Except that:
 1. Do a [Virtual Surgical Plan](#virtual-surgical-planning)
 2. Click "Create 3D model of the reconstruction for 3D printing". This button maybe useful for users that want to prebend plates with a 3D printed model.
 
+## Settings
+
+You can use the "Lights rendering" setting to make the 3D visualizations nicer. Try "MultiLamp and Shadows", if you don't like it, you can always go back to "Lamp" default setting.
+
 # User contributions and feedback
 
 Fell free to open an [issue](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/new) (or [report here](https://discourse.slicer.org/t/how-to-design-3d-printed-surgical-guide-for-mandible-reconstruction/19754/11)) if you find the instructions or the videotutorial inaccurate, or if you need help finishing the workflow

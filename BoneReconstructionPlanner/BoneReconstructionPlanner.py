@@ -336,6 +336,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.customTitaniumPlateDesingCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.makeAllDentalImplanCylindersParallelCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.onOrientation3DCubeCheckBox)
+    self.ui.lightsRenderingComboBox.textActivated.connect(self.onLightsRenderingComboBox)
 
     import os
     recycleIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/recycle_48.svg')
@@ -780,6 +781,26 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.EndModify(wasModified)
 
+  def onLightsRenderingComboBox(self, text):
+    lightsLogic = slicer.modules.lights.widgetRepresentation().self().logic
+    viewNodesList = slicer.util.getNodesByClass("vtkMRMLViewNode")
+    for viewNode in viewNodesList:
+      lightsLogic.addManagedView(viewNode)
+    if text == "Lamp":
+      lightsLogic.setUseLightKit(False)
+      lightsLogic.setSingleLightIntensity(1.0)
+      lightsLogic.setUseSSAO(False)
+    elif text == "Lamp and Shadows":
+      lightsLogic.setUseLightKit(False)
+      lightsLogic.setSingleLightIntensity(1.0)
+      lightsLogic.setUseSSAO(True)
+    elif text == "MultiLamp":
+      lightsLogic.setUseLightKit(True)
+      lightsLogic.setUseSSAO(False)
+    elif text == "MultiLamp and Shadows":
+      lightsLogic.setUseLightKit(True)
+      lightsLogic.setUseSSAO(True)
+  
   def onOrientation3DCubeCheckBox(self):
     threeDViewNodes = slicer.util.getNodesByClass("vtkMRMLViewNode")
     if len(threeDViewNodes) == 0:
