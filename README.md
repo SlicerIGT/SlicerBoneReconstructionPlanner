@@ -246,12 +246,13 @@ You'll have to do the same for mandible in another segmentation node.
 11. Move the mandible planes as desired to change the position/orientation of the cuts.
 12. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" again. And repeat as many times as needed.
 If you tick the button it will react on plane movements and update automatically.
-13. "Show/Hide original mandible model" button may be useful.
-14. Explore other parameters. For example: "Between space" will guarantee some space between each fibula plane that creates a closing-wedge.
+13. You may change "Segmental Mandibulectomy" to "Hemimandibulectomy" if desired, then click update again to calculate the new plan.
+14. "Show/Hide original mandible model" button may be useful.
+15. Explore other parameters. For example: "Between space" will guarantee some space between each fibula plane that creates a closing-wedge.
 
 ## Personalized Fibula Guide Generation
 
-0. Go to "Fibula Surgical Guide Creation" section of BoneReconstructionPlanner
+0. Go to "Fibula Surgical Guide Creation" section of BoneReconstructionPlanner. If the VSP changes, please remind all steps in this section need to be carried over again.
 1. If "Check security margin on miter box creation" is checked each saw-cut (and the bone it eats) will be tested to not collide with others.
 2. Press shift over some fibula piece on the corresponding 3D view. The model should be visible on the 2D slice with the corresponding color as an edge. [Create a line](https://slicer.readthedocs.io/en/5.6/user_guide/modules/markups.html#place-new-markups) over the 2D slice of the fibula that will set the direction of the miterBoxes (with this you select, for example, lateral approach or posterior approach). The line should me drawn from the centerline of the fibula to a point that is distal from the first one on the 2D slice of the fibula.
 3. Select the parameters of the miter boxes: lenght, width, height, wall thickness and tolerance (this last option is inside the Settings widget and it applies also to sawBoxes of the mandible). The combination of tolerance and the slot width suggested by most experienced user (@mrtig) is summarized below (more info [here](/Docs/NOTES.md#tolerance-and-slot-width)):
@@ -288,6 +289,7 @@ Except that:
 - The sawBoxes are movable and you should only move them inside the cut plane, to correct automatic mispositioning. After that hide the "biggerSawBoxes interaction handles" so you have a comfortable experience on later steps.
 - You need to segment two guide bases, one for each planar cut, and copy them together to the same segment. Then export them as a unique model as explained on the earlier section.
 - You may like to create a bridge between both mandibleGuides to make a rigid connection between them. This is done with the module "MarkupsToModel" and it's very easy to use.
+- If you created the VSP with "Hemimandibulectomy" mode you just need one mandible guidebase and the bridge is not needed nor allowed.
 - You need to put the correct models on the corresponding selectors on "Mandible Surgical Guide Generation" panel
 
 ## Mandible Reconstruction Simulation
