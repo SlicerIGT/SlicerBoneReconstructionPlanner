@@ -194,6 +194,8 @@ See more than 40 plans of other users:
 - Toy VSP using a rib because a user wondered if it could be possible:
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TheoreticalPlanBRP_rib.mrb" >Theoretical Virtual Surgical Plan with a rib (Toy-example)</a>
 
+- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/Unofficial_BRP_Videotutorial_5.6.2_Spanish.zip" >Unofficial Spanish videotutorial</a> (credits to @marf-slicer)
+
 # Instructions
 (last validated 07/21/2024)
 
