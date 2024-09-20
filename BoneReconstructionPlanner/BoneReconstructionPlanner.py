@@ -316,11 +316,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.connect('clicked(bool)', self.onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
     self.ui.updateFibulaDentalImplantCylindersButton.connect('clicked(bool)', self.onUpdateFibulaDentalImplantCylindersButton)
     self.ui.centerFibulaLineButton.connect('clicked(bool)', self.onCenterFibulaLineButton)
-    self.ui.showHideBiggerSawBoxesInteractionHandlesButton.connect('clicked(bool)', self.onShowHideBiggerSawBoxesInteractionHandlesButton)
-    self.ui.showHideMandiblePlanesInteractionHandlesButton.connect('clicked(bool)', self.onShowHideMandiblePlanesInteractionHandlesButton)
     self.ui.create3DModelOfTheReconstructionButton.connect('clicked(bool)', self.onCreate3DModelOfTheReconstructionButton)
-    self.ui.showHideFibulaSegmentsLengthsButton.connect('clicked(bool)', self.onShowHideFibulaSegmentsLengthsButton)
-    self.ui.showHideOriginalMandibleButton.connect('clicked(bool)', self.onShowHideOriginalMandibleButton)
     self.ui.createDentalImplantCylindersFiducialListButton.connect('clicked(bool)', self.onCreateDentalImplantCylindersFiducialListButton)
     self.ui.createCylindersFromFiducialListAndNeomandiblePiecesButton.connect('clicked(bool)', self.onCreateCylindersFromFiducialListAndNeomandiblePiecesButton)
     self.ui.createPlateCurveButton.connect('clicked(bool)', self.onCreatePlateCurveButton)
@@ -335,6 +331,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.customTitaniumPlateDesingCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.makeAllDentalImplanCylindersParallelCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.showFibulaSegmentsLengthsCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.showOriginalMandibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.showMandiblePlanesInteractionHandlesCheckBox.connect('stateChanged(int)', self.onShowMandiblePlanesInteractionHandlesCheckBox)
+    self.ui.showMandiblePlanesInteractionHandlesCheckBox_2.connect('stateChanged(int)', self.onShowMandiblePlanesInteractionHandlesCheckBox)
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.onOrientation3DCubeCheckBox)
     self.ui.lightsRenderingComboBox.textActivated.connect(self.onLightsRenderingComboBox)
 
@@ -405,17 +406,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     sawBoxesPlanesList = createListFromFolderID(sawBoxesPlanesFolder)
     dentalImplantsPlanesList = createListFromFolderID(dentalImplantsPlanesFolder)
 
-    self.logic.setInteractiveHandlesVisibilityOfMarkups(
-      mandibularPlanesList,
-      visibility=True
-    )
+    self.setMandiblePlanesInteractionHandlesVisibility(visibility=True)
     self.logic.setMarkupsListLocked(mandibularPlanesList,locked=False)
     self.logic.addMandiblePlaneObservers()
 
-    self.logic.setInteractiveHandlesVisibilityOfMarkups(
-      sawBoxesPlanesList,
-      visibility=True
-    )
+    # make it not visible to not clutter the mandible 3D view
+    self.setBiggerSawBoxesInteractionHandlesVisibility(visibility=False)
     self.logic.setMarkupsListLocked(sawBoxesPlanesList,locked=False)
     self.logic.addSawBoxPlaneObservers()
 
@@ -668,6 +664,23 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self.ui.updateFibulaDentalImplantCylindersButton.checkState = 0
 
+    showFibulaSegmentsLengthsChecked = self._parameterNode.GetParameter("showFibulaSegmentsLengths") == "True"
+    self.ui.showFibulaSegmentsLengthsCheckBox.checked = showFibulaSegmentsLengthsChecked
+    self.setFibulaSegmentsLengthsVisibility(showFibulaSegmentsLengthsChecked)
+    
+    showOriginalMandibleChecked = self._parameterNode.GetParameter("showOriginalMandible") == "True"
+    self.ui.showOriginalMandibleCheckBox.checked = showOriginalMandibleChecked
+    self.setOriginalMandibleVisility(showOriginalMandibleChecked)
+
+    showBiggerSawBoxesInteractionHandlesChecked = self._parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles") == "True"
+    self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.checked = showBiggerSawBoxesInteractionHandlesChecked
+    self.setBiggerSawBoxesInteractionHandlesVisibility(showBiggerSawBoxesInteractionHandlesChecked)
+
+    showMandiblePlanesInteractionHandlesChecked = self._parameterNode.GetParameter("showMandiblePlanesInteractionHandles") == "True"
+    self.ui.showMandiblePlanesInteractionHandlesCheckBox.checked = showMandiblePlanesInteractionHandlesChecked
+    self.ui.showMandiblePlanesInteractionHandlesCheckBox_2.checked = showMandiblePlanesInteractionHandlesChecked
+    self.setMandiblePlanesInteractionHandlesVisibility(showMandiblePlanesInteractionHandlesChecked)
+
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
 
@@ -779,7 +792,26 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self._parameterNode.SetParameter("makeAllDentalImplanCylindersParallel","False")
 
+    if self.ui.showFibulaSegmentsLengthsCheckBox.checked:
+      self._parameterNode.SetParameter("showFibulaSegmentsLengths", "True")
+    else:
+      self._parameterNode.SetParameter("showFibulaSegmentsLengths", "False")
+    if self.ui.showOriginalMandibleCheckBox.checked:
+      self._parameterNode.SetParameter("showOriginalMandible", "True")
+    else:
+      self._parameterNode.SetParameter("showOriginalMandible", "False")
+    if self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.checked:
+      self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles", "True")
+    else:
+      self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles", "False")
+    
     self._parameterNode.EndModify(wasModified)
+
+  def onShowMandiblePlanesInteractionHandlesCheckBox(self, checked):
+    if checked:
+      self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles", "True")
+    else:
+      self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles", "False")
 
   def onLightsRenderingComboBox(self, text):
     lightsLogic = slicer.modules.lights.widgetRepresentation().self().logic
@@ -876,40 +908,37 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onHardVSPUpdateButton(self):
     self.logic.hardVSPUpdate()
   
-  def onShowHideBiggerSawBoxesInteractionHandlesButton(self):
+  def setBiggerSawBoxesInteractionHandlesVisibility(self, visibility):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     sawBoxesPlanesFolder = shNode.GetItemByName("sawBoxes Planes")
     sawBoxesPlanesList = createListFromFolderID(sawBoxesPlanesFolder)
 
     for i in range(len(sawBoxesPlanesList)):
       displayNode = sawBoxesPlanesList[i].GetDisplayNode()
-      handlesVisibility = displayNode.GetHandlesInteractive()
-      displayNode.SetHandlesInteractive(not handlesVisibility)
+      displayNode.SetHandlesInteractive(visibility)
 
-  def onShowHideMandiblePlanesInteractionHandlesButton(self):
+  def setMandiblePlanesInteractionHandlesVisibility(self, visibility):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
 
     for i in range(len(mandibularPlanesList)):
       displayNode = mandibularPlanesList[i].GetDisplayNode()
-      handlesVisibility = displayNode.GetHandlesInteractive()
-      displayNode.SetHandlesInteractive(not handlesVisibility)
+      displayNode.SetHandlesInteractive(visibility)
 
-  def onShowHideFibulaSegmentsLengthsButton(self):
+  def setFibulaSegmentsLengthsVisibility(self, visibility):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     fibulaSegmentsLengthsFolder = shNode.GetItemByName("Fibula Segments Lengths")
     fibulaSegmentsLengthsList = createListFromFolderID(fibulaSegmentsLengthsFolder)
 
     for i in range(len(fibulaSegmentsLengthsList)):
       lineDisplayNode = fibulaSegmentsLengthsList[i].GetDisplayNode()
-      visibility = lineDisplayNode.GetVisibility()
-      lineDisplayNode.SetVisibility(not visibility)
+      lineDisplayNode.SetVisibility(visibility)
 
   def onCreate3DModelOfTheReconstructionButton(self):
     self.logic.create3DModelOfTheReconstruction()
 
-  def onShowHideOriginalMandibleButton(self):
+  def setOriginalMandibleVisility(self, visibility):
     mandibleModelNode = self._parameterNode.GetNodeReference("mandibleModelNode")
     decimatedMandibleModelNode = self._parameterNode.GetNodeReference("decimatedMandibleModelNode")
     useNonDecimatedBoneModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
@@ -917,14 +946,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     mandibleModelDisplayNode = mandibleModelNode.GetDisplayNode()
     decimatedMandibleModelDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
 
-    if mandibleModelDisplayNode.GetVisibility() or decimatedMandibleModelDisplayNode.GetVisibility():
-      mandibleModelDisplayNode.SetVisibility(False)
+    if useNonDecimatedBoneModelsForPreviewChecked:
+      mandibleModelDisplayNode.SetVisibility(visibility)
       decimatedMandibleModelDisplayNode.SetVisibility(False)
     else:
-      if useNonDecimatedBoneModelsForPreviewChecked:
-        mandibleModelDisplayNode.SetVisibility(True)
-      else:
-        decimatedMandibleModelDisplayNode.SetVisibility(True)
+      decimatedMandibleModelDisplayNode.SetVisibility(visibility)
+      mandibleModelDisplayNode.SetVisibility(False)
 
   def onUpdateFibulaDentalImplantCylindersButton(self):
     self.logic.onUpdateFibuladentalImplantsTimerTimeout()
@@ -981,6 +1008,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("kindOfMandibleResection","Segmental Mandibulectomy")
     if not parameterNode.GetParameter("mandibleSideToRemove"):
       parameterNode.SetParameter("mandibleSideToRemove","Removing right side")
+    if not parameterNode.GetParameter("showFibulaSegmentsLengths"):
+      parameterNode.SetParameter("showFibulaSegmentsLengths","True")
+    if not parameterNode.GetParameter("showOriginalMandible"):
+      parameterNode.SetParameter("showOriginalMandible","False")
+    if not parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles"):
+      parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","False")
+    if not parameterNode.GetParameter("showMandiblePlanesInteractionHandles"):
+      parameterNode.SetParameter("showMandiblePlanesInteractionHandles","True")  
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -4940,9 +4975,9 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     
     if not slicer.app.commandOptions().noMainWindow:
       # hide original mandible
-      self.widgetBRP.onShowHideOriginalMandibleButton()
+      self.widgetBRP.setOriginalMandibleVisility(False)
       # hide mandible plane handles
-      self.widgetBRP.onShowHideMandiblePlanesInteractionHandlesButton()
+      self.widgetBRP.setMandiblePlanesInteractionHandlesVisibility(False)
     
     self.delayDisplay("Optimize bones contact in reconstruction")
     parameterNode = self.logicBRP.getParameterNode()
@@ -5094,9 +5129,9 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       else:
         layoutManager.setMaximizedViewNode(None)
       # show mandible plane handles
-      self.widgetBRP.onShowHideMandiblePlanesInteractionHandlesButton()
+      self.widgetBRP.setMandiblePlanesInteractionHandlesVisibility(True)
       # hide saw boxes handles
-      self.widgetBRP.onShowHideBiggerSawBoxesInteractionHandlesButton()
+      self.widgetBRP.setBiggerSawBoxesInteractionHandlesVisibility(False)
 
     # asserts below
 

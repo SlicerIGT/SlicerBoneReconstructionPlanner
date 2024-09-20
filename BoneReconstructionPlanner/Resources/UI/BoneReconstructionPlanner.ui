@@ -309,9 +309,16 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="showHideOriginalMandibleButton">
+       <widget class="QCheckBox" name="showMandiblePlanesInteractionHandlesCheckBox">
         <property name="text">
-         <string>Show/Hide original mandible model</string>
+         <string>Show mandible planes interaction handles</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="showOriginalMandibleCheckBox">
+        <property name="text">
+         <string>Show original mandible model</string>
         </property>
        </widget>
       </item>
@@ -324,15 +331,9 @@
          <number>0</number>
         </property>
         <item>
-         <widget class="QPushButton" name="showHideFibulaSegmentsLengthsButton">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-            <horstretch>3</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
+         <widget class="QCheckBox" name="showFibulaSegmentsLengthsCheckBox">
           <property name="text">
-           <string>Show/Hide fibula segments lengths</string>
+           <string>Show fibula segments lengths</string>
           </property>
          </widget>
         </item>
@@ -1104,16 +1105,16 @@ and transform them to mandible</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_5">
       <item>
-       <widget class="QPushButton" name="showHideBiggerSawBoxesInteractionHandlesButton">
+       <widget class="QCheckBox" name="showBiggerSawBoxesInteractionHandlesCheckBox">
         <property name="text">
-         <string>Show/Hide biggerSawBoxes interaction handles</string>
+         <string>Show biggerSawBoxes interaction handles</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="showHideMandiblePlanesInteractionHandlesButton">
+       <widget class="QCheckBox" name="showMandiblePlanesInteractionHandlesCheckBox_2">
         <property name="text">
-         <string>Show/Hide mandible planes interaction handles</string>
+         <string>Show mandible planes interaction handles</string>
         </property>
        </widget>
       </item>
