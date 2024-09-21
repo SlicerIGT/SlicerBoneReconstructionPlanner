@@ -958,6 +958,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def setOriginalMandibleVisility(self, visibility):
     mandibleModelNode = self._parameterNode.GetNodeReference("mandibleModelNode")
     decimatedMandibleModelNode = self._parameterNode.GetNodeReference("decimatedMandibleModelNode")
+    
+    if (mandibleModelNode is None) and (decimatedMandibleModelNode) is None:
+      return
+
     useNonDecimatedBoneModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
 
     mandibleModelDisplayNode = mandibleModelNode.GetDisplayNode()
