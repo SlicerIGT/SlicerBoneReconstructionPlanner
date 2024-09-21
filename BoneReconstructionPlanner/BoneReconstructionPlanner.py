@@ -6,6 +6,7 @@ import numpy as np
 from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 from BRPLib.helperFunctions import *
+from BRPLib.guiWidgets import *
 
 #
 # BoneReconstructionPlanner
@@ -238,7 +239,34 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # "setMRMLScene(vtkMRMLScene*)" slot.
     uiWidget.setMRMLScene(slicer.mrmlScene)
 
+    
+    # additional UI setup
+    import os
+    updatePlanningIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/update_48.svg')
+
+    generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton = checkablePushButtonWithIcon(
+      "Update fibula planes over fibula line; update fibula bone pieces \nand transform them to mandible",
+      qt.QIcon(updatePlanningIconPath)
+    )
+    
+    updateVSPButtonsLayout = self.ui.updateVSPButtonsFrame.layout()
+    updateVSPButtonsLayout.setWidget(0, 0, generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
+
+    self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton = generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton
+
+    recycleIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/recycle_48.svg')
+    self.ui.hardVSPUpdateButton.setIcon(qt.QIcon(recycleIconPath))
+
+    booleanOperationsIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/construction_48.svg')
+    self.ui.create3DModelOfTheReconstructionButton.setIcon(qt.QIcon(booleanOperationsIconPath))
+    self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.setIcon(qt.QIcon(booleanOperationsIconPath))
+    self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.setIconSize(qt.QSize(48,48))
+    self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.setIcon(qt.QIcon(booleanOperationsIconPath))
+    self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.setIconSize(qt.QSize(48,48))
+
     #self.ui.dentalImplantCylinderSelector.addAttribute('vtkMRMLModelNode','isDentalImplantCylinder','True')
+
+
 
     # Create logic class. Logic implements all computations that should be possible to run
     # in batch mode, without a graphical user interface.
@@ -338,17 +366,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showMandiblePlanesInteractionHandlesCheckBox_2.connect('stateChanged(int)', self.onShowMandiblePlanesInteractionHandlesCheckBox)
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.onOrientation3DCubeCheckBox)
     self.ui.lightsRenderingComboBox.textActivated.connect(self.onLightsRenderingComboBox)
-
-    import os
-    recycleIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/recycle_48.svg')
-    self.ui.hardVSPUpdateButton.setIcon(qt.QIcon(recycleIconPath))
-
-    booleanOperationsIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/construction_48.svg')
-    self.ui.create3DModelOfTheReconstructionButton.setIcon(qt.QIcon(booleanOperationsIconPath))
-    self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.setIcon(qt.QIcon(booleanOperationsIconPath))
-    self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.setIconSize(qt.QSize(48,48))
-    self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.setIcon(qt.QIcon(booleanOperationsIconPath))
-    self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.setIconSize(qt.QSize(48,48))
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
