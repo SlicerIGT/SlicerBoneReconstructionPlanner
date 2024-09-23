@@ -250,12 +250,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     )
     
     updateVSPButtonsLayout = self.ui.updateVSPButtonsFrame.layout()
-    updateVSPButtonsLayout.setWidget(0, 0, generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
+    updateVSPButtonsLayout.insertWidget(0, generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
 
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton = generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton
 
     recycleIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/recycle_48.svg')
     self.ui.hardVSPUpdateButton.setIcon(qt.QIcon(recycleIconPath))
+    
+    lockIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/lock_48.svg')
+    self.ui.lockVSPButton.setIcon(qt.QIcon(lockIconPath))
 
     booleanOperationsIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/construction_48.svg')
     self.ui.create3DModelOfTheReconstructionButton.setIcon(qt.QIcon(booleanOperationsIconPath))
@@ -350,6 +353,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.createPlateCurveButton.connect('clicked(bool)', self.onCreatePlateCurveButton)
     self.ui.createCustomPlateButton.connect('clicked(bool)', self.onCreateCustomPlateButton)
     self.ui.hardVSPUpdateButton.connect('clicked(bool)', self.onHardVSPUpdateButton)
+    self.ui.lockVSPButton.connect('toggled(bool)', self.onLockVSPButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -671,6 +675,37 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.customTitaniumPlateGenerationCollapsibleButton.hide()
 
     
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+    if self._parameterNode.GetParameter("lockVSP") == "True":
+      self.logic.setInteractiveHandlesVisibilityOfMarkups(
+        mandibularPlanesList,
+        visibility=False
+      )
+      self.logic.setMarkupsListLocked(mandibularPlanesList,locked=True)
+      self.logic.removeMandiblePlaneObservers()
+      #
+      self.ui.lockVSPButton.checked = True
+      self.ui.parametersOfVSPFrame.enabled = False
+      self.ui.updateVSPButtonsFrame.enabled = False
+      self.ui.create3DModelOfTheReconstructionButton.enabled = False
+        
+    else:
+      self.logic.setInteractiveHandlesVisibilityOfMarkups(
+        mandibularPlanesList,
+        visibility=True
+      )
+      self.logic.setMarkupsListLocked(mandibularPlanesList,locked=False)
+      self.logic.removeMandiblePlaneObservers() # in case they already exist
+      self.logic.addMandiblePlaneObservers()
+      #
+      self.ui.lockVSPButton.checked = False
+      self.ui.parametersOfVSPFrame.enabled = True
+      self.ui.updateVSPButtonsFrame.enabled = True
+      self.ui.create3DModelOfTheReconstructionButton.enabled = True
+    
+    
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
     else:
@@ -924,6 +959,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   
   def onHardVSPUpdateButton(self):
     self.logic.hardVSPUpdate()
+
+  def onLockVSPButton(self,checked):
+    self.logic.lockVSP(checked)
   
   def setBiggerSawBoxesInteractionHandlesVisibility(self, visibility):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -1037,6 +1075,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","False")
     if not parameterNode.GetParameter("showMandiblePlanesInteractionHandles"):
       parameterNode.SetParameter("showMandiblePlanesInteractionHandles","True")  
+    if not parameterNode.GetParameter("lockVSP"):
+      parameterNode.SetParameter("lockVSP","False")
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -1228,6 +1268,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.generateFibulaPlanesTimer.start()
 
   def onGenerateFibulaPlanesTimerTimeout(self):
+    parameterNode = self.getParameterNode()
+    lockVSPChecked = parameterNode.GetParameter("lockVSP") == "True"
+    if lockVSPChecked:
+      logging.info('VSP updates are locked. Please set "lockVSP" parameter to "False".')
+      return
+    
     import time
     startTime = time.time()
     logging.info('Processing started')
@@ -2135,6 +2181,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def hardVSPUpdate(self):
     self.resetPlan()
     self.onGenerateFibulaPlanesTimerTimeout()
+
+  def lockVSP(self, doLock):
+    parameterNode = self.getParameterNode()
+    parameterNode.SetParameter("lockVSP", str(doLock))
 
   def generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible(self):
     parameterNode = self.getParameterNode()
