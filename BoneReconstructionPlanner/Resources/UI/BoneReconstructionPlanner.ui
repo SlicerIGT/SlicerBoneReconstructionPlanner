@@ -12,6 +12,36 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_7">
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QPushButton" name="emailBugReportButton">
+       <property name="toolTip">
+        <string>Tell us if something does not work as expected</string>
+       </property>
+       <property name="text">
+        <string>Bug report</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="emailFeatureRequestButton">
+       <property name="toolTip">
+        <string>Tell us how we can improve the software</string>
+       </property>
+       <property name="text">
+        <string>Feature request</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="ctkCollapsibleButton" name="CollapsibleButton">
      <property name="text">
       <string>Mandible Reconstruction Planning</string>
