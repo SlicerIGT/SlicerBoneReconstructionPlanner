@@ -258,6 +258,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.emailBugReportButton.setIcon(qt.QIcon(mailIconPath))
     self.ui.emailFeatureRequestButton.setIcon(qt.QIcon(mailIconPath))
     
+    openDocumentationIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/quick_reference_48.svg')
+    self.ui.openDocumentationButton.setIcon(qt.QIcon(openDocumentationIconPath))
+    
     recycleIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/recycle_48.svg')
     self.ui.hardVSPUpdateButton.setIcon(qt.QIcon(recycleIconPath))
     
@@ -348,6 +351,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Buttons
     self.ui.emailBugReportButton.connect('clicked(bool)',self.onEmailBugReportButton)
     self.ui.emailFeatureRequestButton.connect('clicked(bool)',self.onEmailFeatureRequestButton)
+    self.ui.openDocumentationButton.connect('clicked(bool)',self.onOpenDocumentationButton)
     self.ui.rightSideLegFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.addMandibularCurveButton.connect('clicked(bool)',self.onAddMandibularCurveButton)
@@ -946,6 +950,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       bodyVariable = "Please describe the new feature you'd like here." 
     )
   
+  def onOpenDocumentationButton(self):
+    self.logic.openDocumentationOnWebBrowser()
+  
   def onFixCutGoesThroughTheMandibleTwiceCheckBox(self):
     if self._parameterNode is None or self._updatingGUIFromParameterNode:
       return
@@ -1203,6 +1210,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #
     # Open email client
     qt.QDesktopServices.openUrl(prepareEmailUrl)
+  
+  def openDocumentationOnWebBrowser(self):
+    documentationUrl = qt.QUrl("https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner#table-of-contents")
+    qt.QDesktopServices.openUrl(documentationUrl)
   
   def addMandibularCurve(self):
     curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")

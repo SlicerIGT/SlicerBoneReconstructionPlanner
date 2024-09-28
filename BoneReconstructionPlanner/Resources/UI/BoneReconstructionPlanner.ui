@@ -42,6 +42,13 @@
     </layout>
    </item>
    <item>
+    <widget class="QPushButton" name="openDocumentationButton">
+     <property name="text">
+      <string>Open documentation</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="ctkCollapsibleButton" name="CollapsibleButton">
      <property name="text">
       <string>Mandible Reconstruction Planning</string>
