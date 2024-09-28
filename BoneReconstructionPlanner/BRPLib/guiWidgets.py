@@ -22,4 +22,11 @@ class checkablePushButtonWithIcon(ctk.ctkCheckablePushButton):
         self.setMinimumWidth(self.sizeHint.width() + self._iconSize.width())
         self.setSizePolicy(qt.QSizePolicy.Maximum, qt.QSizePolicy.Fixed)
 
-
+# use it with ctk.ctkCheckBox.indicatorIcon = iconWithGreyOut(iconPath)
+def iconWithGreyOut(iconPath, size = qt.QSize(24, 24)):
+    iconPixmap = qt.QPixmap(iconPath)
+    iconWithGreyOut = qt.QIcon()
+    iconWithGreyOut.addPixmap(iconPixmap, qt.QIcon.Normal, qt.QIcon.On)
+    grayed = iconWithGreyOut.pixmap(size, qt.QIcon.Disabled, qt.QIcon.On)
+    iconWithGreyOut.addPixmap(grayed, qt.QIcon.Normal, qt.QIcon.Off)
+    return iconWithGreyOut
