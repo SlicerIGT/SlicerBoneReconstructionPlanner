@@ -254,6 +254,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton = generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton
 
+    mailIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/mail_48.svg')
+    self.ui.emailBugReportButton.setIcon(qt.QIcon(mailIconPath))
+    self.ui.emailFeatureRequestButton.setIcon(qt.QIcon(mailIconPath))
+    
     recycleIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/recycle_48.svg')
     self.ui.hardVSPUpdateButton.setIcon(qt.QIcon(recycleIconPath))
     
@@ -342,6 +346,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibleSideToRemoveComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
+    self.ui.emailBugReportButton.connect('clicked(bool)',self.onEmailBugReportButton)
+    self.ui.emailFeatureRequestButton.connect('clicked(bool)',self.onEmailFeatureRequestButton)
     self.ui.rightSideLegFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.addMandibularCurveButton.connect('clicked(bool)',self.onAddMandibularCurveButton)
@@ -924,6 +930,22 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         viewNode.SetOrientationMarkerType(slicer.vtkMRMLAbstractViewNode.OrientationMarkerTypeNone)
       viewNode.SetOrientationMarkerSize(slicer.vtkMRMLAbstractViewNode.OrientationMarkerSizeMedium)
   
+  def onEmailBugReportButton(self):
+    send2 = ".".join("bone reconstruction planner+bug report@gmail com".split(" "))
+    self.logic.prepareSendEmailOnWebBrowser(
+      emailVariable = send2,
+      subjectVariable = "[WRITE BUG TITLE]",
+      bodyVariable = "Please describe the bug you found here." + "\n\n" + "Please attach the error log file here." 
+    )
+
+  def onEmailFeatureRequestButton(self):
+    send2 = ".".join("bone reconstruction planner+feature request@gmail com".split(" "))
+    self.logic.prepareSendEmailOnWebBrowser(
+      emailVariable = send2,
+      subjectVariable = "[WRITE FEATURE REQUEST TITLE]",
+      bodyVariable = "Please describe the new feature you'd like here." 
+    )
+  
   def onFixCutGoesThroughTheMandibleTwiceCheckBox(self):
     if self._parameterNode is None or self._updatingGUIFromParameterNode:
       return
@@ -1161,6 +1183,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       return folderSubjectHierarchyID
     else:
       return shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandibular planes")
+  
+  def prepareSendEmailOnWebBrowser(self, emailVariable, subjectVariable, bodyVariable, ccVariable="", bccVariable=""):
+    parsedBodyVariable = bodyVariable.replace(" ", "%20").replace("\n", "%0D%0A")
+    #
+    prepareEmailString = (
+      f'mailto:{emailVariable}?'
+      f'subject={subjectVariable}&'
+      f'body={parsedBodyVariable}'
+    )
+    #
+    if ccVariable != "":
+      prepareEmailString += f'&cc={ccVariable}'
+    #
+    if bccVariable != "":
+      prepareEmailString += f'&bcc={bccVariable}'
+    #
+    prepareEmailUrl = qt.QUrl(prepareEmailString)
+    #
+    # Open email client
+    qt.QDesktopServices.openUrl(prepareEmailUrl)
   
   def addMandibularCurve(self):
     curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
