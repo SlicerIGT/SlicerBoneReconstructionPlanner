@@ -260,6 +260,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     lockIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/lock_48.svg')
     self.ui.lockVSPButton.setIcon(qt.QIcon(lockIconPath))
 
+    visibilityIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/visibility_48.svg')
+    self.ui.showMandiblePlanesToolButton.setIcon(qt.QIcon(visibilityIconPath))
+    self.ui.showMandiblePlanesToolButton.setIconSize(qt.QSize(24,24))
+    self.ui.showMandiblePlanesToolButton.setMinimumSize(24,24)
+
+    axesIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/axes.svg')
+    self.ui.showMandiblePlanesInteractionHandlesToolButton.setIcon(qt.QIcon(axesIconPath))
+    self.ui.showMandiblePlanesInteractionHandlesToolButton.setIconSize(qt.QSize(24,24))
+    self.ui.showMandiblePlanesInteractionHandlesToolButton.setMinimumSize(24,24)
+
     booleanOperationsIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/construction_48.svg')
     self.ui.create3DModelOfTheReconstructionButton.setIcon(qt.QIcon(booleanOperationsIconPath))
     self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.setIcon(qt.QIcon(booleanOperationsIconPath))
@@ -366,8 +376,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showFibulaSegmentsLengthsCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.showOriginalMandibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
-    self.ui.showMandiblePlanesInteractionHandlesCheckBox.connect('stateChanged(int)', self.onShowMandiblePlanesInteractionHandlesCheckBox)
-    self.ui.showMandiblePlanesInteractionHandlesCheckBox_2.connect('stateChanged(int)', self.onShowMandiblePlanesInteractionHandlesCheckBox)
+    self.ui.showMandiblePlanesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
+    self.ui.showMandiblePlanesInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.onOrientation3DCubeCheckBox)
     self.ui.lightsRenderingComboBox.textActivated.connect(self.onLightsRenderingComboBox)
 
@@ -674,29 +684,46 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self.ui.customTitaniumPlateGenerationCollapsibleButton.hide()
 
+
+    lockVSPChecked = self._parameterNode.GetParameter("lockVSP") == "True"
+
+    showMandiblePlanesChecked = self._parameterNode.GetParameter("showMandiblePlanes") == "True"
+    self.ui.showMandiblePlanesToolButton.checked = showMandiblePlanesChecked
+    self.setMandiblePlanesVisibility(showMandiblePlanesChecked)
     
+    showMandiblePlanesInteractionHandlesChecked = self._parameterNode.GetParameter("showMandiblePlanesInteractionHandles") == "True"
+    showMandiblePlanesInteractionHandles = (
+      showMandiblePlanesChecked and showMandiblePlanesInteractionHandlesChecked and
+      (not lockVSPChecked)
+    )
+    self.ui.showMandiblePlanesInteractionHandlesToolButton.checked = (
+      showMandiblePlanesInteractionHandles
+    )
+    self.setMandiblePlanesInteractionHandlesVisibility(showMandiblePlanesInteractionHandles)
+    self.ui.showMandiblePlanesInteractionHandlesToolButton.enabled = (
+      showMandiblePlanesChecked and
+      (not lockVSPChecked)
+    )
+
+
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
-    if self._parameterNode.GetParameter("lockVSP") == "True":
-      self.logic.setInteractiveHandlesVisibilityOfMarkups(
-        mandibularPlanesList,
-        visibility=False
-      )
-      self.logic.setMarkupsListLocked(mandibularPlanesList,locked=True)
+    fibulaLine = self._parameterNode.GetNodeReference("fibulaLine")
+    mandibularCurve = self._parameterNode.GetNodeReference("mandibleCurve")
+    planningObjectsList = mandibularPlanesList + [fibulaLine,mandibularCurve]
+    if lockVSPChecked:
+      self.setMandiblePlanesVisibility(showMandiblePlanesChecked)
+      self.logic.setMarkupsListLocked(planningObjectsList,locked=True)
       self.logic.removeMandiblePlaneObservers()
       #
       self.ui.lockVSPButton.checked = True
       self.ui.parametersOfVSPFrame.enabled = False
       self.ui.updateVSPButtonsFrame.enabled = False
       self.ui.create3DModelOfTheReconstructionButton.enabled = False
-        
     else:
-      self.logic.setInteractiveHandlesVisibilityOfMarkups(
-        mandibularPlanesList,
-        visibility=True
-      )
-      self.logic.setMarkupsListLocked(mandibularPlanesList,locked=False)
+      #self.setMandiblePlanesVisibility(True)
+      self.logic.setMarkupsListLocked(planningObjectsList,locked=False)
       self.logic.removeMandiblePlaneObservers() # in case they already exist
       self.logic.addMandiblePlaneObservers()
       #
@@ -727,11 +754,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     showBiggerSawBoxesInteractionHandlesChecked = self._parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles") == "True"
     self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.checked = showBiggerSawBoxesInteractionHandlesChecked
     self.setBiggerSawBoxesInteractionHandlesVisibility(showBiggerSawBoxesInteractionHandlesChecked)
-
-    showMandiblePlanesInteractionHandlesChecked = self._parameterNode.GetParameter("showMandiblePlanesInteractionHandles") == "True"
-    self.ui.showMandiblePlanesInteractionHandlesCheckBox.checked = showMandiblePlanesInteractionHandlesChecked
-    self.ui.showMandiblePlanesInteractionHandlesCheckBox_2.checked = showMandiblePlanesInteractionHandlesChecked
-    self.setMandiblePlanesInteractionHandlesVisibility(showMandiblePlanesInteractionHandlesChecked)
 
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
@@ -819,6 +841,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview","True")
     else:
       self._parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview","False")
+    if self.ui.showMandiblePlanesToolButton.checked:
+      self._parameterNode.SetParameter("showMandiblePlanes","True")
+    else:
+      self._parameterNode.SetParameter("showMandiblePlanes","False")
+    if self.ui.showMandiblePlanesInteractionHandlesToolButton.checked:
+      self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles","True")
+    else:
+      self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles","False")
     if self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked:
       self._parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","True")
     else:
@@ -858,12 +888,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles", "False")
     
     self._parameterNode.EndModify(wasModified)
-
-  def onShowMandiblePlanesInteractionHandlesCheckBox(self, checked):
-    if checked:
-      self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles", "True")
-    else:
-      self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles", "False")
 
   def onLightsRenderingComboBox(self, text):
     lightsLogic = slicer.modules.lights.widgetRepresentation().self().logic
@@ -972,6 +996,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode = sawBoxesPlanesList[i].GetDisplayNode()
       displayNode.SetHandlesInteractive(visibility)
 
+  def setMandiblePlanesVisibility(self, visibility):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
+    for i in range(len(mandibularPlanesList)):
+      displayNode = mandibularPlanesList[i].GetDisplayNode()
+      displayNode.SetVisibility(visibility)
+
   def setMandiblePlanesInteractionHandlesVisibility(self, visibility):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
@@ -1073,6 +1106,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("showOriginalMandible","False")
     if not parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles"):
       parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","False")
+    if not parameterNode.GetParameter("showMandiblePlanes"):
+      parameterNode.SetParameter("showMandiblePlanes","True") 
     if not parameterNode.GetParameter("showMandiblePlanesInteractionHandles"):
       parameterNode.SetParameter("showMandiblePlanesInteractionHandles","True")  
     if not parameterNode.GetParameter("lockVSP"):
@@ -1404,7 +1439,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def setMarkupsListLocked(self,markupsList,locked):
     for i in range(len(markupsList)):
-      markupsList[i].SetLocked(locked)
+      if markupsList[i] is not None:
+        markupsList[i].SetLocked(locked)
   
   def addMandiblePlaneObservers(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
