@@ -309,6 +309,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.dentalImplantFiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     #self.ui.dentalImplantCylinderSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.plateCurveSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.condylarBeamModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
 
     self.ui.initialSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.betweenSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -574,6 +575,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.dentalImplantFiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("dentalImplantsFiducialList"))
     #self.ui.dentalImplantCylinderSelector.setCurrentNode(self._parameterNode.GetNodeReference("selectedDentalImplantCylinderModel"))
     self.ui.plateCurveSelector.setCurrentNode(self._parameterNode.GetNodeReference("plateCurve"))
+    self.ui.condylarBeamModelSelector.setCurrentNode(self._parameterNode.GetNodeReference("condylarBeamModel"))
 
     if self._parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel") is not None:
       self.ui.createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton.enabled = True
@@ -790,6 +792,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetNodeReferenceID("dentalImplantsFiducialList", self.ui.dentalImplantFiducialListSelector.currentNodeID)
     #self._parameterNode.SetNodeReferenceID("selectedDentalImplantCylinderModel", self.ui.dentalImplantCylinderSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("plateCurve", self.ui.plateCurveSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("condylarBeamModel", self.ui.condylarBeamModelSelector.currentNodeID)
 
     self._parameterNode.SetParameter("initialSpace", str(self.ui.initialSpinBox.value))
     self._parameterNode.SetParameter("additionalBetweenSpaceOfFibulaPlanes", str(self.ui.betweenSpinBox.value))
@@ -4164,12 +4167,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.exportScaledFibulaPiecesForNeomandibleReconstructionToFolder(scaledFibulaPiecesFolder)
     scaledFibulaPiecesList = createListFromFolderID(scaledFibulaPiecesFolder)
 
-    listOfObjectsToUnite = scaledFibulaPiecesList + [resectedMandible]
-
     combineModelsLogic = combineModelsRobustLogic
+    listOfObjectsToUnite = scaledFibulaPiecesList + [resectedMandible]
     for i in range(len(listOfObjectsToUnite)):
       combineModelsLogic.process(mandibleReconstructionModel, listOfObjectsToUnite[i], mandibleReconstructionModel, 'union')
-
+    condylarBeamModel = parameterNode.GetNodeReference("condylarBeamModel")
+    if condylarBeamModel is not None:
+      combineModelsLogic.process(mandibleReconstructionModel, condylarBeamModel, mandibleReconstructionModel, 'union')
+    
     shNode.RemoveItem(scaledFibulaPiecesFolder)
 
     if mandibleReconstructionModel.GetPolyData().GetNumberOfPoints() == 0:
