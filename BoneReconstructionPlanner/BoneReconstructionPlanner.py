@@ -216,6 +216,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Called when the user opens the module the first time and the widget is initialized.
     """
+    self.version = "5.6.2.10"
     ScriptedLoadableModuleWidget.__init__(self, parent)
     VTKObservationMixin.__init__(self)  # needed for parameter node observation
     self.logic = None
@@ -241,6 +242,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     
     # additional UI setup
+    self.ui.versionLabel.text = f"Version: {self.version}" 
+
     import os
     updatePlanningIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/update_48.svg')
 
