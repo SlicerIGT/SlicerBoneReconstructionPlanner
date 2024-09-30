@@ -214,6 +214,10 @@ See more than 40 plans of other users:
 To have in mind: every once in a while, you can enter the extension manager and check for updates of this extension to get latest bug fixes and added features
 
 
+## Saving the scene
+- [Save](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#save-data) frequently as the surgical plan can be reopened from where you left it if there is a crash (software malfunction). We suggest using the "Save scene as single file (.mrb file format)", then you can save your progress with different names "example_plan_v01.mrb", "example_plan_v02.mrb", etc
+
+
 ## Segmentation (Preparation for Virtual Surgical Planning)
 
 Make a mandible segmentation and a fibula segmentation.
@@ -234,7 +238,6 @@ You'll have to do the same for mandible in another segmentation node.
 
 ## Virtual Surgical Planning
 
-0. [Save](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#non-dicom-data) frequently as the surgical plan can be reopened from where you left it if there is a crash (software malfunction). We are trying to fix a bug that makes Slicer close unexpectedly during boolean operations ([more info here](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/118)) if you find any other problem please [report it here](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/new).
 1. Click the search icon on the left of the module selector and write 'BoneReconstructionPlanner'. Click "Switch to module".
 2. If fibula is the one from the right leg tick "Right side leg" checkbox. This makes fibula coordinate system X axis be always medial independently of the which leg is used to harvest the fibula.
 3. Select the mandibular segmentation and the fibula segmentation.
@@ -299,6 +302,9 @@ This maybe useful for users that want to prebend plates with a 3D printed model.
 1. Do a [Virtual Surgical Plan](#virtual-surgical-planning)
 2. Optionally, you can add an inter-condylar beam (i.e. a tube model) to the reconstruction. You can create the tube easily from a markups line with points on the condyle using the "Markups To Model" module.
 3. Click "Create 3D model of the reconstruction for 3D printing".
+
+## Export the planning outputs
+- You may want to [export](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#export-data) the 3D models you created of mandible and fibula custom surgical guides, and the neomandible. Remember to select the ".stl" export format (which is the format used for 3D printers).
 
 ## Settings
 
