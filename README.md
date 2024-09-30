@@ -78,6 +78,7 @@ https://www.sciencedirect.com/science/article/pii/S2666964123000103
 
 # Table of Contents
 - [Overview](#bonereconstructionplanner)
+- [Developer statement](#developer-statement)
 - [Citations](#citations)
 - [Description](#description)
   - [Benefits](#benefits)
@@ -90,6 +91,7 @@ https://www.sciencedirect.com/science/article/pii/S2666964123000103
 - [Sample Data](#sample-data)
 - [Instructions](#instructions)
   - [Installing BoneReconstructionPlanner](#installing-bonereconstructionplanner)
+  - [Saving the scene](#saving-the-scene)
   - [Segmentation (Preparation for Virtual Surgical Planning)](#segmentation-preparation-for-virtual-surgical-planning)
   - [Virtual Surgical Planning](#virtual-surgical-planning)
   - [Personalized Fibula Guide Generation](#personalized-fibula-guide-generation)
@@ -97,9 +99,10 @@ https://www.sciencedirect.com/science/article/pii/S2666964123000103
   - [Finish the Fibula Surgical Guide](#finish-the-fibula-surgical-guide)
   - [Personalized Mandible Surgical Guide](#personalized-mandible-surgical-guide)
   - [Mandible Reconstruction Simulation](#mandible-reconstruction-simulation)
-- [Contributing](#Contributing)
-- [Community](#Community)
-- [Additional Resources](#Additional-Resources)
+  - [Export the planning outputs](#export-the-planning-outputs)
+  - [Settings](#settings)
+- [User contact and feedback](#user-contact-and-feedback)
+  - [Contact](#contact)
 - [License](#license)
 
 # Description
@@ -300,7 +303,7 @@ Except that:
 ## Mandible Reconstruction Simulation
 This maybe useful for users that want to prebend plates with a 3D printed model.
 1. Do a [Virtual Surgical Plan](#virtual-surgical-planning)
-2. Optionally, you can add an inter-condylar beam (i.e. a tube model) to the reconstruction. You can create the tube easily from a markups line with points on the condyle using the "Markups To Model" module.
+2. Optionally, you can add an inter-condylar beam (i.e. a tube model) to the reconstruction. You can create the tube easily from a markups line with points on the condyles using the "Markups To Model" module.
 3. Click "Create 3D model of the reconstruction for 3D printing".
 
 ## Export the planning outputs
@@ -309,10 +312,14 @@ This maybe useful for users that want to prebend plates with a 3D printed model.
 ## Settings
 
 You can use the "Lights rendering" setting to make the 3D visualizations nicer. Try "MultiLamp and Shadows", if you don't like it, you can always go back to "Lamp" default setting.
+<img src="BoneReconstructionPlanner/Resources/Pictures/screenshotNicerRendering.png"/>
 
-# User contributions and feedback
+# User contact and feedback
 
 Fell free to open an [issue](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/new) (or [report here](https://discourse.slicer.org/t/how-to-design-3d-printed-surgical-guide-for-mandible-reconstruction/19754/11)) if you find the instructions or the videotutorial inaccurate, or if you need help finishing the workflow
+
+## Contact
+_bone (dot) reconstruction (dot) planner (at) gmail (dot) com_
 
 # License
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/LICENSE" >Read license</a>
