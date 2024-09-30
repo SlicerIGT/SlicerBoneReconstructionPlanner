@@ -735,7 +735,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.lockVSPButton.checked = True
       self.ui.parametersOfVSPFrame.enabled = False
       self.ui.updateVSPButtonsFrame.enabled = False
-      self.ui.create3DModelOfTheReconstructionButton.enabled = False
+      self.ui.create3DModelOfTheReconstructionFrame.enabled = False
     else:
       #self.setMandiblePlanesVisibility(True)
       self.logic.setMarkupsListLocked(planningObjectsList,locked=False)
@@ -745,7 +745,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.lockVSPButton.checked = False
       self.ui.parametersOfVSPFrame.enabled = True
       self.ui.updateVSPButtonsFrame.enabled = True
-      self.ui.create3DModelOfTheReconstructionButton.enabled = True
+      self.ui.create3DModelOfTheReconstructionFrame.enabled = True
     
     
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
