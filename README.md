@@ -54,7 +54,7 @@ A [3D Slicer](https://www.slicer.org/) extension for virtual surgical planning o
 
 # Developer statement
 
-As an open-source developer committed to quality, I am dedicated to ensuring that our "medical" software meets the highest standards, with the goal of achieving ISO 13485 compliance in the future. If you encounter any bugs or issues, please report them, and I will work diligently to address and resolve them promptly. (This software is not FDA approved)
+As an open-source developer committed to quality, I am dedicated to ensuring that our "medical" software meets the highest standards, with the goal of achieving ISO 13485 compliance in the future. If you encounter any bugs or issues, please [report them](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/issues/new), and I will work diligently to address and resolve them promptly. (This software is not FDA approved)
 
 # Citations
 
