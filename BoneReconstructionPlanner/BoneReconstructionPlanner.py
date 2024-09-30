@@ -654,7 +654,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
-    self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked = self._parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") != "False"
+    
+    checkSecurityMarginOnMiterBoxCreationChecked = self._parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") != "False"
+    self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked = checkSecurityMarginOnMiterBoxCreationChecked
+    self.ui.securityMarginOfFibulaPiecesFrame.enabled = checkSecurityMarginOnMiterBoxCreationChecked
 
     self.ui.fibulaSegmentsMeasurementModeComboBox.currentText = self._parameterNode.GetParameter("fibulaSegmentsMeasurementMode")
     

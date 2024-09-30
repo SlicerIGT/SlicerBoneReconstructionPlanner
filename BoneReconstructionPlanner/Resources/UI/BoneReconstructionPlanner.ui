@@ -280,30 +280,7 @@
               <number>1</number>
              </property>
              <property name="value">
-              <double>1.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="10" column="0">
-            <widget class="QLabel" name="label_33">
-             <property name="text">
-              <string>Security margin (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="10" column="1">
-            <widget class="ctkDoubleSpinBox" name="securityMarginOfFibulaPiecesSpinBox">
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <double>30.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>1.000000000000000</double>
+              <double>1.500000000000000</double>
              </property>
             </widget>
            </item>
@@ -1106,18 +1083,68 @@
        </widget>
       </item>
       <item>
+       <widget class="QFrame" name="securityMarginOfFibulaPiecesFrame">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="lineWidth">
+         <number>1</number>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_33">
+           <property name="text">
+            <string>Security margin (mm)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="ctkDoubleSpinBox" name="securityMarginOfFibulaPiecesSpinBox">
+           <property name="decimals">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <double>30.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="value">
+            <double>1.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
        <layout class="QFormLayout" name="formLayout_3">
         <property name="topMargin">
          <number>0</number>
         </property>
-        <item row="0" column="0">
+        <item row="1" column="0">
          <widget class="QLabel" name="label_16">
           <property name="text">
            <string>Slot width (mm)</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
+        <item row="1" column="1">
          <widget class="ctkDoubleSpinBox" name="miterBoxSlotWidthSpinBox">
           <property name="decimals">
            <number>1</number>
@@ -1133,14 +1160,14 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
+        <item row="2" column="0">
          <widget class="QLabel" name="label_17">
           <property name="text">
            <string>Slot length (mm)</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
+        <item row="2" column="1">
          <widget class="ctkDoubleSpinBox" name="miterBoxSlotLengthSpinBox">
           <property name="decimals">
            <number>1</number>
@@ -1153,14 +1180,14 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
+        <item row="4" column="0">
          <widget class="QLabel" name="label_19">
           <property name="text">
            <string>Slot wall (mm)</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="1">
+        <item row="4" column="1">
          <widget class="ctkDoubleSpinBox" name="miterBoxSlotWallSpinBox">
           <property name="decimals">
            <number>1</number>
@@ -1176,14 +1203,14 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="3" column="0">
          <widget class="QLabel" name="label_20">
           <property name="text">
            <string>Slot height (mm)</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
+        <item row="3" column="1">
          <widget class="ctkDoubleSpinBox" name="miterBoxSlotHeightSpinBox">
           <property name="decimals">
            <number>1</number>
@@ -1196,14 +1223,14 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="0">
+        <item row="5" column="0">
          <widget class="QLabel" name="label_21">
           <property name="text">
            <string>Bigger miter box distance to fibula (mm)</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="1">
+        <item row="5" column="1">
          <widget class="ctkDoubleSpinBox" name="biggerMiterBoxDistanceToFibulaSpinBox">
           <property name="decimals">
            <number>1</number>
@@ -1219,14 +1246,14 @@
           </property>
          </widget>
         </item>
-        <item row="6" column="0">
+        <item row="7" column="0">
          <widget class="QLabel" name="label_22">
           <property name="text">
            <string>Miter box direction line</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="1">
+        <item row="7" column="1">
          <widget class="qMRMLNodeComboBox" name="miterBoxDirectionLineSelector">
           <property name="enabled">
            <bool>false</bool>
