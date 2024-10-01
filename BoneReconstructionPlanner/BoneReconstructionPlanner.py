@@ -264,6 +264,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     openDocumentationIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/quick_reference_48.svg')
     self.ui.openDocumentationButton.setIcon(qt.QIcon(openDocumentationIconPath))
     
+    boneIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/bone_48.svg')
+    self.ui.makeModelsButton.setIcon(qt.QIcon(boneIconPath))
+
+    targetIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/target_48.svg')
+    self.ui.centerFibulaLineButton.setIcon(qt.QIcon(targetIconPath))
+    
     recycleIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/recycle_48.svg')
     self.ui.hardVSPUpdateButton.setIcon(qt.QIcon(recycleIconPath))
     
