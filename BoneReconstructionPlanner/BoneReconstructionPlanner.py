@@ -457,12 +457,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     sawBoxesPlanesList = createListFromFolderID(sawBoxesPlanesFolder)
     dentalImplantsPlanesList = createListFromFolderID(dentalImplantsPlanesFolder)
 
-    self.setMandiblePlanesInteractionHandlesVisibility(visibility=True)
+    #self.setMandiblePlanesInteractionHandlesVisibility(visibility=True)
+    if self._parameterNode.GetParameter("lockVSP") == "False":
+      self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles","True")
     self.logic.setMarkupsListLocked(mandibularPlanesList,locked=False)
     self.logic.addMandiblePlaneObservers()
 
     # make it not visible to not clutter the mandible 3D view
-    self.setBiggerSawBoxesInteractionHandlesVisibility(visibility=False)
+    #self.setBiggerSawBoxesInteractionHandlesVisibility(visibility=False)
+    self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","False")
     self.logic.setMarkupsListLocked(sawBoxesPlanesList,locked=False)
     self.logic.addSawBoxPlaneObservers()
 
@@ -491,17 +494,22 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     sawBoxesPlanesList = createListFromFolderID(sawBoxesPlanesFolder)
     dentalImplantsPlanesList = createListFromFolderID(dentalImplantsPlanesFolder)
 
-    self.logic.setInteractiveHandlesVisibilityOfMarkups(
-      mandibularPlanesList,
-      visibility=False
-    )
+    #self.logic.setInteractiveHandlesVisibilityOfMarkups(
+    #  mandibularPlanesList,
+    #  visibility=False
+    #)
+    if self._parameterNode.GetParameter("lockVSP") == "False":
+      self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles","False")
+      self.updateGUIFromParameterNode() # needed because parameterNode observer was removed
     self.logic.setMarkupsListLocked(mandibularPlanesList,locked=True)
     self.logic.removeMandiblePlaneObservers()
 
-    self.logic.setInteractiveHandlesVisibilityOfMarkups(
-      sawBoxesPlanesList,
-      visibility=False
-    )
+    #self.logic.setInteractiveHandlesVisibilityOfMarkups(
+    #  sawBoxesPlanesList,
+    #  visibility=False
+    #)
+    self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","False")
+    self.updateGUIFromParameterNode() # needed because parameterNode observer was removed
     self.logic.setMarkupsListLocked(sawBoxesPlanesList,locked=True)
     self.logic.removeSawBoxPlaneObservers()
 
@@ -1147,7 +1155,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("showFibulaSegmentsLengths"):
       parameterNode.SetParameter("showFibulaSegmentsLengths","True")
     if not parameterNode.GetParameter("showOriginalMandible"):
-      parameterNode.SetParameter("showOriginalMandible","False")
+      parameterNode.SetParameter("showOriginalMandible","True")
     if not parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles"):
       parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","False")
     if not parameterNode.GetParameter("showMandiblePlanes"):
@@ -1520,14 +1528,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.mandiblePlaneObserversAndNodeIDList.append([observer,mandibularPlanesList[i].GetID()])
 
   def removeMandiblePlaneObservers(self):
-    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
-    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
-    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
-
     if len(self.mandiblePlaneObserversAndNodeIDList) == 0:
       return
 
-    for i in range(len(mandibularPlanesList)):
+    for i in range(len(self.mandiblePlaneObserversAndNodeIDList)):
       mandiblePlane = slicer.mrmlScene.GetNodeByID(self.mandiblePlaneObserversAndNodeIDList[i][1])
       mandiblePlane.RemoveObserver(self.mandiblePlaneObserversAndNodeIDList[i][0])
     self.mandiblePlaneObserversAndNodeIDList = []
@@ -3966,6 +3970,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.RemoveItem(pointsIntersectionsFolder)
     
     self.setRedSliceForBoxModelsDisplayNodes()
+
+    parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","True")
     
   def onSawBoxPlaneMoved(self,sourceNode,event):
     for i in range(len(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList)):
@@ -4248,7 +4254,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     return
 
-  def exportScaledFibulaPiecesForNeomandibleReconstructionToFolder(self, scaledFibulaPiecesFolder):
+  def exportScaledFibulaPiecesForNeomandibleReconstructionToFolder(self, scaledFibulaPiecesFolder, scaleFactor=1.001):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
     transformedFibulaPiecesFolder = shNode.GetItemByName("Transformed Fibula Pieces")
@@ -4266,7 +4272,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       scaleTransform.PostMultiply()
       scaleTransform.Translate(-origin)
       #Just scale them enough so that boolean union is successful
-      scaleTransform.Scale(1.0001, 1.0001, 1.0001)
+      scaleTransform.Scale(scaleFactor, scaleFactor, scaleFactor)
       scaleTransform.Translate(origin)
 
       scaleTransformer = vtk.vtkTransformPolyDataFilter()
