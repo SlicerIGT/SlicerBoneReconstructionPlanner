@@ -149,6 +149,7 @@ def registerSampleData():
 slicer.MANDIBLE_VIEW_SINGLETON_TAG = "1"
 slicer.FIBULA_VIEW_SINGLETON_TAG = "2"
 slicer.BRPLayoutId=101
+PREVIEW_RELEASE_OCTOBER_6TH_2024 = 33047
 
 def addBRPLayout():
   BRPLayout = f"""
@@ -1427,6 +1428,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         slicer.util.errorDisplay("Failed to compute results: "+str(e))
         import traceback
         traceback.print_exc()  
+
+    if int(slicer.app.revision) >= PREVIEW_RELEASE_OCTOBER_6TH_2024:
+      slicer.app.logUsageEvent("BoneReconstructionPlanner", "VirtualSurgicalPlanUpdated")
 
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
