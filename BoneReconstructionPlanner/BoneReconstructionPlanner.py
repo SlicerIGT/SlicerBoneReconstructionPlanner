@@ -302,6 +302,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # in batch mode, without a graphical user interface.
     self.logic = BoneReconstructionPlannerLogic()
 
+    # mandibularCurvePlaceWidget
+    placeWidget = self.ui.mandibleCurvePlaceWidget
+    placeWidget.setInteractionNode(slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton"))
+    placeWidget.setCurrentNode(self.logic.getMandibularCurve())
+    placeWidget.buttonsVisible = False
+    placeWidget.placeButton().show()
+    placeWidget.deleteButton().show()
+    placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    placeWidget.setDeleteAllControlPointsOptionVisible(False)
+
     # Connections
 
     # These connections ensure that we update parameter node when scene is closed
@@ -313,7 +323,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
     self.ui.fibulaLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.mandibleCurveSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibularSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaFiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -363,7 +372,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.openDocumentationButton.connect('clicked(bool)',self.onOpenDocumentationButton)
     self.ui.rightSideLegFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
-    self.ui.addMandibularCurveButton.connect('clicked(bool)',self.onAddMandibularCurveButton)
     self.ui.addFibulaLineButton.connect('clicked(bool)',self.onAddFibulaLineButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
     self.ui.createMiterBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateMiterBoxesFromFibulaPlanesButton)
@@ -590,7 +598,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     # Update node selectors and sliders
     self.ui.fibulaLineSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaLine"))
-    self.ui.mandibleCurveSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleCurve"))
     self.ui.mandibularSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularSegmentation"))
     self.ui.fibulaSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSegmentation"))
     self.ui.fibulaFiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaFiducialList"))
@@ -807,7 +814,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if currentScalarVolumeChanged == "True":
       self._parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode", "True")
 
-    self._parameterNode.SetNodeReferenceID("mandibleCurve", self.ui.mandibleCurveSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibularSegmentation", self.ui.mandibularSegmentationSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fibulaSegmentation", self.ui.fibulaSegmentationSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fibulaLine", self.ui.fibulaLineSelector.currentNodeID)
@@ -981,9 +987,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("fixCutGoesThroughTheMandibleTwice","False")
     self._parameterNode.SetParameter("fixCutGoesThroughTheMandibleTwiceCheckBoxChanged","True")
     self._parameterNode.EndModify(wasModified)
-
-  def onAddMandibularCurveButton(self):
-    self.logic.addMandibularCurve()
 
   def onAddFibulaLineButton(self):
     self.logic.addFibulaLine()
@@ -1232,24 +1235,31 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     documentationUrl = qt.QUrl("https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner#table-of-contents")
     qt.QDesktopServices.openUrl(documentationUrl)
   
-  def addMandibularCurve(self):
-    curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
-    curveNode.SetName("temp")
-    slicer.mrmlScene.AddNode(curveNode)
-    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(curveNode)
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    curveNodeItemID = shNode.GetItemByDataNode(curveNode)
-    shNode.SetItemParent(curveNodeItemID, self.getParentFolderItemID())
-    curveNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularCurve"))
+  def getMandibularCurve(self, startPlacementMode = False):
+    parameterNode = self.getParameterNode()
+    mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
+    if mandibularCurve is None:
+      mandibularCurve = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
+      mandibularCurve.SetName("temp")
+      slicer.mrmlScene.AddNode(mandibularCurve)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibularCurve)
+      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+      mandibularCurveItemID = shNode.GetItemByDataNode(mandibularCurve)
+      shNode.SetItemParent(mandibularCurveItemID, self.getParentFolderItemID())
+      mandibularCurve.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularCurve"))
+      parameterNode.SetNodeReferenceID("mandibleCurve",mandibularCurve.GetID())
 
-    displayNode = curveNode.GetDisplayNode()
-    mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-    displayNode.AddViewNodeID(mandibleViewNode.GetID())
+      displayNode = mandibularCurve.GetDisplayNode()
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
-    #setup placement
-    slicer.modules.markups.logic().SetActiveListID(curveNode)
-    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-    interactionNode.SwitchToSinglePlaceMode()
+    if startPlacementMode:
+      #setup placement
+      slicer.modules.markups.logic().SetActiveListID(mandibularCurve)
+      interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+      interactionNode.SwitchToSinglePlaceMode()
+    
+    return mandibularCurve
 
   def addFibulaLine(self):
     parameterNode = self.getParameterNode()

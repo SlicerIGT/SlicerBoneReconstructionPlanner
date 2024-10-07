@@ -160,17 +160,10 @@
            <item row="4" column="0">
             <widget class="QLabel" name="label_6">
              <property name="text">
-              <string>Place mandibular curve</string>
+              <string>Mandibular curve</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="QPushButton" name="addMandibularCurveButton">
-             <property name="text">
-              <string>Add mandibular curve</string>
              </property>
             </widget>
            </item>
@@ -237,38 +230,13 @@
             </widget>
            </item>
            <item row="10" column="0">
-            <widget class="QLabel" name="label_9">
-             <property name="text">
-              <string>Select mandible curve</string>
-             </property>
-            </widget>
-           </item>
-           <item row="10" column="1">
-            <widget class="qMRMLNodeComboBox" name="mandibleCurveSelector">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="nodeTypes">
-              <stringlist>
-               <string>vtkMRMLMarkupsCurveNode</string>
-              </stringlist>
-             </property>
-             <property name="addEnabled">
-              <bool>false</bool>
-             </property>
-             <property name="removeEnabled">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="11" column="0">
             <widget class="QLabel" name="label_11">
              <property name="text">
               <string>Select fibula line</string>
              </property>
             </widget>
            </item>
-           <item row="11" column="1">
+           <item row="10" column="1">
             <widget class="qMRMLNodeComboBox" name="fibulaLineSelector">
              <property name="enabled">
               <bool>true</bool>
@@ -285,6 +253,9 @@
               <bool>false</bool>
              </property>
             </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="qSlicerMarkupsPlaceWidget" name="mandibleCurvePlaceWidget"/>
            </item>
           </layout>
          </item>
@@ -1747,6 +1718,17 @@ Desing</string>
    <container>1</container>
   </customwidget>
   <customwidget>
+   <class>qSlicerWidget</class>
+   <extends>QWidget</extends>
+   <header>qSlicerWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>qSlicerMarkupsPlaceWidget</class>
+   <extends>qSlicerWidget</extends>
+   <header>qSlicerMarkupsPlaceWidget.h</header>
+  </customwidget>
+  <customwidget>
    <class>qMRMLSubjectHierarchyTreeView</class>
    <extends>QTreeView</extends>
    <header>qMRMLSubjectHierarchyTreeView.h</header>
@@ -1815,22 +1797,6 @@ Desing</string>
     <hint type="destinationlabel">
      <x>268</x>
      <y>101</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>BoneReconstructionPlanner</sender>
-   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>mandibleCurveSelector</receiver>
-   <slot>setMRMLScene(vtkMRMLScene*)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>189</x>
-     <y>265</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>268</x>
-     <y>264</y>
     </hint>
    </hints>
   </connection>
@@ -1991,6 +1957,22 @@ Desing</string>
     <hint type="destinationlabel">
      <x>544</x>
      <y>986</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>mandibleCurvePlaceWidget</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>331</x>
+     <y>1883</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>457</x>
+     <y>273</y>
     </hint>
    </hints>
   </connection>
