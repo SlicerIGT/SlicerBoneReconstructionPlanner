@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>664</width>
-    <height>3768</height>
+    <width>559</width>
+    <height>3192</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -82,22 +82,34 @@
          <enum>QFrame::Plain</enum>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_12">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
          <item>
-          <layout class="QFormLayout" name="formLayout">
+          <layout class="QFormLayout" name="formLayout_12">
            <property name="leftMargin">
             <number>0</number>
            </property>
            <property name="topMargin">
             <number>0</number>
            </property>
-           <item row="1" column="0">
+           <item row="0" column="0">
             <widget class="QLabel" name="label_10">
              <property name="text">
               <string>Right side leg</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
+           <item row="0" column="1">
             <widget class="QCheckBox" name="rightSideLegFibulaCheckBox">
              <property name="text">
               <string>(tick if fibula is the one from the right leg)</string>
@@ -107,120 +119,154 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_2">
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_9">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <layout class="QVBoxLayout" name="verticalLayout_9">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="qMRMLNodeComboBox" name="mandibularSegmentationSelector">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="nodeTypes">
+                <stringlist>
+                 <string>vtkMRMLSegmentationNode</string>
+                </stringlist>
+               </property>
+               <property name="noneEnabled">
+                <bool>true</bool>
+               </property>
+               <property name="addEnabled">
+                <bool>false</bool>
+               </property>
+               <property name="removeEnabled">
+                <bool>false</bool>
+               </property>
+               <property name="noneDisplay">
+                <string>Select mandibular segmentation</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="qMRMLNodeComboBox" name="fibulaSegmentationSelector">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="nodeTypes">
+                <stringlist>
+                 <string>vtkMRMLSegmentationNode</string>
+                </stringlist>
+               </property>
+               <property name="noneEnabled">
+                <bool>true</bool>
+               </property>
+               <property name="addEnabled">
+                <bool>false</bool>
+               </property>
+               <property name="removeEnabled">
+                <bool>false</bool>
+               </property>
+               <property name="noneDisplay">
+                <string>Select fibula segmentation</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QPushButton" name="makeModelsButton">
              <property name="text">
-              <string>Select mandibular segmentation</string>
+              <string>Create bone
+models from
+segmentations</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
-            <widget class="qMRMLNodeComboBox" name="mandibularSegmentationSelector">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="nodeTypes">
-              <stringlist>
-               <string>vtkMRMLSegmentationNode</string>
-              </stringlist>
-             </property>
-             <property name="addEnabled">
-              <bool>false</bool>
-             </property>
-             <property name="removeEnabled">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_3">
-             <property name="text">
-              <string>Select fibula segmentation</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="qMRMLNodeComboBox" name="fibulaSegmentationSelector">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="nodeTypes">
-              <stringlist>
-               <string>vtkMRMLSegmentationNode</string>
-              </stringlist>
-             </property>
-             <property name="addEnabled">
-              <bool>false</bool>
-             </property>
-             <property name="removeEnabled">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0">
+          </layout>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="gridLayout">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
             <widget class="QLabel" name="label_6">
              <property name="text">
               <string>Mandibular curve</string>
              </property>
              <property name="alignment">
-              <set>Qt::AlignCenter</set>
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
-           <item row="5" column="0">
+           <item row="0" column="1">
+            <widget class="qSlicerMarkupsPlaceWidget" name="mandibleCurvePlaceWidget"/>
+           </item>
+           <item row="1" column="0">
             <widget class="QLabel" name="label_7">
              <property name="text">
-              <string>Place fibula line</string>
+              <string>Fibula line</string>
              </property>
              <property name="alignment">
-              <set>Qt::AlignCenter</set>
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
-           <item row="5" column="1">
-            <widget class="QPushButton" name="addFibulaLineButton">
-             <property name="text">
-              <string>Add fibula line</string>
-             </property>
-            </widget>
+           <item row="1" column="1">
+            <widget class="qSlicerMarkupsPlaceWidget" name="fibulaLinePlaceWidget"/>
            </item>
-           <item row="6" column="0">
+           <item row="2" column="0">
             <widget class="QLabel" name="label_8">
              <property name="text">
               <string>Place mandibular planes</string>
              </property>
             </widget>
            </item>
-           <item row="6" column="1">
+           <item row="2" column="1">
             <widget class="QPushButton" name="addCutPlaneButton">
              <property name="text">
               <string>Add cut plane</string>
              </property>
             </widget>
            </item>
-           <item row="7" column="0">
-            <widget class="QLabel" name="label_4">
-             <property name="text">
-              <string>Initial space (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="1">
+           <item row="3" column="0">
             <widget class="ctkDoubleSpinBox" name="initialSpinBox">
+             <property name="prefix">
+              <string>Initial space (mm): </string>
+             </property>
+             <property name="suffix">
+              <string/>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
             </widget>
            </item>
-           <item row="8" column="0">
-            <widget class="QLabel" name="label_18">
-             <property name="text">
-              <string>Between space (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="1">
+           <item row="3" column="1">
             <widget class="ctkDoubleSpinBox" name="betweenSpinBox">
+             <property name="prefix">
+              <string>Between space (mm): </string>
+             </property>
+             <property name="suffix">
+              <string/>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -229,42 +275,7 @@
              </property>
             </widget>
            </item>
-           <item row="10" column="0">
-            <widget class="QLabel" name="label_11">
-             <property name="text">
-              <string>Select fibula line</string>
-             </property>
-            </widget>
-           </item>
-           <item row="10" column="1">
-            <widget class="qMRMLNodeComboBox" name="fibulaLineSelector">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="nodeTypes">
-              <stringlist>
-               <string>vtkMRMLMarkupsLineNode</string>
-              </stringlist>
-             </property>
-             <property name="addEnabled">
-              <bool>false</bool>
-             </property>
-             <property name="removeEnabled">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="qSlicerMarkupsPlaceWidget" name="mandibleCurvePlaceWidget"/>
-           </item>
           </layout>
-         </item>
-         <item>
-          <widget class="QPushButton" name="makeModelsButton">
-           <property name="text">
-            <string>Create bone models from segmentations</string>
-           </property>
-          </widget>
          </item>
          <item>
           <widget class="QPushButton" name="centerFibulaLineButton">
@@ -274,132 +285,156 @@
           </widget>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="label_46">
-             <property name="text">
-              <string>Fibula segment lengths measurements</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QComboBox" name="fibulaSegmentsMeasurementModeComboBox">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="toolTip">
-              <string>Fibula segment measurement mode. Needs update</string>
-             </property>
-             <property name="sizeAdjustPolicy">
-              <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-             </property>
-             <item>
-              <property name="text">
-               <string>center2center</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>proximal2proximal</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>distal2distal</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QFormLayout" name="formLayout_9">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item row="0" column="0">
-            <widget class="QComboBox" name="kindOfMandibleResectionComboBox">
-             <item>
-              <property name="text">
-               <string>Segmental Mandibulectomy</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Hemimandibulectomy</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QComboBox" name="mandibleSideToRemoveComboBox">
-             <item>
-              <property name="text">
-               <string>Removing right side</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Removing left side</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string/>
-              </property>
-             </item>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="mandiblePlanesPositioningForMaximumBoneContactCheckBox">
+          <widget class="ctkCollapsibleButton" name="CollapsibleButton_5">
            <property name="text">
-            <string>Automatic mandibular planes positioning for maximum bones contact area</string>
+            <string>Advanced VSP options</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="makeAllMandiblePlanesRotateTogetherCheckBox">
-           <property name="text">
-            <string>Make all mandible planes rotate together</string>
+           <property name="collapsed">
+            <bool>true</bool>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="useMoreExactVersionOfPositioningAlgorithmCheckBox">
-           <property name="toolTip">
-            <string>Use when you have finished editing</string>
-           </property>
-           <property name="text">
-            <string>Use more exact version of the positioning algorithm (takes more time)</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="useNonDecimatedBoneModelsForPreviewCheckBox">
-           <property name="text">
-            <string>Use non-decimated bone models for preview (takes more time)</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="fixCutGoesThroughTheMandibleTwiceCheckBox">
-           <property name="text">
-            <string>Fix cut goes through the mandible twice</string>
-           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_11">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="label_46">
+                <property name="text">
+                 <string>Fibula segment lengths measurements</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="fibulaSegmentsMeasurementModeComboBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Fibula segment measurement mode. Needs update</string>
+                </property>
+                <property name="sizeAdjustPolicy">
+                 <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>center2center</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>proximal2proximal</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>distal2distal</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QFormLayout" name="formLayout_9">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QComboBox" name="kindOfMandibleResectionComboBox">
+                <item>
+                 <property name="text">
+                  <string>Segmental Mandibulectomy</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Hemimandibulectomy</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QComboBox" name="mandibleSideToRemoveComboBox">
+                <item>
+                 <property name="text">
+                  <string>Removing right side</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Removing left side</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string/>
+                 </property>
+                </item>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="mandiblePlanesPositioningForMaximumBoneContactCheckBox">
+              <property name="text">
+               <string>Automatic mandibular planes positioning for maximum bones contact area</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="makeAllMandiblePlanesRotateTogetherCheckBox">
+              <property name="text">
+               <string>Make all mandible planes rotate together</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="useMoreExactVersionOfPositioningAlgorithmCheckBox">
+              <property name="toolTip">
+               <string>Use when you have finished editing</string>
+              </property>
+              <property name="text">
+               <string>Use more exact version of the positioning algorithm (takes more time)</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="useNonDecimatedBoneModelsForPreviewCheckBox">
+              <property name="text">
+               <string>Use non-decimated bone models for preview (takes more time)</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="fixCutGoesThroughTheMandibleTwiceCheckBox">
+              <property name="text">
+               <string>Fix cut goes through the mandible twice</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
         </layout>
@@ -534,171 +569,180 @@
        </widget>
       </item>
       <item>
-       <widget class="QFrame" name="visualizationControlsOfVPSFrame">
-        <property name="minimumSize">
-         <size>
-          <width>100</width>
-          <height>135</height>
-         </size>
+       <widget class="ctkCollapsibleButton" name="CollapsibleButton_6">
+        <property name="text">
+         <string>VSP visualization options</string>
         </property>
-        <property name="frameShape">
-         <enum>QFrame::NoFrame</enum>
-        </property>
-        <property name="frameShadow">
-         <enum>QFrame::Plain</enum>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_10">
-         <property name="spacing">
-          <number>7</number>
-         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_13">
          <item>
-          <layout class="QFormLayout" name="formLayout_11">
-           <property name="verticalSpacing">
-            <number>7</number>
+          <widget class="QFrame" name="visualizationControlsOfVPSFrame">
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>135</height>
+            </size>
            </property>
-           <property name="leftMargin">
-            <number>0</number>
+           <property name="frameShape">
+            <enum>QFrame::NoFrame</enum>
            </property>
-           <property name="topMargin">
-            <number>0</number>
+           <property name="frameShadow">
+            <enum>QFrame::Plain</enum>
            </property>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label">
-             <property name="text">
-              <string>Current Scalar Volume</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="qMRMLNodeComboBox" name="scalarVolumeSelector">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="nodeTypes">
-              <stringlist>
-               <string>vtkMRMLScalarVolumeNode</string>
-              </stringlist>
-             </property>
-             <property name="addEnabled">
-              <bool>false</bool>
-             </property>
-             <property name="removeEnabled">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_6">
-           <property name="sizeConstraint">
-            <enum>QLayout::SetMaximumSize</enum>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="label_47">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Mandible planes</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QToolButton" name="showMandiblePlanesToolButton">
-             <property name="text">
-              <string/>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QToolButton" name="showMandiblePlanesInteractionHandlesToolButton">
-             <property name="text">
-              <string/>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <spacer name="horizontalSpacer">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="showOriginalMandibleCheckBox">
-           <property name="text">
-            <string>Show original mandible model</string>
-           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_10">
+            <property name="spacing">
+             <number>7</number>
+            </property>
+            <item>
+             <layout class="QFormLayout" name="formLayout_11">
+              <property name="verticalSpacing">
+               <number>7</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>Current Scalar Volume</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="qMRMLNodeComboBox" name="scalarVolumeSelector">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="nodeTypes">
+                 <stringlist>
+                  <string>vtkMRMLScalarVolumeNode</string>
+                 </stringlist>
+                </property>
+                <property name="addEnabled">
+                 <bool>false</bool>
+                </property>
+                <property name="removeEnabled">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_6">
+              <property name="sizeConstraint">
+               <enum>QLayout::SetMaximumSize</enum>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="label_47">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Mandible planes</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QToolButton" name="showMandiblePlanesToolButton">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QToolButton" name="showMandiblePlanesInteractionHandlesToolButton">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="showOriginalMandibleCheckBox">
+              <property name="text">
+               <string>Show original mandible model</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="showFibulaSegmentsLengthsCheckBox">
+              <property name="text">
+               <string>Show fibula segments lengths</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QFormLayout" name="formLayout_10">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_45">
+                <property name="text">
+                 <string>Lights rendering:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QComboBox" name="lightsRenderingComboBox">
+                <item>
+                 <property name="text">
+                  <string>Lamp</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Lamp and Shadows</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>MultiLamp</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>MultiLamp and Shadows</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
           </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="showFibulaSegmentsLengthsCheckBox">
-           <property name="text">
-            <string>Show fibula segments lengths</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <layout class="QFormLayout" name="formLayout_10">
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_45">
-             <property name="text">
-              <string>Lights rendering:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QComboBox" name="lightsRenderingComboBox">
-             <item>
-              <property name="text">
-               <string>Lamp</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Lamp and Shadows</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>MultiLamp</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>MultiLamp and Shadows</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-          </layout>
          </item>
         </layout>
        </widget>
@@ -1739,22 +1783,6 @@ Desing</string>
   <connection>
    <sender>BoneReconstructionPlanner</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>fibulaLineSelector</receiver>
-   <slot>setMRMLScene(vtkMRMLScene*)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>189</x>
-     <y>265</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>268</x>
-     <y>290</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>BoneReconstructionPlanner</sender>
-   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>scalarVolumeSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
    <hints>
@@ -1973,6 +2001,22 @@ Desing</string>
     <hint type="destinationlabel">
      <x>457</x>
      <y>273</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>fibulaLinePlaceWidget</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>331</x>
+     <y>1883</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>457</x>
+     <y>307</y>
     </hint>
    </hints>
   </connection>
