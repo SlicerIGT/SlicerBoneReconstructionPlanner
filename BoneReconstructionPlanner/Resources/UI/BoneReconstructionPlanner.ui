@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>559</width>
-    <height>3192</height>
+    <width>769</width>
+    <height>3225</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -206,6 +206,52 @@ segmentations</string>
            <property name="topMargin">
             <number>0</number>
            </property>
+           <item row="3" column="1">
+            <widget class="ctkDoubleSpinBox" name="betweenSpinBox">
+             <property name="prefix">
+              <string>Between space (mm): </string>
+             </property>
+             <property name="suffix">
+              <string/>
+             </property>
+             <property name="decimals">
+              <number>1</number>
+             </property>
+             <property name="value">
+              <double>1.500000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_8">
+             <property name="text">
+              <string>Place mandibular planes</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QPushButton" name="addCutPlaneButton">
+             <property name="text">
+              <string>Add cut plane</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="qSlicerMarkupsPlaceWidget" name="fibulaLinePlaceWidget"/>
+           </item>
+           <item row="3" column="0">
+            <widget class="ctkDoubleSpinBox" name="initialSpinBox">
+             <property name="prefix">
+              <string>Initial space (mm): </string>
+             </property>
+             <property name="suffix">
+              <string/>
+             </property>
+             <property name="decimals">
+              <number>1</number>
+             </property>
+            </widget>
+           </item>
            <item row="0" column="0">
             <widget class="QLabel" name="label_6">
              <property name="text">
@@ -226,52 +272,6 @@ segmentations</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="qSlicerMarkupsPlaceWidget" name="fibulaLinePlaceWidget"/>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_8">
-             <property name="text">
-              <string>Place mandibular planes</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QPushButton" name="addCutPlaneButton">
-             <property name="text">
-              <string>Add cut plane</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="ctkDoubleSpinBox" name="initialSpinBox">
-             <property name="prefix">
-              <string>Initial space (mm): </string>
-             </property>
-             <property name="suffix">
-              <string/>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="ctkDoubleSpinBox" name="betweenSpinBox">
-             <property name="prefix">
-              <string>Between space (mm): </string>
-             </property>
-             <property name="suffix">
-              <string/>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="value">
-              <double>1.500000000000000</double>
              </property>
             </widget>
            </item>
@@ -529,8 +529,25 @@ segmentations</string>
         <property name="frameShadow">
          <enum>QFrame::Plain</enum>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_8">
-         <item>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="2">
+          <widget class="QToolButton" name="interCondylarBeamVisibilityToolButton">
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QToolButton" name="interCondylarBeamIncreaseSizeButton">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
           <widget class="QPushButton" name="create3DModelOfTheReconstructionButton">
            <property name="text">
             <string>Create 3D model of the reconstruction for
@@ -538,32 +555,15 @@ segmentations</string>
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="qMRMLNodeComboBox" name="condylarBeamModelSelector">
-           <property name="nodeTypes">
-            <stringlist notr="true">
-             <string>vtkMRMLModelNode</string>
-            </stringlist>
-           </property>
-           <property name="hideChildNodeTypes">
-            <stringlist notr="true"/>
-           </property>
-           <property name="noneEnabled">
-            <bool>true</bool>
-           </property>
-           <property name="addEnabled">
-            <bool>false</bool>
-           </property>
-           <property name="removeEnabled">
-            <bool>false</bool>
-           </property>
-           <property name="interactionNodeSingletonTag">
-            <string notr="true">Singleton</string>
-           </property>
-           <property name="noneDisplay">
-            <string>No inter-condylar beam</string>
+         <item row="0" column="4">
+          <widget class="QToolButton" name="interCondylarBeamDecreaseSizeButton">
+           <property name="text">
+            <string/>
            </property>
           </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="qSlicerMarkupsPlaceWidget" name="interCondylarBeamLinePlaceWidget"/>
          </item>
         </layout>
        </widget>
@@ -1975,22 +1975,6 @@ Desing</string>
   <connection>
    <sender>BoneReconstructionPlanner</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>condylarBeamModelSelector</receiver>
-   <slot>setMRMLScene(vtkMRMLScene*)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>342</x>
-     <y>1782</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>544</x>
-     <y>986</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>BoneReconstructionPlanner</sender>
-   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>mandibleCurvePlaceWidget</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
    <hints>
@@ -2017,6 +2001,22 @@ Desing</string>
     <hint type="destinationlabel">
      <x>457</x>
      <y>307</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>interCondylarBeamLinePlaceWidget</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>384</x>
+     <y>1612</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>497</x>
+     <y>557</y>
     </hint>
    </hints>
   </connection>
