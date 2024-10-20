@@ -5,6 +5,7 @@ set(MODULE_NAME BoneReconstructionPlanner)
 set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
   BRPLib/helperFunctions.py
+  BRPLib/guiWidgets.py
   )
 
 set(MODULE_PYTHON_RESOURCES
