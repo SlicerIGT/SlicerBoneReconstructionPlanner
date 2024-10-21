@@ -759,9 +759,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self.ui.customTitaniumPlateGenerationCollapsibleButton.hide()
 
-    showInterCondylarBoxChecked = self._parameterNode.GetParameter("showInterCondylarBox") == "True"
-    self.ui.interCondylarBeamVisibilityToolButton.checked = showInterCondylarBoxChecked
-    self.setInterCondylarBeamVisibility(showInterCondylarBoxChecked)
+    showInterCondylarBeamBoxChecked = self._parameterNode.GetParameter("showInterCondylarBeamBox") == "True"
+    self.ui.interCondylarBeamVisibilityToolButton.checked = showInterCondylarBeamBoxChecked
+    self.setInterCondylarBeamVisibility(showInterCondylarBeamBoxChecked)
 
     lockVSPChecked = self._parameterNode.GetParameter("lockVSP") == "True"
 
@@ -917,9 +917,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self._parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview","False")
     if self.ui.interCondylarBeamVisibilityToolButton.checked:
-      self._parameterNode.SetParameter("showInterCondylarBox","True")
+      self._parameterNode.SetParameter("showInterCondylarBeamBox","True")
     else:
-      self._parameterNode.SetParameter("showInterCondylarBox","False")
+      self._parameterNode.SetParameter("showInterCondylarBeamBox","False")
     if self.ui.showMandiblePlanesToolButton.checked:
       self._parameterNode.SetParameter("showMandiblePlanes","True")
     else:
@@ -1104,10 +1104,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.SetVisibility(visibility)
 
   def setInterCondylarBeamVisibility(self, visibility):
-    interCondylarBox = self._parameterNode.GetNodeReference("interCondylarBox")
+    interCondylarBeamBox = self._parameterNode.GetNodeReference("interCondylarBeamBox")
 
-    if interCondylarBox is not None:
-      displayNode = interCondylarBox.GetDisplayNode()
+    if interCondylarBeamBox is not None:
+      displayNode = interCondylarBeamBox.GetDisplayNode()
       displayNode.SetVisibility(visibility)
 
   def setMandiblePlanesInteractionHandlesVisibility(self, visibility):
@@ -1211,8 +1211,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("showOriginalMandible","True")
     if not parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles"):
       parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","False")
-    if not parameterNode.GetParameter("showInterCondylarBox"):
-      parameterNode.SetParameter("showInterCondylarBox","True") 
+    if not parameterNode.GetParameter("showInterCondylarBeamBox"):
+      parameterNode.SetParameter("showInterCondylarBeamBox","True") 
     if not parameterNode.GetParameter("showMandiblePlanes"):
       parameterNode.SetParameter("showMandiblePlanes","True") 
     if not parameterNode.GetParameter("showMandiblePlanesInteractionHandles"):
@@ -1223,8 +1223,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","True")
     if not parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact"):
       parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","True")
-    if not parameterNode.GetParameter("interCondylarBoxSize"):
-      parameterNode.SetParameter("interCondylarBoxSize",str(INITIAL_INTER_CONDYLAR_BOX_SIZE))
+    if not parameterNode.GetParameter("interCondylarBeamBoxSize"):
+      parameterNode.SetParameter("interCondylarBeamBoxSize",str(INITIAL_INTER_CONDYLAR_BOX_SIZE))
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -1381,16 +1381,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   
   def interCondylarBeamSizeChange(self, positive = True):
     parameterNode = self.getParameterNode()
-    interCondylarBoxSize = float(parameterNode.GetParameter("interCondylarBoxSize"))
+    interCondylarBeamBoxSize = float(parameterNode.GetParameter("interCondylarBeamBoxSize"))
 
     if positive:
-      interCondylarBoxSize += INTER_CONDYLAR_BOX_SIZE_STEP
-    elif interCondylarBoxSize >= 2*INTER_CONDYLAR_BOX_SIZE_STEP:
-      interCondylarBoxSize -= INTER_CONDYLAR_BOX_SIZE_STEP
+      interCondylarBeamBoxSize += INTER_CONDYLAR_BOX_SIZE_STEP
+    elif interCondylarBeamBoxSize >= 2*INTER_CONDYLAR_BOX_SIZE_STEP:
+      interCondylarBeamBoxSize -= INTER_CONDYLAR_BOX_SIZE_STEP
 
-    parameterNode.SetParameter("interCondylarBoxSize", str(interCondylarBoxSize))
+    parameterNode.SetParameter("interCondylarBeamBoxSize", str(interCondylarBeamBoxSize))
 
-    self.modifyInterCondylarBox()
+    self.modifyInterCondylarBeamBox()
   
   def addCutPlane(self):
     parameterNode = self.getParameterNode()
@@ -1444,22 +1444,22 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def onInterCondylarLinePointModified(self,sourceNode,event):
     if sourceNode.GetNumberOfControlPoints() == 2:
-      self.modifyInterCondylarBox()
+      self.modifyInterCondylarBeamBox()
     else:
-      # delete interCondylarBox
+      # delete interCondylarBeamBox
       parameterNode = self.getParameterNode()
-      interCondylarBox = parameterNode.GetNodeReference("interCondylarBox")
-      if interCondylarBox is not None:
-        slicer.mrmlScene.RemoveNode(interCondylarBox)
+      interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
+      if interCondylarBeamBox is not None:
+        slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
 
-  def modifyInterCondylarBox(self):
+  def modifyInterCondylarBeamBox(self):
     parameterNode = self.getParameterNode()
     interCondylarBeamLine = parameterNode.GetNodeReference("interCondylarBeamLine")
-    interCondylarBox = parameterNode.GetNodeReference("interCondylarBox")
-    interCondylarBoxSize = float(parameterNode.GetParameter("interCondylarBoxSize"))
+    interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
+    interCondylarBeamBoxSize = float(parameterNode.GetParameter("interCondylarBeamBoxSize"))
 
-    if interCondylarBox is not None:
-      slicer.mrmlScene.RemoveNode(interCondylarBox)
+    if interCondylarBeamBox is not None:
+      slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
 
     # get the two points of the line
     point0 = np.array([0,0,0])
@@ -1471,20 +1471,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     lineDirection = lineDirection / lineNorm
     lineMiddlePoint = (point0 + point1) / 2
 
-    interCondylarBox = createBox(
+    interCondylarBeamBox = createBox(
       X = lineNorm, 
-      Y = interCondylarBoxSize, 
-      Z = interCondylarBoxSize, 
-      name = "interCondylarBox", #maybe get the name fixed
+      Y = interCondylarBeamBoxSize, 
+      Z = interCondylarBeamBoxSize, 
+      name = "interCondylarBeamBox", #maybe get the name fixed
       defaultVisible = False
     )
-    parameterNode.SetNodeReferenceID("interCondylarBox", interCondylarBox.GetID())
+    parameterNode.SetNodeReferenceID("interCondylarBeamBox", interCondylarBeamBox.GetID())
 
-    interCondylarBoxDisplayNode = interCondylarBox.GetDisplayNode()
-    interCondylarBoxDisplayNode.SetVisibility2D(True)
-    interCondylarBoxDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+    interCondylarBeamBoxDisplayNode = interCondylarBeamBox.GetDisplayNode()
+    interCondylarBeamBoxDisplayNode.SetVisibility2D(True)
+    interCondylarBeamBoxDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
     self.setRedSliceForBoxModelsDisplayNodes()
-    #interCondylarBoxDisplayNode.AddViewNodeID(slicer.RED_VIEW_ID)
 
     # transform the box
     transform = vtk.vtkTransform()
@@ -1503,10 +1502,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     transformFilter = vtk.vtkTransformPolyDataFilter()
     transformFilter.SetTransform(transform)
-    transformFilter.SetInputData(interCondylarBox.GetPolyData())
+    transformFilter.SetInputData(interCondylarBeamBox.GetPolyData())
     transformFilter.Update()
-    interCondylarBox.SetAndObservePolyData(transformFilter.GetOutput())
-    interCondylarBoxDisplayNode.SetVisibility(True) # now make it visible
+    interCondylarBeamBox.SetAndObservePolyData(transformFilter.GetOutput())
+    interCondylarBeamBoxDisplayNode.SetVisibility(True) # now make it visible
 
   def onPlanePointAdded(self,sourceNode,event):
     parameterNode = self.getParameterNode()
@@ -2619,17 +2618,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     transformedMandiblePiecesList = createListFromFolderID(transformedMandiblePiecesFolder)
     transformedFullMandiblesList = createListFromFolderID(transformedFullMandiblesFolder)
     cutMandiblePiecesList = createListFromFolderID(cutMandiblePiecesFolder)
-    interCondylarBox = parameterNode.GetNodeReference("interCondylarBox")
+    interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
     redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
 
     if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
       #When fibulaScalarVolume:
       addIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList
-      removeIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBox]
+      removeIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox]
       
     else:
       #When mandibleScalarVolume:
-      addIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBox]
+      addIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox]
       removeIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList
     
     for i in range(len(removeIterationList)):
@@ -4410,9 +4409,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     listOfObjectsToUnite = scaledFibulaPiecesList + [resectedMandible]
     for i in range(len(listOfObjectsToUnite)):
       combineModelsLogic.process(mandibleReconstructionModel, listOfObjectsToUnite[i], mandibleReconstructionModel, 'union')
-    interCondylarBox = parameterNode.GetNodeReference("interCondylarBox")
-    if interCondylarBox is not None:
-      combineModelsLogic.process(mandibleReconstructionModel, interCondylarBox, mandibleReconstructionModel, 'union')
+    interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
+    if interCondylarBeamBox is not None:
+      combineModelsLogic.process(mandibleReconstructionModel, interCondylarBeamBox, mandibleReconstructionModel, 'union')
     
     shNode.RemoveItem(scaledFibulaPiecesFolder)
 
