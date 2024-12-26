@@ -29,6 +29,7 @@ find_package(Sandbox REQUIRED)
 #-----------------------------------------------------------------------------
 # Extension modules
 add_subdirectory(BoneReconstructionPlanner)
+add_subdirectory(AddMagnetsToModel)
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------
