@@ -7,12 +7,25 @@
     <x>0</x>
     <y>0</y>
     <width>449</width>
-    <height>755</height>
+    <height>795</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QFrame" name="frame">
+    <widget class="QLabel" name="versionLabel">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>versionLabel</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="inputModelFrame">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -29,9 +42,6 @@
       </item>
       <item row="1" column="1">
        <widget class="qMRMLNodeComboBox" name="segmentationSelector">
-        <property name="toolTip">
-         <string>Pick the input to the algorithm.</string>
-        </property>
         <property name="nodeTypes">
          <stringlist notr="true">
           <string>vtkMRMLSegmentationNode</string>
@@ -46,9 +56,6 @@
         </property>
         <property name="removeEnabled">
          <bool>false</bool>
-        </property>
-        <property name="SlicerParameterName" stdset="0">
-         <string>inputVolume</string>
         </property>
        </widget>
       </item>
@@ -90,8 +97,12 @@
         <property name="value">
          <double>4.000000000000000</double>
         </property>
-        <property name="SlicerParameterName" stdset="0">
-         <string>imageThreshold</string>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QPushButton" name="createModelButton">
+        <property name="text">
+         <string>Create model</string>
         </property>
        </widget>
       </item>
@@ -99,7 +110,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="frame_2">
+    <widget class="QFrame" name="cutPlaneFrame">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -134,25 +145,44 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="label_10">
         <property name="text">
-         <string>Plane handles visible:</string>
+         <string>Plane edit mode:</string>
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
-       <widget class="QCheckBox" name="planeHandlesVisibleCheckbox">
-        <property name="text">
+      <item row="3" column="1">
+       <widget class="QGroupBox" name="planeEditModeGroupBox">
+        <property name="title">
          <string/>
         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <widget class="QRadioButton" name="pointsRadioButton">
+           <property name="text">
+            <string>Points</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="handlesRadioButton">
+           <property name="text">
+            <string>Handles</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="frame_3">
+    <widget class="QFrame" name="parametersFrame">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -168,7 +198,7 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="qSlicerMarkupsPlaceWidget" name="cylinderPlaceWidget"/>
+       <widget class="qSlicerMarkupsPlaceWidget" name="cylindersPlaceWidget"/>
       </item>
       <item row="1" column="0">
        <widget class="QLabel" name="label_12">
@@ -180,7 +210,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="label_13">
         <property name="text">
-         <string>Outer diameter</string>
+         <string>Extra diameter</string>
         </property>
        </widget>
       </item>
@@ -195,12 +225,12 @@
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="ctkSliderWidget" name="outerCylindersDiameterDoubleSlider">
+       <widget class="ctkSliderWidget" name="extraCylindersDiameterDoubleSlider">
         <property name="maximum">
          <double>50.000000000000000</double>
         </property>
         <property name="value">
-         <double>7.000000000000000</double>
+         <double>5.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -224,8 +254,7 @@
       <item row="4" column="0">
        <widget class="QLabel" name="label_15">
         <property name="text">
-         <string>Inner diameter
-tolerance</string>
+         <string>Diameter tolerance</string>
         </property>
        </widget>
       </item>
@@ -237,7 +266,7 @@ tolerance</string>
        </widget>
       </item>
       <item row="4" column="1">
-       <widget class="QDoubleSpinBox" name="innerDiameterToleranceSpinBox">
+       <widget class="QDoubleSpinBox" name="diameterToleranceSpinBox">
         <property name="toolTip">
          <string>Makes the diameter hole larger accounting for 3D printing inaccuracy. Usually does not need to be changed.</string>
         </property>
@@ -264,6 +293,9 @@ tolerance</string>
         <property name="text">
          <string/>
         </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item row="6" column="0">
@@ -277,15 +309,36 @@ tolerance</string>
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="updateFinalModelsPreviewButton">
-     <property name="toolTip">
-      <string>Shows 3D model with cylindrical wholes</string>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="leftMargin">
+      <number>0</number>
      </property>
-     <property name="text">
-      <string>Update final
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QPushButton" name="updateFinalModelsPreviewButton">
+       <property name="toolTip">
+        <string>Shows 3D model with cylindrical wholes</string>
+       </property>
+       <property name="text">
+        <string>Update final
 models preview</string>
-     </property>
-    </widget>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="lockDesignButton">
+       <property name="text">
+        <string>lock
+design</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QPushButton" name="exportFinalModelsAsButton">
@@ -360,6 +413,38 @@ models preview</string>
     <hint type="destinationlabel">
      <x>248</x>
      <y>61</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>AddMagnetsToModel</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>cylindersPlaceWidget</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>224</x>
+     <y>377</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>315</x>
+     <y>269</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>AddMagnetsToModel</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>planePlaceWidget</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>224</x>
+     <y>377</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>309</x>
+     <y>161</y>
     </hint>
    </hints>
   </connection>
