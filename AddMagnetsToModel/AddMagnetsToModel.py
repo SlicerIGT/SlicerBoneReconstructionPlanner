@@ -686,7 +686,10 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
         cylindersFiducial = self.getCylindersFiducial()
         cutPlane = self.getCutPlane()
 
-        if cylindersFiducial.GetNumberOfControlPoints() == 0:
+        if (
+            (cylindersFiducial.GetNumberOfControlPoints() == 0) or 
+            (cylindersFiducial.GetNumberOfControlPoints() != cylindersFiducial.GetNumberOfDefinedControlPoints())
+        ):
             return
         
         if not cutPlane.GetIsPlaneValid():
@@ -700,11 +703,10 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
         for i in range(cylindersFiducial.GetNumberOfControlPoints()):
             point = np.array(cylindersFiducial.GetNthControlPointPosition(i))
             projected_point = project_point_to_plane(point, plane_center, plane_normal)
-            #print(f"Original Point: {point}, Projected Point: {projected_point}")
-            # Optionally, update the fiducial node's position
-            cylindersFiducial.SetNthControlPointPosition(i, *projected_point)
+            # Update the fiducial node's position if greater than tolerance
+            if np.linalg.norm(np.array(projected_point) - np.array(point)) > 1e-5:
+                cylindersFiducial.SetNthControlPointPosition(i, *projected_point)
 
-        
         self.updateGlyphs3D()
         self.cutWithDynamicModeler()
     
@@ -923,7 +925,7 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
     def addCylindersFiducialObserver(self):
         cylindersFiducial = self.getCylindersFiducial()
         self.cylindersFiducialObserver = cylindersFiducial.AddObserver(
-            slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+            slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
             lambda arg1,arg2: self.updatePointsTimer.start()
         )
 
