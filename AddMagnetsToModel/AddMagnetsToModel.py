@@ -124,9 +124,10 @@ class AddMagnetsToModelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin)
         placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
         placeWidget.setDeleteAllControlPointsOptionVisible(True)
 
-        self.ui.internalShellDoubleSlider.valueChanged.connect(self.updateParameterNodeFromGUI)
+        self.ui.innerCylindersDiameterDoubleSlider.valueChanged.connect(self.updateParameterNodeFromGUI)
         self.ui.extraCylindersDiameterDoubleSlider.valueChanged.connect(self.updateParameterNodeFromGUI)
         self.ui.cylindersDepthDoubleSlider.valueChanged.connect(self.updateParameterNodeFromGUI)
+        self.ui.cylindersExtraDepthDoubleSlider.valueChanged.connect(self.updateParameterNodeFromGUI)
         self.ui.cylindersVisibilityCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
 
         self.ui.updateFinalModelsPreviewButton.connect("clicked(bool)", self.onUpdateFinalModelsPreviewButton)
@@ -269,6 +270,8 @@ class AddMagnetsToModelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin)
             self.ui.extraCylindersDiameterDoubleSlider.setValue(float(self._parameterNode.GetParameter("extraCylindersDiameter")))
         if self._parameterNode.GetParameter("cylindersDepth") != '':
             self.ui.cylindersDepthDoubleSlider.setValue(float(self._parameterNode.GetParameter("cylindersDepth")))
+        if self._parameterNode.GetParameter("cylindersExtraDepth") != '':
+            self.ui.cylindersExtraDepthDoubleSlider.setValue(float(self._parameterNode.GetParameter("cylindersExtraDepth")))
         if self._parameterNode.GetParameter("diameterTolerance") != '':
             self.ui.diameterToleranceSpinBox.setValue(float(self._parameterNode.GetParameter("diameterTolerance")))
         if self._parameterNode.GetParameter("depthDiameterTolerance") != '':
@@ -304,7 +307,11 @@ class AddMagnetsToModelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin)
             self.ui.inputModelFrame.enabled = True
             self.ui.cutPlaneFrame.enabled = True
             self.ui.parametersFrame.enabled = True
-            
+        
+        preModelPartA = self._parameterNode.GetNodeReference("preModelPartA")
+        preModelPartB = self._parameterNode.GetNodeReference("preModelPartB")
+        if planeValid and cylindersValid and (preModelPartA is not None) and (preModelPartB is not None):
+            self.logic.updatePointsTimer.start()
 
         """
         shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -377,6 +384,7 @@ class AddMagnetsToModelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin)
         self._parameterNode.SetParameter("innerCylindersDiameter", str(self.ui.innerCylindersDiameterDoubleSlider.value))
         self._parameterNode.SetParameter("extraCylindersDiameter", str(self.ui.extraCylindersDiameterDoubleSlider.value))
         self._parameterNode.SetParameter("cylindersDepth", str(self.ui.cylindersDepthDoubleSlider.value))
+        self._parameterNode.SetParameter("cylindersExtraDepth", str(self.ui.cylindersExtraDepthDoubleSlider.value))
         self._parameterNode.SetParameter("diameterTolerance", str(self.ui.diameterToleranceSpinBox.value))
         self._parameterNode.SetParameter("depthDiameterTolerance", str(self.ui.depthDiameterToleranceSpinBox.value))
 
@@ -470,6 +478,8 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
             parameterNode.SetParameter("extraCylindersDiameter",str(5.0))
         if not parameterNode.GetParameter("cylindersDepth"):
             parameterNode.SetParameter("cylindersDepth",str(10.0))
+        if not parameterNode.GetParameter("cylindersExtraDepth"):
+            parameterNode.SetParameter("cylindersExtraDepth",str(3.0))
         if not parameterNode.GetParameter("diameterTolerance"):
             parameterNode.SetParameter("diameterTolerance",str(0.15))
         if not parameterNode.GetParameter("depthDiameterTolerance"):
@@ -620,12 +630,20 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
             slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(cutPlane)
             cutPlane.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneTypePlaneFit)
             cutPlane.GetDisplayNode().SetHandlesInteractive(False)
+            cutPlane.GetDisplayNode().SetOccludedVisibility(True)
             cutPlane.SetAttribute("isCutPlane","True")
             shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
             cutPlaneItemID = shNode.GetItemByDataNode(cutPlane)
             shNode.SetItemParent(cutPlaneItemID, self.getParentFolderItemID())
             cutPlane.SetName(slicer.mrmlScene.GetUniqueNameByString("cutPlane"))
             parameterNode.SetNodeReferenceID("cutPlane",cutPlane.GetID())
+
+            #Set color of the plane
+            aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+            colorTable = aux.GetLookupTable()
+            colorwithalpha = colorTable.GetTableValue(2)
+            color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
+            cutPlane.GetDisplayNode().SetSelectedColor(color)
 
             #displayNode = cutPlane.GetDisplayNode()
             #displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
@@ -642,6 +660,7 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
             cylindersFiducial.SetName("temp")
             slicer.mrmlScene.AddNode(cylindersFiducial)
             slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(cylindersFiducial)
+            cylindersFiducial.GetDisplayNode().SetOccludedVisibility(True)
             cylindersFiducial.SetAttribute("isCylindersFiducial","True")
             shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
             cylindersFiducialItemID = shNode.GetItemByDataNode(cylindersFiducial)
@@ -649,8 +668,17 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
             cylindersFiducial.SetName(slicer.mrmlScene.GetUniqueNameByString("cylindersFiducial"))
             parameterNode.SetNodeReferenceID("cylindersFiducial",cylindersFiducial.GetID())
 
+            #Set color of the plane
+            aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+            colorTable = aux.GetLookupTable()
+            colorwithalpha = colorTable.GetTableValue(3)
+            color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
+            cylindersFiducial.GetDisplayNode().SetSelectedColor(color)
+
             #displayNode = cylindersFiducial.GetDisplayNode()
             #displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+
+            self.addCylindersFiducialObserver()
         
         return cylindersFiducial
 
@@ -676,7 +704,133 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
             # Optionally, update the fiducial node's position
             cylindersFiducial.SetNthControlPointPosition(i, *projected_point)
 
+        
+        self.updateGlyphs3D()
         self.cutWithDynamicModeler()
+    
+    def updateGlyphs3D(self):
+        cylindersFiducial = self.getCylindersFiducial()
+        cutPlane = self.getCutPlane()
+
+        if cylindersFiducial.GetNumberOfControlPoints() == 0:
+            return
+        
+        if not cutPlane.GetIsPlaneValid():
+            return
+        
+        # Get plane parameters
+        plane_normal = np.array(cutPlane.GetNormal())
+
+        # rotation axis between superior direction and plane normal
+        default_cylinder_direction = np.zeros(3)
+        default_cylinder_direction[1] = 1
+        rotation_axis = np.cross(default_cylinder_direction,plane_normal)
+        rotation_axis = rotation_axis/np.linalg.norm(rotation_axis)
+        rotation_angle_degrees = np.arccos(np.dot(default_cylinder_direction,plane_normal))*180/np.pi
+        
+        innerDiameter = float(self.getParameterNode().GetParameter("innerCylindersDiameter"))
+        extraDiameter = float(self.getParameterNode().GetParameter("extraCylindersDiameter"))
+        cylindersDepth = float(self.getParameterNode().GetParameter("cylindersDepth"))
+        cylindersExtraDepth = float(self.getParameterNode().GetParameter("cylindersExtraDepth"))
+        tranformList = []
+        for i in range(cylindersFiducial.GetNumberOfControlPoints()):
+            point = np.array(cylindersFiducial.GetNthControlPointPosition(i))
+            tranform = vtk.vtkTransform()
+            tranform.PostMultiply()
+            #tranform.RotateX(90)
+            tranform.Scale(innerDiameter/2,2*cylindersDepth,innerDiameter/2)
+            tranform.RotateWXYZ(rotation_angle_degrees,rotation_axis[0],rotation_axis[1],rotation_axis[2])
+            tranform.Translate(point)
+            tranformList.append(tranform)
+        
+        innerGlyphNode = self.getParameterNode().GetNodeReference("innerGlyph")
+        if innerGlyphNode is None:
+            innerGlyphNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+            innerGlyphNode.SetName("innerGlyph")
+            slicer.mrmlScene.AddNode(innerGlyphNode)
+            innerGlyphNode.CreateDefaultDisplayNodes()
+            innerGlyphDisplayNode = innerGlyphNode.GetDisplayNode()
+            innerGlyphDisplayNode.SetVisibility2D(True)
+
+            #Set color of the plane
+            aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+            colorTable = aux.GetLookupTable()
+            colorwithalpha = colorTable.GetTableValue(4)
+            color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
+            innerGlyphDisplayNode.SetColor(color)
+
+            self.getParameterNode().SetNodeReferenceID("innerGlyph",innerGlyphNode.GetID())
+        
+        innerGlyphNode.SetAndObserveMesh(self.create_cylinders_from_transforms(tranformList))
+
+        outerGlyphNode = self.getParameterNode().GetNodeReference("outerGlyph")
+        if outerGlyphNode is None:
+            outerGlyphNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+            outerGlyphNode.SetName("outerGlyph")
+            slicer.mrmlScene.AddNode(outerGlyphNode)
+            outerGlyphNode.CreateDefaultDisplayNodes()
+            outerGlyphDisplayNode = outerGlyphNode.GetDisplayNode()
+            outerGlyphDisplayNode.SetVisibility2D(True)
+            outerGlyphDisplayNode.SetOpacity(0.3)
+
+            #Set color of the plane
+            aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+            colorTable = aux.GetLookupTable()
+            colorwithalpha = colorTable.GetTableValue(5)
+            color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
+            outerGlyphDisplayNode.SetColor(color)
+
+            self.getParameterNode().SetNodeReferenceID("outerGlyph",outerGlyphNode.GetID())
+
+        outerGlyphNode.SetAndObserveMesh(
+            self.create_cylinders_from_transforms(
+                tranformList,
+                radiusFactor = (extraDiameter+innerDiameter)/innerDiameter,
+                heightFactor = (cylindersExtraDepth+cylindersDepth)/cylindersDepth,
+            )
+        )
+
+    def create_cylinders_from_transforms(self,transform_list,radiusFactor=1.0,heightFactor=1.0):
+        # Create a cylinder source
+        cylinderSource = vtk.vtkCylinderSource()
+        cylinderSource.SetHeight(1.0*heightFactor)
+        cylinderSource.SetRadius(1.0*radiusFactor)
+        cylinderSource.SetResolution(50)
+        cylinderSource.Update()
+
+        # Create a points object to hold the positions
+        points = vtk.vtkPoints()
+        
+        # Create a transform array to hold the transformations
+        tensors = vtk.vtkDoubleArray()
+        tensors.SetNumberOfComponents(9)  # 3x3 scale-rotation matrix
+
+        for transform in transform_list:
+            # Extract the position from the transform
+            position = transform.GetPosition()
+            points.InsertNextPoint(position)
+
+            # Extract the transformation matrix
+            matrix = transform.GetMatrix()
+            matrix_elements = [matrix.GetElement(j, i) for i in range(3) for j in range(3)]
+            # InsertNextTuple9 expects column-major order
+            tensors.InsertNextTuple9(*matrix_elements)
+
+        # Create a polydata to hold the points
+        pointPolyData = vtk.vtkPolyData()
+        pointPolyData.SetPoints(points)
+        pointPolyData.GetPointData().SetTensors(tensors)
+
+        # Create the glyph3D
+        tensorGlyph = vtk.vtkTensorGlyph()
+        tensorGlyph.SetSourceConnection(cylinderSource.GetOutputPort())
+        tensorGlyph.SetInputData(pointPolyData)
+        tensorGlyph.ColorGlyphsOff()
+        tensorGlyph.ThreeGlyphsOff()
+        tensorGlyph.ExtractEigenvaluesOff()
+        tensorGlyph.Update()
+
+        return tensorGlyph.GetOutput()
     
     def cutWithDynamicModeler(self):
         parameterNode = self.getParameterNode()
@@ -748,6 +902,8 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
             planeCutTool.SetAttribute("OperationType", "Difference")
 
             parameterNode.SetNodeReferenceID("planeCutTool", planeCutTool.GetID())
+            parameterNode.SetNodeReferenceID("preModelPartA", modelANode.GetID())
+            parameterNode.SetNodeReferenceID("preModelPartB", modelBNode.GetID())
 
             modelANodeItemID = shNode.GetItemByDataNode(modelANode)
             shNode.SetItemParent(modelANodeItemID, cutModelsFolder)
@@ -836,8 +992,8 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
 
         # Set parameters for the hollow effect
         effect.setParameter("ShellThicknessMm", 3)  # Set shell thickness in mm
-        #effect.setParameter("ShellMode", "OUTSIDE_SURFACE")  # Options: "MEDIAL_SURFACE", "INSIDE_SURFACE", "OUTSIDE_SURFACE"
-        effect.setParameter("ShellMode", "INSIDE_SURFACE")
+        effect.setParameter("ShellMode", "OUTSIDE_SURFACE")  # Options: "MEDIAL_SURFACE", "INSIDE_SURFACE", "OUTSIDE_SURFACE"
+        #effect.setParameter("ShellMode", "INSIDE_SURFACE")
 
         # Apply the effect
         effect.self().onApply()

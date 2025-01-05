@@ -33,14 +33,14 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QFormLayout" name="formLayout">
-      <item row="1" column="0">
+      <item row="2" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
          <string>Input segmentation:</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="2" column="1">
        <widget class="qMRMLNodeComboBox" name="segmentationSelector">
         <property name="nodeTypes">
          <stringlist notr="true">
@@ -73,14 +73,14 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="label_7">
         <property name="text">
          <string>Internal shell (mm):</string>
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
+      <item row="3" column="1">
        <widget class="ctkSliderWidget" name="internalShellDoubleSlider">
         <property name="toolTip">
          <string>Set threshold value for computing the output image. Voxels that have intensities lower than this value will set to zero.</string>
@@ -99,10 +99,17 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="4" column="1">
        <widget class="QPushButton" name="createModelButton">
         <property name="text">
          <string>Create model</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPushButton" name="pushButton">
+        <property name="text">
+         <string>Set AntiCamera</string>
         </property>
        </widget>
       </item>
@@ -193,7 +200,7 @@
       <item row="0" column="0">
        <widget class="QLabel" name="label_11">
         <property name="text">
-         <string>Cylinders placeholders:</string>
+         <string>Create cylinders</string>
         </property>
        </widget>
       </item>
@@ -251,21 +258,21 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="5" column="0">
        <widget class="QLabel" name="label_15">
         <property name="text">
          <string>Diameter tolerance</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="0">
+      <item row="6" column="0">
        <widget class="QLabel" name="label_16">
         <property name="text">
          <string>Depth tolerance</string>
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
+      <item row="5" column="1">
        <widget class="QDoubleSpinBox" name="diameterToleranceSpinBox">
         <property name="toolTip">
          <string>Makes the diameter hole larger accounting for 3D printing inaccuracy. Usually does not need to be changed.</string>
@@ -278,7 +285,7 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="6" column="1">
        <widget class="QDoubleSpinBox" name="depthDiameterToleranceSpinBox">
         <property name="toolTip">
          <string>Makes the hole's depth larger accounting for 3D printing inaccuracy. Usually does not need to be changed.</string>
@@ -288,7 +295,7 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="1">
+      <item row="7" column="1">
        <widget class="QCheckBox" name="cylindersVisibilityCheckBox">
         <property name="text">
          <string/>
@@ -298,10 +305,27 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="0">
+      <item row="7" column="0">
        <widget class="QLabel" name="label_17">
         <property name="text">
          <string>Cylinders visible</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Extra depth</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="ctkSliderWidget" name="cylindersExtraDepthDoubleSlider">
+        <property name="maximum">
+         <double>50.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>3.000000000000000</double>
         </property>
        </widget>
       </item>
