@@ -4645,7 +4645,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def runTest(self):
     """Run as few or as many tests as needed here.
     """
-    slicer.util.mainWindow().enabled = False
+    #slicer.util.mainWindow().enabled = False
     self.setUp()
     self.section_EnterBRP()
     self.section_GetWidget()
@@ -4657,8 +4657,9 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_AddFibulaLineAndCenterIt()
     self.section_SimulateAndImproveMandibleReconstruction()
     self.section_createMiterBoxesFromCorrespondingLine()
+    #self.section_prepareGuideBaseForFibulaGuide()
     self.section_createAndUpdateSawBoxesFromMandiblePlanes()
-    slicer.util.mainWindow().enabled = True
+    #slicer.util.mainWindow().enabled = True
 
   def section_EnterBRP(self):
     self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
@@ -5064,8 +5065,8 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     centeredLinePoints = np.array(
       [
-        [ -88.24621582,  -10.96450806,  -90.23794556],
-        [-100.49311066,   -9.26262665,   47.83334351]
+        [ -88.32122039794922, -10.915949821472168, -90.24563598632812],
+        [-100.49141693115234, -9.320514678955078, 47.834014892578125]
       ]
     )
 
@@ -5237,6 +5238,22 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     # asserts below
 
     self.delayDisplay("CreateMiterBoxesFromCorrespondingLine test successful")
+
+  def loadFibulaGuideBase(self):
+    import SampleData
+    self.fibulaSurgicalGuideBaseModel = SampleData.downloadSample('FibulaGuideBase')
+    self.delayDisplay('Loaded FibulaGuideBase')
+
+    parameterNode = self.logicBRP.getParameterNode()
+    parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", self.fibulaSurgicalGuideBaseModel.GetID())
+
+    self.assertEqual(
+      parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel").GetID(),
+      self.fibulaSurgicalGuideBaseModel.GetID()
+    )
+  
+  def section_prepareGuideBaseForFibulaGuide(self):
+    self.loadFibulaGuideBase()
 
   def section_createAndUpdateSawBoxesFromMandiblePlanes(self):
     self.delayDisplay("Starting the createAndUpdateSawBoxesFromMandiblePlanes test")
