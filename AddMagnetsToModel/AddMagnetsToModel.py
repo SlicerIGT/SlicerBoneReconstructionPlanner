@@ -130,6 +130,8 @@ class AddMagnetsToModelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin)
         self.ui.cylindersDepthDoubleSlider.valueChanged.connect(self.updateParameterNodeFromGUI)
         self.ui.cylindersExtraDepthDoubleSlider.valueChanged.connect(self.updateParameterNodeFromGUI)
         self.ui.cylindersVisibilityCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+        self.ui.diameterToleranceSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+        self.ui.depthToleranceSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
 
         self.ui.updateFinalModelsPreviewButton.connect("clicked(bool)", self.onUpdateFinalModelsPreviewButton)
         self.ui.lockDesignButton.connect('toggled(bool)', self.updateParameterNodeFromGUI)
@@ -282,8 +284,8 @@ class AddMagnetsToModelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin)
             self.ui.cylindersExtraDepthDoubleSlider.setValue(float(self._parameterNode.GetParameter("cylindersExtraDepth")))
         if self._parameterNode.GetParameter("diameterTolerance") != '':
             self.ui.diameterToleranceSpinBox.setValue(float(self._parameterNode.GetParameter("diameterTolerance")))
-        if self._parameterNode.GetParameter("depthDiameterTolerance") != '':
-            self.ui.depthDiameterToleranceSpinBox.setValue(float(self._parameterNode.GetParameter("depthDiameterTolerance")))
+        if self._parameterNode.GetParameter("depthTolerance") != '':
+            self.ui.depthToleranceSpinBox.setValue(float(self._parameterNode.GetParameter("depthTolerance")))
 
         # check if all needed inputs are present
         planeValid = False
@@ -394,7 +396,7 @@ class AddMagnetsToModelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin)
         self._parameterNode.SetParameter("cylindersDepth", str(self.ui.cylindersDepthDoubleSlider.value))
         self._parameterNode.SetParameter("cylindersExtraDepth", str(self.ui.cylindersExtraDepthDoubleSlider.value))
         self._parameterNode.SetParameter("diameterTolerance", str(self.ui.diameterToleranceSpinBox.value))
-        self._parameterNode.SetParameter("depthDiameterTolerance", str(self.ui.depthDiameterToleranceSpinBox.value))
+        self._parameterNode.SetParameter("depthTolerance", str(self.ui.depthToleranceSpinBox.value))
 
         if self.ui.updatePlanarCutCheckbox.checked:
             self._parameterNode.SetParameter("updatePlanarCut","True")
@@ -496,8 +498,8 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
             parameterNode.SetParameter("cylindersExtraDepth",str(3.0))
         if not parameterNode.GetParameter("diameterTolerance"):
             parameterNode.SetParameter("diameterTolerance",str(0.15))
-        if not parameterNode.GetParameter("depthDiameterTolerance"):
-            parameterNode.SetParameter("depthDiameterTolerance",str(0.15)) 
+        if not parameterNode.GetParameter("depthTolerance"):
+            parameterNode.SetParameter("depthTolerance",str(0.15)) 
         if not parameterNode.GetParameter("cylindersVisibility"):
             parameterNode.SetParameter("cylindersVisibility",str(True))  
         if not parameterNode.GetParameter("lockDesign"):
@@ -750,10 +752,18 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
         rotation_axis = rotation_axis/np.linalg.norm(rotation_axis)
         rotation_angle_degrees = np.arccos(np.dot(default_cylinder_direction,plane_normal))*180/np.pi
         
+        diameterTolerance = float(self.getParameterNode().GetParameter("diameterTolerance"))
         innerDiameter = float(self.getParameterNode().GetParameter("innerCylindersDiameter"))
         extraDiameter = float(self.getParameterNode().GetParameter("extraCylindersDiameter"))
+        innerDiameter += diameterTolerance
+        extraDiameter += diameterTolerance
+        
+        depthTolerance = float(self.getParameterNode().GetParameter("depthTolerance"))
         cylindersDepth = float(self.getParameterNode().GetParameter("cylindersDepth"))
         cylindersExtraDepth = float(self.getParameterNode().GetParameter("cylindersExtraDepth"))
+        cylindersDepth += depthTolerance
+        cylindersExtraDepth += depthTolerance
+
         tranformList = []
         for i in range(cylindersFiducial.GetNumberOfControlPoints()):
             point = np.array(cylindersFiducial.GetNthControlPointPosition(i))
