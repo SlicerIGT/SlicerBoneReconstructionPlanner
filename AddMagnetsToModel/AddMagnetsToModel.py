@@ -690,18 +690,19 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
         return cylindersFiducial
 
     def onUpdatePointsTimerTimeout(self):
-        cylindersFiducial = self.getCylindersFiducial()
         cutPlane = self.getCutPlane()
 
-        if (
-            (cylindersFiducial.GetNumberOfControlPoints() == 0) or 
-            (cylindersFiducial.GetNumberOfControlPoints() != cylindersFiducial.GetNumberOfDefinedControlPoints())
-        ):
-            return
-        
-        if not cutPlane.GetIsPlaneValid():
-            return
-        
+        if cutPlane.GetIsPlaneValid():
+            self.cutWithDynamicModeler()
+
+        if self.cylinderPointsAreValid():
+            self.projectCylinderPointsToCutPlane()
+            self.updateGlyphs3D()
+
+    def projectCylinderPointsToCutPlane(self):
+        cutPlane = self.getCutPlane()
+        cylindersFiducial = self.getCylindersFiducial()
+
         # Get plane parameters
         plane_center = np.array(cutPlane.GetOrigin())
         plane_normal = np.array(cutPlane.GetNormal())
@@ -714,8 +715,13 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
             if np.linalg.norm(np.array(projected_point) - np.array(point)) > 1e-5:
                 cylindersFiducial.SetNthControlPointPosition(i, *projected_point)
 
-        self.updateGlyphs3D()
-        self.cutWithDynamicModeler()
+    def cylinderPointsAreValid(self):
+        cylindersFiducial = self.getCylindersFiducial()
+        valid = not(
+            (cylindersFiducial.GetNumberOfControlPoints() == 0) or 
+            (cylindersFiducial.GetNumberOfControlPoints() != cylindersFiducial.GetNumberOfDefinedControlPoints())
+        )
+        return valid
     
     def updateGlyphs3D(self):
         cylindersFiducial = self.getCylindersFiducial()
