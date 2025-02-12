@@ -261,8 +261,15 @@ class AddMagnetsToModelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin)
             self.ui.internalShellDoubleSlider.setValue(float(self._parameterNode.GetParameter("internalShell")))
 
         self.ui.updatePlanarCutCheckbox.checked = self._parameterNode.GetParameter("updatePlanarCut") == "True"
-        self.ui.pointsRadioButton.checked = self._parameterNode.GetParameter("planeEditMode") == "Points"
-        self.ui.handlesRadioButton.checked = self._parameterNode.GetParameter("planeEditMode") == "Handles"
+        pointsPlaneEditMode = self._parameterNode.GetParameter("planeEditMode") == "Points"
+        handlesPlaneEditMode = self._parameterNode.GetParameter("planeEditMode") == "Handles"
+        self.ui.pointsRadioButton.checked = pointsPlaneEditMode
+        self.ui.handlesRadioButton.checked = handlesPlaneEditMode
+
+        if pointsPlaneEditMode:
+            self.logic.setPointsPlaneEditMode()
+        elif handlesPlaneEditMode:
+            self.logic.setHandlesPlaneEditMode()
 
         if self._parameterNode.GetParameter("innerCylindersDiameter") != '':
             self.ui.innerCylindersDiameterDoubleSlider.setValue(float(self._parameterNode.GetParameter("innerCylindersDiameter")))
@@ -914,6 +921,27 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
 
         slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(planeCutTool)
     
+    def setPointsPlaneEditMode(self):
+        cutPlane = self.getCutPlane()
+
+        displayNode = cutPlane.GetDisplayNode()
+        displayNode.HandlesInteractiveOff()
+
+        for i in range(cutPlane.GetNumberOfControlPoints()):
+            cutPlane.SetNthControlPointVisibility(i,True)
+
+    def setHandlesPlaneEditMode(self):
+        cutPlane = self.getCutPlane()
+        for i in range(cutPlane.GetNumberOfControlPoints()):
+            cutPlane.SetNthControlPointVisibility(i,False)
+
+        displayNode = cutPlane.GetDisplayNode()
+        displayNode.RotationHandleVisibilityOn()
+        displayNode.TranslationHandleVisibilityOn()
+        displayNode.ScaleHandleVisibilityOff()
+
+        displayNode.HandlesInteractiveOn()
+    
     def addCutPlaneObserver(self):
         cutPlane = self.getCutPlane()
         #self.cutPlaneObserver = cutPlane.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onCutPlaneModified)
@@ -969,14 +997,15 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
 
 
         # Get the segment ID for the segment with name "hollowed" or create it if it does not exist
-        segmentName = self.HOLLOWED_SEGMENT_NAME
         segmentation = segmentationNode.GetSegmentation()
-        hollowedSegmentID = segmentation.GetSegmentIdBySegmentName(segmentName)
+        hollowedSegmentID = segmentation.GetSegmentIdBySegmentName(self.HOLLOWED_SEGMENT_NAME)
 
         if not hollowedSegmentID:
             # Create a new segment with the name "hollowed"
-            hollowedSegmentID = segmentation.AddEmptySegment(segmentName)
-            #hollowedSegmentID = segmentation.GetSegmentIdBySegmentName(segmentName)
+            hollowedSegmentID = segmentation.AddEmptySegment(
+                segmentation.GenerateUniqueSegmentID(), 
+                self.HOLLOWED_SEGMENT_NAME
+            )
 
 
         # Copy the target
