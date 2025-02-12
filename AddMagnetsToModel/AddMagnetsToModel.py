@@ -94,6 +94,7 @@ class AddMagnetsToModelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin)
 
         # By order of appearance in the .ui file
         self.ui.setDual3DLayoutButton.connect("clicked(bool)", self.onSetDual3DLayoutButton)
+        self.ui.antiCameraButton.connect("toggled(bool)", self.onAntiCameraButton)
         self.ui.segmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
         self.ui.internalShellDoubleSlider.valueChanged.connect(self.updateParameterNodeFromGUI)
         self.ui.createModelButton.connect("clicked(bool)", self.onCreateModelButton)
@@ -425,6 +426,9 @@ class AddMagnetsToModelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin)
     def onSetDual3DLayoutButton(self) -> None:
         layoutManager = slicer.app.layoutManager()
         layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutDual3DView)
+    
+    def onAntiCameraButton(self, checked) -> None:
+        self.logic.setAntiCameraMode(checked)
 
     def onCreateModelButton(self) -> None:
         self.logic.createModel()
@@ -468,6 +472,9 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
         self.HOLLOWED_SEGMENT_NAME = "Hollowed"
         self.cutPlaneObserver = 0
         self.cylindersFiducialObserver = 0
+        self.camera1Observer = 0
+        self.camera2Observer = 0
+        self.cameraIsUpdating = False
 
     def setDefaultParameters(self, parameterNode):
         """
@@ -947,6 +954,57 @@ class AddMagnetsToModelLogic(ScriptedLoadableModuleLogic):
         displayNode.ScaleHandleVisibilityOff()
 
         displayNode.HandlesInteractiveOn()
+    
+    def setAntiCameraMode(self, checked):
+        if checked:
+            self.addAntiCameraObservers()
+        else:
+            self.removeAntiCameraObservers()
+    
+    def getCameraNodesFromDual3DView(self):
+        camera1 = slicer.app.layoutManager().threeDWidget(0).threeDView().cameraNode()
+        camera2 = slicer.app.layoutManager().threeDWidget(1).threeDView().cameraNode()
+        return camera1, camera2
+    
+    def addAntiCameraObservers(self):
+        camera1, camera2 = self.getCameraNodesFromDual3DView()
+        self.camera1Observer = camera1.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onCameraModified)
+        self.camera2Observer = camera2.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onCameraModified)
+    
+    def removeAntiCameraObservers(self):
+        camera1, camera2 = self.getCameraNodesFromDual3DView()
+        camera1.RemoveObserver(self.camera1Observer)
+        camera2.RemoveObserver(self.camera2Observer)
+        self.camera1Observer = 0
+        self.camera2Observer = 0
+
+    def onCameraModified(self, caller, event):
+        camera1, camera2 = self.getCameraNodesFromDual3DView()
+        if caller == camera1:
+            self.updateOppositeCamera(camera1, camera2)
+        elif caller == camera2:
+            self.updateOppositeCamera(camera2, camera1)
+    
+    def updateOppositeCamera(self, fromCamera, toCamera):
+        if self.cameraIsUpdating:
+            return
+        self.cameraIsUpdating = True
+        #
+        # When fromCamera is changed, update toCamera to be the opposite
+        positionFrom = np.array(fromCamera.GetPosition())
+        focalPointFrom = np.array(fromCamera.GetFocalPoint())
+        viewUpFrom = np.array(fromCamera.GetViewUp())
+        
+        positionTo = (focalPointFrom - positionFrom) + focalPointFrom
+
+        toCamera.SetPosition(positionTo)
+        toCamera.SetFocalPoint(focalPointFrom)
+        toCamera.SetViewUp(viewUpFrom)
+        # toCamera.SetViewAngle(fromCamera.GetViewAngle())
+        # toCamera.SetParallelScale(fromCamera.GetParallelScale())
+        # toCamera.SetParallelProjection(fromCamera.GetParallelProjection())
+        # toCamera.ResetClippingRange()
+        self.cameraIsUpdating = False
     
     def addCutPlaneObserver(self):
         cutPlane = self.getCutPlane()
