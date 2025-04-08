@@ -1165,6 +1165,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("showMandiblePlanesInteractionHandles","True")  
     if not parameterNode.GetParameter("lockVSP"):
       parameterNode.SetParameter("lockVSP","False")
+    if not parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact"):
+      parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","True")
+    if not parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether"):
+      parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","True")
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
