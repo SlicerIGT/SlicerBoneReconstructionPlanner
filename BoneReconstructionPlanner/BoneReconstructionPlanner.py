@@ -2345,6 +2345,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.transformFibulaPlanes()
 
+    kindOfMandibleResection = parameterNode.GetParameter("kindOfMandibleResection")
+    if kindOfMandibleResection == "Hemimandibulectomy":
+      # this is needed because otherwise decimation will make rendering of one mandible piece fail
+      parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview", "True")
+
     self.createAndUpdateDynamicModelerNodes()
   
     self.updateFibulaPieces()
