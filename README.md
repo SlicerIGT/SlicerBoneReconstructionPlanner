@@ -69,9 +69,9 @@ https://www.sciencedirect.com/science/article/pii/S2666964123000103
 - [Overview](#bonereconstructionplanner)
 - [Developer statement](#developer-statement)
 - [Citations](#citations)
-- [Description](#description)
-  - [Benefits](#benefits)
-  - [Cons](#cons)
+- [Introduction to BoneReconstructionPlanner](#introduction-to-bonereconstructionplanner)
+  - [Benefits of using personalized surgical guides](#benefits-of-using-personalized-surgical-guides)
+  - [Cons of using personalized surgical guides](#cons-of-using-personalized-surgical-guides)
   - [User Considerations](#user-considerations)
 - [Interactive VSP Demo](#interactive-vsp-demo)
 - [Teaser and Tutorial Videos](#teaser-and-tutorial-videos)
@@ -94,7 +94,7 @@ https://www.sciencedirect.com/science/article/pii/S2666964123000103
   - [Contact](#contact)
 - [License](#license)
 
-# Description
+# Introduction to BoneReconstructionPlanner
 
 From the engineering point of view this project attemps to be a What You See Is What You Get (WYSIWYG) editor. 
 
@@ -106,14 +106,15 @@ Digital means ideal but real-world objects are not, and neither are our inputs (
 
 As far as we know our BoneReconstructionPlanner custom surgical guides will be accurate and effective enough to be adequate tools. Although, you are invited to do a mock surgery to sawbones using BoneReconstructionPlanner designed instruments yourself and weight the results before attempting their use on a IRB-approved case.
 
-## Benefits:
-- less operation time
+
+## Benefits of using personalized surgical guides
+- less total surgical time
 - less ischemic time
 - less length of hospital stay after surgery
 - better osteotomies accuracy
 - better neomandible contour, more aesthetic
 
-## Cons:
+## Cons of using personalized surgical guides
 - VSP software license (free if using BoneReconstructionPlanner,
 15k USD annual license if using commercial software)
 - 3D printer, biocompatible material, sterilization (can be done
@@ -123,7 +124,7 @@ on an in-house 3D printing lab or outsourced)
 - learning curve for new user or need of biomedical engineer or
 qualified technician
 
-## User Considerations:
+## User Considerations
 - There are some parameters like the distance between faces of the closing-wedge osteotomies of fibula that can be increased if desired.
 - Deviations from the Virtual Surgical Plan could come from big slice thickness CTs, suboptimal segmentation to 3D model convertions, big extrusion layers while 3D printing the guides, not accounting for tool fitting (e.g. periosteum remainings over bone, boneSurface2guideSurface fitting, etc) and other reasons.
 
@@ -131,16 +132,8 @@ qualified technician
 
 <table>
 <tr>
-<td align ="center">See a finished Virtual Surgical Plan of a Mandibular Reconstruction using Fibula Pieces.
+<td align ="center">See a finished Virtual Surgical Plan of a Mandibular Reconstruction using Fibula Pieces</br><iframe width="640" height="480" style="border:1px solid #eeeeee;" src="https://3dviewer.net/embed.html#model=https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner.gltf$camera=2.19855,216.47766,371.05635,33.61519,-44.06078,48.61965,0.00000,1.00000,0.00000,45.00000$projectionmode=perspective$envsettings=fishermans_bastion,off$backgroundcolor=255,255,255,255$defaultcolor=200,200,200$defaultlinecolor=100,100,100$edgesettings=off,0,0,0,1"></iframe></br><a href="https://3dviewer.net/index.html#model=https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/BoneReconstructionPlanner.gltf">(Open on other tab)</a>
 </td>
-</tr>
-<tr>
-<td align ="center">
-Link: https://3dviewer.net/index.html#model=https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/BoneReconstructionPlanner.gltf
-</td>
-</tr>
-<tr>
-<td align ="center"><img src="BoneReconstructionPlanner/Resources/Pictures/screenshot3DDemo.png" width="1000"/></td>
 </tr>
 </table>
 
