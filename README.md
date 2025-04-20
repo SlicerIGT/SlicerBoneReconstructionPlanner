@@ -131,9 +131,7 @@ qualified technician
 # Interactive VSP demo
 
 <table>
-<tr>
-<td align ="center">See a finished Virtual Surgical Plan of a Mandibular Reconstruction using Fibula Pieces</br><iframe width="640" height="480" style="border:1px solid #eeeeee;" src="https://3dviewer.net/embed.html#model=https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner.gltf$camera=2.19855,216.47766,371.05635,33.61519,-44.06078,48.61965,0.00000,1.00000,0.00000,45.00000$projectionmode=perspective$envsettings=fishermans_bastion,off$backgroundcolor=255,255,255,255$defaultcolor=200,200,200$defaultlinecolor=100,100,100$edgesettings=off,0,0,0,1"></iframe></br><a href="https://3dviewer.net/index.html#model=https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/BoneReconstructionPlanner.gltf">(Open on other tab)</a>
-</td>
+<td align ="center">3D models of a finished Virtual Surgical Plan of a Mandibular Reconstruction using Fibula Pieces</br><img src="BoneReconstructionPlanner/Resources/Pictures/screenshot3DDemo.png" width="1000"/></br><a href="https://3dviewer.net/index.html#model=https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/BoneReconstructionPlanner.gltf">Open on interactive viewer</a></td>
 </tr>
 </table>
 
