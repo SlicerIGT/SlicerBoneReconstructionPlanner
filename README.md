@@ -27,26 +27,15 @@ A [3D Slicer](https://www.slicer.org/) extension for virtual surgical planning o
 <td><img src="BoneReconstructionPlanner/Resources/Pictures/screenshotPatientSpecificSurgicalGuides.png" width="500"/></td>
 </tr>
 <tr>
-<td align ="center">See Custom Fibula Guide Use (click link below)</td>
-<td align ="center">See Neo Mandible (click link below)</td>
+<td align ="center">Custom Fibula Guide Use</br><img src="BoneReconstructionPlanner/Resources/Pictures/photo3DPrintedFibulaGuideUse_gray.png" width="500"/><a href="BoneReconstructionPlanner/Resources/Pictures/photo3DPrintedFibulaGuideUse.png"></br>SEE ORIGINAL PHOTO</a></td>
+<td align ="center">Neo Mandible</br><img src="BoneReconstructionPlanner/Resources/Pictures/photoNeoMandible_gray.png" width="500"/><a href="BoneReconstructionPlanner/Resources/Pictures/photoNeoMandible.png"></br>SEE ORIGINAL PHOTO</a></td>
 </tr>
 <tr>
-<td align ="center"><a href="BoneReconstructionPlanner/Resources/Pictures/photo3DPrintedFibulaGuideUse.png">GRAPHIC EXPLICIT PHOTO</a></td>
-<td align ="center"><a href="BoneReconstructionPlanner/Resources/Pictures/photoNeoMandible.png">GRAPHIC EXPLICIT PHOTO</a></td>
+<td align ="center" colspan="2">Pre Surgery Photo (left) and Post Surgery Photo (right) [*]</br><img src="BoneReconstructionPlanner/Resources/Pictures/photoPreAndPostSurgery.jpg" width="800"/></td>
 </tr>
 <tr>
-<td align ="center" colspan="2">Pre Surgery Photo (left) and Post Surgery Photo (right) [*]</td>
-</tr>
-<tr>
-<td align ="center" colspan="2"><img src="BoneReconstructionPlanner/Resources/Pictures/photoPreAndPostSurgery.jpg" width="800"/></td>
-</tr>
-<tr>
-<td align ="center">Pre Surgery Orthopantomogram [*]</td>
-<td align ="center">Post Surgery Orthopantomogram [*]</td>
-</tr>
-<tr>
-<td><img src="BoneReconstructionPlanner/Resources/Pictures/preSurgeryOrthopantomogram.jpg" width="500"/></td>
-<td><img src="BoneReconstructionPlanner/Resources/Pictures/postSurgeryOrthopantomogram.jpg" width="600"/></td>
+<td align ="center">Pre Surgery Orthopantomogram [*]</br><img src="BoneReconstructionPlanner/Resources/Pictures/preSurgeryOrthopantomogram.jpg" width="500"/></td>
+<td align ="center">Post Surgery Orthopantomogram [*]</br><img src="BoneReconstructionPlanner/Resources/Pictures/postSurgeryOrthopantomogram.jpg" width="600"/></td>
 </tr>
 <td align ="right" colspan="2">[*]: marked pictures belong to the same surgery and patient</td>
 </tr>
