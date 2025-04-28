@@ -1543,6 +1543,9 @@
             <string>vtkMRMLModelNode</string>
            </stringlist>
           </property>
+          <property name="noneEnabled">
+           <bool>true</bool>
+          </property>
          </widget>
         </item>
         <item row="7" column="0">
