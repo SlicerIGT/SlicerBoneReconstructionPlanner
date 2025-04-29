@@ -1083,7 +1083,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     mandibleModelNode = self._parameterNode.GetNodeReference("mandibleModelNode")
     decimatedMandibleModelNode = self._parameterNode.GetNodeReference("decimatedMandibleModelNode")
     
-    if (mandibleModelNode is None) and (decimatedMandibleModelNode) is None:
+    if (mandibleModelNode is None) and (decimatedMandibleModelNode is None):
       return
 
     useNonDecimatedBoneModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
