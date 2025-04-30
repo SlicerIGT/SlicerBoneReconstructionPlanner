@@ -2601,28 +2601,23 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
     useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
 
+    wasModified = parameterNode.StartModify()
+
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
     if segmentationModelsFolder:
-      if segmentationModelsFolder:
-        shNode.RemoveItem(segmentationModelsFolder)
-      segmentationModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Segmentation Models")
-    else:
-      segmentationModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Segmentation Models")
-    fibulaModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-    fibulaModelNode.SetName("fibula")
-    mandibleModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-    mandibleModelNode.SetName("mandible")
+      shNode.RemoveItem(segmentationModelsFolder)
+    segmentationModelsFolder = shNode.CreateFolderItem(self.getParentFolderItemID(),"Segmentation Models")
+    
+    fibulaModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "fibula")
+    mandibleModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "mandible")
     decimatedFibulaModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','decimatedFibula')
     decimatedMandibleModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','decimatedMandible')
     segmentations = [fibulaSegmentation,mandibularSegmentation]
     models = [fibulaModelNode,mandibleModelNode]
     decimatedModels = [decimatedFibulaModelNode,decimatedMandibleModelNode]
 
-    wasModified = parameterNode.StartModify()
-
     for i in range(2):
-      slicer.mrmlScene.AddNode(models[i])
       models[i].CreateDefaultDisplayNodes()
       decimatedModels[i].CreateDefaultDisplayNodes()
 
@@ -2634,6 +2629,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       segDisplayNode.SetSegmentVisibility(segmentID,False)
 
       logic = slicer.modules.segmentations.logic()
+      # this replaces original model names by segment names
       logic.ExportSegmentToRepresentationNode(segment, models[i])
 
       modelDisplayNode = models[i].GetDisplayNode()
@@ -2692,6 +2688,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         parameterNode.SetParameter("mandibleCentroidX",str(centroid[0]))
         parameterNode.SetParameter("mandibleCentroidY",str(centroid[1]))
         parameterNode.SetParameter("mandibleCentroidZ",str(centroid[2]))
+
+    fibulaModelNode.SetName("fibula")
+    mandibleModelNode.SetName("mandible")
 
     parameterNode.SetNodeReferenceID("fibulaModelNode", fibulaModelNode.GetID())
     parameterNode.SetNodeReferenceID("mandibleModelNode", mandibleModelNode.GetID())
