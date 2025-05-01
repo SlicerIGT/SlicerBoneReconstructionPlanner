@@ -184,7 +184,7 @@ See more than 40 plans of other users:
 
 ## Installing BoneReconstructionPlanner
 
-1. You need Slicer 5.6.2 Stable. You have 2 options to download it:
+1. You need Slicer 5.8.1 Stable. You have 2 options to download it:
    - Use a download link provided by Kitware: [Windows](https://slicer-packages.kitware.com/api/v1/item/67c53d1129825655577d0b13/download), [macOS](https://slicer-packages.kitware.com/api/v1/item/67c52e9629825655577d0353/download), [Linux](https://slicer-packages.kitware.com/api/v1/item/67c51fc129825655577cfee9/download)
    - As time of the writing of this guide you are also able to go to: https://download.slicer.org/ and download the Stable release (i.e. 5.8.1) for your Operating System.
 2. Install Slicer
