@@ -185,8 +185,8 @@ See more than 40 plans of other users:
 ## Installing BoneReconstructionPlanner
 
 1. You need Slicer 5.6.2 Stable. You have 2 options to download it:
-   - Use a download link provided by Kitware: [Windows](https://slicer-packages.kitware.com/api/v1/item/660fb6c930e435b0e3560453/download), [macOS](https://slicer-packages.kitware.com/api/v1/item/660fa2e930e435b0e355f67c/download), [Linux](https://slicer-packages.kitware.com/api/v1/item/660f92ed30e435b0e355f1a4/download)
-   - As time of the writing of this guide you are also able to go to: https://download.slicer.org/ and download the Stable release for your Operating System.
+   - Use a download link provided by Kitware: [Windows](https://slicer-packages.kitware.com/api/v1/item/67c53d1129825655577d0b13/download), [macOS](https://slicer-packages.kitware.com/api/v1/item/67c52e9629825655577d0353/download), [Linux](https://slicer-packages.kitware.com/api/v1/item/67c51fc129825655577cfee9/download)
+   - As time of the writing of this guide you are also able to go to: https://download.slicer.org/ and download the Stable release (i.e. 5.8.1) for your Operating System.
 2. Install Slicer
 3. Open Slicer
 4. Press Ctrl+4 to open the extension manager. Or click the upper-right icon with the letter 'E'
@@ -198,7 +198,7 @@ To have in mind: every once in a while, you can enter the extension manager and 
 
 
 ## Saving the scene
-- [Save](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#save-data) frequently as the surgical plan can be reopened from where you left it if there is a crash (software malfunction). We suggest using the "Save scene as single file (.mrb file format)", then you can save your progress with different names "example_plan_v01.mrb", "example_plan_v02.mrb", etc
+- [Save](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#save-data) frequently as the surgical plan can be reopened from where you left it if there is a crash (i.e. software malfunction). We suggest using the "Save scene as single file (.mrb file format)", then you can save your progress with different names "example_plan_v01.mrb", "example_plan_v02.mrb", etc
 
 
 ## Segmentation (Preparation for Virtual Surgical Planning)
@@ -207,17 +207,18 @@ Make a mandible segmentation and a fibula segmentation.
 
 Example of a fibula segmentation:
 
-0. CTs should have a recommended slice thickness of 0.65mm (or a maximum slice thickness of 1mm). Load the study to Slicer.
-1. Go to the segment editor. Create a new segmentation. Create a new segment, name it 'fibula'.
-2. Use threshold effect to select bone but not connecting tissue (like ligaments). Check if your selected threshold value is okay if there is no connection of the segmented bones near the joint. Threshold value should not be too low to not lose detail. Suggested value: 200. Avoid highlighting noise if possible as it will reduce the need for clean up later.
-3. Use Islands effect, select 'keep selected island' and click over the fibula to keep it. Click "Show 3D".
-4. If successful continue. If not start over and use a higher threshold value or use scissors to isolate the fibula
-5. Go to Wrap Solidify effect, on Advanced button set the suggested configuration below (by @SteveMaisi) and click apply. (This is needed because it is recommended that bone segmentations have no holes inside so the assisted miterBox positioning algorithms work well)
+0. CTs should have a recommended slice thickness of 0.65mm (or a maximum slice thickness of 1mm). [Load the study to Slicer](https://slicer.readthedocs.io/en/latest/user_guide/modules/dicom.html#basic-usage).
+1. Go to the [segment editor](https://slicer.readthedocs.io/en/latest/user_guide/modules/segmenteditor.html#segment-editor). Create a new segmentation. Create a new segment, name it 'fibula'.
+2. Use threshold effect to select only bone. The lower threshold value should not be too high to lose detail (and the higher threshold value should be maximum). Check if your selected threshold value is okay if you can avoid [salt-and-pepper noise](https://en.wikipedia.org/wiki/Salt-and-pepper_noise) being added to the segmentation result. Suggested value: 200.
+3. Use [scissors effect](https://slicer.readthedocs.io/en/latest/user_guide/modules/segmenteditor.html#scissors) to keep only the fibula bone.
+4. Use [Islands effect](https://slicer.readthedocs.io/en/latest/user_guide/modules/segmenteditor.html#islands), select 'keep selected island' and click over the fibula to keep it. Click "Show 3D".
+5. If successful, continue. If not, check out the [segmentation tutorials](https://slicer.readthedocs.io/en/latest/user_guide/modules/segmenteditor.html#tutorials) and start over.
+6. Go to Wrap Solidify effect, on Advanced button set the suggested configuration below (by @SteveMaisi) and click apply. (This is needed because it is recommended that bone segmentations have no holes inside so the assisted miterBox positioning algorithms work well).
 ![192679644-995cbed7-9732-4f87-a936-55e000179fc4](https://user-images.githubusercontent.com/19158307/193409717-40605b9b-e48f-4a51-8332-967a08a9e30c.png)
-6. Correct errors on segmentations with scissors if needed.
-7. The bone segment (fibula in this case) should be the first of the segment-list of the segmentation. In other words the bone segment should be in position zero of the list.
+7. Correct new inaccurate protrusions if needed.
+8. The bone segment (fibula in this case) should be the first of the segment-list of the segmentation. In other words the bone segment should be in position zero of the list.
 
-You'll have to do the same for mandible in another segmentation node.
+You'll have to do the same for the mandible in another segmentation node.
 
 ## Virtual Surgical Planning
 
