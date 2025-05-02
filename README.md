@@ -246,6 +246,7 @@ If you tick the button it will react on plane movements and update automatically
 1. If "Check security margin on miter box creation" is checked, each saw-cut (and the bone it eats) will be tested to not collide with others.
 2. Press shift over some fibula piece on the corresponding 3D view. The model should be visible on the 2D slice with the corresponding color as an edge. [Create a line](https://slicer.readthedocs.io/en/5.6/user_guide/modules/markups.html#place-new-markups) over the 2D slice of the fibula that will set the direction of the miterBoxes (with this you select, for example, lateral approach or posterior approach). The line should me drawn from the centerline of the fibula to a point that is distal from the first one on the 2D slice of the fibula.
 ![Screenshot from 2025-05-02 13-45-01](https://github.com/user-attachments/assets/8df9032c-8dc2-4203-a263-5554161265f9)
+Choose the line you just created in the "Miter box direction line" selector.
 3. Select the parameters of the miter boxes: lenght, width, height, wall thickness and tolerance (this last option is inside the Settings widget and it applies also to sawBoxes of the mandible). The combination of tolerance and the slot width suggested by most experienced user (@mrtig) is summarized below (more info [here](/Docs/NOTES.md#tolerance-and-slot-width)):
 
 ```
