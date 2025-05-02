@@ -180,21 +180,21 @@ See more than 40 plans of other users:
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/Unofficial_BRP_Videotutorial_5.6.2_Spanish.zip" >Unofficial Spanish videotutorial</a> (credits to @marf-slicer)
 
 # Instructions
-(last validated October 6th, 2024)
+(last validated May 2nd, 2025)
 
 ## Installing BoneReconstructionPlanner
 
 1. You need Slicer 5.8.1 Stable. You have 2 options to download it:
-   - Use a download link provided by Kitware: [Windows](https://slicer-packages.kitware.com/api/v1/item/67c53d1129825655577d0b13/download), [macOS](https://slicer-packages.kitware.com/api/v1/item/67c52e9629825655577d0353/download), [Linux](https://slicer-packages.kitware.com/api/v1/item/67c51fc129825655577cfee9/download)
+   - Use a download link provided by Kitware: [Windows](https://slicer-packages.kitware.com/api/v1/item/67c53d1129825655577d0b13/download), [Mac](https://slicer-packages.kitware.com/api/v1/item/67c52e9629825655577d0353/download), [Linux](https://slicer-packages.kitware.com/api/v1/item/67c51fc129825655577cfee9/download)
    - As time of the writing of this guide you are also able to go to: https://download.slicer.org/ and download the Stable release (i.e. 5.8.1) for your Operating System.
-2. Install Slicer
-3. Open Slicer
-4. Press Ctrl+4 to open the extension manager. Or click the upper-right icon with the letter 'E'
-5. Go to 'Install Extensions' tab
-6. On the upper-right search box write "BoneReconstructionPlanner"
+2. Install Slicer (if you need help, follow [this document section](https://slicer.readthedocs.io/en/latest/user_guide/getting_started.html#installing-3d-slicer)).
+3. Open Slicer.
+4. Press Ctrl+4 to open the [Extensions Manager](https://slicer.readthedocs.io/en/latest/user_guide/extensions_manager.html#extensions-manager). Or click the upper-right icon with the letter 'E'.
+5. Go to 'Install Extensions' tab.
+6. On the upper-right search box write "BoneReconstructionPlanner".
 7. Click install and give okay to install other extensions if asked (wait till ALL dependencies are installed completely). Then click "Restart" on the bottom-right corner.
 
-To have in mind: every once in a while, you can enter the extension manager and check for updates of this extension to get latest bug fixes and added features
+To have in mind: every once in a while, you can enter the Extensions Manager and [check for updates](https://slicer.readthedocs.io/en/latest/user_guide/extensions_manager.html#update-extensions-for-slicer-stable-releases) of this extension to get latest bug fixes and added features.
 
 
 ## Saving the scene
