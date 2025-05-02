@@ -290,7 +290,7 @@ This maybe useful for users that want to prebend plates with a 3D printed model.
 1. Do a [Virtual Surgical Plan](#virtual-surgical-planning)
 2. Optionally, you can add an inter-condylar beam (i.e. a tube model) to the reconstruction for more rigidity. You can create the tube easily from a markups line with points that connects both condyles using the "Markups To Model" module. Select the beam model on the selector that is next to the "Create 3D model of the reconstruction for 3D printing" button.
 3. Click "Create 3D model of the reconstruction for 3D printing" button.
-<ADD PICTURE>
+![Screenshot from 2025-05-02 16-01-49](https://github.com/user-attachments/assets/7e9416be-1df4-49b2-a118-b1ea95e50597)
 
 ## Export the planning outputs
 - You may want to [export](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#export-data) the 3D models you created of mandible and fibula custom surgical guides, and the neomandible. Remember to select the ".stl" export format (which is the format used for 3D printers).
