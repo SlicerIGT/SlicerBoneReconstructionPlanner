@@ -280,16 +280,17 @@ If you tick the button it will react on plane movements and update automatically
 The workflow doesn't differ much from fibula guide creation.
 Except that:
 - The sawBoxes are movable and you should only move them inside the cut plane, to correct automatic mispositioning. After that hide the "biggerSawBoxes interaction handles" so you have a comfortable experience on later steps.
-- You need to segment two guide bases, one for each planar cut, and copy them together to the same segment. Then export them as a unique model as explained on the earlier section.
-- You may like to create a bridge between both mandibleGuides to make a rigid connection between them. This is done with the module "MarkupsToModel" and it's very easy to use.
+- If you are doing a "Segmental Mandibulectomy", you need to segment two guide bases, one for each planar cut, and copy them together to the same segment. Then export them as a unique model as explained on the earlier section.
+- Optionally, you could create a bridge between both mandible guidebases to achieve a rigid connection between them when the mandible surgical guide is finished. The bridge can be created with the module "MarkupsToModel".
 - If you created the VSP with "Hemimandibulectomy" mode you just need one mandible guidebase and the bridge is not needed nor allowed.
 - You need to put the correct models on the corresponding selectors on "Mandible Surgical Guide Generation" panel
 
 ## Mandible Reconstruction Simulation
 This maybe useful for users that want to prebend plates with a 3D printed model.
 1. Do a [Virtual Surgical Plan](#virtual-surgical-planning)
-2. Optionally, you can add an inter-condylar beam (i.e. a tube model) to the reconstruction. You can create the tube easily from a markups line with points on the condyles using the "Markups To Model" module.
-3. Click "Create 3D model of the reconstruction for 3D printing".
+2. Optionally, you can add an inter-condylar beam (i.e. a tube model) to the reconstruction for more rigidity. You can create the tube easily from a markups line with points that connects both condyles using the "Markups To Model" module. Select the beam model on the selector that is next to the "Create 3D model of the reconstruction for 3D printing" button.
+3. Click "Create 3D model of the reconstruction for 3D printing" button.
+<ADD PICTURE>
 
 ## Export the planning outputs
 - You may want to [export](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#export-data) the 3D models you created of mandible and fibula custom surgical guides, and the neomandible. Remember to select the ".stl" export format (which is the format used for 3D printers).
