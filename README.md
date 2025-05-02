@@ -227,7 +227,7 @@ You'll have to do the same for the mandible in another segmentation node.
 2. If fibula is the one from the right leg tick "Right side leg" checkbox. This makes fibula coordinate system X axis be always medial independently of the which leg is used to harvest the fibula.
 3. Select the mandibular segmentation and the fibula segmentation.
 4. Click "Create bone models from segmentations".
-5. Double left-click inside the mandibular 3D view to maximize it (if needed). And to return to the multi-view layout, also do double left-click inside the view.
+5. If needed, double left-click inside the mandibular 3D view to maximize it. And to return to the multi-view layout, also do double left-click inside the view.
 6. Click "Add mandibular curve" and create a curve along the mandible. This will help giving the cut planes their initial position. It's a bit important to make it quite similar to the ideal mandible curve the patient would have if he was healthy because the algorithm that does initial planes positioning depend on it.
 7. Click "Add cut plane" and click where you want plane. Add as many planes as needed. There will be a bone piece between every two adjacent planes. So the number of mandible planes should be the desired number of bone pieces for the reconstruction plus one. The first and the last mandible planes will be the mandible resection cuts.
 8. Click "Add fibula line". Draw a line over the fibula on the 3D view. First point distal, last point proximal. Try to draw the line over the diaphysis.
