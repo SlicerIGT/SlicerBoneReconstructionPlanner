@@ -217,6 +217,7 @@ Example of a fibula segmentation:
 ![192679644-995cbed7-9732-4f87-a936-55e000179fc4](https://user-images.githubusercontent.com/19158307/193409717-40605b9b-e48f-4a51-8332-967a08a9e30c.png)
 7. Correct new inaccurate protrusions if needed.
 8. The bone segment (fibula in this case) should be the first of the segment-list of the segmentation. In other words the bone segment should be in position zero of the list.
+![Screenshot from 2025-05-01 20-44-26](https://github.com/user-attachments/assets/e8833b30-dbcb-4210-a5b6-ba96e9cdf141)
 
 You'll have to do the same for the mandible in another segmentation node.
 
