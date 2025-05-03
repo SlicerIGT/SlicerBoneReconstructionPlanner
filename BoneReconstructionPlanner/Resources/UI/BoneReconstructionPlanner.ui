@@ -220,36 +220,13 @@
             </widget>
            </item>
            <item row="8" column="0">
-            <widget class="QLabel" name="label_23">
-             <property name="text">
-              <string>Intersection distance multiplier</string>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="1">
-            <widget class="ctkDoubleSpinBox" name="intersectionDistanceMultiplierSpinBox">
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <double>30.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>1.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="0">
             <widget class="QLabel" name="label_18">
              <property name="text">
               <string>Between space (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="9" column="1">
+           <item row="8" column="1">
             <widget class="ctkDoubleSpinBox" name="betweenSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -259,14 +236,14 @@
              </property>
             </widget>
            </item>
-           <item row="11" column="0">
+           <item row="10" column="0">
             <widget class="QLabel" name="label_9">
              <property name="text">
               <string>Select mandible curve</string>
              </property>
             </widget>
            </item>
-           <item row="11" column="1">
+           <item row="10" column="1">
             <widget class="qMRMLNodeComboBox" name="mandibleCurveSelector">
              <property name="enabled">
               <bool>true</bool>
@@ -284,14 +261,14 @@
              </property>
             </widget>
            </item>
-           <item row="12" column="0">
+           <item row="11" column="0">
             <widget class="QLabel" name="label_11">
              <property name="text">
               <string>Select fibula line</string>
              </property>
             </widget>
            </item>
-           <item row="12" column="1">
+           <item row="11" column="1">
             <widget class="qMRMLNodeComboBox" name="fibulaLineSelector">
              <property name="enabled">
               <bool>true</bool>

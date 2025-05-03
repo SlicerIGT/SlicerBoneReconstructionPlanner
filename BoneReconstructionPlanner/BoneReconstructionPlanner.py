@@ -338,7 +338,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.clearanceFitPrintingToleranceSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.biggerMiterBoxDistanceToFibulaSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.intersectionDistanceMultiplierSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotWidthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotLengthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -635,8 +634,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.clearanceFitPrintingToleranceSpinBox.setValue(float(self._parameterNode.GetParameter("clearanceFitPrintingTolerance")))
     if self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula") != '':
       self.ui.biggerMiterBoxDistanceToFibulaSpinBox.setValue(float(self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula")))
-    if self._parameterNode.GetParameter("intersectionDistanceMultiplier") != '':
-      self.ui.intersectionDistanceMultiplierSpinBox.setValue(float(self._parameterNode.GetParameter("intersectionDistanceMultiplier")))
     if self._parameterNode.GetParameter("sawBoxSlotWidth") != '':
       self.ui.sawBoxSlotWidthSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotWidth")))
     if self._parameterNode.GetParameter("sawBoxSlotLength") != '':
@@ -827,7 +824,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.SetParameter("initialSpace", str(self.ui.initialSpinBox.value))
     self._parameterNode.SetParameter("additionalBetweenSpaceOfFibulaPlanes", str(self.ui.betweenSpinBox.value))
-    self._parameterNode.SetParameter("intersectionDistanceMultiplier", str(self.ui.intersectionDistanceMultiplierSpinBox.value))
     self._parameterNode.SetParameter("securityMarginOfFibulaPieces", str(self.ui.securityMarginOfFibulaPiecesSpinBox.value))
     self._parameterNode.SetParameter("miterBoxSlotWidth", str(self.ui.miterBoxSlotWidthSpinBox.value))
     self._parameterNode.SetParameter("miterBoxSlotLength", str(self.ui.miterBoxSlotLengthSpinBox.value))
@@ -1596,7 +1592,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     initialSpace = float(parameterNode.GetParameter("initialSpace"))
-    intersectionDistanceMultiplier = float(parameterNode.GetParameter("intersectionDistanceMultiplier"))
     additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
     rightSideLegFibulaChecked = parameterNode.GetParameter("rightSideLegFibula") == "True"
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
@@ -1742,7 +1737,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         zAInf = boundsA[4]
         deltaZ = zBSup - zAInf
 
-        self.fibulaPlanesPositionA.append(self.fibulaPlanesPositionB[i-1] + fibulaZ*(intersectionDistanceMultiplier*deltaZ + additionalBetweenSpaceOfFibulaPlanes))
+        self.fibulaPlanesPositionA.append(self.fibulaPlanesPositionB[i-1] + fibulaZ*(deltaZ + additionalBetweenSpaceOfFibulaPlanes))
         self.fibulaPlanesPositionB.append(self.fibulaPlanesPositionA[i] + boneSegmentsDistance[i]*fibulaZ)
 
         if i!=(len(planeList)-2):
@@ -3105,7 +3100,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         shNode.RemoveItem(duplicateFibulaBonePiecesModelsFolder)
       if collisionDetected:
         slicer.util.errorDisplay(f"Planned fibula segments could overlap each other (the distance in between them do not satisfy the security margin of {securityMarginOfFibulaPieces}mm). " +
-            "You can fix this by increasing 'intersection distance multiplier' or 'between space' and pressing the update button")
+            "You can fix this by increasing 'between space' and pressing the update button")
         return
 
 
