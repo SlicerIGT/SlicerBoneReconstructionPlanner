@@ -281,6 +281,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     
     planeIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/MarkupsPlaneMouseModePlaceAdd.png')
     self.ui.addCutPlaneButton.setIcon(qt.QIcon(planeIconPath))
+    trashbinIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/MarkupsDelete.png')
+    self.ui.removeCutPlaneButton.setIcon(qt.QIcon(trashbinIconPath))
     visibilityIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/visibility_48.svg')
     self.ui.interCondylarBeamVisibilityToolButton.setIcon(qt.QIcon(visibilityIconPath))
     increaseIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/add_48.svg')
@@ -350,6 +352,28 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
     placeWidget.setDeleteAllControlPointsOptionVisible(False)
 
+    # miterBoxLinePlaceWidget
+    placeWidget = self.ui.miterBoxDirectionLinePlaceWidget
+    placeWidget.setInteractionNode(slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton"))
+    placeWidget.setCurrentNode(self.logic.getMiterBoxDirectionLine())
+    placeWidget.buttonsVisible = False
+    placeWidget.placeButton().show()
+    placeWidget.deleteButton().show()
+    #placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
+    placeWidget.setDeleteAllControlPointsOptionVisible(False)
+
+    # fibulaFiducialsPlaceWidget
+    placeWidget = self.ui.fibulaFiducialsPlaceWidget
+    placeWidget.setInteractionNode(slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton"))
+    placeWidget.setCurrentNode(self.logic.getFibulaFiducials())
+    placeWidget.buttonsVisible = False
+    placeWidget.placeButton().show()
+    placeWidget.deleteButton().show()
+    #placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
+    placeWidget.setDeleteAllControlPointsOptionVisible(False)
+
     # Connections
 
     # These connections ensure that we update parameter node when scene is closed
@@ -363,9 +387,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # (in the selected parameter node).
     self.ui.mandibularSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.fibulaFiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.miterBoxDirectionLineSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleBridgeModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -409,10 +431,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.openDocumentationButton.connect('clicked(bool)',self.onOpenDocumentationButton)
     self.ui.rightSideLegFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
+    self.ui.removeCutPlaneButton.connect('clicked(bool)',self.onRemoveCutPlaneButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
     self.ui.createMiterBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateMiterBoxesFromFibulaPlanesButton)
-    self.ui.createFibulaCylindersFiducialListButton.connect('clicked(bool)',self.onCreateFibulaCylindersFiducialListButton)
-    self.ui.createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton.connect('clicked(bool)',self.onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton)
+    #self.ui.createFibulaCylindersFiducialListButton.connect('clicked(bool)',self.onCreateFibulaCylindersFiducialListButton)
+    #self.ui.createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton.connect('clicked(bool)',self.onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton)
     self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToFibulaSurgicalGuideBaseButton)
     self.ui.createMandibleCylindersFiducialListButton.connect('clicked(bool)', self.onCreateMandibleCylindersFiducialListButton)
     self.ui.createSawBoxesFromFirstAndLastMandiblePlanesButton.connect('clicked(bool)', self.onCreateSawBoxesFromFirstAndLastMandiblePlanesButton)
@@ -503,6 +526,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       #print(callData.GetName())
       placeWidget = self.ui.interCondylarBeamLinePlaceWidget
       placeWidget.setCurrentNode(self.logic.getInterCondylarBeamLine())
+    if callData.GetClassName() == 'vtkMRMLMarkupsLineNode' and callData.GetAttribute("isMiterBoxDirectionLine") == 'True':
+      #print(callData.GetName())
+      placeWidget = self.ui.miterBoxDirectionLinePlaceWidget
+      placeWidget.setCurrentNode(self.logic.getMiterBoxDirectionLine())
+    if callData.GetClassName() == 'vtkMRMLMarkupsFiducialNode' and callData.GetAttribute("isFibulaFiducials") == 'True':
+      #print(callData.GetName())
+      placeWidget = self.ui.fibulaFiducialsPlaceWidget
+      placeWidget.setCurrentNode(self.logic.getFibulaFiducials())
 
   def enter(self):
     """
@@ -663,20 +694,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Update node selectors and sliders
     self.ui.mandibularSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularSegmentation"))
     self.ui.fibulaSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSegmentation"))
-    self.ui.fibulaFiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaFiducialList"))
     self.ui.fibulaSurgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel"))
-    self.ui.miterBoxDirectionLineSelector.setCurrentNode(self._parameterNode.GetNodeReference("miterBoxDirectionLine"))
     self.ui.mandibleBridgeModelSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleBridgeModel"))
     self.ui.mandibleSurgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel"))
     self.ui.mandibleFiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleFiducialList"))
     self.ui.dentalImplantFiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("dentalImplantsFiducialList"))
     #self.ui.dentalImplantCylinderSelector.setCurrentNode(self._parameterNode.GetNodeReference("selectedDentalImplantCylinderModel"))
     self.ui.plateCurveSelector.setCurrentNode(self._parameterNode.GetNodeReference("plateCurve"))
-
-    if self._parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel") is not None:
-      self.ui.createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton.enabled = True
-    else:
-      self.ui.createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton.enabled = False
 
     if self._parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel") is not None:
       self.ui.createCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton.enabled = True
@@ -886,9 +910,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.SetNodeReferenceID("mandibularSegmentation", self.ui.mandibularSegmentationSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fibulaSegmentation", self.ui.fibulaSegmentationSelector.currentNodeID)
-    self._parameterNode.SetNodeReferenceID("fibulaFiducialList", self.ui.fibulaFiducialListSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", self.ui.fibulaSurgicalGuideBaseSelector.currentNodeID)
-    self._parameterNode.SetNodeReferenceID("miterBoxDirectionLine", self.ui.miterBoxDirectionLineSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibleBridgeModel", self.ui.mandibleBridgeModelSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibleSurgicalGuideBaseModel", self.ui.mandibleSurgicalGuideBaseSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibleFiducialList", self.ui.mandibleFiducialListSelector.currentNodeID)
@@ -1063,6 +1085,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onAddCutPlaneButton(self):
     self.logic.addCutPlane()
 
+  def onRemoveCutPlaneButton(self):
+    self.logic.removeCutPlane()
+  
   def onMakeModelsButton(self):
     self.logic.makeModels()
 
@@ -1417,6 +1442,120 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     return interCondylarBeamLine
   
+  def getMiterBoxDirectionLine(self, startPlacementMode = False):
+    parameterNode = self.getParameterNode()
+    miterBoxDirectionLine = parameterNode.GetNodeReference("miterBoxDirectionLine")
+    if miterBoxDirectionLine is None:
+      miterBoxDirectionLine = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+      miterBoxDirectionLine.SetName("temp")
+      slicer.mrmlScene.AddNode(miterBoxDirectionLine)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(miterBoxDirectionLine)
+      miterBoxDirectionLine.SetAttribute("isMiterBoxDirectionLine","True")
+      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+      miterBoxDirectionLineItemID = shNode.GetItemByDataNode(miterBoxDirectionLine)
+      shNode.SetItemParent(miterBoxDirectionLineItemID, self.getParentFolderItemID())
+      miterBoxDirectionLine.SetName(slicer.mrmlScene.GetUniqueNameByString("miterBoxDirectionLine"))
+      parameterNode.SetNodeReferenceID("miterBoxDirectionLine",miterBoxDirectionLine.GetID())
+
+      displayNode = miterBoxDirectionLine.GetDisplayNode()
+      displayNode.AddViewNodeID(slicer.FIBULA_VIEW_ID)
+      displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
+      displayNode.SetOccludedVisibility(True)
+
+      #conections
+      #self.miterBoxDirectionLineObserver = miterBoxDirectionLine.AddObserver(
+      #  slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+      #  self.onMiterBoxDirectionLinePointModified
+      #)
+      # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
+
+    if startPlacementMode:
+      #setup placement
+      slicer.modules.markups.logic().SetActiveListID(miterBoxDirectionLine)
+      interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+      interactionNode.SwitchToSinglePlaceMode()
+    
+    return miterBoxDirectionLine
+  
+  def getFibulaFiducials(self, startPlacementMode = False):
+    parameterNode = self.getParameterNode()
+    fibulaFiducialList = parameterNode.GetNodeReference("fibulaFiducialList")
+    if fibulaFiducialList is None:
+      fibulaFiducialList = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+      fibulaFiducialList.SetName("temp")
+      slicer.mrmlScene.AddNode(fibulaFiducialList)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaFiducialList)
+      fibulaFiducialList.SetAttribute("isFibulaFiducials","True")
+      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+      fibulaFiducialListItemID = shNode.GetItemByDataNode(fibulaFiducialList)
+      shNode.SetItemParent(fibulaFiducialListItemID, self.getParentFolderItemID())
+      fibulaFiducialList.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaFiducialList"))
+      parameterNode.SetNodeReferenceID("fibulaFiducialList",fibulaFiducialList.GetID())
+
+      displayNode = fibulaFiducialList.GetDisplayNode()
+      displayNode.AddViewNodeID(slicer.FIBULA_VIEW_ID)
+      #displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
+      displayNode.SetOccludedVisibility(True)
+
+      #conections
+      #self.fibulaFiducialListObserver = fibulaFiducialList.AddObserver(
+      #  slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+      #  self.onFibulaFiducialsPointModified
+      #)
+      # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
+
+    if startPlacementMode:
+      #setup placement
+      slicer.modules.markups.logic().SetActiveListID(fibulaFiducialList)
+      interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+      interactionNode.SwitchToSinglePlaceMode()
+    
+    return fibulaFiducialList
+  
+  def getMandibleFiducials(self, startPlacementMode = False):
+    parameterNode = self.getParameterNode()
+    mandibleFiducialList = parameterNode.GetNodeReference("mandibleFiducialList")
+    if mandibleFiducialList is None:
+      mandibleFiducialList = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+      mandibleFiducialList.SetName("temp")
+      slicer.mrmlScene.AddNode(mandibleFiducialList)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibleFiducialList)
+      mandibleFiducialList.SetAttribute("isFibulaFiducials","True")
+      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+      mandibleFiducialListItemID = shNode.GetItemByDataNode(mandibleFiducialList)
+      shNode.SetItemParent(mandibleFiducialListItemID, self.getParentFolderItemID())
+      mandibleFiducialList.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleFiducialList"))
+      parameterNode.SetNodeReferenceID("mandibleFiducialList",mandibleFiducialList.GetID())
+
+      displayNode = mandibleFiducialList.GetDisplayNode()
+      displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+      #displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
+      displayNode.SetOccludedVisibility(True)
+
+      #conections
+      #self.mandibleFiducialListObserver = mandibleFiducialList.AddObserver(
+      #  slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+      #  self.onMandibleFiducialsPointModified
+      #)
+      # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
+
+    if startPlacementMode:
+      #setup placement
+      slicer.modules.markups.logic().SetActiveListID(mandibleFiducialList)
+      interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+      interactionNode.SwitchToSinglePlaceMode()
+    
+    return mandibleFiducialList
+  
+  def onFibulaFiducialsPointModified(self,sourceNode,event):
+    pass
+
+  def onMandibleFiducialsPointModified(self,sourceNode,event):
+    pass
+  
+  def onMiterBoxDirectionLinePointModified(self,sourceNode,event):
+    pass
+  
   def interCondylarBeamSizeChange(self, positive = True):
     parameterNode = self.getParameterNode()
     interCondylarBeamBoxSize = float(parameterNode.GetParameter("interCondylarBeamBoxSize"))
@@ -1491,6 +1630,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
 
   """
+  
+  def removeCutPlane(self):
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
+    if len(mandibularPlanesList) > 0:
+      # remove the last plane
+      planeNode = mandibularPlanesList[-1]
+      slicer.mrmlScene.RemoveNode(planeNode)
+  
   def onInterCondylarLinePointModified(self,sourceNode,event):
       self.interCondylarBeamBoxCreationTimer.start()
 

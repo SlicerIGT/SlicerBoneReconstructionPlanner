@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>455</width>
-    <height>1466</height>
+    <width>483</width>
+    <height>2107</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -65,6 +65,9 @@
     <widget class="ctkCollapsibleButton" name="CollapsibleButton">
      <property name="text">
       <string>Mandible Reconstruction Planning</string>
+     </property>
+     <property name="collapsed">
+      <bool>false</bool>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
@@ -294,13 +297,6 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
-            <widget class="QPushButton" name="addCutPlaneButton">
-             <property name="text">
-              <string>Add plane</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="0">
             <widget class="QLabel" name="label_3">
              <property name="text">
@@ -343,6 +339,30 @@
               <double>1.500000000000000</double>
              </property>
             </widget>
+           </item>
+           <item row="0" column="1">
+            <layout class="QHBoxLayout" name="horizontalLayout_10">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="addCutPlaneButton">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="removeCutPlaneButton">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
           </layout>
          </item>
@@ -595,7 +615,7 @@
          <item row="0" column="1">
           <widget class="QLabel" name="label_2">
            <property name="text">
-            <string>Create beam:</string>
+            <string>Create beam </string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1167,13 +1187,14 @@ neomandible</string>
       <string>Fibula Surgical Guide Generation</string>
      </property>
      <property name="collapsed">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
        <widget class="QCheckBox" name="checkSecurityMarginOnMiterBoxCreationCheckBox">
         <property name="text">
-         <string>Check security margin on miter box creation</string>
+         <string>Check security margin
+on miter box creation</string>
         </property>
         <property name="checked">
          <bool>true</bool>
@@ -1324,7 +1345,8 @@ neomandible</string>
         <item row="5" column="0">
          <widget class="QLabel" name="label_21">
           <property name="text">
-           <string>Bigger miter box distance to fibula (mm)</string>
+           <string>Bigger miter box
+distance to fibula (mm)</string>
           </property>
          </widget>
         </item>
@@ -1352,36 +1374,17 @@ neomandible</string>
          </widget>
         </item>
         <item row="7" column="1">
-         <widget class="qMRMLNodeComboBox" name="miterBoxDirectionLineSelector">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="nodeTypes">
-           <stringlist>
-            <string>vtkMRMLMarkupsLineNode</string>
-           </stringlist>
-          </property>
-          <property name="addEnabled">
-           <bool>false</bool>
-          </property>
-          <property name="removeEnabled">
-           <bool>false</bool>
-          </property>
-         </widget>
+         <widget class="qSlicerMarkupsPlaceWidget" name="miterBoxDirectionLinePlaceWidget"/>
         </item>
        </layout>
       </item>
       <item>
        <widget class="QPushButton" name="createMiterBoxesFromFibulaPlanesButton">
-        <property name="text">
+        <property name="toolTip">
          <string>Create miter boxes from fibula planes</string>
         </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="createFibulaCylindersFiducialListButton">
         <property name="text">
-         <string>Create fiducial list</string>
+         <string>Create miter boxes</string>
         </property>
        </widget>
       </item>
@@ -1391,20 +1394,14 @@ neomandible</string>
          <number>0</number>
         </property>
         <item row="0" column="0">
-         <widget class="QLabel" name="label_12">
-          <property name="text">
-           <string>Select fiducial list to create cylinders</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
          <widget class="QLabel" name="label_13">
           <property name="text">
-           <string>Select fibula surgical guide base</string>
+           <string>Fibula surgical
+guide base</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
+        <item row="0" column="1">
          <widget class="qMRMLNodeComboBox" name="fibulaSurgicalGuideBaseSelector">
           <property name="nodeTypes">
            <stringlist>
@@ -1419,62 +1416,119 @@ neomandible</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="qMRMLNodeComboBox" name="fibulaFiducialListSelector">
-          <property name="nodeTypes">
-           <stringlist>
-            <string>vtkMRMLMarkupsFiducialNode</string>
-           </stringlist>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_9">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
-          <property name="addEnabled">
-           <bool>false</bool>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
           </property>
-          <property name="removeEnabled">
-           <bool>false</bool>
-          </property>
-         </widget>
+         </spacer>
         </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_14">
+        <item>
+         <widget class="QLabel" name="label_23">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="text">
-           <string>Screw holes cylinders radius (mm)</string>
+           <string>Screw
+holes
+cylinders</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
-         <widget class="ctkDoubleSpinBox" name="fibulaScrewHoleCylinderRadiusSpinBox">
-          <property name="decimals">
-           <number>1</number>
+        <item>
+         <layout class="QFormLayout" name="formLayout_14">
+          <property name="leftMargin">
+           <number>0</number>
           </property>
-          <property name="maximum">
-           <double>5.000000000000000</double>
+          <property name="topMargin">
+           <number>0</number>
           </property>
-          <property name="singleStep">
-           <double>0.100000000000000</double>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_50">
+            <property name="text">
+             <string>Radius (mm)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="ctkDoubleSpinBox" name="fibulaScrewHoleCylinderRadiusSpinBox">
+            <property name="decimals">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <double>5.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+            <property name="value">
+             <double>1.500000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_49">
+            <property name="text">
+             <string>Points</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="qSlicerMarkupsPlaceWidget" name="fibulaFiducialsPlaceWidget"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_48">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
-          <property name="value">
-           <double>1.500000000000000</double>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
           </property>
-         </widget>
+         </spacer>
         </item>
        </layout>
       </item>
       <item>
-       <widget class="QPushButton" name="createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Create cylinders from fiducial list and fibula surgical guide base</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QPushButton" name="makeBooleanOperationsToFibulaSurgicalGuideBaseButton">
-        <property name="text">
+        <property name="toolTip">
          <string>Make boolean operations to surgical
  guide base with screwHolesCylinders,
  fibulaDentalImplantCylinders and miterBoxes</string>
+        </property>
+        <property name="text">
+         <string>Create fibula
+surgical guide</string>
         </property>
        </widget>
       </item>
@@ -1819,6 +1873,19 @@ Desing</string>
      </layout>
     </widget>
    </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -1886,38 +1953,6 @@ Desing</string>
     <hint type="destinationlabel">
      <x>337</x>
      <y>683</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>BoneReconstructionPlanner</sender>
-   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>fibulaFiducialListSelector</receiver>
-   <slot>setMRMLScene(vtkMRMLScene*)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>207</x>
-     <y>357</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>297</x>
-     <y>634</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>BoneReconstructionPlanner</sender>
-   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>miterBoxDirectionLineSelector</receiver>
-   <slot>setMRMLScene(vtkMRMLScene*)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>216</x>
-     <y>496</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>314</x>
-     <y>712</y>
     </hint>
    </hints>
   </connection>
