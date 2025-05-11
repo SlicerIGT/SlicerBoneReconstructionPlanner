@@ -254,8 +254,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     updatePlanningIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/update_48.svg')
 
     generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton = checkablePushButtonWithIcon(
-      "Update fibula planes over fibula line;\nupdate fibula bone pieces \nand transform them to mandible",
+      "Update\nvirtual\nplan",
       qt.QIcon(updatePlanningIconPath)
+    )
+    generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.setToolTip(
+      "Update fibula planes over fibula line;\nupdate fibula bone pieces \nand transform them to mandible"
     )
     
     updateVSPButtonsLayout = self.ui.updateVSPButtonsFrame.layout()
