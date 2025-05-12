@@ -411,7 +411,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.mandibleBridgeModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.dentalImplantFiducialListSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     #self.ui.dentalImplantCylinderSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -603,6 +602,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         self.logic.onInterCondylarLinePointModified
       )
       self.logic.interCondylarBeamLineObserver = observerTag
+
+    if self.logic.mandibleBridgeCurveObserver == 0:
+      observerTag = self.logic.getMandibleBridgeCurve().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+        self.logic.onMandibleBridgeCurvePointModified
+      )
+      self.logic.mandibleBridgeCurveObserver = observerTag
     
     if (self.ui.scalarVolumeSelector.nodeCount() != 0) and (self.ui.scalarVolumeSelector.currentNode() == None):
       self.ui.scalarVolumeSelector.setCurrentNodeIndex(0)#0 == first scalarVolume
@@ -650,6 +656,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineObserver)
     self.logic.interCondylarBeamLineObserver = 0
+
+    self.logic.getMandibleBridgeCurve().RemoveObserver(self.logic.mandibleBridgeCurveObserver)
+    self.logic.mandibleBridgeCurveObserver = 0
 
   def onSceneStartClose(self, caller, event):
     """
@@ -723,7 +732,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibularSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularSegmentation"))
     self.ui.fibulaSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSegmentation"))
     self.ui.fibulaSurgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel"))
-    self.ui.mandibleBridgeModelSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleBridgeModel"))
     self.ui.mandibleSurgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel"))
     self.ui.dentalImplantFiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("dentalImplantsFiducialList"))
     #self.ui.dentalImplantCylinderSelector.setCurrentNode(self._parameterNode.GetNodeReference("selectedDentalImplantCylinderModel"))
@@ -799,15 +807,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     kindOfMandibleResection = self._parameterNode.GetParameter("kindOfMandibleResection")
     self.ui.kindOfMandibleResectionComboBox.currentText = kindOfMandibleResection
     if kindOfMandibleResection == "Segmental Mandibulectomy":
-      self.ui.mandibleBridgeModelSelector.enabled = True
-      self.ui.mandibleBridgeModelSelector.toolTip = "Bridge model to connect both mandible guides (optional)."
+      self.ui.mandibleBridgeCurvePlaceWidget.enabled = True
+      self.ui.mandibleBridgeCurvePlaceWidget.toolTip = "Bridge model to connect both mandible guides (optional)."
 
       self.ui.mandibleSideToRemoveComboBox.enabled = False
       self.ui.mandibleSideToRemoveComboBox.addItem("")
       self.ui.mandibleSideToRemoveComboBox.currentText = ""
     else:
-      self.ui.mandibleBridgeModelSelector.enabled = False
-      self.ui.mandibleBridgeModelSelector.toolTip = "Bridge model will not be used since you selected an hemimandibulectomy."
+      self.ui.mandibleBridgeCurvePlaceWidget.enabled = False
+      self.ui.mandibleBridgeCurvePlaceWidget.toolTip = "Bridge model will not be used since you selected an hemimandibulectomy."
 
       self.ui.mandibleSideToRemoveComboBox.enabled = True
       self.ui.mandibleSideToRemoveComboBox.removeItem(2)
@@ -935,7 +943,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetNodeReferenceID("mandibularSegmentation", self.ui.mandibularSegmentationSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fibulaSegmentation", self.ui.fibulaSegmentationSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", self.ui.fibulaSurgicalGuideBaseSelector.currentNodeID)
-    self._parameterNode.SetNodeReferenceID("mandibleBridgeModel", self.ui.mandibleBridgeModelSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibleSurgicalGuideBaseModel", self.ui.mandibleSurgicalGuideBaseSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("dentalImplantsFiducialList", self.ui.dentalImplantFiducialListSelector.currentNodeID)
     #self._parameterNode.SetNodeReferenceID("selectedDentalImplantCylinderModel", self.ui.dentalImplantCylinderSelector.currentNodeID)
@@ -1258,6 +1265,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList = []
     self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList = []
     self.interCondylarBeamLineObserver = 0
+    self.mandibleBridgeCurveObserver = 0
     self.generateFibulaPlanesTimer = qt.QTimer()
     self.generateFibulaPlanesTimer.setInterval(300)
     self.generateFibulaPlanesTimer.setSingleShot(True)
@@ -1266,6 +1274,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.interCondylarBeamBoxCreationTimer.setInterval(150)
     self.interCondylarBeamBoxCreationTimer.setSingleShot(True)
     self.interCondylarBeamBoxCreationTimer.connect('timeout()', self.onInterCondylarLineTimerTimeout)
+    self.mandibleBridgeCreationTimer = qt.QTimer()
+    self.mandibleBridgeCreationTimer.setInterval(150)
+    self.mandibleBridgeCreationTimer.setSingleShot(True)
+    self.mandibleBridgeCreationTimer.connect('timeout()', self.onMandibleBridgeTimerTimeout)
     self.updateFibuladentalImplantsTimer = qt.QTimer()
     self.updateFibuladentalImplantsTimer.setInterval(300)
     self.updateFibuladentalImplantsTimer.setSingleShot(True)
@@ -1305,6 +1317,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","True")
     if not parameterNode.GetParameter("interCondylarBeamBoxSize"):
       parameterNode.SetParameter("interCondylarBeamBoxSize",str(INITIAL_INTER_CONDYLAR_BOX_SIZE))
+    if not parameterNode.GetParameter("mandibleBridgeRadius"):
+      parameterNode.SetParameter("mandibleBridgeRadius",str(3.0))
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -1589,10 +1603,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetOccludedVisibility(True)
 
       #conections
-      #self.mandibleBridgeCurveObserver = mandibleBridgeCurve.AddObserver(
-      #  slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
-      #  self.onMandibleFiducialsPointModified
-      #)
+      self.mandibleBridgeCurveObserver = mandibleBridgeCurve.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+        self.onMandibleBridgeCurvePointModified
+      )
       # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
 
     if startPlacementMode:
@@ -1603,6 +1617,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     return mandibleBridgeCurve
   
+  def onMandibleBridgeCurvePointModified(self,sourceNode,event):
+    self.mandibleBridgeCreationTimer.start()
+  
+  def onMandibleBridgeTimerTimeout(self):
+    self.updateMandibleBridgeTube()
+
   def onFibulaFiducialsPointModified(self,sourceNode,event):
     pass
 
@@ -1737,7 +1757,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interCondylarBeamBoxDisplayNode = interCondylarBeamBox.GetDisplayNode()
     interCondylarBeamBoxDisplayNode.SetVisibility2D(True)
     interCondylarBeamBoxDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
-    self.setRedSliceForBoxModelsDisplayNodes()
+    # self.setRedSliceForBoxModelsDisplayNodes() 
 
     # transform the box
     transform = vtk.vtkTransform()
@@ -1760,6 +1780,61 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     transformFilter.Update()
     interCondylarBeamBox.SetAndObservePolyData(transformFilter.GetOutput())
     interCondylarBeamBoxDisplayNode.SetVisibility(True) # now make it visible
+
+  def updateMandibleBridgeTube(self):
+    parameterNode = self.getParameterNode()
+    mandibleBridgeCurve = parameterNode.GetNodeReference("mandibleBridgeCurve")
+    mandibleBridgeTube = parameterNode.GetNodeReference("mandibleBridgeTube")
+    mandibleBridgeRadius = float(parameterNode.GetParameter("mandibleBridgeRadius"))
+
+    #if mandibleBridgeTube is not None:
+    #  slicer.mrmlScene.RemoveNode(mandibleBridgeTube)
+
+    if mandibleBridgeCurve.GetNumberOfControlPoints() <= 1:
+      return
+    
+    if mandibleBridgeTube is None:
+      # create the placeholder model
+      mandibleBridgeTube = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+      mandibleBridgeTube.SetName("temp")
+      slicer.mrmlScene.AddNode(mandibleBridgeTube)
+      mandibleBridgeTube.CreateDefaultDisplayNodes()
+      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+      mandibleBridgeTubeItemID = shNode.GetItemByDataNode(mandibleBridgeTube)
+      shNode.SetItemParent(mandibleBridgeTubeItemID, self.getMandibleReconstructionFolderItemID())
+      mandibleBridgeTube.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleBridgeTube"))
+      parameterNode.SetNodeReferenceID("mandibleBridgeTube",mandibleBridgeTube.GetID())
+
+      mandibleBridgeTubeDisplayNode = mandibleBridgeTube.GetDisplayNode()
+      mandibleBridgeTubeDisplayNode.SetVisibility2D(True)
+      mandibleBridgeTubeDisplayNode.SetVisibility(True) # now make it visible
+      mandibleBridgeTubeDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+      #self.setRedSliceForBoxModelsDisplayNodes()
+
+
+    """
+    if markupsToModel_bridge is None:
+      markupsToModel_bridge = slicer.mrmlScene.AddNode(slicer.vtkMRMLMarkupsToModelNode())
+      markupsToModel_bridge.SetName("markupsToModel_bridge")
+      markupsToModel_bridge.SetAutoUpdateOutput(False)
+      markupsToModel_bridge.SetAndObserveMarkupsNodeID(mandibleBridgeCurve.GetID())
+      markupsToModel_bridge.SetAndObserveModelNodeID(mandibleBridgeTube.GetID())
+      markupsToModel_bridge.SetModelType(markupsToModel_bridge.Curve)
+      markupsToModel_bridge.SetTubeRadius(mandibleBridgeRadius)
+      markupsToModel_bridge.SetTubeResolution(8)
+      markupsToModel_bridge.SetTubeSides(8)
+    """
+
+
+    markupsToModel = slicer.modules.markupstomodel.logic()
+    # see https://github.com/SlicerIGT/SlicerMarkupsToModel/blob/312cf9f8ccb84613e191a0a3f18cd3f865026aeb/MarkupsToModel/Logic/vtkSlicerMarkupsToModelLogic.h#L78-L85
+    markupsToModel.UpdateOutputCurveModel( 
+      mandibleBridgeCurve, mandibleBridgeTube, slicer.vtkMRMLMarkupsToModelNode.CardinalSpline, 
+      False, mandibleBridgeRadius, 8, 5, True, 3, slicer.vtkMRMLMarkupsToModelNode.RawIndices, 
+      None, slicer.vtkMRMLMarkupsToModelNode.MovingLeastSquares 
+    )
+
+
 
   def onPlanePointAdded(self,sourceNode,event):
     parameterNode = self.getParameterNode()
