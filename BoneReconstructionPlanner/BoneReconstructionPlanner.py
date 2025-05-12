@@ -385,6 +385,17 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
     placeWidget.setDeleteAllControlPointsOptionVisible(False)
 
+    # mandibleBridgeCurvePlaceWidget
+    placeWidget = self.ui.mandibleBridgeCurvePlaceWidget
+    placeWidget.setInteractionNode(slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton"))
+    placeWidget.setCurrentNode(self.logic.getMandibleBridgeCurve())
+    placeWidget.buttonsVisible = False
+    placeWidget.placeButton().show()
+    placeWidget.deleteButton().show()
+    #placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
+    placeWidget.setDeleteAllControlPointsOptionVisible(False)
+
     # Connections
 
     # These connections ensure that we update parameter node when scene is closed
@@ -422,6 +433,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.sawBoxSlotWallSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.biggerSawBoxDistanceToMandibleSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.mandibleBridgeRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.dentalImplantCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.dentalImplantCylinderHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.dentalImplantDrillGuideWallSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -546,6 +558,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       #print(callData.GetName())
       placeWidget = self.ui.mandibleFiducialsPlaceWidget
       placeWidget.setCurrentNode(self.logic.getMandibleFiducials())
+    if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode' and callData.GetAttribute("isMandibleBridgeCurve") == 'True':
+      #print(callData.GetName())
+      placeWidget = self.ui.mandibleBridgeCurvePlaceWidget
+      placeWidget.setCurrentNode(self.logic.getMandibleBridgeCurve())
 
   def enter(self):
     """
@@ -745,6 +761,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.biggerSawBoxDistanceToMandibleSpinBox.setValue(float(self._parameterNode.GetParameter("biggerSawBoxDistanceToMandible")))
     if self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius") != '':
       self.ui.mandibleScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius")))
+    if self._parameterNode.GetParameter("mandibleBridgeRadius") != '':
+      self.ui.mandibleBridgeRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleBridgeRadius")))
     if self._parameterNode.GetParameter("dentalImplantCylinderRadius") != '':
       self.ui.dentalImplantCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantCylinderRadius")))
     if self._parameterNode.GetParameter("dentalImplantCylinderHeight") != '':
@@ -939,6 +957,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("sawBoxSlotWall", str(self.ui.sawBoxSlotWallSpinBox.value))
     self._parameterNode.SetParameter("biggerSawBoxDistanceToMandible", str(self.ui.biggerSawBoxDistanceToMandibleSpinBox.value))
     self._parameterNode.SetParameter("mandibleScrewHoleCylinderRadius", str(self.ui.mandibleScrewHoleCylinderRadiusSpinBox.value))
+    self._parameterNode.SetParameter("mandibleBridgeRadius", str(self.ui.mandibleBridgeRadiusSpinBox.value))
     self._parameterNode.SetParameter("dentalImplantCylinderRadius", str(self.ui.dentalImplantCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("dentalImplantCylinderHeight", str(self.ui.dentalImplantCylinderHeightSpinBox.value))
     self._parameterNode.SetParameter("dentalImplantDrillGuideWall", str(self.ui.dentalImplantDrillGuideWallSpinBox.value))
@@ -1483,7 +1502,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     fibulaFiducialList = parameterNode.GetNodeReference("fibulaFiducialList")
     if fibulaFiducialList is None:
-      fibulaFiducialList = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+      fibulaFiducialList = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")
       fibulaFiducialList.SetName("temp")
       slicer.mrmlScene.AddNode(fibulaFiducialList)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaFiducialList)
@@ -1518,7 +1537,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     mandibleFiducialList = parameterNode.GetNodeReference("mandibleFiducialList")
     if mandibleFiducialList is None:
-      mandibleFiducialList = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+      mandibleFiducialList = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")
       mandibleFiducialList.SetName("temp")
       slicer.mrmlScene.AddNode(mandibleFiducialList)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibleFiducialList)
@@ -1548,6 +1567,41 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       interactionNode.SwitchToSinglePlaceMode()
     
     return mandibleFiducialList
+  
+  def getMandibleBridgeCurve(self, startPlacementMode = False):
+    parameterNode = self.getParameterNode()
+    mandibleBridgeCurve = parameterNode.GetNodeReference("mandibleBridgeCurve")
+    if mandibleBridgeCurve is None:
+      mandibleBridgeCurve = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
+      mandibleBridgeCurve.SetName("temp")
+      slicer.mrmlScene.AddNode(mandibleBridgeCurve)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibleBridgeCurve)
+      mandibleBridgeCurve.SetAttribute("isMandibleBridgeCurve","True")
+      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+      mandibleBridgeCurveItemID = shNode.GetItemByDataNode(mandibleBridgeCurve)
+      shNode.SetItemParent(mandibleBridgeCurveItemID, self.getParentFolderItemID())
+      mandibleBridgeCurve.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleBridgeCurve"))
+      parameterNode.SetNodeReferenceID("mandibleBridgeCurve",mandibleBridgeCurve.GetID())
+
+      displayNode = mandibleBridgeCurve.GetDisplayNode()
+      displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+      displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
+      displayNode.SetOccludedVisibility(True)
+
+      #conections
+      #self.mandibleBridgeCurveObserver = mandibleBridgeCurve.AddObserver(
+      #  slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+      #  self.onMandibleFiducialsPointModified
+      #)
+      # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
+
+    if startPlacementMode:
+      #setup placement
+      slicer.modules.markups.logic().SetActiveListID(mandibleBridgeCurve)
+      interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+      interactionNode.SwitchToSinglePlaceMode()
+    
+    return mandibleBridgeCurve
   
   def onFibulaFiducialsPointModified(self,sourceNode,event):
     pass
