@@ -596,19 +596,33 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.setMarkupsListLocked(dentalImplantsPlanesList,locked=False)
     self.logic.addDentalImplantsPlaneObservers()
 
-    if self.logic.interCondylarBeamLineObserver == 0:
+    if self.logic.interCondylarBeamLineControlPointModifiedObserver == 0:
       observerTag = self.logic.getInterCondylarBeamLine().AddObserver(
         slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
         self.logic.onInterCondylarLinePointModified
       )
-      self.logic.interCondylarBeamLineObserver = observerTag
+      self.logic.interCondylarBeamLineControlPointModifiedObserver = observerTag
+    
+    if self.logic.interCondylarBeamLineControlPointRemovedObserver == 0:
+      observerTag = self.logic.getInterCondylarBeamLine().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.logic.onInterCondylarLinePointRemoved
+      )
+      self.logic.interCondylarBeamLineControlPointRemovedObserver = observerTag  
 
-    if self.logic.mandibleBridgeCurveObserver == 0:
+    if self.logic.mandibleBridgeCurveControlPointModifiedObserver == 0:
       observerTag = self.logic.getMandibleBridgeCurve().AddObserver(
         slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
         self.logic.onMandibleBridgeCurvePointModified
       )
-      self.logic.mandibleBridgeCurveObserver = observerTag
+      self.logic.mandibleBridgeCurveControlPointModifiedObserver = observerTag
+
+    if self.logic.mandibleBridgeCurveControlPointRemovedObserver == 0:
+      observerTag = self.logic.getMandibleBridgeCurve().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.logic.onMandibleBridgeCurvePointRemoved
+      )
+      self.logic.mandibleBridgeCurveControlPointRemovedObserver = observerTag
     
     if (self.ui.scalarVolumeSelector.nodeCount() != 0) and (self.ui.scalarVolumeSelector.currentNode() == None):
       self.ui.scalarVolumeSelector.setCurrentNodeIndex(0)#0 == first scalarVolume
@@ -654,11 +668,17 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.setMarkupsListLocked(dentalImplantsPlanesList,locked=True)
     self.logic.removeDentalImplantsPlaneObservers()
 
-    self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineObserver)
-    self.logic.interCondylarBeamLineObserver = 0
+    self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineControlPointModifiedObserver)
+    self.logic.interCondylarBeamLineControlPointModifiedObserver = 0
 
-    self.logic.getMandibleBridgeCurve().RemoveObserver(self.logic.mandibleBridgeCurveObserver)
-    self.logic.mandibleBridgeCurveObserver = 0
+    self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineControlPointRemovedObserver)
+    self.logic.interCondylarBeamLineControlPointRemovedObserver = 0
+
+    self.logic.getMandibleBridgeCurve().RemoveObserver(self.logic.mandibleBridgeCurveControlPointModifiedObserver)
+    self.logic.mandibleBridgeCurveControlPointModifiedObserver = 0
+
+    self.logic.getMandibleBridgeCurve().RemoveObserver(self.logic.mandibleBridgeCurveControlPointRemovedObserver)
+    self.logic.mandibleBridgeCurveControlPointRemovedObserver = 0
 
   def onSceneStartClose(self, caller, event):
     """
@@ -1264,8 +1284,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.mandiblePlaneObserversAndNodeIDList = []
     self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList = []
     self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList = []
-    self.interCondylarBeamLineObserver = 0
-    self.mandibleBridgeCurveObserver = 0
+    self.interCondylarBeamLineControlPointModifiedObserver = 0
+    self.interCondylarBeamLineControlPointRemovedObserver = 0
+    self.mandibleBridgeCurveControlPointModifiedObserver = 0
+    self.mandibleBridgeCurveControlPointRemovedObserver = 0
     self.generateFibulaPlanesTimer = qt.QTimer()
     self.generateFibulaPlanesTimer.setInterval(300)
     self.generateFibulaPlanesTimer.setSingleShot(True)
@@ -1463,9 +1485,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetOccludedVisibility(True)
 
       #conections
-      self.interCondylarBeamLineObserver = interCondylarBeamLine.AddObserver(
+      self.interCondylarBeamLineControlPointModifiedObserver = interCondylarBeamLine.AddObserver(
         slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
         self.onInterCondylarLinePointModified
+      )
+      self.interCondylarBeamLineControlPointModifiedObserver = interCondylarBeamLine.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.onInterCondylarLinePointRemoved
       )
       # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
 
@@ -1603,11 +1629,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetOccludedVisibility(True)
 
       #conections
-      self.mandibleBridgeCurveObserver = mandibleBridgeCurve.AddObserver(
+      self.mandibleBridgeCurveControlPointModifiedObserver = mandibleBridgeCurve.AddObserver(
         slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
         self.onMandibleBridgeCurvePointModified
       )
-      # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
+      self.mandibleBridgeCurveControlPointRemovedObserver = mandibleBridgeCurve.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.onMandibleBridgeCurvePointRemoved
+      )
 
     if startPlacementMode:
       #setup placement
@@ -1619,10 +1648,56 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   
   def onMandibleBridgeCurvePointModified(self,sourceNode,event):
     self.mandibleBridgeCreationTimer.start()
+
+  def onMandibleBridgeCurvePointRemoved(self,sourceNode,event):
+    print("onMandibleBridgeCurvePointRemoved")
+    parameterNode = self.getParameterNode()
+    mandibleBridgeCurve = parameterNode.GetNodeReference("mandibleBridgeCurve")
+    mandibleBridgeTube = parameterNode.GetNodeReference("mandibleBridgeTube")
+    if mandibleBridgeCurve.GetNumberOfControlPoints() <= 1:
+      if mandibleBridgeTube is not None:
+        slicer.mrmlScene.RemoveNode(mandibleBridgeTube)
+    elif mandibleBridgeCurve.GetNumberOfControlPoints() >= 2:
+      self.updateMandibleBridgeTube()
   
   def onMandibleBridgeTimerTimeout(self):
     self.updateMandibleBridgeTube()
+  
+  def updateMandibleBridgeTube(self):
+    parameterNode = self.getParameterNode()
+    mandibleBridgeCurve = parameterNode.GetNodeReference("mandibleBridgeCurve")
+    mandibleBridgeTube = parameterNode.GetNodeReference("mandibleBridgeTube")
+    mandibleBridgeRadius = float(parameterNode.GetParameter("mandibleBridgeRadius"))
 
+    if mandibleBridgeCurve.GetNumberOfControlPoints() <= 1:
+      return
+    
+    if mandibleBridgeTube is None:
+      # create the placeholder model
+      mandibleBridgeTube = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+      mandibleBridgeTube.SetName("temp")
+      slicer.mrmlScene.AddNode(mandibleBridgeTube)
+      mandibleBridgeTube.CreateDefaultDisplayNodes()
+      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+      mandibleBridgeTubeItemID = shNode.GetItemByDataNode(mandibleBridgeTube)
+      shNode.SetItemParent(mandibleBridgeTubeItemID, self.getMandibleReconstructionFolderItemID())
+      mandibleBridgeTube.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleBridgeTube"))
+      parameterNode.SetNodeReferenceID("mandibleBridgeTube",mandibleBridgeTube.GetID())
+
+      mandibleBridgeTubeDisplayNode = mandibleBridgeTube.GetDisplayNode()
+      mandibleBridgeTubeDisplayNode.SetVisibility2D(True)
+      mandibleBridgeTubeDisplayNode.SetVisibility(True) # now make it visible
+      mandibleBridgeTubeDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+      #self.setRedSliceForBoxModelsDisplayNodes()
+
+    markupsToModel = slicer.modules.markupstomodel.logic()
+    # see https://github.com/SlicerIGT/SlicerMarkupsToModel/blob/312cf9f8ccb84613e191a0a3f18cd3f865026aeb/MarkupsToModel/Logic/vtkSlicerMarkupsToModelLogic.h#L78-L85
+    markupsToModel.UpdateOutputCurveModel( 
+      mandibleBridgeCurve, mandibleBridgeTube, slicer.vtkMRMLMarkupsToModelNode.CardinalSpline, 
+      False, mandibleBridgeRadius, 8, 5, True, 3, slicer.vtkMRMLMarkupsToModelNode.RawIndices, 
+      None, slicer.vtkMRMLMarkupsToModelNode.MovingLeastSquares 
+    )
+  
   def onFibulaFiducialsPointModified(self,sourceNode,event):
     pass
 
@@ -1694,18 +1769,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     slicer.modules.markups.logic().SetActiveListID(planeNode)
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
     interactionNode.SwitchToSinglePlaceMode()
-
-  """
-    if sourceNode.GetNumberOfControlPoints() == 2:
-      self.modifyInterCondylarBeamBox()
-    else:
-      # delete interCondylarBeamBox
-      parameterNode = self.getParameterNode()
-      interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
-      if interCondylarBeamBox is not None:
-        slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
-
-  """
   
   def removeCutPlane(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -1720,121 +1783,51 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def onInterCondylarLinePointModified(self,sourceNode,event):
       self.interCondylarBeamBoxCreationTimer.start()
 
+  def onInterCondylarLinePointRemoved(self,sourceNode,event):
+    parameterNode = self.getParameterNode()
+    interCondylarBeamLine = parameterNode.GetNodeReference("interCondylarBeamLine")
+    interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
+    if interCondylarBeamLine.GetNumberOfControlPoints() <= 1:
+      if interCondylarBeamBox is not None:
+        slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
+  
   def onInterCondylarLineTimerTimeout(self):
     self.updateInterCondylarBeamBox()
-  
+
   def updateInterCondylarBeamBox(self):
     parameterNode = self.getParameterNode()
     interCondylarBeamLine = parameterNode.GetNodeReference("interCondylarBeamLine")
     interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
     interCondylarBeamBoxSize = float(parameterNode.GetParameter("interCondylarBeamBoxSize"))
 
-    if interCondylarBeamBox is not None:
-      slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
-
     if interCondylarBeamLine.GetNumberOfControlPoints() != 2:
       return
 
-    # get the two points of the line
-    point0 = np.array([0,0,0])
-    point1 = np.array([0,0,0])
-    interCondylarBeamLine.GetNthControlPointPosition(0,point0)
-    interCondylarBeamLine.GetNthControlPointPosition(1,point1)
-    lineDirection = point1 - point0
-    lineNorm = np.linalg.norm(lineDirection)
-    lineDirection = lineDirection / lineNorm
-    lineMiddlePoint = (point0 + point1) / 2
-
-    interCondylarBeamBox = createBox(
-      X = lineNorm, 
-      Y = interCondylarBeamBoxSize, 
-      Z = interCondylarBeamBoxSize, 
-      name = "interCondylarBeamBox", #maybe get the name fixed
-      defaultVisible = False
-    )
-    parameterNode.SetNodeReferenceID("interCondylarBeamBox", interCondylarBeamBox.GetID())
-
-    interCondylarBeamBoxDisplayNode = interCondylarBeamBox.GetDisplayNode()
-    interCondylarBeamBoxDisplayNode.SetVisibility2D(True)
-    interCondylarBeamBoxDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
-    # self.setRedSliceForBoxModelsDisplayNodes() 
-
-    # transform the box
-    transform = vtk.vtkTransform()
-    transform.PostMultiply()
-
-    angleRadiansZ = np.arccos(vtk.vtkMath().Dot([1,0,0], lineDirection))
-    transform.RotateZ(np.degrees(angleRadiansZ))
-    transformedXAxis = transform.TransformVector([1,0,0])
-
-    angleRadians = np.arccos(vtk.vtkMath().Dot(transformedXAxis, lineDirection))
-    rotationAxis = [0,0,0]
-    vtk.vtkMath().Cross(transformedXAxis, lineDirection, rotationAxis)
-    transform.RotateWXYZ(np.degrees(angleRadians), rotationAxis)
-
-    transform.Translate(lineMiddlePoint)
-
-    transformFilter = vtk.vtkTransformPolyDataFilter()
-    transformFilter.SetTransform(transform)
-    transformFilter.SetInputData(interCondylarBeamBox.GetPolyData())
-    transformFilter.Update()
-    interCondylarBeamBox.SetAndObservePolyData(transformFilter.GetOutput())
-    interCondylarBeamBoxDisplayNode.SetVisibility(True) # now make it visible
-
-  def updateMandibleBridgeTube(self):
-    parameterNode = self.getParameterNode()
-    mandibleBridgeCurve = parameterNode.GetNodeReference("mandibleBridgeCurve")
-    mandibleBridgeTube = parameterNode.GetNodeReference("mandibleBridgeTube")
-    mandibleBridgeRadius = float(parameterNode.GetParameter("mandibleBridgeRadius"))
-
-    #if mandibleBridgeTube is not None:
-    #  slicer.mrmlScene.RemoveNode(mandibleBridgeTube)
-
-    if mandibleBridgeCurve.GetNumberOfControlPoints() <= 1:
-      return
-    
-    if mandibleBridgeTube is None:
+    if interCondylarBeamBox is None:
       # create the placeholder model
-      mandibleBridgeTube = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-      mandibleBridgeTube.SetName("temp")
-      slicer.mrmlScene.AddNode(mandibleBridgeTube)
-      mandibleBridgeTube.CreateDefaultDisplayNodes()
+      interCondylarBeamBox = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+      interCondylarBeamBox.SetName("temp")
+      slicer.mrmlScene.AddNode(interCondylarBeamBox)
+      interCondylarBeamBox.CreateDefaultDisplayNodes()
       shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      mandibleBridgeTubeItemID = shNode.GetItemByDataNode(mandibleBridgeTube)
-      shNode.SetItemParent(mandibleBridgeTubeItemID, self.getMandibleReconstructionFolderItemID())
-      mandibleBridgeTube.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleBridgeTube"))
-      parameterNode.SetNodeReferenceID("mandibleBridgeTube",mandibleBridgeTube.GetID())
+      interCondylarBeamBoxItemID = shNode.GetItemByDataNode(interCondylarBeamBox)
+      shNode.SetItemParent(interCondylarBeamBoxItemID, self.getMandibleReconstructionFolderItemID())
+      interCondylarBeamBox.SetName(slicer.mrmlScene.GetUniqueNameByString("interCondylarBeamBox"))
+      parameterNode.SetNodeReferenceID("interCondylarBeamBox",interCondylarBeamBox.GetID())
 
-      mandibleBridgeTubeDisplayNode = mandibleBridgeTube.GetDisplayNode()
-      mandibleBridgeTubeDisplayNode.SetVisibility2D(True)
-      mandibleBridgeTubeDisplayNode.SetVisibility(True) # now make it visible
-      mandibleBridgeTubeDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+      interCondylarBeamBoxDisplayNode = interCondylarBeamBox.GetDisplayNode()
+      interCondylarBeamBoxDisplayNode.SetVisibility2D(True)
+      interCondylarBeamBoxDisplayNode.SetVisibility(True) # now make it visible
+      interCondylarBeamBoxDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
       #self.setRedSliceForBoxModelsDisplayNodes()
-
-
-    """
-    if markupsToModel_bridge is None:
-      markupsToModel_bridge = slicer.mrmlScene.AddNode(slicer.vtkMRMLMarkupsToModelNode())
-      markupsToModel_bridge.SetName("markupsToModel_bridge")
-      markupsToModel_bridge.SetAutoUpdateOutput(False)
-      markupsToModel_bridge.SetAndObserveMarkupsNodeID(mandibleBridgeCurve.GetID())
-      markupsToModel_bridge.SetAndObserveModelNodeID(mandibleBridgeTube.GetID())
-      markupsToModel_bridge.SetModelType(markupsToModel_bridge.Curve)
-      markupsToModel_bridge.SetTubeRadius(mandibleBridgeRadius)
-      markupsToModel_bridge.SetTubeResolution(8)
-      markupsToModel_bridge.SetTubeSides(8)
-    """
-
 
     markupsToModel = slicer.modules.markupstomodel.logic()
     # see https://github.com/SlicerIGT/SlicerMarkupsToModel/blob/312cf9f8ccb84613e191a0a3f18cd3f865026aeb/MarkupsToModel/Logic/vtkSlicerMarkupsToModelLogic.h#L78-L85
     markupsToModel.UpdateOutputCurveModel( 
-      mandibleBridgeCurve, mandibleBridgeTube, slicer.vtkMRMLMarkupsToModelNode.CardinalSpline, 
-      False, mandibleBridgeRadius, 8, 5, True, 3, slicer.vtkMRMLMarkupsToModelNode.RawIndices, 
+      interCondylarBeamLine, interCondylarBeamBox, slicer.vtkMRMLMarkupsToModelNode.CardinalSpline, 
+      False, interCondylarBeamBoxSize/2, 4, 5, True, 3, slicer.vtkMRMLMarkupsToModelNode.RawIndices, 
       None, slicer.vtkMRMLMarkupsToModelNode.MovingLeastSquares 
     )
-
-
 
   def onPlanePointAdded(self,sourceNode,event):
     parameterNode = self.getParameterNode()
