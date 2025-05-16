@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>484</width>
-    <height>2813</height>
+    <height>2524</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -105,49 +105,29 @@
            <property name="topMargin">
             <number>0</number>
            </property>
-           <item row="2" column="1">
-            <widget class="QCheckBox" name="rightSideLegFibulaCheckBox">
-             <property name="toolTip">
-              <string>(tick if fibula is the one from the right leg)</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="checked">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_10">
-             <property name="text">
-              <string>Right side leg</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="0">
             <widget class="QLabel" name="label_18">
              <property name="toolTip">
               <string>Donor grafting side laterality</string>
              </property>
              <property name="text">
-              <string>Laterality</string>
+              <string>Donor Leg</string>
              </property>
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QComboBox" name="comboBox">
+            <widget class="QComboBox" name="donorLegComboBox">
              <property name="toolTip">
               <string>Donor grafting side laterality</string>
              </property>
              <item>
               <property name="text">
-               <string>Right side leg</string>
+               <string>Left</string>
               </property>
              </item>
              <item>
               <property name="text">
-               <string>Left side leg</string>
+               <string>Right</string>
               </property>
              </item>
             </widget>

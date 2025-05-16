@@ -442,6 +442,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.plateTipsBevelRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkBoxToggled.connect(self.updateParameterNodeFromGUI)
     self.ui.updateFibulaDentalImplantCylindersButton.checkBoxToggled.connect(self.updateParameterNodeFromGUI)
+    self.ui.donorLegComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.fibulaSegmentsMeasurementModeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.kindOfMandibleResectionComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleSideToRemoveComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
@@ -450,7 +451,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.emailBugReportButton.connect('clicked(bool)',self.onEmailBugReportButton)
     self.ui.emailFeatureRequestButton.connect('clicked(bool)',self.onEmailFeatureRequestButton)
     self.ui.openDocumentationButton.connect('clicked(bool)',self.onOpenDocumentationButton)
-    self.ui.rightSideLegFibulaCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.removeCutPlaneButton.connect('clicked(bool)',self.onRemoveCutPlaneButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
@@ -757,6 +757,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     #self.ui.dentalImplantCylinderSelector.setCurrentNode(self._parameterNode.GetNodeReference("selectedDentalImplantCylinderModel"))
     self.ui.plateCurveSelector.setCurrentNode(self._parameterNode.GetNodeReference("plateCurve"))
 
+    self.ui.donorLegComboBox.currentText = self._parameterNode.GetParameter("donorLeg")
+    
     if self._parameterNode.GetParameter("initialSpace") != '':
       self.ui.initialSpinBox.setValue(float(self._parameterNode.GetParameter("initialSpace")))
     if self._parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes") != '':
@@ -806,7 +808,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if self._parameterNode.GetParameter("plateTipsBevelRadius") != '':
       self.ui.plateTipsBevelRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("plateTipsBevelRadius")))
 
-    self.ui.rightSideLegFibulaCheckBox.checked = self._parameterNode.GetParameter("rightSideLegFibula") == "True"
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = self._parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
@@ -998,10 +999,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if self.ui.mandibleSideToRemoveComboBox.currentText != "":
       self._parameterNode.SetParameter("mandibleSideToRemove", self.ui.mandibleSideToRemoveComboBox.currentText)
 
-    if self.ui.rightSideLegFibulaCheckBox.checked:
-      self._parameterNode.SetParameter("rightSideLegFibula","True")
-    else:
-      self._parameterNode.SetParameter("rightSideLegFibula","False")
+    self._parameterNode.SetParameter("donorLeg", self.ui.donorLegComboBox.currentText)
+
     if self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked:
       self._parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","True")
     else:
@@ -2076,7 +2075,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     initialSpace = float(parameterNode.GetParameter("initialSpace"))
     additionalBetweenSpaceOfFibulaPlanes = float(parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes"))
-    rightSideLegFibulaChecked = parameterNode.GetParameter("rightSideLegFibula") == "True"
+    rightSideLegIsDonor = parameterNode.GetParameter("donorLeg") == "Right"
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
     planeList = createListFromFolderID(self.getMandiblePlanesFolderItemID())
@@ -2093,7 +2092,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     #Improve code readability by deleting if-else block that avoided recalculation if mandiblePlane rotated
     #Create fibula axis:
-    fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndRightSideLegChecked(fibulaLine,rightSideLegFibulaChecked) 
+    fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndRightSideLegChecked(fibulaLine,rightSideLegIsDonor) 
     
     #NewPlanes position and distance
     self.fibulaPlanesPositionA = []
@@ -2170,7 +2169,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandibleAxisY = mandibleAxisY/np.linalg.norm(mandibleAxisY)
 
       #Create fibula axis:
-      fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndRightSideLegChecked(fibulaLine,rightSideLegFibulaChecked) 
+      fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndRightSideLegChecked(fibulaLine,rightSideLegIsDonor) 
       
       if i==0:
         self.fibulaPlanesPositionA.append(fibulaOrigin + fibulaZ*initialSpace)
@@ -2269,7 +2268,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           lineEndPos = getCentroid(intersectionB)
 
           #Create fibula axis:
-          fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndRightSideLegChecked_2(lineStartPos,lineEndPos,rightSideLegFibulaChecked)
+          fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndRightSideLegChecked_2(lineStartPos,lineEndPos,rightSideLegIsDonor)
           
           lineEndPos = lineStartPos + boneSegmentsDistance[i]*fibulaZ
 
@@ -3432,7 +3431,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeNode.SetNthControlPointPosition(1,mandiblePlaneStraightOrigin + mandiblePlaneStraightX*dx)
     planeNode.SetNthControlPointPosition(2,mandiblePlaneStraightOrigin + mandiblePlaneStraightY*dy)
 
-  def createFibulaAxisFromFibulaLineAndRightSideLegChecked(self,fibulaLine,rightSideLegFibulaChecked):
+  def createFibulaAxisFromFibulaLineAndRightSideLegChecked(self,fibulaLine,rightSideLegIsDonor):
     lineStartPos = np.zeros(3)
     lineEndPos = np.zeros(3)
     fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
@@ -3445,7 +3444,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     anteriorDirection = [0,1,0]
     posteriorDirection = [0,-1,0]
     # make fibulaX always point in the medial direction
-    if rightSideLegFibulaChecked:
+    if rightSideLegIsDonor:
       vtk.vtkMath.Cross(fibulaZ, anteriorDirection, fibulaX)
       fibulaX = fibulaX/np.linalg.norm(fibulaX)
     else:
@@ -3456,7 +3455,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     return fibulaX, fibulaY, fibulaZ, fibulaOrigin
 
-  def createFibulaAxisFromFibulaLineAndRightSideLegChecked_2(self,lineStartPos,lineEndPos,rightSideLegFibulaChecked):
+  def createFibulaAxisFromFibulaLineAndRightSideLegChecked_2(self,lineStartPos,lineEndPos,rightSideLegIsDonor):
     fibulaOrigin = lineStartPos
     fibulaZLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
     fibulaZ = (lineEndPos-lineStartPos)/fibulaZLineNorm
@@ -3465,7 +3464,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     anteriorDirection = [0,1,0]
     posteriorDirection = [0,-1,0]
     # make fibulaX always point in the medial direction
-    if rightSideLegFibulaChecked:
+    if rightSideLegIsDonor:
       vtk.vtkMath.Cross(fibulaZ, anteriorDirection, fibulaX)
       fibulaX = fibulaX/np.linalg.norm(fibulaX)
     else:
@@ -3487,7 +3486,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     clearanceFitPrintingTolerance = float(parameterNode.GetParameter("clearanceFitPrintingTolerance"))
     biggerMiterBoxDistanceToFibula = float(parameterNode.GetParameter("biggerMiterBoxDistanceToFibula"))
     securityMarginOfFibulaPieces = float(parameterNode.GetParameter("securityMarginOfFibulaPieces"))
-    rightSideLegFibulaChecked = parameterNode.GetParameter("rightSideLegFibula") == "True"
+    rightSideLegIsDonor = parameterNode.GetParameter("donorLeg") == "Right"
     checkSecurityMarginOnMiterBoxCreationChecked = parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") == "True"
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
@@ -3594,7 +3593,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     if not useMoreExactVersionOfPositioningAlgorithmChecked:
       #Create fibula axis:
-      fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndRightSideLegChecked(fibulaLine,rightSideLegFibulaChecked) 
+      fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndRightSideLegChecked(fibulaLine,rightSideLegIsDonor) 
 
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
 
@@ -3605,7 +3604,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         fibulaPlanesList[(i//2)*2].GetOrigin(lineStartPos)
         fibulaPlanesList[(i//2)*2 +1].GetOrigin(lineEndPos)
         #Create fibula axis:
-        fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndRightSideLegChecked_2(lineStartPos,lineEndPos,rightSideLegFibulaChecked)
+        fibulaX, fibulaY, fibulaZ, fibulaOrigin = self.createFibulaAxisFromFibulaLineAndRightSideLegChecked_2(lineStartPos,lineEndPos,rightSideLegIsDonor)
 
       #miterBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
       if i%2 == 0:
