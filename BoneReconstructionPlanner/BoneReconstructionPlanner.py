@@ -851,12 +851,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
       self.ui.dentalImplantsPlanningCollapsibleButton.show()
       self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.text = (
-        "Make boolean operations to surgical\n guide base with screwHolesCylinders,\n fibulaDentalImplantCylinders and miterBoxes"
+        "Create fibula\nand implants\nsurgical guide"
       )
     else:
       self.ui.dentalImplantsPlanningCollapsibleButton.hide()
       self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.text = (
-        "Make boolean operations to surgical\n guide base with screwHolesCylinders\n and miterBoxes"
+        "Create fibula\nsurgical guide"
       )
     
     if customTitaniumPlateDesingChecked:

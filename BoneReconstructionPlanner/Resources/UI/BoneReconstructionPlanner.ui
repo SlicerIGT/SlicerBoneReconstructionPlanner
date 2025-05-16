@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>484</width>
-    <height>2720</height>
+    <height>2813</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -398,7 +398,8 @@
               <item>
                <widget class="QLabel" name="label_46">
                 <property name="text">
-                 <string>Fibula segment lengths measurements</string>
+                 <string>Fibula segment
+lengths measurements</string>
                 </property>
                </widget>
               </item>
@@ -481,7 +482,8 @@
             <item>
              <widget class="QCheckBox" name="mandiblePlanesPositioningForMaximumBoneContactCheckBox">
               <property name="text">
-               <string>Automatic mandibular planes positioning for maximum bones contact area</string>
+               <string>Automatic mandibular planes positioning
+for maximum bones contact area</string>
               </property>
              </widget>
             </item>
@@ -498,14 +500,16 @@
                <string>Use when you have finished editing</string>
               </property>
               <property name="text">
-               <string>Use more exact version of the positioning algorithm (takes more time)</string>
+               <string>Use more exact version of the positioning
+algorithm (takes more time)</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="useNonDecimatedBoneModelsForPreviewCheckBox">
               <property name="text">
-               <string>Use non-decimated bone models for preview (takes more time)</string>
+               <string>Use non-decimated bone models for
+preview (takes more time)</string>
               </property>
              </widget>
             </item>
