@@ -8,6 +8,23 @@ from slicer.util import VTKObservationMixin
 from BRPLib.helperFunctions import *
 from BRPLib.guiWidgets import *
 
+def saveExecutedMethodWithTelemetry(method):
+    def decorated_method(self, *args, **kwargs):
+        result = method(self, *args, **kwargs)
+        if int(slicer.app.revision) >= PREVIEW_RELEASE_OCTOBER_6TH_2024:
+          slicer.app.logUsageEvent("BoneReconstructionPlanner", method.__name__)
+        #print("Saved method name: " + method.__name__)
+        return result
+
+    return decorated_method
+
+def saveAllExecutedMethodsWithTelemetry(cls):
+    for name, method in cls.__dict__.items():
+        if name.startswith('_'):  # don't decorate private functions
+            continue
+        setattr(cls, name, saveExecutedMethodWithTelemetry(method))
+    return cls
+
 #
 # BoneReconstructionPlanner
 #
@@ -1107,6 +1124,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 # BoneReconstructionPlannerLogic
 #
 
+@saveAllExecutedMethodsWithTelemetry
 class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   """This class should implement all the actual
   computation done by your module.  The interface
@@ -1368,6 +1386,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.reorderMandiblePlanes()
   
+  #@saveExecutedMethodWithTelemetry
   def onPlaneModifiedTimer(self,sourceNode,event):
     parameterNode = self.getParameterNode()
     updateOnMandiblePlanesMovementChecked = parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True"
@@ -1379,6 +1398,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if updateOnMandiblePlanesMovementChecked:
       self.generateFibulaPlanesTimer.start()
 
+  #@saveExecutedMethodWithTelemetry
   def onGenerateFibulaPlanesTimerTimeout(self):
     parameterNode = self.getParameterNode()
     lockVSPChecked = parameterNode.GetParameter("lockVSP") == "True"
@@ -1428,9 +1448,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         slicer.util.errorDisplay("Failed to compute results: "+str(e))
         import traceback
         traceback.print_exc()  
-
-    if int(slicer.app.revision) >= PREVIEW_RELEASE_OCTOBER_6TH_2024:
-      slicer.app.logUsageEvent("BoneReconstructionPlanner", "VirtualSurgicalPlanUpdated")
 
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
@@ -4197,6 +4214,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     if intersectionsFolder:
       shNode.RemoveItem(intersectionsFolder)
+    
+    if int(slicer.app.revision) >= PREVIEW_RELEASE_OCTOBER_6TH_2024:
+      slicer.app.logUsageEvent("BoneReconstructionPlanner", "centerFibulaLine")
 
   def setBackgroundVolumeFromID(self,scalarVolumeID):
     redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
@@ -4259,6 +4279,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.RemoveNode(mandibleReconstructionModel)
       slicer.util.errorDisplay("ERROR: Boolean operations to make neomandible model failed")
     
+    if int(slicer.app.revision) >= PREVIEW_RELEASE_OCTOBER_6TH_2024:
+      slicer.app.logUsageEvent("BoneReconstructionPlanner", "create3DModelOfTheReconstruction")
+
     return
 
   def exportScaledFibulaPiecesForNeomandibleReconstructionToFolder(self, scaledFibulaPiecesFolder, scaleFactor=1.001):
