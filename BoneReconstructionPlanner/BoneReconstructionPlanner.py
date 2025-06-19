@@ -4215,9 +4215,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if intersectionsFolder:
       shNode.RemoveItem(intersectionsFolder)
     
-    if int(slicer.app.revision) >= PREVIEW_RELEASE_OCTOBER_6TH_2024:
-      slicer.app.logUsageEvent("BoneReconstructionPlanner", "centerFibulaLine")
-
   def setBackgroundVolumeFromID(self,scalarVolumeID):
     redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
     redSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
@@ -4279,9 +4276,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.RemoveNode(mandibleReconstructionModel)
       slicer.util.errorDisplay("ERROR: Boolean operations to make neomandible model failed")
     
-    if int(slicer.app.revision) >= PREVIEW_RELEASE_OCTOBER_6TH_2024:
-      slicer.app.logUsageEvent("BoneReconstructionPlanner", "create3DModelOfTheReconstruction")
-
     return
 
   def exportScaledFibulaPiecesForNeomandibleReconstructionToFolder(self, scaledFibulaPiecesFolder, scaleFactor=1.001):
