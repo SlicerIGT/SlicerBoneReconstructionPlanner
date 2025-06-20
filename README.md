@@ -12,9 +12,9 @@
 # BoneReconstructionPlanner
 
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) 
-![auto-commit-msg](https://img.shields.io/badge/dynamic/json?label=Citations&query=%24.citationCount&url=https%3A%2F%2Fapi.semanticscholar.org%2Fgraph%2Fv1%2Fpaper%2FDOI%3A10.1016%2Fj.stlm.2023.100109%3Ffields%3DcitationCount)
-[![forks - badge-generator](https://img.shields.io/github/forks/SlicerIGT/SlicerBoneReconstructionPlanner?style=social)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner)
-[![stars - badge-generator](https://img.shields.io/github/stars/SlicerIGT/SlicerBoneReconstructionPlanner?style=social)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner)
+[![auto-commit-msg](https://img.shields.io/badge/dynamic/json?label=Citations&query=%24.citationCount&url=https%3A%2F%2Fapi.semanticscholar.org%2Fgraph%2Fv1%2Fpaper%2FDOI%3A10.1016%2Fj.stlm.2023.100109%3Ffields%3DcitationCount)](https://www.sciencedirect.com/science/article/pii/S2666964123000103#section-cited-by)
+[![forks - badge-generator](https://img.shields.io/github/forks/SlicerIGT/SlicerBoneReconstructionPlanner?style=social)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/fork)
+[![stars - badge-generator](https://img.shields.io/github/stars/SlicerIGT/SlicerBoneReconstructionPlanner?style=social)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/stargazers)
 
 A [3D Slicer](https://www.slicer.org/) extension for virtual surgical planning of mandibular reconstruction with vascularized fibula free flap and generation of patient-specific surgical guides. 
 
