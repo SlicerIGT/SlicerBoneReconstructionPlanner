@@ -9,7 +9,7 @@ set(EXTENSION_CATEGORY "Planning")
 set(EXTENSION_CONTRIBUTORS "MSc. Mauro I. Dominguez, PhD. Andras Lasso (PerkLab), Dr. Manjula Herath")
 set(EXTENSION_DESCRIPTION "A extension for virtual surgical planning of mandibular reconstruction with vascularized fibula free flap and generation of patient-specific surgical guides.  ")
 set(EXTENSION_ICONURL "https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner.jpg")
-set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Pictures/screenshotPlanning.png https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Pictures/screenshotPatientSpecificSurgicalGuides.png")
+set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Pictures/screenshotPlanning.png https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Pictures/screenshotPatientSpecificSurgicalGuides.png https://img.shields.io/badge/dynamic/json?label=Citations%20to%20date:&query=%24.citationCount&url=https%3A%2F%2Fapi.semanticscholar.org%2Fgraph%2Fv1%2Fpaper%2FDOI%3A10.1016%2Fj.stlm.2023.100109%3Ffields%3DcitationCount")
 set(EXTENSION_DEPENDS "SurfaceWrapSolidify MarkupsToModel Sandbox") # Specified as a list or "NA" if no dependencies
 set(EXTENSION_SCM "git")
 set(EXTENSION_SCMURL "https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner.git")
