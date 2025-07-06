@@ -611,3 +611,14 @@ class combineModelsRobustLogic:
 
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds'.format(stopTime-startTime))
+
+def saveExecutedMethodWithTelemetry(method):
+    PREVIEW_RELEASE_OCTOBER_6TH_2024 = 33047
+    def decorated_method(self, *args, **kwargs):
+        result = method(self, *args, **kwargs)
+        if int(slicer.app.revision) >= PREVIEW_RELEASE_OCTOBER_6TH_2024:
+          slicer.app.logUsageEvent("BoneReconstructionPlanner", method.__name__)
+        #print("Saved method name: " + method.__name__)
+        return result
+
+    return decorated_method

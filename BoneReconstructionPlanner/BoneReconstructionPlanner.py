@@ -149,7 +149,6 @@ def registerSampleData():
 slicer.MANDIBLE_VIEW_SINGLETON_TAG = "1"
 slicer.FIBULA_VIEW_SINGLETON_TAG = "2"
 slicer.BRPLayoutId=101
-PREVIEW_RELEASE_OCTOBER_6TH_2024 = 33047
 
 def addBRPLayout():
   BRPLayout = f"""
@@ -1212,6 +1211,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     else:
       return shNode.CreateFolderItem(self.getParentFolderItemID(),"Mandibular planes")
   
+  @saveExecutedMethodWithTelemetry
   def prepareSendEmailOnWebBrowser(self, emailVariable, subjectVariable, bodyVariable, ccVariable="", bccVariable=""):
     parsedBodyVariable = bodyVariable.replace(" ", "%20").replace("\n", "%0D%0A")
     #
@@ -1232,6 +1232,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     # Open email client
     qt.QDesktopServices.openUrl(prepareEmailUrl)
   
+  @saveExecutedMethodWithTelemetry
   def openDocumentationOnWebBrowser(self):
     documentationUrl = qt.QUrl("https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner#table-of-contents")
     qt.QDesktopServices.openUrl(documentationUrl)
@@ -1379,6 +1380,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if updateOnMandiblePlanesMovementChecked:
       self.generateFibulaPlanesTimer.start()
 
+  @saveExecutedMethodWithTelemetry
   def onGenerateFibulaPlanesTimerTimeout(self):
     parameterNode = self.getParameterNode()
     lockVSPChecked = parameterNode.GetParameter("lockVSP") == "True"
@@ -1428,9 +1430,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         slicer.util.errorDisplay("Failed to compute results: "+str(e))
         import traceback
         traceback.print_exc()  
-
-    if int(slicer.app.revision) >= PREVIEW_RELEASE_OCTOBER_6TH_2024:
-      slicer.app.logUsageEvent("BoneReconstructionPlanner", "VirtualSurgicalPlanUpdated")
 
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
@@ -2289,10 +2288,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if transformedFibulaPiecesFolder:
       shNode.RemoveItem(transformedFibulaPiecesFolder)
   
+  @saveExecutedMethodWithTelemetry
   def hardVSPUpdate(self):
     self.resetPlan()
     self.onGenerateFibulaPlanesTimerTimeout()
 
+  @saveExecutedMethodWithTelemetry
   def lockVSP(self, doLock):
     parameterNode = self.getParameterNode()
     parameterNode.SetParameter("lockVSP", str(doLock))
@@ -2586,6 +2587,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     vtk.vtkMatrix4x4.Multiply4x4(axes2ToWorldChangeOfFrameMatrix, worldToAxes1ChangeOfFrameMatrix, axes1ToAxes2RegistrationTransformMatrix)
     return axes1ToAxes2RegistrationTransformMatrix
 
+  @saveExecutedMethodWithTelemetry
   def makeModels(self):
     if not slicer.app.commandOptions().noMainWindow:
       setBRPLayout()
@@ -2865,6 +2867,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPieceToMandibleAxisTransformNodeItemID = shNode.GetItemByDataNode(fibulaPieceToMandibleAxisTransformNode)
       shNode.SetItemParent(fibulaPieceToMandibleAxisTransformNodeItemID, bonePiecesTransformFolder)
 
+  @saveExecutedMethodWithTelemetry
   def mandiblePlanesPositioningForMaximumBoneContact(self):
     parameterNode = self.getParameterNode()
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
@@ -2994,6 +2997,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     return fibulaX, fibulaY, fibulaZ, fibulaOrigin
   
+  @saveExecutedMethodWithTelemetry
   def createMiterBoxesFromFibulaPlanes(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
@@ -3299,6 +3303,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
     interactionNode.SwitchToPersistentPlaceMode()
 
+  @saveExecutedMethodWithTelemetry
   def createCylindersFromFiducialListAndFibulaSurgicalGuideBase(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     fibulaCylindersModelsFolder = shNode.GetItemByName("Fibula Cylinders Models")
@@ -3356,6 +3361,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if cylindersTransformsFolder:
       shNode.RemoveItem(cylindersTransformsFolder)
   
+  @saveExecutedMethodWithTelemetry
   def createCylindersFromFiducialListAndMandibleSurgicalGuideBase(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandibleCylindersModelsFolder = shNode.GetItemByName("Mandible Cylinders Models")
@@ -3691,6 +3697,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaDentalImplantCylinderTransformNodeItemID = shNode.GetItemByDataNode(fibulaDentalImplantCylinderTransformNode)
       shNode.SetItemParent(fibulaDentalImplantCylinderTransformNodeItemID, fibulaDentalImplantsCylindersTransformsFolder)
 
+  @saveExecutedMethodWithTelemetry
   def makeBooleanOperationsToFibulaSurgicalGuideBase(self):
     parameterNode = self.getParameterNode()
     fibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
@@ -3764,6 +3771,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
     interactionNode.SwitchToPersistentPlaceMode()
 
+  @saveExecutedMethodWithTelemetry
   def createSawBoxesFromFirstAndLastMandiblePlanes(self):
     parameterNode = self.getParameterNode()
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
@@ -4075,6 +4083,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if updateOnDentalImplantPlanesMovement:
       self.updateFibuladentalImplantsTimer.start()
 
+  @saveExecutedMethodWithTelemetry
   def makeBooleanOperationsToMandibleSurgicalGuideBase(self):
     parameterNode = self.getParameterNode()
     mandibleSurgicalGuideBaseModel = parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel")
@@ -4159,6 +4168,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     #return rightPlaneOrigin, leftPlaneOrigin
     return rightPlane, leftPlane
 
+  @saveExecutedMethodWithTelemetry
   def centerFibulaLine(self):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
@@ -4206,6 +4216,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     yellowSliceLogic = slicer.app.layoutManager().sliceWidget('Yellow').sliceLogic()
     yellowSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
 
+  @saveExecutedMethodWithTelemetry
   def create3DModelOfTheReconstruction(self):
     import time
     startTime = time.time()
