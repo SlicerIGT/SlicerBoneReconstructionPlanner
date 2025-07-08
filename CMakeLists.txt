@@ -10,7 +10,7 @@ set(EXTENSION_CONTRIBUTORS "MSc. Mauro I. Dominguez, PhD. Andras Lasso (PerkLab)
 set(EXTENSION_DESCRIPTION "A extension for virtual surgical planning of mandibular reconstruction with vascularized fibula free flap and generation of patient-specific surgical guides.<br><img src=\"https://img.shields.io/badge/dynamic/json?label=Citations%20to%20date:&query=%24.citationCount&url=https%3A%2F%2Fapi.semanticscholar.org%2Fgraph%2Fv1%2Fpaper%2FDOI%3A10.1016%2Fj.stlm.2023.100109%3Ffields%3DcitationCount\" alt=\"Citations to date count\">")
 set(EXTENSION_ICONURL "https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner.jpg")
 set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Pictures/screenshotPlanning.png https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/BoneReconstructionPlanner/Resources/Pictures/screenshotPatientSpecificSurgicalGuides.png")
-set(EXTENSION_DEPENDS "SurfaceWrapSolidify MarkupsToModel Sandbox") # Specified as a list or "NA" if no dependencies
+set(EXTENSION_DEPENDS "SurfaceWrapSolidify MarkupsToModel Sandbox SlicerTelemetry") # Specified as a list or "NA" if no dependencies
 set(EXTENSION_SCM "git")
 set(EXTENSION_SCMURL "https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner.git")
 set(EXTENSION_SCMREVISION "main")
