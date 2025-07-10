@@ -81,6 +81,7 @@ https://www.sciencedirect.com/science/article/pii/S2666964123000103
 - [Interactive VSP Demo](#interactive-vsp-demo)
 - [Teaser and Tutorial Videos](#teaser-and-tutorial-videos)
 - [Documentation](#documentation)
+  - [Whitepaper](#whitepaper)
 - [Reported Use Cases](#reported-use-cases)
 - [Sample Data](#sample-data)
 - [Instructions](#instructions)
@@ -158,7 +159,9 @@ qualified technician
 </table>
 
 # Documentation
-- [White Paper (pdf)](https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/Docs/BoneReconstructionPlannerSlides.pdf)
+## Whitepaper
+- [Google slides](https://docs.google.com/presentation/d/1fMJOwBm4-TStrGy0NT975880UG0wlHEA3KAITjMazuw/) 
+- [PDF](https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/Docs/BoneReconstructionPlanner-whitepaper.pdf)
 
 # Reported Use Cases
 See more than 40 plans of other users:
