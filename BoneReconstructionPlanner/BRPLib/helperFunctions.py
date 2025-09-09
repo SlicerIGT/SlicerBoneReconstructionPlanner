@@ -257,11 +257,12 @@ def getLineNorm(line):
   line.GetNthControlPointPositionWorld(1, lineEndPos)
   return np.linalg.norm(lineEndPos-lineStartPos)
 
-def createBox(X, Y, Z, name):
+def createBox(X, Y, Z, name, defaultVisible = True):
   miterBox = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
   miterBox.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
   slicer.mrmlScene.AddNode(miterBox)
   miterBox.CreateDefaultDisplayNodes()
+  miterBox.GetDisplayNode().SetVisibility(defaultVisible)
   miterBox.GetDisplayNode().SetInterpolation(slicer.vtkMRMLModelDisplayNode.FlatInterpolation)
   #
   miterBoxSource = vtk.vtkCubeSource()
