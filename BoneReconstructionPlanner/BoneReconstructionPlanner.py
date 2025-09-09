@@ -321,7 +321,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     placeWidget.buttonsVisible = False
     placeWidget.placeButton().show()
     placeWidget.deleteButton().show()
-    placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
     placeWidget.setDeleteAllControlPointsOptionVisible(False)
 
     # fibulaLinePlaceWidget
@@ -353,6 +353,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
 
     slicer.mrmlScene.AddObserver(slicer.mrmlScene.NodeAboutToBeRemovedEvent, self.onNodeAboutToBeRemovedEvent) 
+    slicer.mrmlScene.AddObserver(slicer.mrmlScene.NodeRemovedEvent, self.onNodeRemovedEvent)
 
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
@@ -484,6 +485,21 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
               observerIndex = i
           callData.RemoveObserver(self.logic.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList.pop(observerIndex)[0])
 
+  @vtk.calldata_type(vtk.VTK_OBJECT)
+  def onNodeRemovedEvent(self, caller, event, callData):
+    if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode' and callData.GetAttribute("isMandibleCurve") == 'True':
+      #print(callData.GetName())
+      placeWidget = self.ui.mandibleCurvePlaceWidget
+      placeWidget.setCurrentNode(self.logic.getMandibularCurve())
+    if callData.GetClassName() == 'vtkMRMLMarkupsLineNode' and callData.GetAttribute("isFibulaLine") == 'True':
+      #print(callData.GetName())
+      placeWidget = self.ui.fibulaLinePlaceWidget
+      placeWidget.setCurrentNode(self.logic.getFibulaLine())
+    if callData.GetClassName() == 'vtkMRMLMarkupsLineNode' and callData.GetAttribute("isInterCondylarBeamLine") == 'True':
+      #print(callData.GetName())
+      placeWidget = self.ui.interCondylarBeamLinePlaceWidget
+      placeWidget.setCurrentNode(self.logic.getInterCondylarBeamLine())
+
   def enter(self):
     """
     Called each time the user opens this module.
@@ -518,6 +534,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.setMarkupsListLocked(dentalImplantsPlanesList,locked=False)
     self.logic.addDentalImplantsPlaneObservers()
 
+    if self.logic.interCondylarBeamLineObserver == 0:
+      observerTag = self.logic.getInterCondylarBeamLine().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+        self.logic.onInterCondylarLinePointModified
+      )
+      self.logic.interCondylarBeamLineObserver = observerTag
+    
     if (self.ui.scalarVolumeSelector.nodeCount() != 0) and (self.ui.scalarVolumeSelector.currentNode() == None):
       self.ui.scalarVolumeSelector.setCurrentNodeIndex(0)#0 == first scalarVolume
 
@@ -561,6 +584,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     )
     self.logic.setMarkupsListLocked(dentalImplantsPlanesList,locked=True)
     self.logic.removeDentalImplantsPlaneObservers()
+
+    self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineObserver)
+    self.logic.interCondylarBeamLineObserver = 0
 
   def onSceneStartClose(self, caller, event):
     """
@@ -1181,10 +1207,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.mandiblePlaneObserversAndNodeIDList = []
     self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList = []
     self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList = []
+    self.interCondylarBeamLineObserver = 0
     self.generateFibulaPlanesTimer = qt.QTimer()
     self.generateFibulaPlanesTimer.setInterval(300)
     self.generateFibulaPlanesTimer.setSingleShot(True)
     self.generateFibulaPlanesTimer.connect('timeout()', self.onGenerateFibulaPlanesTimerTimeout)
+    self.interCondylarBeamBoxCreationTimer = qt.QTimer()
+    self.interCondylarBeamBoxCreationTimer.setInterval(150)
+    self.interCondylarBeamBoxCreationTimer.setSingleShot(True)
+    self.interCondylarBeamBoxCreationTimer.connect('timeout()', self.onInterCondylarLineTimerTimeout)
     self.updateFibuladentalImplantsTimer = qt.QTimer()
     self.updateFibuladentalImplantsTimer.setInterval(300)
     self.updateFibuladentalImplantsTimer.setSingleShot(True)
@@ -1305,6 +1336,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandibularCurve.SetName("temp")
       slicer.mrmlScene.AddNode(mandibularCurve)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibularCurve)
+      mandibularCurve.SetAttribute("isMandibleCurve","True")
       shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
       mandibularCurveItemID = shNode.GetItemByDataNode(mandibularCurve)
       shNode.SetItemParent(mandibularCurveItemID, self.getParentFolderItemID())
@@ -1330,6 +1362,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaLine.SetName("temp")
       slicer.mrmlScene.AddNode(fibulaLine)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaLine)
+      fibulaLine.SetAttribute("isFibulaLine","True")
       shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
       fibulaLineItemID = shNode.GetItemByDataNode(fibulaLine)
       shNode.SetItemParent(fibulaLineItemID, self.getParentFolderItemID())
@@ -1355,6 +1388,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       interCondylarBeamLine.SetName("temp")
       slicer.mrmlScene.AddNode(interCondylarBeamLine)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(interCondylarBeamLine)
+      interCondylarBeamLine.SetAttribute("isInterCondylarBeamLine","True")
       shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
       interCondylarBeamLineItemID = shNode.GetItemByDataNode(interCondylarBeamLine)
       shNode.SetItemParent(interCondylarBeamLineItemID, self.getParentFolderItemID())
@@ -1367,8 +1401,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetOccludedVisibility(True)
 
       #conections
-      self.interCondylarLineNodeObserver = interCondylarBeamLine.AddObserver(
-        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onInterCondylarLinePointModified
+      self.interCondylarBeamLineObserver = interCondylarBeamLine.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+        self.onInterCondylarLinePointModified
       )
       # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
 
@@ -1391,7 +1426,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     parameterNode.SetParameter("interCondylarBeamBoxSize", str(interCondylarBeamBoxSize))
 
-    self.modifyInterCondylarBeamBox()
+    self.updateInterCondylarBeamBox()
 
   def addCutPlane(self):
     parameterNode = self.getParameterNode()
@@ -1443,7 +1478,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
     interactionNode.SwitchToSinglePlaceMode()
 
-  def onInterCondylarLinePointModified(self,sourceNode,event):
+  """
     if sourceNode.GetNumberOfControlPoints() == 2:
       self.modifyInterCondylarBeamBox()
     else:
@@ -1453,7 +1488,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if interCondylarBeamBox is not None:
         slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
 
-  def modifyInterCondylarBeamBox(self):
+  """
+  def onInterCondylarLinePointModified(self,sourceNode,event):
+      self.interCondylarBeamBoxCreationTimer.start()
+
+  def onInterCondylarLineTimerTimeout(self):
+    self.updateInterCondylarBeamBox()
+  
+  def updateInterCondylarBeamBox(self):
     parameterNode = self.getParameterNode()
     interCondylarBeamLine = parameterNode.GetNodeReference("interCondylarBeamLine")
     interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
@@ -1461,6 +1503,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     if interCondylarBeamBox is not None:
       slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
+
+    if interCondylarBeamLine.GetNumberOfControlPoints() != 2:
+      return
 
     # get the two points of the line
     point0 = np.array([0,0,0])
