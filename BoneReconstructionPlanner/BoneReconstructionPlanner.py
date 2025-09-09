@@ -148,6 +148,8 @@ def registerSampleData():
 
 slicer.MANDIBLE_VIEW_SINGLETON_TAG = "1"
 slicer.FIBULA_VIEW_SINGLETON_TAG = "2"
+slicer.MANDIBLE_VIEW_ID = "vtkMRMLViewNode1"
+slicer.FIBULA_VIEW_ID = "vtkMRMLViewNode2"
 slicer.BRPLayoutId=101
 
 def addBRPLayout():
@@ -1267,8 +1269,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetNodeReferenceID("mandibleCurve",mandibularCurve.GetID())
 
       displayNode = mandibularCurve.GetDisplayNode()
-      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-      displayNode.AddViewNodeID(mandibleViewNode.GetID())
+      displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
 
     if startPlacementMode:
       #setup placement
@@ -1293,8 +1294,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetNodeReferenceID("fibulaLine",fibulaLine.GetID())
 
       displayNode = fibulaLine.GetDisplayNode()
-      #fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-      #displayNode.AddViewNodeID(fibulaViewNode.GetID())
+      displayNode.AddViewNodeID(slicer.FIBULA_VIEW_ID)
 
     if startPlacementMode:
       #setup placement
