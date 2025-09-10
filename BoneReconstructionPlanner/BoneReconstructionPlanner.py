@@ -181,6 +181,57 @@ CLEARANCE_FIT_PRINTING_TOLERANCE_MM = 0.25
 BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_MM = 3.0
 BIGGER_SAW_BOX_DISTANCE_TO_MANDIBLE_MM = 3.0
 
+defaultParametersDict = {
+  "scalarVolumeChangedThroughParameterNode": str(False),
+  "fibulaSegmentsMeasurementMode": "center2center",
+  "kindOfMandibleResection": "Segmental Mandibulectomy",
+  "mandibleSideToRemove": "Removing right side",
+  "showFibulaSegmentsLengths": str(True),
+  "showOriginalMandible": str(True),
+  "showBiggerSawBoxesInteractionHandles": str(False),
+  "showInterCondylarBeamBox": str(True),
+  "showMandiblePlanes": str(True),
+  "showMandiblePlanesInteractionHandles": str(True),
+  "lockVSP": str(False),
+  "mandiblePlanesPositioningForMaximumBoneContact": str(True),
+  "makeAllMandiblePlanesRotateTogether": str(True),
+  "interCondylarBeamBoxSize": str(INITIAL_INTER_CONDYLAR_BOX_SIZE_MM),
+  "mandibleBridgeRadius": str(MANDIBLE_BRIDGE_RADIUS_MM),
+  "fixCutGoesThroughTheMandibleTwice": str(False),
+  "useNonDecimatedBoneModelsForPreview": str(False),
+  "initialSpace": str(INITIAL_SPACE_MM),
+  "additionalBetweenSpaceOfFibulaPlanes": str(BETWEEN_SPACE_MM),
+  "useMoreExactVersionOfPositioningAlgorithm": str(False),
+  "updateOnMandiblePlanesMovement": str(True),
+  "lightsRendering": "Lamp",
+  "checkSecurityMarginOnMiterBoxCreation": str(True),
+  "securityMarginOfFibulaPieces": str(SECURITY_MARGIN_OF_FIBULA_PIECES_MM),
+  "miterBoxSlotWidth": str(MITER_BOX_SLOT_WIDTH_MM),
+  "miterBoxSlotLength": str(MITER_BOX_SLOT_LENGTH_MM),
+  "miterBoxSlotHeight": str(MITER_BOX_SLOT_HEIGHT_MM),
+  "miterBoxSlotWall": str(MITER_BOX_SLOT_WALL_MM),
+  "fibulaScrewHoleCylinderRadius": str(FIBULA_SCREW_HOLE_CYLINDER_RADIUS_MM),
+  "clearanceFitPrintingTolerance": str(CLEARANCE_FIT_PRINTING_TOLERANCE_MM),
+  "biggerMiterBoxDistanceToFibula": str(BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_MM),
+  "sawBoxSlotWidth": str(SAW_BOX_SLOT_WIDTH_MM),
+  "sawBoxSlotLength": str(SAW_BOX_SLOT_LENGTH_MM),
+  "sawBoxSlotHeight": str(SAW_BOX_SLOT_HEIGHT_MM),
+  "sawBoxSlotWall": str(SAW_BOX_SLOT_WALL_MM),
+  "biggerSawBoxDistanceToMandible": str(BIGGER_SAW_BOX_DISTANCE_TO_MANDIBLE_MM),
+  "mandibleScrewHoleCylinderRadius": str(MANDIBLE_SCREW_HOLE_CYLINDER_RADIUS_MM),
+  "dentalImplantsPlanningAndFibulaDrillGuides": str(False),
+  "dentalImplantCylinderRadius": str(DENTAL_IMPLANT_CYLINDER_RADIUS_MM),
+  "dentalImplantCylinderHeight": str(DENTAL_IMPLANT_CYLINDER_HEIGHT_MM),
+  "dentalImplantDrillGuideWall": str(DENTAL_IMPLANT_DRILL_GUIDE_WALL_MM),
+  "makeAllDentalImplanCylindersParallel": str(False),
+  "updateOnDentalImplantPlanesMovement": str(True),
+  "customTitaniumPlateDesing": str(False),
+  "plateCrossSectionalWidth": str(PLATE_CROSS_SECTIONAL_WIDTH_MM),
+  "plateCrossSectionalLength": str(PLATE_CROSS_SECTIONAL_LENGTH_MM),
+  "plateCrossSectionalBevelRadiusPorcentage": str(PLATE_CROSS_SECTIONAL_BEVEL_RADIUS_PORCENTAGE),
+  "plateTipsBevelRadius": str(PLATE_TIPS_BEVEL_RADIUS_MM)
+}
+
 def addBRPLayout():
   BRPLayout = f"""
     <layout type="vertical">
@@ -514,6 +565,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showMandiblePlanesInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.onOrientation3DCubeCheckBox)
     self.ui.lightsRenderingComboBox.textActivated.connect(self.onLightsRenderingComboBox)
+    self.ui.restoreDefaultSettingsButton.connect('clicked(bool)', self.onRestoreDefaultSettingsButton)
+    self.ui.overwriteDefaultSettingsButton.connect('clicked(bool)', self.onOverwriteDefaultSettingsButton)
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
@@ -784,54 +837,30 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self.ui.donorLegComboBox.currentText = self._parameterNode.GetParameter("donorLeg")
     
-    if self._parameterNode.GetParameter("initialSpace") != '':
-      self.ui.initialSpinBox.setValue(float(self._parameterNode.GetParameter("initialSpace")))
-    if self._parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes") != '':
-      self.ui.betweenSpinBox.setValue(float(self._parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes")))
-    if self._parameterNode.GetParameter("securityMarginOfFibulaPieces") != '':
-      self.ui.securityMarginOfFibulaPiecesSpinBox.setValue(float(self._parameterNode.GetParameter("securityMarginOfFibulaPieces")))
-    if self._parameterNode.GetParameter("miterBoxSlotWidth") != '':
-      self.ui.miterBoxSlotWidthSpinBox.setValue(float(self._parameterNode.GetParameter("miterBoxSlotWidth")))
-    if self._parameterNode.GetParameter("miterBoxSlotLength") != '':
-      self.ui.miterBoxSlotLengthSpinBox.setValue(float(self._parameterNode.GetParameter("miterBoxSlotLength")))
-    if self._parameterNode.GetParameter("miterBoxSlotHeight") != '':
-      self.ui.miterBoxSlotHeightSpinBox.setValue(float(self._parameterNode.GetParameter("miterBoxSlotHeight")))
-    if self._parameterNode.GetParameter("miterBoxSlotWall") != '':
-      self.ui.miterBoxSlotWallSpinBox.setValue(float(self._parameterNode.GetParameter("miterBoxSlotWall")))
-    if self._parameterNode.GetParameter("fibulaScrewHoleCylinderRadius") != '':
-      self.ui.fibulaScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("fibulaScrewHoleCylinderRadius")))
-    if self._parameterNode.GetParameter("clearanceFitPrintingTolerance") != '':
-      self.ui.clearanceFitPrintingToleranceSpinBox.setValue(float(self._parameterNode.GetParameter("clearanceFitPrintingTolerance")))
-    if self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula") != '':
-      self.ui.biggerMiterBoxDistanceToFibulaSpinBox.setValue(float(self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula")))
-    if self._parameterNode.GetParameter("sawBoxSlotWidth") != '':
-      self.ui.sawBoxSlotWidthSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotWidth")))
-    if self._parameterNode.GetParameter("sawBoxSlotLength") != '':
-      self.ui.sawBoxSlotLengthSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotLength")))
-    if self._parameterNode.GetParameter("sawBoxSlotHeight") != '':
-      self.ui.sawBoxSlotHeightSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotHeight")))
-    if self._parameterNode.GetParameter("sawBoxSlotWall") != '':
-      self.ui.sawBoxSlotWallSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotWall")))
-    if self._parameterNode.GetParameter("biggerSawBoxDistanceToMandible") != '':
-      self.ui.biggerSawBoxDistanceToMandibleSpinBox.setValue(float(self._parameterNode.GetParameter("biggerSawBoxDistanceToMandible")))
-    if self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius") != '':
-      self.ui.mandibleScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius")))
-    if self._parameterNode.GetParameter("mandibleBridgeRadius") != '':
-      self.ui.mandibleBridgeRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleBridgeRadius")))
-    if self._parameterNode.GetParameter("dentalImplantCylinderRadius") != '':
-      self.ui.dentalImplantCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantCylinderRadius")))
-    if self._parameterNode.GetParameter("dentalImplantCylinderHeight") != '':
-      self.ui.dentalImplantCylinderHeightSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantCylinderHeight")))
-    if self._parameterNode.GetParameter("dentalImplantDrillGuideWall") != '':
-      self.ui.dentalImplantDrillGuideWallSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantDrillGuideWall")))
-    if self._parameterNode.GetParameter("plateCrossSectionalWidth") != '':
-      self.ui.plateCrossSectionalWidthSpinBox.setValue(float(self._parameterNode.GetParameter("plateCrossSectionalWidth")))
-    if self._parameterNode.GetParameter("plateCrossSectionalLength") != '':
-      self.ui.plateCrossSectionalLengthSpinBox.setValue(float(self._parameterNode.GetParameter("plateCrossSectionalLength")))
-    if self._parameterNode.GetParameter("plateCrossSectionalBevelRadiusPorcentage") != '':
-      self.ui.plateCrossSectionalBevelRadiusPorcentageSpinBox.setValue(float(self._parameterNode.GetParameter("plateCrossSectionalBevelRadiusPorcentage")))
-    if self._parameterNode.GetParameter("plateTipsBevelRadius") != '':
-      self.ui.plateTipsBevelRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("plateTipsBevelRadius")))
+    self.ui.initialSpinBox.setValue(float(self._parameterNode.GetParameter("initialSpace")))
+    self.ui.betweenSpinBox.setValue(float(self._parameterNode.GetParameter("additionalBetweenSpaceOfFibulaPlanes")))
+    self.ui.securityMarginOfFibulaPiecesSpinBox.setValue(float(self._parameterNode.GetParameter("securityMarginOfFibulaPieces")))
+    self.ui.miterBoxSlotWidthSpinBox.setValue(float(self._parameterNode.GetParameter("miterBoxSlotWidth")))
+    self.ui.miterBoxSlotLengthSpinBox.setValue(float(self._parameterNode.GetParameter("miterBoxSlotLength")))
+    self.ui.miterBoxSlotHeightSpinBox.setValue(float(self._parameterNode.GetParameter("miterBoxSlotHeight")))
+    self.ui.miterBoxSlotWallSpinBox.setValue(float(self._parameterNode.GetParameter("miterBoxSlotWall")))
+    self.ui.fibulaScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("fibulaScrewHoleCylinderRadius")))
+    self.ui.clearanceFitPrintingToleranceSpinBox.setValue(float(self._parameterNode.GetParameter("clearanceFitPrintingTolerance")))
+    self.ui.biggerMiterBoxDistanceToFibulaSpinBox.setValue(float(self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula")))
+    self.ui.sawBoxSlotWidthSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotWidth")))
+    self.ui.sawBoxSlotLengthSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotLength")))
+    self.ui.sawBoxSlotHeightSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotHeight")))
+    self.ui.sawBoxSlotWallSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotWall")))
+    self.ui.biggerSawBoxDistanceToMandibleSpinBox.setValue(float(self._parameterNode.GetParameter("biggerSawBoxDistanceToMandible")))
+    self.ui.mandibleScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius")))
+    self.ui.mandibleBridgeRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleBridgeRadius")))
+    self.ui.dentalImplantCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantCylinderRadius")))
+    self.ui.dentalImplantCylinderHeightSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantCylinderHeight")))
+    self.ui.dentalImplantDrillGuideWallSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantDrillGuideWall")))
+    self.ui.plateCrossSectionalWidthSpinBox.setValue(float(self._parameterNode.GetParameter("plateCrossSectionalWidth")))
+    self.ui.plateCrossSectionalLengthSpinBox.setValue(float(self._parameterNode.GetParameter("plateCrossSectionalLength")))
+    self.ui.plateCrossSectionalBevelRadiusPorcentageSpinBox.setValue(float(self._parameterNode.GetParameter("plateCrossSectionalBevelRadiusPorcentage")))
+    self.ui.plateTipsBevelRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("plateTipsBevelRadius")))
 
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = self._parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
@@ -1114,6 +1143,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       lightsLogic.setUseLightKit(True)
       lightsLogic.setUseSSAO(True)
   
+  def onRestoreDefaultSettingsButton(self):
+    self.logic.restoreDefaultParameters()
+
+  def onOverwriteDefaultSettingsButton(self):
+    self.logic.overwriteDefaultParameters()
+
   def onOrientation3DCubeCheckBox(self):
     threeDViewNodes = slicer.util.getNodesByClass("vtkMRMLViewNode")
     if len(threeDViewNodes) == 0:
@@ -1335,105 +1370,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     """
     Initialize parameter node with default settings.
     """
-    if not parameterNode.GetParameter("scalarVolumeChangedThroughParameterNode"):
-      parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode",str(False))
-    if not parameterNode.GetParameter("fibulaSegmentsMeasurementMode"):
-      parameterNode.SetParameter("fibulaSegmentsMeasurementMode","center2center")
-    if not parameterNode.GetParameter("kindOfMandibleResection"):
-      parameterNode.SetParameter("kindOfMandibleResection","Segmental Mandibulectomy")
-    if not parameterNode.GetParameter("mandibleSideToRemove"):
-      parameterNode.SetParameter("mandibleSideToRemove","Removing right side")
-    if not parameterNode.GetParameter("showFibulaSegmentsLengths"):
-      parameterNode.SetParameter("showFibulaSegmentsLengths",str(True))
-    if not parameterNode.GetParameter("showOriginalMandible"):
-      parameterNode.SetParameter("showOriginalMandible",str(True))
-    if not parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles"):
-      parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles",str(False))
-    if not parameterNode.GetParameter("showInterCondylarBeamBox"):
-      parameterNode.SetParameter("showInterCondylarBeamBox",str(True)) 
-    if not parameterNode.GetParameter("showMandiblePlanes"):
-      parameterNode.SetParameter("showMandiblePlanes",str(True)) 
-    if not parameterNode.GetParameter("showMandiblePlanesInteractionHandles"):
-      parameterNode.SetParameter("showMandiblePlanesInteractionHandles",str(True))  
-    if not parameterNode.GetParameter("lockVSP"):
-      parameterNode.SetParameter("lockVSP",str(False))
-    if not parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact"):
-      parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact",str(True))
-    if not parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether"):
-      parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether",str(True))
-    if not parameterNode.GetParameter("interCondylarBeamBoxSize"):
-      parameterNode.SetParameter("interCondylarBeamBoxSize",str(INITIAL_INTER_CONDYLAR_BOX_SIZE_MM))
-    if not parameterNode.GetParameter("mandibleBridgeRadius"):
-      parameterNode.SetParameter("mandibleBridgeRadius",str(MANDIBLE_BRIDGE_RADIUS_MM))
-    if not parameterNode.GetParameter("fixCutGoesThroughTheMandibleTwice"):
-      parameterNode.SetParameter("fixCutGoesThroughTheMandibleTwice",str(False))
-    if not parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview"):
-      parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview",str(False))
-    if not parameterNode.GetParameter("initialSpace"):
-      parameterNode.SetParameter("initialSpace",str(INITIAL_SPACE_MM))
-    if not parameterNode.GetParameter("betweenSpace"):
-      parameterNode.SetParameter("betweenSpace",str(BETWEEN_SPACE_MM))
-    if not parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm"):
-      parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm",str(False))
-    if not parameterNode.GetParameter("updateOnMandiblePlanesMovement"):
-      parameterNode.SetParameter("updateOnMandiblePlanesMovement",str(True))
-    if not parameterNode.GetParameter("lightsRendering"):
-      parameterNode.SetParameter("lightsRendering","Lamp")
-    if not parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation"):
-      parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation",str(True))
-    if not parameterNode.GetParameter("securityMarginOfFibulaPieces"):
-      parameterNode.SetParameter("securityMarginOfFibulaPieces",str(SECURITY_MARGIN_OF_FIBULA_PIECES_MM))
-    # miterbox parameters
-    if not parameterNode.GetParameter("miterBoxSlotWidth"):
-      parameterNode.SetParameter("miterBoxSlotWidth",str(MITER_BOX_SLOT_WIDTH_MM))
-    if not parameterNode.GetParameter("miterBoxSlotLength"):
-      parameterNode.SetParameter("miterBoxSlotLength",str(MITER_BOX_SLOT_LENGTH_MM))
-    if not parameterNode.GetParameter("miterBoxSlotHeight"):
-      parameterNode.SetParameter("miterBoxSlotHeight",str(MITER_BOX_SLOT_HEIGHT_MM))
-    if not parameterNode.GetParameter("miterBoxSlotWall"):
-      parameterNode.SetParameter("miterBoxSlotWall",str(MITER_BOX_SLOT_WALL_MM))
-    if not parameterNode.GetParameter("fibulaScrewHoleCylinderRadius"):
-      parameterNode.SetParameter("fibulaScrewHoleCylinderRadius",str(FIBULA_SCREW_HOLE_CYLINDER_RADIUS_MM))
-    if not parameterNode.GetParameter("clearanceFitPrintingTolerance"):
-      parameterNode.SetParameter("clearanceFitPrintingTolerance",str(CLEARANCE_FIT_PRINTING_TOLERANCE_MM))
-    if not parameterNode.GetParameter("biggerMiterBoxDistanceToFibula"):
-      parameterNode.SetParameter("biggerMiterBoxDistanceToFibula",str(BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_MM))
-    # sawbox parameters
-    if not parameterNode.GetParameter("sawBoxSlotWidth"):
-      parameterNode.SetParameter("sawBoxSlotWidth",str(SAW_BOX_SLOT_WIDTH_MM))
-    if not parameterNode.GetParameter("sawBoxSlotLength"):
-      parameterNode.SetParameter("sawBoxSlotLength",str(SAW_BOX_SLOT_LENGTH_MM))
-    if not parameterNode.GetParameter("sawBoxSlotHeight"):
-      parameterNode.SetParameter("sawBoxSlotHeight",str(SAW_BOX_SLOT_HEIGHT_MM))
-    if not parameterNode.GetParameter("sawBoxSlotWall"):
-      parameterNode.SetParameter("sawBoxSlotWall",str(SAW_BOX_SLOT_WALL_MM))
-    if not parameterNode.GetParameter("biggerSawBoxDistanceToMandible"):
-      parameterNode.SetParameter("biggerSawBoxDistanceToMandible",str(BIGGER_SAW_BOX_DISTANCE_TO_MANDIBLE_MM))
-    if not parameterNode.GetParameter("mandibleScrewHoleCylinderRadius"):
-      parameterNode.SetParameter("mandibleScrewHoleCylinderRadius",str(MANDIBLE_SCREW_HOLE_CYLINDER_RADIUS_MM))
-    if not parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides"):
-      parameterNode.SetParameter("dentalImplantsPlanningAndFibulaDrillGuides",str(False))
-    if not parameterNode.GetParameter("dentalImplantCylinderRadius"):
-      parameterNode.SetParameter("dentalImplantCylinderRadius",str(DENTAL_IMPLANT_CYLINDER_RADIUS_MM))
-    if not parameterNode.GetParameter("dentalImplantCylinderHeight"):
-      parameterNode.SetParameter("dentalImplantCylinderHeight",str(DENTAL_IMPLANT_CYLINDER_HEIGHT_MM))
-    if not parameterNode.GetParameter("dentalImplantDrillGuideWall"):
-      parameterNode.SetParameter("dentalImplantDrillGuideWall",str(DENTAL_IMPLANT_DRILL_GUIDE_WALL_MM))
-    if not parameterNode.GetParameter("makeAllDentalImplanCylindersParallel"):
-      parameterNode.SetParameter("makeAllDentalImplanCylindersParallel",str(False))
-    if not parameterNode.GetParameter("updateOnDentalImplantPlanesMovement"):
-      parameterNode.SetParameter("updateOnDentalImplantPlanesMovement",str(True))
-    if not parameterNode.GetParameter("customTitaniumPlateDesing"):
-      parameterNode.SetParameter("customTitaniumPlateDesing",str(False))
-    if not parameterNode.GetParameter("plateCrossSectionalWidth"):
-      parameterNode.SetParameter("plateCrossSectionalWidth",str(PLATE_CROSS_SECTIONAL_WIDTH_MM))
-    if not parameterNode.GetParameter("plateCrossSectionalLength"):
-      parameterNode.SetParameter("plateCrossSectionalLength",str(PLATE_CROSS_SECTIONAL_LENGTH_MM))
-    if not parameterNode.GetParameter("plateCrossSectionalBevelRadiusPorcentage"):
-      parameterNode.SetParameter("plateCrossSectionalBevelRadiusPorcentage",str(PLATE_CROSS_SECTIONAL_BEVEL_RADIUS_PORCENTAGE))
-    if not parameterNode.GetParameter("plateTipsBevelRadius"):
-      parameterNode.SetParameter("plateTipsBevelRadius",str(PLATE_TIPS_BEVEL_RADIUS_MM))
+    for parameterName, parameterValue in defaultParametersDict.items():
+      valueFromSettings = rs(parameterName)
+      if valueFromSettings is None:
+        ws(parameterName, parameterValue)
+        wp(parameterNode, parameterName, parameterValue)
+      else:
+        wp(parameterNode, parameterName, valueFromSettings)
 
+  def restoreDefaultParameters(self):
+    parameterNode = self.getParameterNode()
+    for parameterName, parameterValue in defaultParametersDict.items():
+      ws(parameterName, parameterValue)
+      wp(parameterNode, parameterName, parameterValue)
+
+  def overwriteDefaultParameters(self):
+    parameterNode = self.getParameterNode()
+    for parameterName in defaultParametersDict.keys():
+      valueFromParameterNode = rp(parameterNode, parameterName)
+      ws(parameterName, valueFromParameterNode)
+  
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     sceneItemID = shNode.GetSceneItemID()
