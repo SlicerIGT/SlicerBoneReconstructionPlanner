@@ -153,6 +153,8 @@ slicer.MANDIBLE_VIEW_ID = "vtkMRMLViewNode1"
 slicer.FIBULA_VIEW_ID = "vtkMRMLViewNode2"
 slicer.BRPLayoutId=101
 
+USING_GUI = not(slicer.app.commandOptions().noMainWindow)
+
 # constants
 INTER_CONDYLAR_BOX_SIZE_STEP_MM = 1.0
 INITIAL_INTER_CONDYLAR_BOX_SIZE_MM = 6.0
@@ -494,14 +496,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self.ui.initialSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.betweenSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.securityMarginOfFibulaPiecesSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.miterBoxSlotWidthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.miterBoxSlotLengthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.miterBoxSlotHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.miterBoxSlotWallSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.securityMarginOfFibulaPiecesSpinBox.valueChanged.connect(self.updateMiterBoxes)
+    self.ui.miterBoxSlotWidthSpinBox.valueChanged.connect(self.updateMiterBoxes)
+    self.ui.miterBoxSlotLengthSpinBox.valueChanged.connect(self.updateMiterBoxes)
+    self.ui.miterBoxSlotHeightSpinBox.valueChanged.connect(self.updateMiterBoxes)
+    self.ui.miterBoxSlotWallSpinBox.valueChanged.connect(self.updateMiterBoxes)
     self.ui.fibulaScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.clearanceFitPrintingToleranceSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.biggerMiterBoxDistanceToFibulaSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.clearanceFitPrintingToleranceSpinBox.valueChanged.connect(self.updateMiterBoxes)
+    self.ui.biggerMiterBoxDistanceToFibulaSpinBox.valueChanged.connect(self.updateMiterBoxes)
     self.ui.sawBoxSlotWidthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotLengthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -530,9 +532,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.removeCutPlaneButton.connect('clicked(bool)',self.onRemoveCutPlaneButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
-    self.ui.createMiterBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateMiterBoxesFromFibulaPlanesButton)
-    #self.ui.createFibulaCylindersFiducialListButton.connect('clicked(bool)',self.onCreateFibulaCylindersFiducialListButton)
-    #self.ui.createCylindersFromFiducialListAndFibulaSurgicalGuideBaseButton.connect('clicked(bool)',self.onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton)
+    #self.ui.createMiterBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateMiterBoxesFromFibulaPlanesButton)
     self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToFibulaSurgicalGuideBaseButton)
     self.ui.createSawBoxesFromFirstAndLastMandiblePlanesButton.connect('clicked(bool)', self.onCreateSawBoxesFromFirstAndLastMandiblePlanesButton)
     self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToMandibleSurgicalGuideBaseButton)
@@ -571,6 +571,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
 
+  def updateMiterBoxes(self, caller=None, event=None):
+    self.updateParameterNodeFromGUI(caller=None, event=None)
+    self.logic.miterBoxDirectionLineTimer.start()
+  
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     sceneItemID = shNode.GetSceneItemID()
@@ -820,7 +824,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.scalarVolumeSelector.setCurrentNode(currentScalarVolume)
     if currentScalarVolume is not None:
       scalarVolumeID = currentScalarVolume.GetID()
-      if not slicer.app.commandOptions().noMainWindow:
+      if USING_GUI:
         if scalarVolumeID:
           self.logic.setBackgroundVolumeFromID(scalarVolumeID)
           self.logic.setRedSliceForBoneModelsDisplayNodes()
@@ -1201,12 +1205,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onMakeModelsButton(self):
     self.logic.makeModels()
 
-  def onCreateMiterBoxesFromFibulaPlanesButton(self):
-    self.logic.createMiterBoxesFromFibulaPlanes()
-
-  def onCreateFibulaCylindersFiducialListButton(self):
-    self.logic.createFibulaCylindersFiducialList()
-
   def onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton(self):
     self.logic.createCylindersFromFiducialListAndFibulaSurgicalGuideBase()
 
@@ -1312,7 +1310,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       mandibleModelDisplayNode.SetVisibility(False)
 
   def onUpdateFibulaDentalImplantCylindersButton(self):
-    self.logic.onUpdateFibuladentalImplantsTimerTimeout()
+    self.logic.onUpdateFibulaDentalImplantsTimerTimeout()
 
   def onCreatePlateCurveButton(self):
     self.logic.createPlateCurve()
@@ -1359,10 +1357,22 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.mandibleBridgeCreationTimer.setInterval(150)
     self.mandibleBridgeCreationTimer.setSingleShot(True)
     self.mandibleBridgeCreationTimer.connect('timeout()', self.onMandibleBridgeTimerTimeout)
+    self.fibulaFiducialsCylindersTimer = qt.QTimer()
+    self.fibulaFiducialsCylindersTimer.setInterval(150)
+    self.fibulaFiducialsCylindersTimer.setSingleShot(True)
+    self.fibulaFiducialsCylindersTimer.connect('timeout()', self.onUpdateFibulaFiducialsCylindersTimerTimeout)
+    self.mandibleFiducialsCylindersTimer = qt.QTimer()
+    self.mandibleFiducialsCylindersTimer.setInterval(150)
+    self.mandibleFiducialsCylindersTimer.setSingleShot(True)
+    self.mandibleFiducialsCylindersTimer.connect('timeout()', self.onUpdateMandibleFiducialsCylindersTimerTimeout)
+    self.miterBoxDirectionLineTimer = qt.QTimer()
+    self.miterBoxDirectionLineTimer.setInterval(300)
+    self.miterBoxDirectionLineTimer.setSingleShot(True)
+    self.miterBoxDirectionLineTimer.connect('timeout()', self.onMiterBoxDirectionLineTimerTimeout)
     self.updateFibuladentalImplantsTimer = qt.QTimer()
-    self.updateFibuladentalImplantsTimer.setInterval(300)
+    self.updateFibuladentalImplantsTimer.setInterval(150)
     self.updateFibuladentalImplantsTimer.setSingleShot(True)
-    self.updateFibuladentalImplantsTimer.connect('timeout()', self.onUpdateFibuladentalImplantsTimerTimeout)
+    self.updateFibuladentalImplantsTimer.connect('timeout()', self.onUpdateFibulaDentalImplantsTimerTimeout)
     self.PLANE_SIDE_SIZE = 50.
     self.PLANE_GLYPH_SCALE = 2.5
 
@@ -1574,10 +1584,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetOccludedVisibility(True)
 
       #conections
-      #self.miterBoxDirectionLineObserver = miterBoxDirectionLine.AddObserver(
-      #  slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
-      #  self.onMiterBoxDirectionLinePointModified
-      #)
+      self.miterBoxDirectionLineObserver = miterBoxDirectionLine.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+        self.onMiterBoxDirectionLinePointModified
+      )
       # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
 
     if startPlacementMode:
@@ -1609,17 +1619,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetOccludedVisibility(True)
 
       #conections
-      #self.fibulaFiducialListObserver = fibulaFiducialList.AddObserver(
-      #  slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
-      #  self.onFibulaFiducialsPointModified
-      #)
+      self.fibulaFiducialListObserver = fibulaFiducialList.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+        self.onFibulaFiducialsPointModified
+      )
       # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
 
     if startPlacementMode:
       #setup placement
       slicer.modules.markups.logic().SetActiveListID(fibulaFiducialList)
       interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-      interactionNode.SwitchToSinglePlaceMode()
+      interactionNode.SwitchToPersistentPlaceMode()
     
     return fibulaFiducialList
   
@@ -1644,17 +1654,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetOccludedVisibility(True)
 
       #conections
-      #self.mandibleFiducialListObserver = mandibleFiducialList.AddObserver(
-      #  slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
-      #  self.onMandibleFiducialsPointModified
-      #)
+      self.mandibleFiducialListObserver = mandibleFiducialList.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+        self.onMandibleFiducialsPointModified
+      )
       # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
 
     if startPlacementMode:
       #setup placement
       slicer.modules.markups.logic().SetActiveListID(mandibleFiducialList)
       interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-      interactionNode.SwitchToSinglePlaceMode()
+      interactionNode.SwitchToPersistentPlaceMode()
     
     return mandibleFiducialList
   
@@ -1749,13 +1759,32 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     )
   
   def onFibulaFiducialsPointModified(self,sourceNode,event):
-    pass
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    fibulaCylindersModelsFolder = shNode.GetItemByName("Fibula Cylinders Models")
+    fibulaCylindersModelsList = createListFromFolderID(fibulaCylindersModelsFolder)
+    for i in range(len(fibulaCylindersModelsList)):
+      fibulaCylindersModelsList[i].GetDisplayNode().SetVisibility(False)
+    self.fibulaFiducialsCylindersTimer.start()
 
   def onMandibleFiducialsPointModified(self,sourceNode,event):
-    pass
-  
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibleCylindersModelsFolder = shNode.GetItemByName("Mandible Cylinders Models")
+    mandibleCylindersModelsList = createListFromFolderID(mandibleCylindersModelsFolder)
+    for i in range(len(mandibleCylindersModelsList)):
+      mandibleCylindersModelsList[i].GetDisplayNode().SetVisibility(False)
+    self.mandibleFiducialsCylindersTimer.start()
+
   def onMiterBoxDirectionLinePointModified(self,sourceNode,event):
-    pass
+    self.miterBoxDirectionLineTimer.start()
+
+  def onUpdateFibulaFiducialsCylindersTimerTimeout(self):
+    self.createCylindersFromFiducialListAndFibulaSurgicalGuideBase()
+
+  def onUpdateMandibleFiducialsCylindersTimerTimeout(self):
+    self.createCylindersFromFiducialListAndMandibleSurgicalGuideBase()
+  
+  def onMiterBoxDirectionLineTimerTimeout(self):
+    self.createMiterBoxesFromFibulaPlanes()
   
   def interCondylarBeamSizeChange(self, positive = True):
     parameterNode = self.getParameterNode()
@@ -3124,7 +3153,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   @saveExecutedMethodWithTelemetry
   def makeModels(self):
-    if not slicer.app.commandOptions().noMainWindow:
+    if USING_GUI:
       setBRPLayout()
       slicer.util.resetSliceViews()
 
@@ -3229,9 +3258,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode.SetNodeReferenceID("decimatedFibulaModelNode", decimatedFibulaModelNode.GetID())
     parameterNode.SetNodeReferenceID("decimatedMandibleModelNode", decimatedMandibleModelNode.GetID())
 
+    decimatedFibulaModelNode.SetAndObserveMesh(calculateNormals(decimatedFibulaModelNode.GetMesh()))
+    decimatedMandibleModelNode.SetAndObserveMesh(calculateNormals(decimatedMandibleModelNode.GetMesh()))
+
     parameterNode.EndModify(wasModified)
 
-    if not slicer.app.commandOptions().noMainWindow:
+    if USING_GUI:
       slicer.util.forceRenderAllViews()
 
   def updateFibulaPieces(self):
@@ -3537,6 +3569,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     miterBoxDirectionLine = parameterNode.GetNodeReference("miterBoxDirectionLine")
+    
+    if (not fibulaLine) or (not miterBoxDirectionLine):
+      return
+    if (fibulaLine.GetNumberOfControlPoints() < 2) or (miterBoxDirectionLine.GetNumberOfControlPoints() < 2):
+      return
+
     miterBoxSlotWidth = float(parameterNode.GetParameter("miterBoxSlotWidth"))
     miterBoxSlotLength = float(parameterNode.GetParameter("miterBoxSlotLength"))
     miterBoxSlotHeight = float(parameterNode.GetParameter("miterBoxSlotHeight"))
@@ -3813,30 +3851,28 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     slicer.modules.markups.logic().SetActiveListID(dentalImplantFiducialListNode)
     interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
     interactionNode.SwitchToPersistentPlaceMode()
-  
-  def createFibulaCylindersFiducialList(self):
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    fibulaCylindersFiducialsListsFolder = shNode.GetItemByName("Fibula Cylinders Fiducials Lists")
-    if not fibulaCylindersFiducialsListsFolder:
-      fibulaCylindersFiducialsListsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Fibula Cylinders Fiducials Lists")
+
+  def getCurrentFibulaModel(self):
+    parameterNode = self.getParameterNode()
+    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     
-    fibulaFiducialListNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")
-    fibulaFiducialListNode.SetName("temp")
-    slicer.mrmlScene.AddNode(fibulaFiducialListNode)
-    slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaFiducialListNode)
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    fibulaFiducialListNodeItemID = shNode.GetItemByDataNode(fibulaFiducialListNode)
-    shNode.SetItemParent(fibulaFiducialListNodeItemID, fibulaCylindersFiducialsListsFolder)
-    fibulaFiducialListNode.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaCylindersFiducialsList"))
+    if useNonDecimatedBoneModelsForPreviewChecked:
+      fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    else:
+      fibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    
+    return fibulaModelNode
 
-    displayNode = fibulaFiducialListNode.GetDisplayNode()
-    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-    displayNode.AddViewNodeID(fibulaViewNode.GetID())
+  def getCurrentMandibleModel(self):
+    parameterNode = self.getParameterNode()
+    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    
+    if useNonDecimatedBoneModelsForPreviewChecked:
+      mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    else:
+      mandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
 
-    #setup placement
-    slicer.modules.markups.logic().SetActiveListID(fibulaFiducialListNode)
-    interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
-    interactionNode.SwitchToPersistentPlaceMode()
+    return mandibleModelNode
 
   @saveExecutedMethodWithTelemetry
   def createCylindersFromFiducialListAndFibulaSurgicalGuideBase(self):
@@ -3848,8 +3884,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     cylindersTransformsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Cylinders Transforms")
     
     parameterNode = self.getParameterNode()
-    fibulaFiducialList = parameterNode.GetNodeReference("fibulaFiducialList")
+    fibulaFiducialList = self.getFibulaFiducials()
     fibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
+    if fibulaSurgicalGuideBaseModel is None:
+      fibulaSurgicalGuideBaseModel = self.getCurrentFibulaModel() # we are just reading a normal
     fibulaScrewHoleCylinderRadius = float(parameterNode.GetParameter("fibulaScrewHoleCylinderRadius"))
 
     normalsOfSurgicalGuideBaseModel = slicer.util.arrayFromModelPointData(fibulaSurgicalGuideBaseModel, 'Normals')
@@ -3890,6 +3928,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if not (cylinderTransformationSuccess):
         Exception('Hardening transforms was not successful')
 
+      displayNode = cylinderModel.GetDisplayNode()
+      displayNode.AddViewNodeID(slicer.FIBULA_VIEW_ID)
+
       cylinderToWorldChangeOfFrameTransformNodeItemID = shNode.GetItemByDataNode(cylinderToWorldChangeOfFrameTransformNode)
       shNode.SetItemParent(cylinderToWorldChangeOfFrameTransformNodeItemID, cylindersTransformsFolder)
     
@@ -3906,8 +3947,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     cylindersTransformsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Cylinders Transforms")
     
     parameterNode = self.getParameterNode()
-    mandibleFiducialList = parameterNode.GetNodeReference("mandibleFiducialList")
+    mandibleFiducialList = self.getMandibleFiducials()
     mandibleSurgicalGuideBaseModel = parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel")
+    if mandibleSurgicalGuideBaseModel is None:
+      mandibleSurgicalGuideBaseModel = self.getCurrentMandibleModel() # we are just reading a normal
     mandibleScrewHoleCylinderRadius = float(parameterNode.GetParameter("mandibleScrewHoleCylinderRadius"))
 
     normalsOfSurgicalGuideBaseModel = slicer.util.arrayFromModelPointData(mandibleSurgicalGuideBaseModel, 'Normals')
@@ -3947,6 +3990,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       cylinderTransformationSuccess = cylinderModel.HardenTransform()
       if not (cylinderTransformationSuccess):
         Exception('Hardening transforms was not successful')
+      
+      displayNode = cylinderModel.GetDisplayNode()
+      displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
       
       cylinderToWorldChangeOfFrameTransformNodeItemID = shNode.GetItemByDataNode(cylinderToWorldChangeOfFrameTransformNode)
       shNode.SetItemParent(cylinderToWorldChangeOfFrameTransformNodeItemID, cylindersTransformsFolder)
@@ -4140,9 +4186,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       observer = dentalImplantPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onDentalImplantPlaneMoved)
       self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList.append([observer,dentalImplantPlane.GetID(),dentalImplantCylinderTransformNode.GetID()])
 
-    self.onUpdateFibuladentalImplantsTimerTimeout()
+    self.onUpdateFibulaDentalImplantsTimerTimeout()
 
-  def onUpdateFibuladentalImplantsTimerTimeout(self):
+  def onUpdateFibulaDentalImplantsTimerTimeout(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
 
     #check if self.mandibleToFibulaRegistrationTransformMatricesList exists, if not, create it
@@ -5646,7 +5692,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     # 
     # 
 
-    if not slicer.app.commandOptions().noMainWindow:
+    if USING_GUI:
       layoutManager = slicer.app.layoutManager()
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       if int(slicer.app.revision) >= 31524:
@@ -5685,7 +5731,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       self.logicBRP.onGenerateFibulaPlanesTimerTimeout()
       self.delayDisplay("Update successful")
     
-    if not slicer.app.commandOptions().noMainWindow:
+    if USING_GUI:
       # hide original mandible
       self.widgetBRP.setOriginalMandibleVisility(False)
       # hide mandible plane handles
@@ -5697,7 +5743,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.logicBRP.onGenerateFibulaPlanesTimerTimeout()
     self.delayDisplay("Bones contact optimized")
 
-    if not slicer.app.commandOptions().noMainWindow:
+    if USING_GUI:
       fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       layoutManager = slicer.app.layoutManager()
       if int(slicer.app.revision) >= 31524:
@@ -5714,7 +5760,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.logicBRP.onGenerateFibulaPlanesTimerTimeout()
     self.delayDisplay("Achieved zero relative rotation")
 
-    if not slicer.app.commandOptions().noMainWindow:
+    if USING_GUI:
       layoutManager = slicer.app.layoutManager()
       if int(slicer.app.revision) >= 31524:
         layoutManager.removeMaximizedViewNode(fibulaViewNode)
@@ -5733,7 +5779,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     parameterNode.EndModify(wasModified)
 
     sliceOffset = -38.08869552612305
-    if not slicer.app.commandOptions().noMainWindow:
+    if USING_GUI:
       redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
       redSliceNode.SetSliceOffset(sliceOffset)
 
@@ -5782,7 +5828,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def section_createAndUpdateSawBoxesFromMandiblePlanes(self):
     self.delayDisplay("Starting the createAndUpdateSawBoxesFromMandiblePlanes test")
 
-    if not slicer.app.commandOptions().noMainWindow:
+    if USING_GUI:
       layoutManager = slicer.app.layoutManager()
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       if int(slicer.app.revision) >= 31524:
@@ -5850,7 +5896,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       planeNode.EndModify(wasModified)
       self.delayDisplay("Saw box moved")
 
-    if not slicer.app.commandOptions().noMainWindow:
+    if USING_GUI:
       layoutManager = slicer.app.layoutManager()
       if int(slicer.app.revision) >= 31524:
         layoutManager.removeMaximizedViewNode(mandibleViewNode)

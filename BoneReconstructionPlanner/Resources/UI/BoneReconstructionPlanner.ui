@@ -1283,6 +1283,26 @@ on miter box creation</string>
           </property>
          </widget>
         </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_20">
+          <property name="text">
+           <string>Slot height (mm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="ctkDoubleSpinBox" name="miterBoxSlotHeightSpinBox">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>15.000000000000000</double>
+          </property>
+         </widget>
+        </item>
         <item row="4" column="0">
          <widget class="QLabel" name="label_19">
           <property name="text">
@@ -1303,26 +1323,6 @@ on miter box creation</string>
           </property>
           <property name="value">
            <double>3.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_20">
-          <property name="text">
-           <string>Slot height (mm)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1">
-         <widget class="ctkDoubleSpinBox" name="miterBoxSlotHeightSpinBox">
-          <property name="decimals">
-           <number>1</number>
-          </property>
-          <property name="singleStep">
-           <double>0.100000000000000</double>
-          </property>
-          <property name="value">
-           <double>15.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -1361,16 +1361,6 @@ distance to fibula (mm)</string>
          <widget class="qSlicerMarkupsPlaceWidget" name="miterBoxDirectionLinePlaceWidget"/>
         </item>
        </layout>
-      </item>
-      <item>
-       <widget class="QPushButton" name="createMiterBoxesFromFibulaPlanesButton">
-        <property name="toolTip">
-         <string>Create miter boxes from fibula planes</string>
-        </property>
-        <property name="text">
-         <string>Create miter boxes</string>
-        </property>
-       </widget>
       </item>
       <item>
        <layout class="QFormLayout" name="formLayout_2">
