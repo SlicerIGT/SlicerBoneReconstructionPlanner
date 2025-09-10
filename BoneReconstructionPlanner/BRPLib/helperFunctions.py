@@ -623,3 +623,21 @@ def saveExecutedMethodWithTelemetry(method):
         return result
 
     return decorated_method
+
+# read setting
+def rs(parameter):
+  read_value = slicer.app.settings().value(f"BoneReconstructionPlanner/{parameter}")
+  return read_value
+
+# write setting
+def ws(parameter, parameterValue):
+  slicer.app.settings().setValue(f"BoneReconstructionPlanner/{parameter}", str(parameterValue))
+
+# read parameter from the parameterNode
+def rp(parameterNode, parameter):
+  read_value = parameterNode.GetParameter(parameter)
+  return read_value
+
+# write parameter to the parameterNode
+def wp(parameterNode, parameter, parameterValue):
+  parameterNode.SetParameter(parameter, str(parameterValue))
