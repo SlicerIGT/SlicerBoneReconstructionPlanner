@@ -152,8 +152,34 @@ slicer.RED_VIEW_ID = "vtkMRMLSliceNodeRed"
 slicer.MANDIBLE_VIEW_ID = "vtkMRMLViewNode1"
 slicer.FIBULA_VIEW_ID = "vtkMRMLViewNode2"
 slicer.BRPLayoutId=101
-INTER_CONDYLAR_BOX_SIZE_STEP = 1
-INITIAL_INTER_CONDYLAR_BOX_SIZE = 6
+
+# constants
+INTER_CONDYLAR_BOX_SIZE_STEP_MM = 1.0
+INITIAL_INTER_CONDYLAR_BOX_SIZE_MM = 6.0
+MANDIBLE_BRIDGE_RADIUS_MM = 3.0
+INITIAL_SPACE_MM = 0.0
+BETWEEN_SPACE_MM = 1.5
+SECURITY_MARGIN_OF_FIBULA_PIECES_MM = 1.0
+MITER_BOX_SLOT_WIDTH_MM = 1.0
+MITER_BOX_SLOT_LENGTH_MM = 20.0
+MITER_BOX_SLOT_HEIGHT_MM = 15.0
+MITER_BOX_SLOT_WALL_MM = 3.0
+SAW_BOX_SLOT_WIDTH_MM = 1.0
+SAW_BOX_SLOT_LENGTH_MM = 20.0
+SAW_BOX_SLOT_HEIGHT_MM = 15.0
+SAW_BOX_SLOT_WALL_MM = 3.0
+DENTAL_IMPLANT_CYLINDER_RADIUS_MM = 2.0
+DENTAL_IMPLANT_CYLINDER_HEIGHT_MM = 14.0
+DENTAL_IMPLANT_DRILL_GUIDE_WALL_MM = 3.0
+FIBULA_SCREW_HOLE_CYLINDER_RADIUS_MM = 1.5
+MANDIBLE_SCREW_HOLE_CYLINDER_RADIUS_MM = 1.5
+PLATE_CROSS_SECTIONAL_WIDTH_MM = 2.5
+PLATE_CROSS_SECTIONAL_LENGTH_MM = 7.0
+PLATE_CROSS_SECTIONAL_BEVEL_RADIUS_PORCENTAGE = 30
+PLATE_TIPS_BEVEL_RADIUS_MM = 49
+CLEARANCE_FIT_PRINTING_TOLERANCE_MM = 0.25
+BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_MM = 3.0
+BIGGER_SAW_BOX_DISTANCE_TO_MANDIBLE_MM = 3.0
 
 def addBRPLayout():
   BRPLayout = f"""
@@ -1310,7 +1336,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     Initialize parameter node with default settings.
     """
     if not parameterNode.GetParameter("scalarVolumeChangedThroughParameterNode"):
-      parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode","False")
+      parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode",str(False))
     if not parameterNode.GetParameter("fibulaSegmentsMeasurementMode"):
       parameterNode.SetParameter("fibulaSegmentsMeasurementMode","center2center")
     if not parameterNode.GetParameter("kindOfMandibleResection"):
@@ -1318,27 +1344,95 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if not parameterNode.GetParameter("mandibleSideToRemove"):
       parameterNode.SetParameter("mandibleSideToRemove","Removing right side")
     if not parameterNode.GetParameter("showFibulaSegmentsLengths"):
-      parameterNode.SetParameter("showFibulaSegmentsLengths","True")
+      parameterNode.SetParameter("showFibulaSegmentsLengths",str(True))
     if not parameterNode.GetParameter("showOriginalMandible"):
-      parameterNode.SetParameter("showOriginalMandible","True")
+      parameterNode.SetParameter("showOriginalMandible",str(True))
     if not parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles"):
-      parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","False")
+      parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles",str(False))
     if not parameterNode.GetParameter("showInterCondylarBeamBox"):
-      parameterNode.SetParameter("showInterCondylarBeamBox","True") 
+      parameterNode.SetParameter("showInterCondylarBeamBox",str(True)) 
     if not parameterNode.GetParameter("showMandiblePlanes"):
-      parameterNode.SetParameter("showMandiblePlanes","True") 
+      parameterNode.SetParameter("showMandiblePlanes",str(True)) 
     if not parameterNode.GetParameter("showMandiblePlanesInteractionHandles"):
-      parameterNode.SetParameter("showMandiblePlanesInteractionHandles","True")  
+      parameterNode.SetParameter("showMandiblePlanesInteractionHandles",str(True))  
     if not parameterNode.GetParameter("lockVSP"):
-      parameterNode.SetParameter("lockVSP","False")
+      parameterNode.SetParameter("lockVSP",str(False))
     if not parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact"):
-      parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","True")
+      parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact",str(True))
     if not parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether"):
-      parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","True")
+      parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether",str(True))
     if not parameterNode.GetParameter("interCondylarBeamBoxSize"):
-      parameterNode.SetParameter("interCondylarBeamBoxSize",str(INITIAL_INTER_CONDYLAR_BOX_SIZE))
+      parameterNode.SetParameter("interCondylarBeamBoxSize",str(INITIAL_INTER_CONDYLAR_BOX_SIZE_MM))
     if not parameterNode.GetParameter("mandibleBridgeRadius"):
-      parameterNode.SetParameter("mandibleBridgeRadius",str(3.0))
+      parameterNode.SetParameter("mandibleBridgeRadius",str(MANDIBLE_BRIDGE_RADIUS_MM))
+    if not parameterNode.GetParameter("fixCutGoesThroughTheMandibleTwice"):
+      parameterNode.SetParameter("fixCutGoesThroughTheMandibleTwice",str(False))
+    if not parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview"):
+      parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview",str(False))
+    if not parameterNode.GetParameter("initialSpace"):
+      parameterNode.SetParameter("initialSpace",str(INITIAL_SPACE_MM))
+    if not parameterNode.GetParameter("betweenSpace"):
+      parameterNode.SetParameter("betweenSpace",str(BETWEEN_SPACE_MM))
+    if not parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm"):
+      parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm",str(False))
+    if not parameterNode.GetParameter("updateOnMandiblePlanesMovement"):
+      parameterNode.SetParameter("updateOnMandiblePlanesMovement",str(True))
+    if not parameterNode.GetParameter("lightsRendering"):
+      parameterNode.SetParameter("lightsRendering","Lamp")
+    if not parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation"):
+      parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation",str(True))
+    if not parameterNode.GetParameter("securityMarginOfFibulaPieces"):
+      parameterNode.SetParameter("securityMarginOfFibulaPieces",str(SECURITY_MARGIN_OF_FIBULA_PIECES_MM))
+    # miterbox parameters
+    if not parameterNode.GetParameter("miterBoxSlotWidth"):
+      parameterNode.SetParameter("miterBoxSlotWidth",str(MITER_BOX_SLOT_WIDTH_MM))
+    if not parameterNode.GetParameter("miterBoxSlotLength"):
+      parameterNode.SetParameter("miterBoxSlotLength",str(MITER_BOX_SLOT_LENGTH_MM))
+    if not parameterNode.GetParameter("miterBoxSlotHeight"):
+      parameterNode.SetParameter("miterBoxSlotHeight",str(MITER_BOX_SLOT_HEIGHT_MM))
+    if not parameterNode.GetParameter("miterBoxSlotWall"):
+      parameterNode.SetParameter("miterBoxSlotWall",str(MITER_BOX_SLOT_WALL_MM))
+    if not parameterNode.GetParameter("fibulaScrewHoleCylinderRadius"):
+      parameterNode.SetParameter("fibulaScrewHoleCylinderRadius",str(FIBULA_SCREW_HOLE_CYLINDER_RADIUS_MM))
+    if not parameterNode.GetParameter("clearanceFitPrintingTolerance"):
+      parameterNode.SetParameter("clearanceFitPrintingTolerance",str(CLEARANCE_FIT_PRINTING_TOLERANCE_MM))
+    if not parameterNode.GetParameter("biggerMiterBoxDistanceToFibula"):
+      parameterNode.SetParameter("biggerMiterBoxDistanceToFibula",str(BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_MM))
+    # sawbox parameters
+    if not parameterNode.GetParameter("sawBoxSlotWidth"):
+      parameterNode.SetParameter("sawBoxSlotWidth",str(SAW_BOX_SLOT_WIDTH_MM))
+    if not parameterNode.GetParameter("sawBoxSlotLength"):
+      parameterNode.SetParameter("sawBoxSlotLength",str(SAW_BOX_SLOT_LENGTH_MM))
+    if not parameterNode.GetParameter("sawBoxSlotHeight"):
+      parameterNode.SetParameter("sawBoxSlotHeight",str(SAW_BOX_SLOT_HEIGHT_MM))
+    if not parameterNode.GetParameter("sawBoxSlotWall"):
+      parameterNode.SetParameter("sawBoxSlotWall",str(SAW_BOX_SLOT_WALL_MM))
+    if not parameterNode.GetParameter("biggerSawBoxDistanceToMandible"):
+      parameterNode.SetParameter("biggerSawBoxDistanceToMandible",str(BIGGER_SAW_BOX_DISTANCE_TO_MANDIBLE_MM))
+    if not parameterNode.GetParameter("mandibleScrewHoleCylinderRadius"):
+      parameterNode.SetParameter("mandibleScrewHoleCylinderRadius",str(MANDIBLE_SCREW_HOLE_CYLINDER_RADIUS_MM))
+    if not parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides"):
+      parameterNode.SetParameter("dentalImplantsPlanningAndFibulaDrillGuides",str(False))
+    if not parameterNode.GetParameter("dentalImplantCylinderRadius"):
+      parameterNode.SetParameter("dentalImplantCylinderRadius",str(DENTAL_IMPLANT_CYLINDER_RADIUS_MM))
+    if not parameterNode.GetParameter("dentalImplantCylinderHeight"):
+      parameterNode.SetParameter("dentalImplantCylinderHeight",str(DENTAL_IMPLANT_CYLINDER_HEIGHT_MM))
+    if not parameterNode.GetParameter("dentalImplantDrillGuideWall"):
+      parameterNode.SetParameter("dentalImplantDrillGuideWall",str(DENTAL_IMPLANT_DRILL_GUIDE_WALL_MM))
+    if not parameterNode.GetParameter("makeAllDentalImplanCylindersParallel"):
+      parameterNode.SetParameter("makeAllDentalImplanCylindersParallel",str(False))
+    if not parameterNode.GetParameter("updateOnDentalImplantPlanesMovement"):
+      parameterNode.SetParameter("updateOnDentalImplantPlanesMovement",str(True))
+    if not parameterNode.GetParameter("customTitaniumPlateDesing"):
+      parameterNode.SetParameter("customTitaniumPlateDesing",str(False))
+    if not parameterNode.GetParameter("plateCrossSectionalWidth"):
+      parameterNode.SetParameter("plateCrossSectionalWidth",str(PLATE_CROSS_SECTIONAL_WIDTH_MM))
+    if not parameterNode.GetParameter("plateCrossSectionalLength"):
+      parameterNode.SetParameter("plateCrossSectionalLength",str(PLATE_CROSS_SECTIONAL_LENGTH_MM))
+    if not parameterNode.GetParameter("plateCrossSectionalBevelRadiusPorcentage"):
+      parameterNode.SetParameter("plateCrossSectionalBevelRadiusPorcentage",str(PLATE_CROSS_SECTIONAL_BEVEL_RADIUS_PORCENTAGE))
+    if not parameterNode.GetParameter("plateTipsBevelRadius"):
+      parameterNode.SetParameter("plateTipsBevelRadius",str(PLATE_TIPS_BEVEL_RADIUS_MM))
 
   def getParentFolderItemID(self):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -1712,9 +1806,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interCondylarBeamBoxSize = float(parameterNode.GetParameter("interCondylarBeamBoxSize"))
 
     if positive:
-      interCondylarBeamBoxSize += INTER_CONDYLAR_BOX_SIZE_STEP
-    elif interCondylarBeamBoxSize >= 2*INTER_CONDYLAR_BOX_SIZE_STEP:
-      interCondylarBeamBoxSize -= INTER_CONDYLAR_BOX_SIZE_STEP
+      interCondylarBeamBoxSize += INTER_CONDYLAR_BOX_SIZE_STEP_MM
+    elif interCondylarBeamBoxSize >= 2*INTER_CONDYLAR_BOX_SIZE_STEP_MM:
+      interCondylarBeamBoxSize -= INTER_CONDYLAR_BOX_SIZE_STEP_MM
 
     parameterNode.SetParameter("interCondylarBeamBoxSize", str(interCondylarBeamBoxSize))
 
