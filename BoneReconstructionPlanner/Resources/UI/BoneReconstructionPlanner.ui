@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>484</width>
-    <height>2524</height>
+    <height>2696</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -2007,6 +2007,22 @@ and Fibula Drill Guides</string>
           <property name="text">
            <string>Custom Titanium Plate
 Desing</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0">
+         <widget class="QPushButton" name="restoreDefaultSettingsButton">
+          <property name="text">
+           <string>Restore default
+settings</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1">
+         <widget class="QPushButton" name="overwriteDefaultSettingsButton">
+          <property name="text">
+           <string>Overwrite default
+settings</string>
           </property>
          </widget>
         </item>
