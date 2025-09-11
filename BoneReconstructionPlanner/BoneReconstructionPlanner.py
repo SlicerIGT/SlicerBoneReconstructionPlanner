@@ -355,8 +355,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     boneIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/bone_48.svg')
     self.ui.makeModelsButton.setIcon(qt.QIcon(boneIconPath))
 
-    targetIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/target_48.svg')
-    self.ui.centerFibulaLineButton.setIcon(qt.QIcon(targetIconPath))
+    #targetIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/target_48.svg')
+    #self.ui.centerFibulaLineButton.setIcon(qt.QIcon(targetIconPath))
     
     planeIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/MarkupsPlaneMouseModePlaceAdd.png')
     self.ui.addCutPlaneButton.setIcon(qt.QIcon(planeIconPath))
@@ -539,7 +539,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToMandibleSurgicalGuideBaseButton)
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.connect('clicked(bool)', self.onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
     self.ui.updateFibulaDentalImplantCylindersButton.connect('clicked(bool)', self.onUpdateFibulaDentalImplantCylindersButton)
-    self.ui.centerFibulaLineButton.connect('clicked(bool)', self.onCenterFibulaLineButton)
+    #self.ui.centerFibulaLineButton.connect('clicked(bool)', self.onCenterFibulaLineButton)
     self.ui.create3DModelOfTheReconstructionButton.connect('clicked(bool)', self.onCreate3DModelOfTheReconstructionButton)
     self.ui.createDentalImplantCylindersFiducialListButton.connect('clicked(bool)', self.onCreateDentalImplantCylindersFiducialListButton)
     self.ui.createCylindersFromFiducialListAndNeomandiblePiecesButton.connect('clicked(bool)', self.onCreateCylindersFromFiducialListAndNeomandiblePiecesButton)
@@ -1350,6 +1350,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.interCondylarBeamLineControlPointRemovedObserver = 0
     self.mandibleBridgeCurveControlPointModifiedObserver = 0
     self.mandibleBridgeCurveControlPointRemovedObserver = 0
+    self.fibulaLineControlPointPlacedObserver = 0
     self.generateFibulaPlanesTimer = qt.QTimer()
     self.generateFibulaPlanesTimer.setInterval(300)
     self.generateFibulaPlanesTimer.setSingleShot(True)
@@ -1520,6 +1521,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = fibulaLine.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.FIBULA_VIEW_ID)
+
+      #connections
+      self.fibulaLineControlPointPlacedObserver = fibulaLine.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+        self.onFibulaLinePointPlaced
+      )
 
     if startPlacementMode:
       #setup placement
@@ -1912,6 +1919,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       False, interCondylarBeamBoxSize/2, 4, 5, True, 3, slicer.vtkMRMLMarkupsToModelNode.RawIndices, 
       None, slicer.vtkMRMLMarkupsToModelNode.MovingLeastSquares 
     )
+
+  def onFibulaLinePointPlaced(self,sourceNode,event):
+    parameterNode = self.getParameterNode()
+    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    #print("number of points = ", fibulaLine.GetNumberOfControlPoints())
+    if fibulaLine.GetNumberOfControlPoints() == 2:
+      self.centerFibulaLine()
 
   def onPlanePointAdded(self,sourceNode,event):
     parameterNode = self.getParameterNode()
