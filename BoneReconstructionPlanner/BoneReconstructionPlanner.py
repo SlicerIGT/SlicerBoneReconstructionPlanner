@@ -195,6 +195,7 @@ defaultParametersDict = {
   "showMandiblePlanes": str(True),
   "showMandiblePlanesInteractionHandles": str(True),
   "lockVSP": str(False),
+  "lightingInterpolation": "Gouraud",
   "mandiblePlanesPositioningForMaximumBoneContact": str(True),
   "makeAllMandiblePlanesRotateTogether": str(True),
   "interCondylarBeamBoxSize": str(INITIAL_INTER_CONDYLAR_BOX_SIZE_MM),
@@ -565,6 +566,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showMandiblePlanesInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.onOrientation3DCubeCheckBox)
     self.ui.lightsRenderingComboBox.textActivated.connect(self.onLightsRenderingComboBox)
+    self.ui.lightingInterpolationComboBox.textActivated.connect(self.onLightingInterpolationComboBox)
     self.ui.restoreDefaultSettingsButton.connect('clicked(bool)', self.onRestoreDefaultSettingsButton)
     self.ui.overwriteDefaultSettingsButton.connect('clicked(bool)', self.onOverwriteDefaultSettingsButton)
 
@@ -1147,6 +1149,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       lightsLogic.setUseLightKit(True)
       lightsLogic.setUseSSAO(True)
   
+  def onLightingInterpolationComboBox(self, text):
+    self.logic.setModelsLightingInterpolation(text)
+
   def onRestoreDefaultSettingsButton(self):
     self.logic.restoreDefaultParameters()
 
@@ -4865,6 +4870,49 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.SetItemParent(scaledFibulaPieceModelItemID, scaledFibulaPiecesFolder)
 
     return
+
+  def setModelsLightingInterpolation(self, interpolationMode = "Gouraud"):
+    DEFAULT_LIGHTING_VALUES_GOURAUD = {
+      "Ambient": 0.0,
+      "Diffuse": 1.0,
+      "Specular": 0.0,
+      "Power": 1.0,
+      "Metallic": 0.0,
+      "Roughness": 0.5
+    }
+    PREFERRED_LIGHTING_EMPIRICAL_VALUES_PBR = {
+      "Diffuse": 1.0,
+      "Metallic": 0.0,
+      "Roughness": 0.3
+    }
+
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    folderSubjectHierarchyID = self.getParentFolderItemID()
+    childIDs = vtk.vtkIdList()
+    shNode.GetItemChildren(folderSubjectHierarchyID, childIDs, True)
+
+    for id in range(childIDs.GetNumberOfIds()):
+      itemID = childIDs.GetId(id)
+      dataNode = shNode.GetItemDataNode(itemID)
+      if (dataNode is None) or not(dataNode.IsA("vtkMRMLModelNode")):
+        continue
+      displayNode = dataNode.GetDisplayNode()
+      if displayNode:
+        if interpolationMode == "PBR":
+          # Set interpolation to PBR
+          displayNode.SetInterpolation(slicer.vtkMRMLDisplayNode.PBRInterpolation)
+          displayNode.SetDiffuse(PREFERRED_LIGHTING_EMPIRICAL_VALUES_PBR["Diffuse"])
+          displayNode.SetMetallic(PREFERRED_LIGHTING_EMPIRICAL_VALUES_PBR["Metallic"])
+          displayNode.SetRoughness(PREFERRED_LIGHTING_EMPIRICAL_VALUES_PBR["Roughness"])
+        elif interpolationMode == "Gouraud":
+          # Set interpolation to Gouraud
+          displayNode.SetInterpolation(slicer.vtkMRMLDisplayNode.GouraudInterpolation)
+          displayNode.SetAmbient(DEFAULT_LIGHTING_VALUES_GOURAUD["Ambient"])
+          displayNode.SetDiffuse(DEFAULT_LIGHTING_VALUES_GOURAUD["Diffuse"])
+          displayNode.SetSpecular(DEFAULT_LIGHTING_VALUES_GOURAUD["Specular"])
+          displayNode.SetPower(DEFAULT_LIGHTING_VALUES_GOURAUD["Power"])
+          displayNode.SetMetallic(DEFAULT_LIGHTING_VALUES_GOURAUD["Metallic"])
+          displayNode.SetRoughness(DEFAULT_LIGHTING_VALUES_GOURAUD["Roughness"])
 
   def createPlateCurve(self):
     curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
