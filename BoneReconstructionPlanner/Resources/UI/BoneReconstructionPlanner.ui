@@ -62,6 +62,13 @@
     </widget>
    </item>
    <item>
+    <widget class="QPushButton" name="loadTestCaseButton">
+     <property name="text">
+      <string>Load test case</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="ctkCollapsibleButton" name="CollapsibleButton">
      <property name="text">
       <string>Mandible Reconstruction Planning</string>
