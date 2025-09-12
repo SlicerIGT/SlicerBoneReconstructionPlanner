@@ -146,6 +146,29 @@ def registerSampleData():
     nodeNames='TestPlanBRP'
   )
 
+def confirm_clean_and_load_test_data():
+  confirm_close_msg_box = ctk.ctkMessageBox()
+  confirm_close_msg_box.setAttribute(qt.Qt.WA_DeleteOnClose)
+  confirm_close_msg_box.setWindowTitle("Delete everything and load test data?")
+  confirm_close_msg_box.setText("The scene will be cleaned and test data will be loaded. Do you want to proceed?")
+
+  confirm_close_msg_box.addButton("Clean scene and load test data", qt.QMessageBox.AcceptRole)
+  confirm_close_msg_box.addButton(qt.QMessageBox.Cancel)
+
+  confirm_close_msg_box.setIcon(qt.QMessageBox.Question)
+  result_code = confirm_close_msg_box.exec()
+
+  if result_code == qt.QMessageBox.Cancel:
+    return False
+  if result_code == qt.QMessageBox.AcceptRole:
+    import SampleData
+    sampleDataLogic = SampleData.SampleDataLogic()
+    sampleDataLogic.downloadSample('CTFibula')
+    sampleDataLogic.downloadSample('CTMandible')
+    sampleDataLogic.downloadSample('FibulaSegmentation')
+    sampleDataLogic.downloadSample('MandibleSegmentation')
+  return True
+
 slicer.MANDIBLE_VIEW_SINGLETON_TAG = "1"
 slicer.FIBULA_VIEW_SINGLETON_TAG = "2"
 slicer.RED_VIEW_ID = "vtkMRMLSliceNodeRed"
@@ -351,7 +374,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     
     openDocumentationIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/quick_reference_48.svg')
     self.ui.openDocumentationButton.setIcon(qt.QIcon(openDocumentationIconPath))
-    
+
+    testDataIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/experiment_48.svg')
+    self.ui.loadTestCaseButton.setIcon(qt.QIcon(testDataIconPath))
+
     boneIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/bone_48.svg')
     self.ui.makeModelsButton.setIcon(qt.QIcon(boneIconPath))
 
@@ -530,6 +556,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.emailBugReportButton.connect('clicked(bool)',self.onEmailBugReportButton)
     self.ui.emailFeatureRequestButton.connect('clicked(bool)',self.onEmailFeatureRequestButton)
     self.ui.openDocumentationButton.connect('clicked(bool)',self.onOpenDocumentationButton)
+    self.ui.loadTestCaseButton.connect('clicked(bool)', confirm_clean_and_load_test_data)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.removeCutPlaneButton.connect('clicked(bool)',self.onRemoveCutPlaneButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
