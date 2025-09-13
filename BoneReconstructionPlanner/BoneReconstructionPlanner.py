@@ -348,7 +348,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # "setMRMLScene(vtkMRMLScene*)" slot.
     uiWidget.setMRMLScene(slicer.mrmlScene)
 
-    
+    processingLabel = qt.QLabel("Processing...")
+    processingLabel.setAlignment(qt.Qt.AlignCenter)
+    processingLabel.setStyleSheet("QLabel {color: green; font-family: 'Lato Semibold'; font-size: 30pt;}")
+    slicer.util.mainWindow().statusBar().insertWidget(0,processingLabel)
+    self.ui.processingLabel = processingLabel
+
     # additional UI setup
     self.ui.versionLabel.text = f"Version: {self.version}" 
 
@@ -556,7 +561,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.emailBugReportButton.connect('clicked(bool)',self.onEmailBugReportButton)
     self.ui.emailFeatureRequestButton.connect('clicked(bool)',self.onEmailFeatureRequestButton)
     self.ui.openDocumentationButton.connect('clicked(bool)',self.onOpenDocumentationButton)
-    self.ui.loadTestCaseButton.connect('clicked(bool)', confirm_clean_and_load_test_data)
+    self.ui.loadTestCaseButton.connect('clicked(bool)', self.onLoadTestCaseButton)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.removeCutPlaneButton.connect('clicked(bool)',self.onRemoveCutPlaneButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
@@ -599,6 +604,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     # Make sure parameter node is initialized (needed for module reload)
     self.initializeParameterNode()
+
+  def onLoadTestCaseButton(self):
+    self._parameterNode.SetParameter("currentlyProcessing", str(True))
+    confirm_clean_and_load_test_data()
+    self._parameterNode.SetParameter("currentlyProcessing", str(False))
 
   def updateMiterBoxes(self, caller=None, event=None):
     self.updateParameterNodeFromGUI(caller=None, event=None)
@@ -841,6 +851,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     This method is called whenever parameter node is changed.
     The module GUI is updated to show the current state of the parameter node.
     """
+
+    # only put here code that updates the GUI but does not cause any changes in the parameterNode,
+    # in other words, only widgets that do not have any connections, otherwise put them below
+    # the _updatingGUIFromParameterNode flag
+    currentlyProcessing = self._parameterNode.GetParameter("currentlyProcessing") == str(True)
+    self.processingLabelShow(currentlyProcessing)
 
     if self._parameterNode is None or self._updatingGUIFromParameterNode:
       return
@@ -1234,6 +1250,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onRemoveCutPlaneButton(self):
     self.logic.removeCutPlane()
   
+  def processingLabelShow(self, show):
+    if show:
+      self.ui.processingLabel.show()
+    else:
+      self.ui.processingLabel.hide()
+    slicer.app.processEvents()
+
   def onMakeModelsButton(self):
     self.logic.makeModels()
 
@@ -2002,6 +2025,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   @saveExecutedMethodWithTelemetry
   def onGenerateFibulaPlanesTimerTimeout(self):
     parameterNode = self.getParameterNode()
+    parameterNode.SetParameter("currentlyProcessing", str(True))
     lockVSPChecked = parameterNode.GetParameter("lockVSP") == "True"
     if lockVSPChecked:
       logging.info('VSP updates are locked. Please set "lockVSP" parameter to "False".')
@@ -2052,6 +2076,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
+    parameterNode.SetParameter("currentlyProcessing", str(False))
 
   def transformMandiblePlanesZRotationToBeTheSameAsInputPlane(self,mandiblePlaneOfRotation):
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -3216,6 +3241,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.util.resetSliceViews()
 
     parameterNode = self.getParameterNode()
+    parameterNode.SetParameter("currentlyProcessing", str(True))
     fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
     mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
     useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
@@ -3323,6 +3349,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     if USING_GUI:
       slicer.util.forceRenderAllViews()
+
+    parameterNode.SetParameter("currentlyProcessing", str(False))
 
   def updateFibulaPieces(self):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
