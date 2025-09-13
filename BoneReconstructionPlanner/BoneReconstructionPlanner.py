@@ -207,6 +207,7 @@ BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_MM = 3.0
 BIGGER_SAW_BOX_DISTANCE_TO_MANDIBLE_MM = 3.0
 
 defaultParametersDict = {
+  "currentlyProcessing": str(False),
   "scalarVolumeChangedThroughParameterNode": str(False),
   "fibulaSegmentsMeasurementMode": "center2center",
   "kindOfMandibleResection": "Segmental Mandibulectomy",
