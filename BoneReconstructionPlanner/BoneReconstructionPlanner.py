@@ -1963,6 +1963,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def onPlanePointAdded(self,sourceNode,event):
     parameterNode = self.getParameterNode()
     mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
+    if mandibleCurve.GetNumberOfControlPoints() < 2:
+      interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+      interactionNode.SwitchToViewTransformMode()
+      slicer.mrmlScene.RemoveNode(sourceNode)
+      slicer.util.errorDisplay("Did you draw the mandibular curve before adding the planes? If not, please draw it first.")
+      return
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
