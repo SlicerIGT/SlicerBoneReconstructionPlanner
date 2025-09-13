@@ -233,7 +233,10 @@ def getClosestModelPointToPosition(model,position):
   return result
 
 def getCentroid(model):
-  pd = model.GetPolyData().GetPoints().GetData()
+  try:
+    pd = model.GetPolyData().GetPoints().GetData()
+  except:
+    return None
   from vtk.util.numpy_support import vtk_to_numpy
   return np.average(vtk_to_numpy(pd), axis=0)
 
