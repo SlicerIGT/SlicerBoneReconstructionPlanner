@@ -1378,6 +1378,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.mandibleBridgeCurveControlPointModifiedObserver = 0
     self.mandibleBridgeCurveControlPointRemovedObserver = 0
     self.fibulaLineControlPointPlacedObserver = 0
+    self.fibulaLineControlPointEndInteractionObserver = 0
     self.generateFibulaPlanesTimer = qt.QTimer()
     self.generateFibulaPlanesTimer.setInterval(300)
     self.generateFibulaPlanesTimer.setSingleShot(True)
@@ -1553,6 +1554,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.fibulaLineControlPointPlacedObserver = fibulaLine.AddObserver(
         slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
         self.onFibulaLinePointPlaced
+      )
+      self.fibulaLineControlPointEndInteractionObserver = fibulaLine.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.onFibulaLineEndInteraction
       )
 
     if startPlacementMode:
@@ -1948,12 +1953,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     )
 
   def onFibulaLinePointPlaced(self,sourceNode,event):
-    parameterNode = self.getParameterNode()
-    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
-    #print("number of points = ", fibulaLine.GetNumberOfControlPoints())
+    self.onFibulaLineEndInteraction(sourceNode,event)
+
+  def onFibulaLineEndInteraction(self,sourceNode,event):
+    fibulaLine = self.getFibulaLine()
     if fibulaLine.GetNumberOfControlPoints() == 2:
       self.centerFibulaLine()
-
+  
   def onPlanePointAdded(self,sourceNode,event):
     parameterNode = self.getParameterNode()
     mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
