@@ -4809,6 +4809,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,fibulaEndIntersectionModel)
       lineStartPos = getCentroid(fibulaStartIntersectionModel)
       lineEndPos = getCentroid(fibulaEndIntersectionModel)
+      if lineStartPos is None or lineEndPos is None:
+        if intersectionsFolder:
+          shNode.RemoveItem(intersectionsFolder)
+        slicer.util.errorDisplay("ERROR: Line has invalid direction, please re-draw it")
+        return
 
     fibulaLine.SetNthControlPointPosition(0,lineStartPos)
     fibulaLine.SetNthControlPointPosition(1,lineEndPos)
@@ -4892,7 +4897,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       or1 = np.zeros(3)
       planeList[i+1].GetOrigin(or1)
       origin = (or0+or1)/2
-      #origin = getCentroid(transformedFibulaPiecesList[i])
 
       scaleTransform = vtk.vtkTransform()
       scaleTransform.PostMultiply()
