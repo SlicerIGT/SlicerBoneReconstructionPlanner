@@ -169,6 +169,34 @@ def confirm_clean_and_load_test_data():
     sampleDataLogic.downloadSample('MandibleSegmentation')
   return True
 
+def setLightsRenderingMode(text):
+  try:
+    lightsLogic = slicer.modules.lights.widgetRepresentation().self().logic
+  except:
+    errorString = "BoneReconstructionPlanner: Lights module is not available. Install Sandbox extension"
+    slicer.util.messageBox(
+      errorString, 
+      dontShowAgainSettingsKey = "BRP/MissingSandboxExtension"
+    )
+    return
+  viewNodesList = slicer.util.getNodesByClass("vtkMRMLViewNode")
+  for viewNode in viewNodesList:
+    lightsLogic.addManagedView(viewNode)
+  if text == "Lamp":
+    lightsLogic.setUseLightKit(False)
+    lightsLogic.setSingleLightIntensity(1.0)
+    lightsLogic.setUseSSAO(False)
+  elif text == "Lamp and Shadows":
+    lightsLogic.setUseLightKit(False)
+    lightsLogic.setSingleLightIntensity(1.0)
+    lightsLogic.setUseSSAO(True)
+  elif text == "MultiLamp":
+    lightsLogic.setUseLightKit(True)
+    lightsLogic.setUseSSAO(False)
+  elif text == "MultiLamp and Shadows":
+    lightsLogic.setUseLightKit(True)
+    lightsLogic.setUseSSAO(True)
+
 slicer.MANDIBLE_VIEW_SINGLETON_TAG = "1"
 slicer.FIBULA_VIEW_SINGLETON_TAG = "2"
 slicer.RED_VIEW_ID = "vtkMRMLSliceNodeRed"
@@ -598,7 +626,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showMandiblePlanesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.showMandiblePlanesInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.onOrientation3DCubeCheckBox)
-    self.ui.lightsRenderingComboBox.textActivated.connect(self.onLightsRenderingComboBox)
+    self.ui.lightsRenderingComboBox.textActivated.connect(self.updateParameterNodeFromGUI)
     self.ui.lightingInterpolationComboBox.textActivated.connect(self.onLightingInterpolationComboBox)
     self.ui.restoreDefaultSettingsButton.connect('clicked(bool)', self.onRestoreDefaultSettingsButton)
     self.ui.overwriteDefaultSettingsButton.connect('clicked(bool)', self.onOverwriteDefaultSettingsButton)
@@ -990,7 +1018,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
-    
+
+    self.ui.lightsRenderingComboBox.currentText = self._parameterNode.GetParameter("lightsRendering")
+    setLightsRenderingMode(self._parameterNode.GetParameter("lightsRendering"))
+
     self.ui.makeModelsButton.enabled = (
       self._parameterNode.GetNodeReference("mandibularSegmentation") is not None and
       self._parameterNode.GetNodeReference("fibulaSegmentation") is not None
@@ -1245,27 +1276,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles", "False")
     
-    self._parameterNode.EndModify(wasModified)
+    self._parameterNode.SetParameter("lightsRendering", self.ui.lightsRenderingComboBox.currentText)
 
-  def onLightsRenderingComboBox(self, text):
-    lightsLogic = slicer.modules.lights.widgetRepresentation().self().logic
-    viewNodesList = slicer.util.getNodesByClass("vtkMRMLViewNode")
-    for viewNode in viewNodesList:
-      lightsLogic.addManagedView(viewNode)
-    if text == "Lamp":
-      lightsLogic.setUseLightKit(False)
-      lightsLogic.setSingleLightIntensity(1.0)
-      lightsLogic.setUseSSAO(False)
-    elif text == "Lamp and Shadows":
-      lightsLogic.setUseLightKit(False)
-      lightsLogic.setSingleLightIntensity(1.0)
-      lightsLogic.setUseSSAO(True)
-    elif text == "MultiLamp":
-      lightsLogic.setUseLightKit(True)
-      lightsLogic.setUseSSAO(False)
-    elif text == "MultiLamp and Shadows":
-      lightsLogic.setUseLightKit(True)
-      lightsLogic.setUseSSAO(True)
+    self._parameterNode.EndModify(wasModified)
   
   def onLightingInterpolationComboBox(self, text):
     self.logic.setModelsLightingInterpolation(text)
