@@ -718,6 +718,23 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.setMarkupsListLocked(dentalImplantsPlanesList,locked=False)
     self.logic.addDentalImplantsPlaneObservers()
 
+    self.setMarkupControlPointsVisibility(self.logic.getMandibularCurve(), visibility=True)
+    self.setMarkupControlPointsVisibility(self.logic.getInterCondylarBeamLine(), visibility=True)
+    self.setMarkupControlPointsVisibility(self.logic.getFibulaLine(), visibility=True)
+    self.setMarkupControlPointsVisibility(self.logic.getFibulaFiducials(), visibility=True)
+    self.setMarkupControlPointsVisibility(self.logic.getMandibleFiducials(), visibility=True)
+    self.setMarkupControlPointsVisibility(self.logic.getMandibleBridgeCurve(), visibility=True)
+
+    markupsList = [
+      self.logic.getMandibularCurve(),
+      self.logic.getInterCondylarBeamLine(),
+      self.logic.getFibulaLine(),
+      self.logic.getFibulaFiducials(),
+      self.logic.getMandibleFiducials(),
+      self.logic.getMandibleBridgeCurve()
+    ]
+    self.logic.setMarkupsListLocked(markupsList,locked=False)
+    
     if self.logic.interCondylarBeamLineControlPointModifiedObserver == 0:
       observerTag = self.logic.getInterCondylarBeamLine().AddObserver(
         slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
@@ -817,6 +834,23 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     )
     self.logic.setMarkupsListLocked(dentalImplantsPlanesList,locked=True)
     self.logic.removeDentalImplantsPlaneObservers()
+
+    self.setMarkupControlPointsVisibility(self.logic.getMandibularCurve(), visibility=False)
+    self.setMarkupControlPointsVisibility(self.logic.getInterCondylarBeamLine(), visibility=False)
+    self.setMarkupControlPointsVisibility(self.logic.getFibulaLine(), visibility=False)
+    self.setMarkupControlPointsVisibility(self.logic.getFibulaFiducials(), visibility=False)
+    self.setMarkupControlPointsVisibility(self.logic.getMandibleFiducials(), visibility=False)
+    self.setMarkupControlPointsVisibility(self.logic.getMandibleBridgeCurve(), visibility=False)
+
+    markupsList = [
+      self.logic.getMandibularCurve(),
+      self.logic.getInterCondylarBeamLine(),
+      self.logic.getFibulaLine(),
+      self.logic.getFibulaFiducials(),
+      self.logic.getMandibleFiducials(),
+      self.logic.getMandibleBridgeCurve()
+    ]
+    self.logic.setMarkupsListLocked(markupsList,locked=True)
 
     self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineControlPointModifiedObserver)
     self.logic.interCondylarBeamLineControlPointModifiedObserver = 0
@@ -1358,6 +1392,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode = mandibularPlanesList[i].GetDisplayNode()
       displayNode.SetVisibility(visibility)
 
+  def setMarkupControlPointsVisibility(self, markupsNode, visibility):
+    if markupsNode is not None:
+      for i in range(markupsNode.GetNumberOfControlPoints()):
+        markupsNode.SetNthControlPointVisibility(i, visibility)
+  
   def setInterCondylarBeamVisibility(self, visibility):
     interCondylarBeamBox = self._parameterNode.GetNodeReference("interCondylarBeamBox")
 
