@@ -288,6 +288,9 @@ defaultParametersDict = {
 }
 
 def addBRPLayout():
+  if not USING_GUI:
+    return
+
   BRPLayout = f"""
     <layout type="vertical">
     <item>
@@ -337,6 +340,8 @@ def addBRPLayout():
   return False
 
 def setBRPLayout():
+  if not USING_GUI:
+    return
   layoutManager = slicer.app.layoutManager()
   layoutManager.setLayout(slicer.BRPLayoutId)
 
@@ -1157,7 +1162,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     The changes are saved into the parameter node (so that they are restored when the scene is saved and loaded).
     """
 
-    if self._parameterNode is None or self._updatingGUIFromParameterNode:
+    if (
+      self._parameterNode is None or 
+      self._updatingGUIFromParameterNode or
+      not USING_GUI
+    ):
       return
 
     wasModified = self._parameterNode.StartModify()  # Modify all properties in a single batch
@@ -1281,6 +1290,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.EndModify(wasModified)
   
   def onLightingInterpolationComboBox(self, text):
+    # TODO make this possible to save on scene as "lightsRendering"
     self.logic.setModelsLightingInterpolation(text)
 
   def onRestoreDefaultSettingsButton(self):
@@ -1290,6 +1300,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.overwriteDefaultParameters()
 
   def onOrientation3DCubeCheckBox(self):
+    # TODO make this possible to save on scene as "lightsRendering"
     threeDViewNodes = slicer.util.getNodesByClass("vtkMRMLViewNode")
     if len(threeDViewNodes) == 0:
       return
@@ -1321,6 +1332,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.openDocumentationOnWebBrowser()
   
   def onFixCutGoesThroughTheMandibleTwiceCheckBox(self):
+    # TODO this should use the updateParameterFromGUI function
     if self._parameterNode is None or self._updatingGUIFromParameterNode:
       return
 
@@ -1339,6 +1351,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.removeCutPlane()
   
   def processingLabelShow(self, show):
+    if not USING_GUI:
+      return
     if show:
       self.ui.processingLabel.show()
     else:
@@ -1388,6 +1402,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.lockVSP(checked)
   
   def setBiggerSawBoxesInteractionHandlesVisibility(self, visibility):
+    if not USING_GUI:
+      return
+    
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     sawBoxesPlanesFolder = shNode.GetItemByName("sawBoxes Planes")
     sawBoxesPlanesList = createListFromFolderID(sawBoxesPlanesFolder)
@@ -1397,6 +1414,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.SetHandlesInteractive(visibility)
 
   def setMandiblePlanesVisibility(self, visibility):
+    if not USING_GUI:
+      return
+    
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
@@ -1406,11 +1426,17 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.SetVisibility(visibility)
 
   def setMarkupControlPointsVisibility(self, markupsNode, visibility):
+    if not USING_GUI:
+      return
+    
     if markupsNode is not None:
       for i in range(markupsNode.GetNumberOfControlPoints()):
         markupsNode.SetNthControlPointVisibility(i, visibility)
   
   def setInterCondylarBeamVisibility(self, visibility):
+    if not USING_GUI:
+      return
+    
     interCondylarBeamBox = self._parameterNode.GetNodeReference("interCondylarBeamBox")
 
     if interCondylarBeamBox is not None:
@@ -1418,6 +1444,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.SetVisibility(visibility)
 
   def setMandiblePlanesInteractionHandlesVisibility(self, visibility):
+    if not USING_GUI:
+      return
+    
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
     mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
@@ -1427,6 +1456,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.SetHandlesInteractive(visibility)
 
   def setFibulaSegmentsLengthsVisibility(self, visibility):
+    if not USING_GUI:
+      return
+    
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     fibulaSegmentsLengthsFolder = shNode.GetItemByName("Fibula Segments Lengths")
     fibulaSegmentsLengthsList = createListFromFolderID(fibulaSegmentsLengthsFolder)
@@ -1439,6 +1471,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.create3DModelOfTheReconstruction()
 
   def setOriginalMandibleVisility(self, visibility):
+    # TODO use current mandible model function here
+    if not USING_GUI:
+      return
+    
     mandibleModelNode = self._parameterNode.GetNodeReference("mandibleModelNode")
     decimatedMandibleModelNode = self._parameterNode.GetNodeReference("decimatedMandibleModelNode")
     
@@ -3331,9 +3367,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   @saveExecutedMethodWithTelemetry
   def makeModels(self):
-    if USING_GUI:
-      setBRPLayout()
-      slicer.util.resetSliceViews()
+    setBRPLayout()
+    slicer.util.resetSliceViews()
 
     parameterNode = self.getParameterNode()
     parameterNode.SetParameter("currentlyProcessing", str(True))
