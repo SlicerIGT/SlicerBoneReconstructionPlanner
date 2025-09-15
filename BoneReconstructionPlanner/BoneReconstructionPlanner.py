@@ -1520,7 +1520,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.create3DModelOfTheReconstruction()
 
   def setOriginalMandibleVisility(self, visibility):
-    # TODO use current mandible model function here
     if not USING_GUI:
       return
     
