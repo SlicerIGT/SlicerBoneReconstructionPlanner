@@ -1602,7 +1602,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.mandibleFiducialsCylindersTimer.setSingleShot(True)
     self.mandibleFiducialsCylindersTimer.connect('timeout()', self.onUpdateMandibleFiducialsCylindersTimerTimeout)
     self.miterBoxDirectionLineTimer = qt.QTimer()
-    self.miterBoxDirectionLineTimer.setInterval(300)
+    self.miterBoxDirectionLineTimer.setInterval(400)
     self.miterBoxDirectionLineTimer.setSingleShot(True)
     self.miterBoxDirectionLineTimer.connect('timeout()', self.onMiterBoxDirectionLineTimerTimeout)
     self.updateFibuladentalImplantsTimer = qt.QTimer()
@@ -3876,6 +3876,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerMiterBoxesModelsFolder = shNode.GetItemByName("biggerMiterBoxes Models")
     if biggerMiterBoxesModelsFolder:
       shNode.RemoveItem(biggerMiterBoxesModelsFolder)
+    previewMiterBoxesModelsFolder = shNode.GetItemByName("previewMiterBoxes Models")
+    if previewMiterBoxesModelsFolder:
+      shNode.RemoveItem(previewMiterBoxesModelsFolder)
 
     if checkSecurityMarginOnMiterBoxCreationChecked:
       cutBonesList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
@@ -3947,6 +3950,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     miterBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"miterBoxes Models")
     biggerMiterBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"biggerMiterBoxes Models")
+    previewMiterBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"previewMiterBoxes Models")
     miterBoxesTransformsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"miterBoxes Transforms")
     intersectionsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Intersections")
     pointsIntersectionsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Points Intersections")
@@ -3957,6 +3961,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
 
+    combineModelsLogic = combineModelsRobustLogic
     for i in range(len(fibulaPlanesList)):
       if useMoreExactVersionOfPositioningAlgorithmChecked:
         lineStartPos = np.zeros(3)
@@ -3970,15 +3975,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if i%2 == 0:
         miterBoxName = "miterBox%d_A" % (i//2)
         biggerMiterBoxName = "biggerMiterBox%d_A" % (i//2)
+        previewMiterBoxName = "previewMiterBox%d_A" % (i//2)
       else:
         miterBoxName = "miterBox%d_B" % (i//2)
         biggerMiterBoxName = "biggerMiterBox%d_B" % (i//2)
+        previewMiterBoxName = "previewMiterBox%d_B" % (i//2)
       miterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance
       miterBoxLength = miterBoxSlotLength
       miterBoxHeight = 70
       miterBoxModel = createBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
 
       miterBoxDisplayNode = miterBoxModel.GetDisplayNode()
+      miterBoxDisplayNode.SetVisibility(False)
       miterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
       miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
@@ -3991,6 +3999,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       biggerMiterBoxDisplayNode = biggerMiterBoxModel.GetDisplayNode()
 
       biggerMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+      biggerMiterBoxDisplayNode.SetVisibility3D(False)
       biggerMiterBoxDisplayNode.SetVisibility2D(True)
       if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
         redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
@@ -3998,6 +4007,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       biggerMiterBoxModelItemID = shNode.GetItemByDataNode(biggerMiterBoxModel)
       shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
+
+      # previewMiterBoxes
+      previewMiterBoxModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", previewMiterBoxName)
+      combineModelsLogic.process(biggerMiterBoxModel, miterBoxModel, previewMiterBoxModel, 'difference')
+      previewMiterBoxDisplayNode = previewMiterBoxModel.GetDisplayNode()
+      previewMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+
+      previewMiterBoxModelItemID = shNode.GetItemByDataNode(previewMiterBoxModel)
+      shNode.SetItemParent(previewMiterBoxModelItemID, previewMiterBoxesModelsFolder)
 
       fibulaPlaneMatrix = vtk.vtkMatrix4x4()
       fibulaPlanesList[i].GetObjectToWorldMatrix(fibulaPlaneMatrix)
@@ -4076,8 +4094,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxTransformationSuccess = miterBoxModel.HardenTransform()
       biggerMiterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
       biggerMiterBoxTransformationSuccess = biggerMiterBoxModel.HardenTransform()
+      previewMiterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
+      previewMiterBoxTransformationSuccess = previewMiterBoxModel.HardenTransform()
 
-      if not (miterBoxTransformationSuccess and biggerMiterBoxTransformationSuccess):
+      if not (
+        miterBoxTransformationSuccess and 
+        biggerMiterBoxTransformationSuccess and
+        previewMiterBoxTransformationSuccess
+      ):
         Exception('Hardening transforms was not successful')
 
       miterBoxToWorldChangeOfFrameTransformNodeItemID = shNode.GetItemByDataNode(miterBoxToWorldChangeOfFrameTransformNode)
@@ -4627,6 +4651,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerSawBoxesModelsFolder = shNode.GetItemByName("biggerSawBoxes Models")
     if biggerSawBoxesModelsFolder:
       shNode.RemoveItem(biggerSawBoxesModelsFolder)
+    previewSawBoxesModelsFolder = shNode.GetItemByName("previewSawBoxes Models")
+    if previewSawBoxesModelsFolder:
+      shNode.RemoveItem(previewSawBoxesModelsFolder)
     sawBoxesPlanesFolder = shNode.GetItemByName("sawBoxes Planes")
     if sawBoxesPlanesFolder:
       shNode.RemoveItem(sawBoxesPlanesFolder)
@@ -4635,6 +4662,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       shNode.RemoveItem(sawBoxesTransformsFolder)
     sawBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"sawBoxes Models")
     biggerSawBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"biggerSawBoxes Models")
+    previewSawBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"previewSawBoxes Models")
     sawBoxesPlanesFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"sawBoxes Planes")
     sawBoxesTransformsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"sawBoxes Transforms")
     intersectionsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Intersections")
@@ -4666,14 +4694,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       bestFittingPlaneNormalOfCurvePoints *= -1
 
 
+    combineModelsLogic = combineModelsRobustLogic
     for i in range(len(resectionPlanesList)):
       #sawBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
       if i == 0:
         sawBoxName = "sawBox_%d" % i
         biggerSawBoxName = "biggerSawBox%d" % i
+        previewSawBoxName = "previewSawBox%d" % i
       else:
         sawBoxName = "sawBox_%d" % (len(mandibularPlanesList)-1)
         biggerSawBoxName = "biggerSawBox%d" % (len(mandibularPlanesList)-1)
+        previewSawBoxName = "previewSawBox%d" % (len(mandibularPlanesList)-1)
       sawBoxWidth = sawBoxSlotWidth+2*clearanceFitPrintingTolerance
       sawBoxLength = sawBoxSlotLength
       sawBoxHeight = 70
@@ -4695,12 +4726,22 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       biggerSawBoxDisplayNode = biggerSawBoxModel.GetDisplayNode()
       biggerSawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
 
+      # previewSawBoxes
+      previewSawBoxModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", previewSawBoxName)
+      combineModelsLogic.process(biggerSawBoxModel, sawBoxModel, previewSawBoxModel, 'difference')
+      previewSawBoxDisplayNode = previewSawBoxModel.GetDisplayNode()
+      previewSawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+
+      previewSawBoxModelItemID = shNode.GetItemByDataNode(previewSawBoxModel)
+      shNode.SetItemParent(previewSawBoxModelItemID, previewSawBoxesModelsFolder)
+
       #Create sawBox plane
       sawBoxPlane = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "sawBox Plane%d" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(sawBoxPlane)
       sawBoxPlaneItemID = shNode.GetItemByDataNode(sawBoxPlane)
       shNode.SetItemParent(sawBoxPlaneItemID, sawBoxesPlanesFolder)
       biggerSawBoxDisplayNode.SetVisibility2D(True)
+      biggerSawBoxDisplayNode.SetVisibility3D(False)
 
       sawBoxPlane.SetAxes([1,0,0],[0,1,0],[0,0,1])
       sawBoxPlane.SetOrigin([0,0,0])
@@ -4792,6 +4833,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       sawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
       biggerSawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
+      previewSawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
       
       transformNodeItemID = shNode.GetItemByDataNode(transformNode)
       shNode.SetItemParent(transformNodeItemID, sawBoxesTransformsFolder)
