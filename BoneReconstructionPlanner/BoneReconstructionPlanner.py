@@ -197,6 +197,17 @@ def setLightsRenderingMode(text):
     lightsLogic.setUseLightKit(True)
     lightsLogic.setUseSSAO(True)
 
+def displayOrientation3DCube(display):
+  threeDViewNodes = slicer.util.getNodesByClass("vtkMRMLViewNode")
+  if len(threeDViewNodes) == 0:
+    return
+  for viewNode in threeDViewNodes:
+    if display:
+      viewNode.SetOrientationMarkerType(slicer.vtkMRMLAbstractViewNode.OrientationMarkerTypeCube)
+    else:
+      viewNode.SetOrientationMarkerType(slicer.vtkMRMLAbstractViewNode.OrientationMarkerTypeNone)
+    viewNode.SetOrientationMarkerSize(slicer.vtkMRMLAbstractViewNode.OrientationMarkerSizeMedium)
+
 slicer.MANDIBLE_VIEW_SINGLETON_TAG = "1"
 slicer.FIBULA_VIEW_SINGLETON_TAG = "2"
 slicer.RED_VIEW_ID = "vtkMRMLSliceNodeRed"
@@ -235,6 +246,7 @@ BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_MM = 3.0
 BIGGER_SAW_BOX_DISTANCE_TO_MANDIBLE_MM = 3.0
 
 defaultParametersDict = {
+  "displayOrientation3DCube": str(False),
   "currentlyProcessing": str(False),
   "scalarVolumeChangedThroughParameterNode": str(False),
   "fibulaSegmentsMeasurementMode": "center2center",
@@ -630,7 +642,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.showMandiblePlanesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.showMandiblePlanesInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
-    self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.onOrientation3DCubeCheckBox)
+    self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.lightsRenderingComboBox.textActivated.connect(self.updateParameterNodeFromGUI)
     self.ui.lightingInterpolationComboBox.textActivated.connect(self.onLightingInterpolationComboBox)
     self.ui.restoreDefaultSettingsButton.connect('clicked(bool)', self.onRestoreDefaultSettingsButton)
@@ -1023,7 +1035,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
-
+    
+    doDisplayOrientation3DCube = self._parameterNode.GetParameter("displayOrientation3DCube") == "True"
+    self.ui.orientation3DCubeCheckBox.checked = doDisplayOrientation3DCube
+    displayOrientation3DCube(doDisplayOrientation3DCube)
+    
     self.ui.lightsRenderingComboBox.currentText = self._parameterNode.GetParameter("lightsRendering")
     setLightsRenderingMode(self._parameterNode.GetParameter("lightsRendering"))
 
@@ -1284,7 +1300,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles", "True")
     else:
       self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles", "False")
-    
+    if self.ui.orientation3DCubeCheckBox.checked:
+      self._parameterNode.SetParameter("displayOrientation3DCube", "True")
+    else:
+      self._parameterNode.SetParameter("displayOrientation3DCube", "False")
+
     self._parameterNode.SetParameter("lightsRendering", self.ui.lightsRenderingComboBox.currentText)
 
     self._parameterNode.EndModify(wasModified)
@@ -1299,19 +1319,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   def onOverwriteDefaultSettingsButton(self):
     self.logic.overwriteDefaultParameters()
 
-  def onOrientation3DCubeCheckBox(self):
-    # TODO make this possible to save on scene as "lightsRendering"
-    threeDViewNodes = slicer.util.getNodesByClass("vtkMRMLViewNode")
-    if len(threeDViewNodes) == 0:
-      return
-    firstViewOrientationMarkerType = threeDViewNodes[0].GetOrientationMarkerType()
-    for viewNode in threeDViewNodes:
-      if firstViewOrientationMarkerType == slicer.vtkMRMLAbstractViewNode.OrientationMarkerTypeNone:
-        viewNode.SetOrientationMarkerType(slicer.vtkMRMLAbstractViewNode.OrientationMarkerTypeCube)
-      else:
-        viewNode.SetOrientationMarkerType(slicer.vtkMRMLAbstractViewNode.OrientationMarkerTypeNone)
-      viewNode.SetOrientationMarkerSize(slicer.vtkMRMLAbstractViewNode.OrientationMarkerSizeMedium)
-  
   def onEmailBugReportButton(self):
     send2 = ".".join("bone reconstruction planner+bug report@gmail com".split(" "))
     self.logic.prepareSendEmailOnWebBrowser(
