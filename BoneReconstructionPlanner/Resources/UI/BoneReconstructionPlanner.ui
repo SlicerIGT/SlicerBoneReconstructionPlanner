@@ -798,7 +798,7 @@ neomandible</string>
                   </widget>
                  </item>
                  <item row="0" column="1">
-                  <widget class="QComboBox" name="lightsRenderingComboBox">
+                  <widget class="QComboBox" name="lightingModeComboBox">
                    <item>
                     <property name="text">
                      <string>Lamp</string>
@@ -829,7 +829,7 @@ neomandible</string>
                   </widget>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QComboBox" name="lightingInterpolationComboBox">
+                  <widget class="QComboBox" name="lightingInterpolationMethodComboBox">
                    <item>
                     <property name="text">
                      <string>Gouraud</string>
