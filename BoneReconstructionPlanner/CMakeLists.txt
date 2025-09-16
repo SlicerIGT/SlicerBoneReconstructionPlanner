@@ -27,6 +27,7 @@ set(MODULE_PYTHON_RESOURCES
   Resources/Icons/axes.svg
   Resources/Icons/construction_48.svg
   Resources/UI/${MODULE_NAME}.ui
+  Resources/defaultParameters.json
   )
 
 #-----------------------------------------------------------------------------
