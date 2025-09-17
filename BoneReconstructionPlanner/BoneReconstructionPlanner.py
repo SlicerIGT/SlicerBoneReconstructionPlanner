@@ -608,7 +608,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToMandibleSurgicalGuideBaseButton)
     self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.connect('clicked(bool)', self.onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton)
     self.ui.updateFibulaDentalImplantCylindersButton.connect('clicked(bool)', self.onUpdateFibulaDentalImplantCylindersButton)
-    #self.ui.centerFibulaLineButton.connect('clicked(bool)', self.onCenterFibulaLineButton)
     self.ui.create3DModelOfTheReconstructionButton.connect('clicked(bool)', self.onCreate3DModelOfTheReconstructionButton)
     self.ui.createDentalImplantCylindersFiducialListButton.connect('clicked(bool)', self.onCreateDentalImplantCylindersFiducialListButton)
     self.ui.createCylindersFromFiducialListAndNeomandiblePiecesButton.connect('clicked(bool)', self.onCreateCylindersFromFiducialListAndNeomandiblePiecesButton)
@@ -644,15 +643,24 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.initializeParameterNode()
 
   def onLoadTestCaseButton(self):
+    """
+    Load BoneReconstructionPlanner test data using SampleData module
+    """
     self._parameterNode.SetParameter("currentlyProcessing", str(True))
     confirm_clean_and_load_test_data()
     self._parameterNode.SetParameter("currentlyProcessing", str(False))
 
   def updateMiterBoxes(self, caller=None, event=None):
+    """
+    Update miterBoxes parameters and start update timer countdown
+    """
     self.updateParameterNodeFromGUI(caller=None, event=None)
     self.logic.miterBoxDirectionLineTimer.start()
   
   def getParentFolderItemID(self):
+    """
+    Return subject hierarchy itemID of BoneReconstructionPlanner folder
+    """
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
     sceneItemID = shNode.GetSceneItemID()
     folderSubjectHierarchyID = shNode.GetItemByName("BoneReconstructionPlanner")
@@ -669,6 +677,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeAboutToBeRemovedEvent(self, caller, event, callData):
+    """
+    Processing to do before a node is removed from the scene
+    """
     if callData.GetClassName() == 'vtkMRMLMarkupsPlaneNode':
       if callData.GetAttribute("isMandibularPlane") == 'True':
         if len(self.logic.mandiblePlaneObserversAndNodeIDList) > 0:
@@ -692,6 +703,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeRemovedEvent(self, caller, event, callData):
+    """
+    Processing to do after a node is removed from the scene
+    """
     if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode' and callData.GetAttribute("isMandibleCurve") == 'True':
       #print(callData.GetName())
       placeWidget = self.ui.mandibleCurvePlaceWidget
@@ -1181,7 +1195,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     
     showOriginalMandibleChecked = self._parameterNode.GetParameter("showOriginalMandible") == "True"
     self.ui.showOriginalMandibleCheckBox.checked = showOriginalMandibleChecked
-    self.setOriginalMandibleVisility(showOriginalMandibleChecked)
+    self.setOriginalMandibleVisibility(showOriginalMandibleChecked)
 
     showBiggerSawBoxesInteractionHandlesChecked = self._parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles") == "True"
     self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.checked = showBiggerSawBoxesInteractionHandlesChecked
@@ -1335,12 +1349,21 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.EndModify(wasModified)
 
   def onRestoreDefaultSettingsButton(self):
+    """
+    Execute function to restore default parameters
+    """
     self.logic.restoreDefaultParameters()
 
   def onOverwriteDefaultSettingsButton(self):
+    """
+    Execute function to overwrite default parameters
+    """
     self.logic.overwriteDefaultParameters()
 
   def onEmailBugReportButton(self):
+    """
+    Execute function to start an email client with an email draft about a bug
+    """
     send2 = ".".join("bone reconstruction planner+bug report@gmail com".split(" "))
     self.logic.prepareSendEmailOnWebBrowser(
       emailVariable = send2,
@@ -1349,6 +1372,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     )
 
   def onEmailFeatureRequestButton(self):
+    """
+    Execute function to start an email client with an email draft requesting a feature
+    """
     send2 = ".".join("bone reconstruction planner+feature request@gmail com".split(" "))
     self.logic.prepareSendEmailOnWebBrowser(
       emailVariable = send2,
@@ -1357,10 +1383,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     )
   
   def onOpenDocumentationButton(self):
+    """
+    Execute function to open the online BoneReconstructionPlanner documentation using a web-browser 
+    """
     self.logic.openDocumentationOnWebBrowser()
   
   def onFixCutGoesThroughTheMandibleTwiceCheckBox(self):
-    # TODO this should use the updateParameterFromGUI function
+    """
+    Function to remember the checkbox was changed, and to update the parameterNode as usual 
+    """
+    # TODO this should use the updateParameterNodeFromGUI function
     if self._parameterNode is None or self._updatingGUIFromParameterNode:
       return
 
@@ -1373,12 +1405,22 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.EndModify(wasModified)
     
   def onAddCutPlaneButton(self):
+    """
+    Function to start creating a mandible plane
+    """
     self.logic.addCutPlane()
 
   def onRemoveCutPlaneButton(self):
+    """
+    Function to delete last mandible plane according to mandible curve index decreasing order
+    """
     self.logic.removeCutPlane()
   
   def processingLabelShow(self, show):
+    """
+    Show processing label on the lower left corner of screen
+    """
+    # TODO: replace this function by using a dialog that is cancellable and that changes the mouse cursor to busy mode
     if not USING_GUI:
       return
     if show:
@@ -1388,48 +1430,76 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     slicer.app.processEvents()
 
   def onMakeModelsButton(self):
+    """
+    Callback function to create bone models from segmentations
+    """
     self.logic.makeModels()
 
-  def onCreateCylindersFromFiducialListAndSurgicalGuideBaseButton(self):
-    self.logic.createCylindersFromFiducialListAndFibulaSurgicalGuideBase()
-
   def onMakeBooleanOperationsToFibulaSurgicalGuideBaseButton(self):
+    """
+    Callback function to create the fibula surgical guide
+    """
     self.logic.makeBooleanOperationsToFibulaSurgicalGuideBase()
   
   def onCreateDentalImplantCylindersFiducialListButton(self):
+    """
+    Callback function to create fiducials for dental implant cylinders
+    """
+    # TODO: remove this function and show the user a markupsSimpleWidget
     self.logic.createDentalImplantCylindersFiducialList()
 
   def onCreateCylindersFromFiducialListAndNeomandiblePiecesButton(self):
+    """
+    Callback function to create implant cylinders
+    """
     self.logic.createCylindersFromFiducialListAndNeomandiblePieces()
 
   def onCreateSawBoxesFromFirstAndLastMandiblePlanesButton(self):
+    """
+    Callback function to create sawBoxes
+    """
     self.logic.createSawBoxesFromFirstAndLastMandiblePlanes()
 
   def onMakeBooleanOperationsToMandibleSurgicalGuideBaseButton(self):
+    """
+    Callback function to create mandible surgical guide
+    """
     self.logic.makeBooleanOperationsToMandibleSurgicalGuideBase()
 
-  def onCreateCylindersFromFiducialListAndMandibleSurgicalGuideBaseButton(self):
-    self.logic.createCylindersFromFiducialListAndMandibleSurgicalGuideBase()
-
   def onGenerateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton(self):
+    """
+    Callback function to execute the main pipeline for virtual surgical planning
+    """
     self.logic.onGenerateFibulaPlanesTimerTimeout()
-
-  def onCenterFibulaLineButton(self):
-    self.logic.centerFibulaLine()
   
   def onHardVSPUpdateButton(self):
+    """
+    Callback function clean earlier, might be faulty, visualization and execute the main pipeline for virtual surgical planning again
+    """
     self.logic.hardVSPUpdate()
 
   def onInterCondylarBeamIncreaseSizeButton(self):
+    """
+    Callback function to increase the intercondylar beam size
+    """
     self.logic.interCondylarBeamSizeChange(positive = True)
   
   def onInterCondylarBeamDecreaseSizeButton(self):
+    """
+    Callback function to decrease the intercondylar beam size
+    """
     self.logic.interCondylarBeamSizeChange(positive = False)
 
   def onLockVSPButton(self,checked):
+    """
+    Callback function to avoid GUI modification of VSP parameters
+    """
     self.logic.lockVSP(checked)
   
   def setBiggerSawBoxesInteractionHandlesVisibility(self, visibility):
+    """
+    Set bigger sawBoxes interactive handles visibility
+    """
     if not USING_GUI:
       return
     
@@ -1442,6 +1512,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.SetHandlesInteractive(visibility)
 
   def setMandiblePlanesVisibility(self, visibility):
+    """
+    Set mandible planes visibility
+    """
     if not USING_GUI:
       return
     
@@ -1454,6 +1527,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.SetVisibility(visibility)
 
   def setMarkupControlPointsVisibility(self, markupsNode, visibility):
+    """
+    Set visibility of all control points in a markupNode. Does not affect rendering of interpolating lines.
+    """
     if not USING_GUI:
       return
     
@@ -1462,6 +1538,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         markupsNode.SetNthControlPointVisibility(i, visibility)
   
   def setInterCondylarBeamVisibility(self, visibility):
+    """
+    Set visibility of intercondylar beam model
+    """
     if not USING_GUI:
       return
     
@@ -1472,6 +1551,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.SetVisibility(visibility)
 
   def setMandiblePlanesInteractionHandlesVisibility(self, visibility):
+    """
+    Set visibility of mandible planes interactive handles
+    """
     if not USING_GUI:
       return
     
@@ -1484,6 +1566,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.SetHandlesInteractive(visibility)
 
   def setMandiblePlanesInCameraPlaneInteractionHandles(self, visibility):
+    """
+    Set visibility of rotation interactive handles of mandible planes to inPlane only if True
+    """
     if not USING_GUI:
       return
     
@@ -1506,6 +1591,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode.SetRotationHandleComponentVisibility(x,y,z,inPlane)
   
   def setFibulaSegmentsLengthsVisibility(self, visibility):
+    """
+    Set fibula segment measurement lines visibility
+    """
     if not USING_GUI:
       return
     
@@ -1518,9 +1606,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       lineDisplayNode.SetVisibility(visibility)
 
   def onCreate3DModelOfTheReconstructionButton(self):
+    """
+    Callback to create a 3D model of the neomandible (with or without an intercondylar beam)
+    """
     self.logic.create3DModelOfTheReconstruction()
 
-  def setOriginalMandibleVisility(self, visibility):
+  def setOriginalMandibleVisibility(self, visibility):
+    """
+    Set original mandible visibility
+    """
     if not USING_GUI:
       return
     
@@ -1543,12 +1637,21 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       mandibleModelDisplayNode.SetVisibility(False)
 
   def onUpdateFibulaDentalImplantCylindersButton(self):
+    """
+    Callback to update fibula drill guides according to dental implants
+    """
     self.logic.onUpdateFibulaDentalImplantsTimerTimeout()
 
   def onCreatePlateCurveButton(self):
+    """
+    Callback to create a plate curve
+    """
     self.logic.createPlateCurve()
 
   def onCreateCustomPlateButton(self):
+    """
+    Callback to create a custom plate
+    """
     self.logic.createCustomPlate()
 
 #
@@ -6109,7 +6212,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     
     if USING_GUI:
       # hide original mandible
-      self.widgetBRP.setOriginalMandibleVisility(False)
+      self.widgetBRP.setOriginalMandibleVisibility(False)
       # hide mandible plane handles
       self.widgetBRP.setMandiblePlanesInteractionHandlesVisibility(False)
     
