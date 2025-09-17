@@ -22,6 +22,7 @@ set(MODULE_PYTHON_RESOURCES
   Resources/Icons/iconFibulaSegmentation.png
   Resources/Icons/iconMandibleSegmentation.png
   Resources/Icons/iconTestPlanBRP.png
+  Resources/Icons/linked_camera_48.svg
   Resources/Icons/lock_48.svg
   Resources/Icons/mail_48.svg
   Resources/Icons/MarkupsDelete.png
