@@ -280,6 +280,8 @@ slicer.RED_VIEW_ID = "vtkMRMLSliceNodeRed"
 slicer.MANDIBLE_VIEW_ID = "vtkMRMLViewNode1"
 slicer.FIBULA_VIEW_ID = "vtkMRMLViewNode2"
 slicer.BRPLayoutId=101
+slicer.PLANE_SIDE_SIZE = 50.
+slicer.PLANE_GLYPH_SCALE = 2.5
 
 USING_GUI = not(slicer.app.commandOptions().noMainWindow)
 
@@ -1713,8 +1715,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.updateFibuladentalImplantsTimer.setInterval(150)
     self.updateFibuladentalImplantsTimer.setSingleShot(True)
     self.updateFibuladentalImplantsTimer.connect('timeout()', self.onUpdateFibulaDentalImplantsTimerTimeout)
-    self.PLANE_SIDE_SIZE = 50.
-    self.PLANE_GLYPH_SCALE = 2.5
 
   def setDefaultParameters(self, parameterNode):
     """
@@ -2174,7 +2174,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode.SetItemParent(planeNodeItemID, mandibularFolderID)
     planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
     planeNode.SetAttribute("isMandibularPlane","True")
-    planeNode.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
+    planeNode.SetSize(slicer.PLANE_SIDE_SIZE,slicer.PLANE_SIDE_SIZE)
     planeNode.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
     aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
@@ -2185,7 +2185,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #display node of the plane
     displayNode = planeNode.GetDisplayNode()
-    displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
+    displayNode.SetGlyphScale(slicer.PLANE_GLYPH_SCALE)
     displayNode.SetSelectedColor(color)
     displayNode.HandlesInteractiveOn()
     displayNode.RotationHandleVisibilityOn()
@@ -2835,7 +2835,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       fibulaPlaneA = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_A" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneA)
-      fibulaPlaneA.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
+      fibulaPlaneA.SetSize(slicer.PLANE_SIDE_SIZE,slicer.PLANE_SIDE_SIZE)
       fibulaPlaneA.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = fibulaPlaneA.GetDisplayNode()
@@ -2855,7 +2855,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       fibulaPlaneB = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "FibulaPlane%d_B" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaPlaneB)
-      fibulaPlaneB.SetSize(self.PLANE_SIDE_SIZE,self.PLANE_SIDE_SIZE)
+      fibulaPlaneB.SetSize(slicer.PLANE_SIDE_SIZE,slicer.PLANE_SIDE_SIZE)
       fibulaPlaneB.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
 
       displayNode = fibulaPlaneB.GetDisplayNode()
@@ -4540,7 +4540,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode = dentalImplantPlane.GetDisplayNode()
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       displayNode.AddViewNodeID(mandibleViewNode.GetID())
-      displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
+      displayNode.SetGlyphScale(slicer.PLANE_GLYPH_SCALE)
       displayNode.SetOpacity(0)
       displayNode.HandlesInteractiveOn()
       displayNode.RotationHandleVisibilityOn()
@@ -4906,7 +4906,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode = sawBoxPlane.GetDisplayNode()
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       displayNode.AddViewNodeID(mandibleViewNode.GetID())
-      displayNode.SetGlyphScale(self.PLANE_GLYPH_SCALE)
+      displayNode.SetGlyphScale(slicer.PLANE_GLYPH_SCALE)
       displayNode.SetOpacity(0)
       displayNode.HandlesInteractiveOn()
       displayNode.RotationHandleVisibilityOn()
