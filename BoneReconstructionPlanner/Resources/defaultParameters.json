@@ -5,6 +5,7 @@
     "dentalImplantsPlanningAndFibulaDrillGuides": false,
     "displayOrientation3DCube": false,
     "fixCutGoesThroughTheMandibleTwice": false,
+    "inCameraPlaneInteractionHandles": false,
     "lockVSP": false,
     "makeAllDentalImplanCylindersParallel": false,
     "makeAllMandiblePlanesRotateTogether": true,
