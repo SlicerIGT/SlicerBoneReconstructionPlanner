@@ -1435,7 +1435,7 @@ distance to fibula (mm)</string>
             </widget>
            </item>
            <item row="1" column="0">
-            <widget class="QLabel" name="label_54">
+            <widget class="QLabel" name="miterBoxesGuideTypeLabel">
              <property name="text">
               <string>Guide type</string>
              </property>
