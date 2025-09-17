@@ -781,6 +781,16 @@ neomandible</string>
                    </property>
                   </widget>
                  </item>
+                 <item>
+                  <widget class="QToolButton" name="inCameraPlaneInteractionHandlesToolButton">
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
                </item>
                <item>

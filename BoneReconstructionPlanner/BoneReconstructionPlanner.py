@@ -445,6 +445,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showMandiblePlanesInteractionHandlesToolButton.setIconSize(qt.QSize(24,24))
     self.ui.showMandiblePlanesInteractionHandlesToolButton.setMinimumSize(24,24)
 
+    inCameraPlaneIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/linked_camera_48.svg')
+    self.ui.inCameraPlaneInteractionHandlesToolButton.setIcon(qt.QIcon(inCameraPlaneIconPath))
+    self.ui.inCameraPlaneInteractionHandlesToolButton.setIconSize(qt.QSize(24,24))
+    self.ui.inCameraPlaneInteractionHandlesToolButton.setMinimumSize(24,24)
+
     booleanOperationsIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/construction_48.svg')
     self.ui.create3DModelOfTheReconstructionButton.setIcon(qt.QIcon(booleanOperationsIconPath))
     self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.setIcon(qt.QIcon(booleanOperationsIconPath))
@@ -628,6 +633,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.showMandiblePlanesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.showMandiblePlanesInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
+    self.ui.inCameraPlaneInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.lightingModeComboBox.textActivated.connect(self.updateParameterNodeFromGUI)
     self.ui.lightingInterpolationMethodComboBox.textActivated.connect(self.updateParameterNodeFromGUI)
@@ -1113,6 +1119,23 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       showMandiblePlanesChecked and
       (not lockVSPChecked)
     )
+    
+    inCameraPlaneInteractionHandlesChecked = self._parameterNode.GetParameter("inCameraPlaneInteractionHandles") == "True"
+    inCameraPlaneInteractionHandles = (
+      showMandiblePlanesChecked and 
+      showMandiblePlanesInteractionHandlesChecked and 
+      inCameraPlaneInteractionHandlesChecked and
+      (not lockVSPChecked)
+    )
+    self.ui.inCameraPlaneInteractionHandlesToolButton.checked = (
+      inCameraPlaneInteractionHandles
+    )
+    self.setMandiblePlanesInCameraPlaneInteractionHandles(inCameraPlaneInteractionHandles)
+    self.ui.inCameraPlaneInteractionHandlesToolButton.enabled = (
+      showMandiblePlanesChecked and
+      showMandiblePlanesInteractionHandlesChecked and 
+      (not lockVSPChecked)
+    )
 
 
     shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
@@ -1260,6 +1283,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles","True")
     else:
       self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles","False")
+    if self.ui.inCameraPlaneInteractionHandlesToolButton.checked:
+      self._parameterNode.SetParameter("inCameraPlaneInteractionHandles","True")
+    else:
+      self._parameterNode.SetParameter("inCameraPlaneInteractionHandles","False")
     if self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked:
       self._parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","True")
     else:
@@ -1456,6 +1483,28 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode = mandibularPlanesList[i].GetDisplayNode()
       displayNode.SetHandlesInteractive(visibility)
 
+  def setMandiblePlanesInCameraPlaneInteractionHandles(self, visibility):
+    if not USING_GUI:
+      return
+    
+    shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+    mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
+    mandibularPlanesList = createListFromFolderID(mandibularPlanesFolder)
+
+    for i in range(len(mandibularPlanesList)):
+      displayNode = mandibularPlanesList[i].GetDisplayNode()
+      if visibility:
+        x = False
+        y = False
+        z = False
+        inPlane = True
+      else:
+        x = True
+        y = True
+        z = True
+        inPlane = False
+      displayNode.SetRotationHandleComponentVisibility(x,y,z,inPlane)
+  
   def setFibulaSegmentsLengthsVisibility(self, visibility):
     if not USING_GUI:
       return
