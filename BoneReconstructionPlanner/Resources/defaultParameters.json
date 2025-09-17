@@ -50,5 +50,7 @@
     "kindOfMandibleResection": "Segmental Mandibulectomy",
     "lightingInterpolationMethod": "Gouraud",
     "lightingMode": "Lamp",
-    "mandibleSideToRemove": "Removing right side"
+    "mandibleSideToRemove": "Removing right side",
+    "miterBoxesGuideType": "Slot",
+    "sawBoxesGuideType": "Slot"
 }
