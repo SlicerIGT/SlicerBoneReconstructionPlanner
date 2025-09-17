@@ -151,7 +151,7 @@ def readDefaultParameters():
   """
   Return default parameters as a dict
   """
-  defaultParametersPath = os.path.join(os.path.dirname(__file__), 'BRPLib/defaultParameters.json')
+  defaultParametersPath = os.path.join(os.path.dirname(__file__), 'Resources/defaultParameters.json')
   # read as json and convert to dictionary
   with open(defaultParametersPath, 'r') as file:
     defaultParametersDict = json.load(file)
@@ -586,6 +586,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaSegmentsMeasurementModeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.kindOfMandibleResectionComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleSideToRemoveComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.miterBoxesGuideTypeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.sawBoxesGuideTypeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
     self.ui.emailBugReportButton.connect('clicked(bool)',self.onEmailBugReportButton)
@@ -1058,6 +1060,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.mandibleSideToRemoveComboBox.removeItem(2)
       self.ui.mandibleSideToRemoveComboBox.currentText = self._parameterNode.GetParameter("mandibleSideToRemove")
 
+    self.ui.miterBoxesGuideTypeComboBox.currentText = self._parameterNode.GetParameter("miterBoxesGuideType")
+    self.ui.sawBoxesGuideTypeComboBox.currentText = self._parameterNode.GetParameter("sawBoxesGuideType")
+    
     dentalImplantsPlanningAndFibulaDrillGuidesChecked = self._parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
     customTitaniumPlateDesingChecked = self._parameterNode.GetParameter("customTitaniumPlateDesing") == "True"
     makeAllDentalImplanCylindersParallelChecked = self._parameterNode.GetParameter("makeAllDentalImplanCylindersParallel") == "True"
@@ -1215,6 +1220,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("plateTipsBevelRadius", str(self.ui.plateTipsBevelRadiusSpinBox.value))
 
     self._parameterNode.SetParameter("fibulaSegmentsMeasurementMode", self.ui.fibulaSegmentsMeasurementModeComboBox.currentText)
+    self._parameterNode.SetParameter("miterBoxesGuideType", self.ui.miterBoxesGuideTypeComboBox.currentText)
+    self._parameterNode.SetParameter("sawBoxesGuideType", self.ui.sawBoxesGuideTypeComboBox.currentText)
     self._parameterNode.SetParameter("kindOfMandibleResection", self.ui.kindOfMandibleResectionComboBox.currentText)
     if self.ui.mandibleSideToRemoveComboBox.currentText != "":
       self._parameterNode.SetParameter("mandibleSideToRemove", self.ui.mandibleSideToRemoveComboBox.currentText)
@@ -4572,6 +4579,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerSawBoxDistanceToMandible = float(parameterNode.GetParameter("biggerSawBoxDistanceToMandible_mm"))
     mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     kindOfMandibleResection = parameterNode.GetParameter("kindOfMandibleResection")
+    sawBoxesGuideType = parameterNode.GetParameter("sawBoxesGuideType")
     
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandibularPlanesFolder = shNode.GetItemByName("Mandibular planes")
@@ -4605,9 +4613,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     sawBoxesTransformsFolder = shNode.GetItemByName("sawBoxes Transforms")
     if sawBoxesTransformsFolder:
       shNode.RemoveItem(sawBoxesTransformsFolder)
-    sawBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"sawBoxes Models")
+    
     biggerSawBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"biggerSawBoxes Models")
-    previewSawBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"previewSawBoxes Models")
+    if sawBoxesGuideType == "Slot":  
+      sawBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"sawBoxes Models")
+      previewSawBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"previewSawBoxes Models")
     sawBoxesPlanesFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"sawBoxes Planes")
     sawBoxesTransformsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"sawBoxes Transforms")
     intersectionsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Intersections")
@@ -4653,16 +4663,25 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       sawBoxWidth = sawBoxSlotWidth+2*clearanceFitPrintingTolerance
       sawBoxLength = sawBoxSlotLength
       sawBoxHeight = 70
-      sawBoxModel = createBox(sawBoxLength,sawBoxHeight,sawBoxWidth,sawBoxName)
-      sawBoxModelItemID = shNode.GetItemByDataNode(sawBoxModel)
-      shNode.SetItemParent(sawBoxModelItemID, sawBoxesModelsFolder)
+      if sawBoxesGuideType == "Slot":
+        sawBoxModel = createBox(sawBoxLength,sawBoxHeight,sawBoxWidth,sawBoxName)
+        sawBoxModelItemID = shNode.GetItemByDataNode(sawBoxModel)
+        shNode.SetItemParent(sawBoxModelItemID, sawBoxesModelsFolder)
 
-      sawBoxDisplayNode = sawBoxModel.GetDisplayNode()
-      sawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
-      sawBoxDisplayNode.SetVisibility(False)
+        sawBoxDisplayNode = sawBoxModel.GetDisplayNode()
+        sawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+        sawBoxDisplayNode.SetVisibility(False)
+      
+      elif sawBoxesGuideType == "Border":
+        pass # not need to create the sawBox
 
-      biggerSawBoxWidth = sawBoxSlotWidth+2*clearanceFitPrintingTolerance+2*sawBoxSlotWall
-      biggerSawBoxLength = sawBoxSlotLength+2*sawBoxSlotWall
+
+      if sawBoxesGuideType == "Slot":
+        biggerSawBoxWidth = sawBoxSlotWidth+2*clearanceFitPrintingTolerance+2*sawBoxSlotWall
+        biggerSawBoxLength = sawBoxSlotLength+2*sawBoxSlotWall
+      elif sawBoxesGuideType == "Border":
+        biggerSawBoxWidth = sawBoxSlotWidth+clearanceFitPrintingTolerance
+        biggerSawBoxLength = sawBoxSlotLength
       biggerSawBoxHeight = sawBoxSlotHeight
       biggerSawBoxModel = createBox(biggerSawBoxLength,biggerSawBoxHeight,biggerSawBoxWidth,biggerSawBoxName)
       biggerSawBoxModelItemID = shNode.GetItemByDataNode(biggerSawBoxModel)
@@ -4671,14 +4690,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       biggerSawBoxDisplayNode = biggerSawBoxModel.GetDisplayNode()
       biggerSawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
 
-      # previewSawBoxes
-      previewSawBoxModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", previewSawBoxName)
-      combineModelsLogic.process(biggerSawBoxModel, sawBoxModel, previewSawBoxModel, 'difference')
-      previewSawBoxDisplayNode = previewSawBoxModel.GetDisplayNode()
-      previewSawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+      if sawBoxesGuideType == "Slot":
+        # previewSawBoxes
+        previewSawBoxModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", previewSawBoxName)
+        combineModelsLogic.process(biggerSawBoxModel, sawBoxModel, previewSawBoxModel, 'difference')
+        previewSawBoxDisplayNode = previewSawBoxModel.GetDisplayNode()
+        previewSawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
 
-      previewSawBoxModelItemID = shNode.GetItemByDataNode(previewSawBoxModel)
-      shNode.SetItemParent(previewSawBoxModelItemID, previewSawBoxesModelsFolder)
+        previewSawBoxModelItemID = shNode.GetItemByDataNode(previewSawBoxModel)
+        shNode.SetItemParent(previewSawBoxModelItemID, previewSawBoxesModelsFolder)
 
       #Create sawBox plane
       sawBoxPlane = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "sawBox Plane%d" % i)
@@ -4686,7 +4706,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       sawBoxPlaneItemID = shNode.GetItemByDataNode(sawBoxPlane)
       shNode.SetItemParent(sawBoxPlaneItemID, sawBoxesPlanesFolder)
       biggerSawBoxDisplayNode.SetVisibility2D(True)
-      biggerSawBoxDisplayNode.SetVisibility3D(False)
+      if sawBoxesGuideType == "Slot":
+        biggerSawBoxDisplayNode.SetVisibility3D(False)
+      elif sawBoxesGuideType == "Border":
+        biggerSawBoxDisplayNode.SetVisibility3D(True)
 
       sawBoxPlane.SetAxes([1,0,0],[0,1,0],[0,0,1])
       sawBoxPlane.SetOrigin([0,0,0])
@@ -4770,15 +4793,29 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       transformNode.SetName("sawBoxTransform%d" % i)
       slicer.mrmlScene.AddNode(transformNode)
 
+      if sawBoxesGuideType == "Border":
+        auxTransform = vtk.vtkTransform()
+        auxTransform.PostMultiply()
+        if i == 0:
+          auxTransform.Translate(0,0,-sawBoxSlotWidth)
+        else:
+          auxTransform.Translate(0,0,sawBoxSlotWidth)
+        transformNode.SetMatrixTransformToParent(auxTransform.GetMatrix())
+        biggerSawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
+        biggerSawBoxTransformationSuccess = biggerSawBoxModel.HardenTransform()
+        if not (biggerSawBoxTransformationSuccess):
+          Exception('Hardening transforms was not successful')
+
       sawBoxPlaneToWorldMatrix = vtk.vtkMatrix4x4()
       sawBoxPlane.GetObjectToWorldMatrix(sawBoxPlaneToWorldMatrix)
       transformNode.SetMatrixTransformToParent(sawBoxPlaneToWorldMatrix)
 
       transformNode.UpdateScene(slicer.mrmlScene)
 
-      sawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
       biggerSawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
-      previewSawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
+      if sawBoxesGuideType == "Slot":
+        sawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
+        previewSawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
       
       transformNodeItemID = shNode.GetItemByDataNode(transformNode)
       shNode.SetItemParent(transformNodeItemID, sawBoxesTransformsFolder)

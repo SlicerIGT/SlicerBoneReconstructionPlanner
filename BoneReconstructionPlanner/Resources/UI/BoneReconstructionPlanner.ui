@@ -1300,14 +1300,14 @@ on miter box creation</string>
            <property name="topMargin">
             <number>0</number>
            </property>
-           <item row="1" column="0">
+           <item row="2" column="0">
             <widget class="QLabel" name="label_16">
              <property name="text">
               <string>Slot width (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
+           <item row="2" column="1">
             <widget class="ctkDoubleSpinBox" name="miterBoxSlotWidthSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -1323,14 +1323,14 @@ on miter box creation</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
+           <item row="3" column="0">
             <widget class="QLabel" name="label_17">
              <property name="text">
               <string>Slot length (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
+           <item row="3" column="1">
             <widget class="ctkDoubleSpinBox" name="miterBoxSlotLengthSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -1343,14 +1343,14 @@ on miter box creation</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="4" column="0">
             <widget class="QLabel" name="label_20">
              <property name="text">
               <string>Slot height (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="1">
+           <item row="4" column="1">
             <widget class="ctkDoubleSpinBox" name="miterBoxSlotHeightSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -1363,14 +1363,14 @@ on miter box creation</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="0">
+           <item row="5" column="0">
             <widget class="QLabel" name="label_19">
              <property name="text">
               <string>Slot wall (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
+           <item row="5" column="1">
             <widget class="ctkDoubleSpinBox" name="miterBoxSlotWallSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -1386,7 +1386,7 @@ on miter box creation</string>
              </property>
             </widget>
            </item>
-           <item row="5" column="0">
+           <item row="6" column="0">
             <widget class="QLabel" name="label_21">
              <property name="text">
               <string>Bigger miter box
@@ -1394,7 +1394,7 @@ distance to fibula (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="5" column="1">
+           <item row="6" column="1">
             <widget class="ctkDoubleSpinBox" name="biggerMiterBoxDistanceToFibulaSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -1410,15 +1410,36 @@ distance to fibula (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="7" column="0">
+           <item row="8" column="0">
             <widget class="QLabel" name="label_22">
              <property name="text">
               <string>Miter box direction line</string>
              </property>
             </widget>
            </item>
-           <item row="7" column="1">
+           <item row="8" column="1">
             <widget class="qSlicerMarkupsPlaceWidget" name="miterBoxDirectionLinePlaceWidget"/>
+           </item>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="miterBoxesGuideTypeComboBox">
+             <item>
+              <property name="text">
+               <string>Slot</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Border</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_54">
+             <property name="text">
+              <string>Guide type</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
@@ -1603,14 +1624,14 @@ interaction handles</string>
            <property name="topMargin">
             <number>0</number>
            </property>
-           <item row="1" column="0">
+           <item row="2" column="0">
             <widget class="QLabel" name="label_28">
              <property name="text">
               <string>Slot width (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
+           <item row="2" column="1">
             <widget class="ctkDoubleSpinBox" name="sawBoxSlotWidthSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -1626,14 +1647,14 @@ interaction handles</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
+           <item row="3" column="0">
             <widget class="QLabel" name="label_27">
              <property name="text">
               <string>Slot length (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
+           <item row="3" column="1">
             <widget class="ctkDoubleSpinBox" name="sawBoxSlotLengthSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -1646,14 +1667,14 @@ interaction handles</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="4" column="0">
             <widget class="QLabel" name="label_26">
              <property name="text">
               <string>Slot height (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="1">
+           <item row="4" column="1">
             <widget class="ctkDoubleSpinBox" name="sawBoxSlotHeightSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -1666,14 +1687,14 @@ interaction handles</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="0">
+           <item row="5" column="0">
             <widget class="QLabel" name="label_25">
              <property name="text">
               <string>Slot wall (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
+           <item row="5" column="1">
             <widget class="ctkDoubleSpinBox" name="sawBoxSlotWallSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -1689,7 +1710,7 @@ interaction handles</string>
              </property>
             </widget>
            </item>
-           <item row="5" column="0">
+           <item row="6" column="0">
             <widget class="QLabel" name="label_24">
              <property name="text">
               <string>Bigger saw box
@@ -1697,7 +1718,7 @@ distance to mandible (mm)</string>
              </property>
             </widget>
            </item>
-           <item row="5" column="1">
+           <item row="6" column="1">
             <widget class="ctkDoubleSpinBox" name="biggerSawBoxDistanceToMandibleSpinBox">
              <property name="decimals">
               <number>1</number>
@@ -1711,6 +1732,27 @@ distance to mandible (mm)</string>
              <property name="value">
               <double>3.000000000000000</double>
              </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_53">
+             <property name="text">
+              <string>Guide type</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="sawBoxesGuideTypeComboBox">
+             <item>
+              <property name="text">
+               <string>Slot</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Border</string>
+              </property>
+             </item>
             </widget>
            </item>
           </layout>
