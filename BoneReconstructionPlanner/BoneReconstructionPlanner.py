@@ -586,7 +586,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaSegmentsMeasurementModeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.kindOfMandibleResectionComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleSideToRemoveComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
-    self.ui.miterBoxesGuideTypeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.miterBoxesGuideTypeComboBox.currentTextChanged.connect(self.updateMiterBoxes)
     self.ui.sawBoxesGuideTypeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
@@ -1060,6 +1060,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.mandibleSideToRemoveComboBox.removeItem(2)
       self.ui.mandibleSideToRemoveComboBox.currentText = self._parameterNode.GetParameter("mandibleSideToRemove")
 
+    # TODO: finish implementation, probably needs turning around the fibula centerline support of miterBoxes
+    self.ui.miterBoxesGuideTypeLabel.hide()
+    self.ui.miterBoxesGuideTypeComboBox.hide()
+    #
     self.ui.miterBoxesGuideTypeComboBox.currentText = self._parameterNode.GetParameter("miterBoxesGuideType")
     self.ui.sawBoxesGuideTypeComboBox.currentText = self._parameterNode.GetParameter("sawBoxesGuideType")
     
@@ -3801,6 +3805,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     rightSideLegIsDonor = parameterNode.GetParameter("donorLeg") == "Right"
     checkSecurityMarginOnMiterBoxCreationChecked = parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") == "True"
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
+    miterBoxesGuideType = parameterNode.GetParameter("miterBoxesGuideType")
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
 
     scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
@@ -3900,9 +3905,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         return
 
 
-    miterBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"miterBoxes Models")
     biggerMiterBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"biggerMiterBoxes Models")
-    previewMiterBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"previewMiterBoxes Models")
+    if miterBoxesGuideType == "Slot":
+      miterBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"miterBoxes Models")
+      previewMiterBoxesModelsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"previewMiterBoxes Models")
     miterBoxesTransformsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"miterBoxes Transforms")
     intersectionsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Intersections")
     pointsIntersectionsFolder = shNode.CreateFolderItem(self.getMandibleReconstructionFolderItemID(),"Points Intersections")
@@ -3935,23 +3941,34 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance
       miterBoxLength = miterBoxSlotLength
       miterBoxHeight = 70
-      miterBoxModel = createBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
+      if miterBoxesGuideType == "Slot":
+        miterBoxModel = createBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
 
-      miterBoxDisplayNode = miterBoxModel.GetDisplayNode()
-      miterBoxDisplayNode.SetVisibility(False)
-      miterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+        miterBoxDisplayNode = miterBoxModel.GetDisplayNode()
+        miterBoxDisplayNode.SetVisibility(False)
+        miterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
-      miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
-      shNode.SetItemParent(miterBoxModelItemID, miterBoxesModelsFolder)
+        miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
+        shNode.SetItemParent(miterBoxModelItemID, miterBoxesModelsFolder)
 
-      biggerMiterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance+2*miterBoxSlotWall
-      biggerMiterBoxLength = miterBoxSlotLength+2*miterBoxSlotWall
+      elif miterBoxesGuideType == "Border":
+        pass # not need to create the sawBox
+
+      if miterBoxesGuideType == "Slot":
+        biggerMiterBoxWidth = miterBoxSlotWidth+2*clearanceFitPrintingTolerance+2*miterBoxSlotWall
+        biggerMiterBoxLength = miterBoxSlotLength+2*miterBoxSlotWall
+      elif miterBoxesGuideType == "Border":
+        biggerMiterBoxWidth = miterBoxSlotWidth+clearanceFitPrintingTolerance
+        biggerMiterBoxLength = miterBoxSlotLength
       biggerMiterBoxHeight = miterBoxSlotHeight
       biggerMiterBoxModel = createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
       biggerMiterBoxDisplayNode = biggerMiterBoxModel.GetDisplayNode()
 
       biggerMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
-      biggerMiterBoxDisplayNode.SetVisibility3D(False)
+      if miterBoxesGuideType == "Slot":
+        biggerMiterBoxDisplayNode.SetVisibility3D(False)
+      elif miterBoxesGuideType == "Border":
+        biggerMiterBoxDisplayNode.SetVisibility3D(True)
       biggerMiterBoxDisplayNode.SetVisibility2D(True)
       if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
         redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
@@ -3960,14 +3977,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       biggerMiterBoxModelItemID = shNode.GetItemByDataNode(biggerMiterBoxModel)
       shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
 
-      # previewMiterBoxes
-      previewMiterBoxModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", previewMiterBoxName)
-      combineModelsLogic.process(biggerMiterBoxModel, miterBoxModel, previewMiterBoxModel, 'difference')
-      previewMiterBoxDisplayNode = previewMiterBoxModel.GetDisplayNode()
-      previewMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+      if miterBoxesGuideType == "Slot":
+        # previewMiterBoxes
+        previewMiterBoxModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", previewMiterBoxName)
+        combineModelsLogic.process(biggerMiterBoxModel, miterBoxModel, previewMiterBoxModel, 'difference')
+        previewMiterBoxDisplayNode = previewMiterBoxModel.GetDisplayNode()
+        previewMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
-      previewMiterBoxModelItemID = shNode.GetItemByDataNode(previewMiterBoxModel)
-      shNode.SetItemParent(previewMiterBoxModelItemID, previewMiterBoxesModelsFolder)
+        previewMiterBoxModelItemID = shNode.GetItemByDataNode(previewMiterBoxModel)
+        shNode.SetItemParent(previewMiterBoxModelItemID, previewMiterBoxesModelsFolder)
 
       fibulaPlaneMatrix = vtk.vtkMatrix4x4()
       fibulaPlanesList[i].GetObjectToWorldMatrix(fibulaPlaneMatrix)
@@ -4027,6 +4045,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxToWorldChangeOfFrameTransformNode.SetName("temp%d" % i)
       slicer.mrmlScene.AddNode(miterBoxToWorldChangeOfFrameTransformNode)
 
+      if miterBoxesGuideType == "Border":
+        auxTransform = vtk.vtkTransform()
+        auxTransform.PostMultiply()
+        if i%2 == 0:
+          auxTransform.Translate(0,0,miterBoxSlotWidth)
+        else:
+          auxTransform.Translate(0,0,-miterBoxSlotWidth)
+        miterBoxToWorldChangeOfFrameTransformNode.SetMatrixTransformToParent(auxTransform.GetMatrix())
+        biggerMiterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
+        biggerSawBoxTransformationSuccess = biggerMiterBoxModel.HardenTransform()
+        if not (biggerSawBoxTransformationSuccess):
+          Exception('Hardening transforms was not successful')
+
       if i%2 == 0:
         miterBoxAxisXTranslation = 0
         miterBoxAxisYTranslation = biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula/cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY
@@ -4042,19 +4073,23 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxToWorldChangeOfFrameTransformNode.SetMatrixTransformToParent(miterBoxToWorldChangeOfFrameMatrix)
       miterBoxToWorldChangeOfFrameTransformNode.UpdateScene(slicer.mrmlScene)
 
-      miterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
-      miterBoxTransformationSuccess = miterBoxModel.HardenTransform()
       biggerMiterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
       biggerMiterBoxTransformationSuccess = biggerMiterBoxModel.HardenTransform()
-      previewMiterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
-      previewMiterBoxTransformationSuccess = previewMiterBoxModel.HardenTransform()
-
       if not (
-        miterBoxTransformationSuccess and 
-        biggerMiterBoxTransformationSuccess and
-        previewMiterBoxTransformationSuccess
+        biggerMiterBoxTransformationSuccess
       ):
         Exception('Hardening transforms was not successful')
+      
+      if miterBoxesGuideType == "Slot":
+        miterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
+        miterBoxTransformationSuccess = miterBoxModel.HardenTransform()
+        previewMiterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
+        previewMiterBoxTransformationSuccess = previewMiterBoxModel.HardenTransform()
+        if not (
+          miterBoxTransformationSuccess and 
+          previewMiterBoxTransformationSuccess
+        ):
+          Exception('Hardening transforms was not successful')
 
       miterBoxToWorldChangeOfFrameTransformNodeItemID = shNode.GetItemByDataNode(miterBoxToWorldChangeOfFrameTransformNode)
       shNode.SetItemParent(miterBoxToWorldChangeOfFrameTransformNodeItemID, miterBoxesTransformsFolder)
