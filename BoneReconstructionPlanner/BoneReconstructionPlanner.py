@@ -1730,6 +1730,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         wp(parameterNode, parameterName, valueFromSettings)
 
   def restoreDefaultParameters(self):
+    """
+    Restore parameterNode and settings to default parameters from the defaultParameters.json
+    """
     defaultParametersDict = readDefaultParameters()
     parameterNode = self.getParameterNode()
     for parameterName, parameterValue in defaultParametersDict.items():
@@ -1737,6 +1740,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       wp(parameterNode, parameterName, parameterValue)
 
   def overwriteDefaultParameters(self):
+    """
+    Overwrite default settings to current values on the parameterNode
+    """
     defaultParametersDict = readDefaultParameters()
     parameterNode = self.getParameterNode()
     for parameterName in defaultParametersDict.keys():
