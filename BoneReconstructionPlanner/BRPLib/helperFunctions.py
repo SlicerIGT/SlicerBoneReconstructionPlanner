@@ -644,3 +644,72 @@ def rp(parameterNode, parameter):
 # write parameter to the parameterNode
 def wp(parameterNode, parameter, parameterValue):
   parameterNode.SetParameter(parameter, str(parameterValue))
+
+def createListFromFolderID(folderID):
+  shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+  createdList = []
+
+  if folderID != shNode.GetInvalidItemID():
+    myList = vtk.vtkIdList()
+    shNode.GetItemChildren(folderID,myList)
+    for i in range(myList.GetNumberOfIds()):
+      createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
+  
+  return createdList
+
+def createListFromFolderName(folderName):
+  shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+  createdList = []
+
+  folderID = shNode.GetItemByName(folderName)
+  if folderID != shNode.GetInvalidItemID():
+    myList = vtk.vtkIdList()
+    shNode.GetItemChildren(folderID,myList)
+    for i in range(myList.GetNumberOfIds()):
+      createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
+  
+  return createdList
+
+def setFolderItemVisibility(folderItemID, visibility):
+  pluginHandler = slicer.qSlicerSubjectHierarchyPluginHandler().instance()
+  folderPlugin = pluginHandler.pluginByName("Folder")
+  folderPlugin.setDisplayVisibility(folderItemID, visibility)
+
+# get all childrenIDs inside a folder
+
+# get folderID from a folderName and create it if it doesn't exist
+# but it needs to know the parentFolderId too
+
+# my main use is to delete previous folders and replace them by new ones to populate
+# and to create lists from the nodes for further processing
+
+def getFolder(folderName, parentFolderName="", reset=False):
+  # TODO: use this function where needed on the code
+  shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+  folderID = shNode.GetItemByName(folderName)
+  if reset and folderID:
+    shNode.RemoveItem(folderID)
+    folderID = 0
+  if not folderID:
+    parentFolderID = shNode.GetItemByName(parentFolderName)
+    if not parentFolderID:
+      parentFolderID = shNode.GetSceneItemID()
+    folderID = shNode.CreateFolderItem(parentFolderID,folderName)
+  return folderID
+  
+  # if folder already exists, delete it
+  # create a new folder
+  # return the folderID
+
+
+# one use is to put some nodes inside a particular folder
+def moveNodeToFolder(dataNode, folderID):
+  shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+  dataNodeItemID = shNode.GetItemByDataNode(dataNode)
+  shNode.SetItemParent(dataNodeItemID, folderID)
+
+def removeFolder(folderID):
+  # TODO: use this function where needed on the code
+  shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+  if folderID:
+      shNode.RemoveItem(folderID)

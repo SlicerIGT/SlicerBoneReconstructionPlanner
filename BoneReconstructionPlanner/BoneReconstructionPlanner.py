@@ -1830,9 +1830,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(mandibularCurve)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibularCurve)
       mandibularCurve.SetAttribute("isMandibleCurve","True")
-      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      mandibularCurveItemID = shNode.GetItemByDataNode(mandibularCurve)
-      shNode.SetItemParent(mandibularCurveItemID, self.getParentFolderItemID())
+      moveNodeToFolder(mandibularCurve, self.getParentFolderItemID())
       mandibularCurve.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularCurve"))
       parameterNode.SetNodeReferenceID("mandibleCurve",mandibularCurve.GetID())
 
@@ -1856,9 +1854,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(fibulaLine)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaLine)
       fibulaLine.SetAttribute("isFibulaLine","True")
-      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      fibulaLineItemID = shNode.GetItemByDataNode(fibulaLine)
-      shNode.SetItemParent(fibulaLineItemID, self.getParentFolderItemID())
+      moveNodeToFolder(fibulaLine, self.getParentFolderItemID())
       fibulaLine.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaLine"))
       parameterNode.SetNodeReferenceID("fibulaLine",fibulaLine.GetID())
 
@@ -1892,9 +1888,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(interCondylarBeamLine)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(interCondylarBeamLine)
       interCondylarBeamLine.SetAttribute("isInterCondylarBeamLine","True")
-      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      interCondylarBeamLineItemID = shNode.GetItemByDataNode(interCondylarBeamLine)
-      shNode.SetItemParent(interCondylarBeamLineItemID, self.getParentFolderItemID())
+      moveNodeToFolder(interCondylarBeamLine, self.getParentFolderItemID())
       interCondylarBeamLine.SetName(slicer.mrmlScene.GetUniqueNameByString("interCondylarBeamLine"))
       parameterNode.SetNodeReferenceID("interCondylarBeamLine",interCondylarBeamLine.GetID())
 
@@ -1931,9 +1925,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(miterBoxDirectionLine)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(miterBoxDirectionLine)
       miterBoxDirectionLine.SetAttribute("isMiterBoxDirectionLine","True")
-      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      miterBoxDirectionLineItemID = shNode.GetItemByDataNode(miterBoxDirectionLine)
-      shNode.SetItemParent(miterBoxDirectionLineItemID, self.getParentFolderItemID())
+      moveNodeToFolder(miterBoxDirectionLine, self.getParentFolderItemID())
       miterBoxDirectionLine.SetName(slicer.mrmlScene.GetUniqueNameByString("miterBoxDirectionLine"))
       parameterNode.SetNodeReferenceID("miterBoxDirectionLine",miterBoxDirectionLine.GetID())
 
@@ -1966,9 +1958,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(fibulaFiducialList)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaFiducialList)
       fibulaFiducialList.SetAttribute("isFibulaFiducials","True")
-      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      fibulaFiducialListItemID = shNode.GetItemByDataNode(fibulaFiducialList)
-      shNode.SetItemParent(fibulaFiducialListItemID, self.getParentFolderItemID())
+      moveNodeToFolder(fibulaFiducialList, self.getParentFolderItemID())
       fibulaFiducialList.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaFiducialList"))
       parameterNode.SetNodeReferenceID("fibulaFiducialList",fibulaFiducialList.GetID())
 
@@ -2001,9 +1991,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(mandibleFiducialList)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibleFiducialList)
       mandibleFiducialList.SetAttribute("isMandibleFiducials","True")
-      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      mandibleFiducialListItemID = shNode.GetItemByDataNode(mandibleFiducialList)
-      shNode.SetItemParent(mandibleFiducialListItemID, self.getParentFolderItemID())
+      moveNodeToFolder(mandibleFiducialList, self.getParentFolderItemID())
       mandibleFiducialList.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleFiducialList"))
       parameterNode.SetNodeReferenceID("mandibleFiducialList",mandibleFiducialList.GetID())
 
@@ -2036,9 +2024,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.AddNode(mandibleBridgeCurve)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibleBridgeCurve)
       mandibleBridgeCurve.SetAttribute("isMandibleBridgeCurve","True")
-      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      mandibleBridgeCurveItemID = shNode.GetItemByDataNode(mandibleBridgeCurve)
-      shNode.SetItemParent(mandibleBridgeCurveItemID, self.getParentFolderItemID())
+      moveNodeToFolder(mandibleBridgeCurve, self.getParentFolderItemID())
       mandibleBridgeCurve.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleBridgeCurve"))
       parameterNode.SetNodeReferenceID("mandibleBridgeCurve",mandibleBridgeCurve.GetID())
 
@@ -2097,9 +2083,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandibleBridgeTube.SetName("temp")
       slicer.mrmlScene.AddNode(mandibleBridgeTube)
       mandibleBridgeTube.CreateDefaultDisplayNodes()
-      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      mandibleBridgeTubeItemID = shNode.GetItemByDataNode(mandibleBridgeTube)
-      shNode.SetItemParent(mandibleBridgeTubeItemID, self.getMandibleReconstructionFolderItemID())
+      moveNodeToFolder(mandibleBridgeTube, self.getMandibleReconstructionFolderItemID())
       mandibleBridgeTube.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibleBridgeTube"))
       parameterNode.SetNodeReferenceID("mandibleBridgeTube",mandibleBridgeTube.GetID())
 
@@ -2174,10 +2158,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeNode.SetName("temp")
     slicer.mrmlScene.AddNode(planeNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeNode)
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     mandibularFolderID = self.getMandiblePlanesFolderItemID()
-    planeNodeItemID = shNode.GetItemByDataNode(planeNode)
-    shNode.SetItemParent(planeNodeItemID, mandibularFolderID)
+    moveNodeToFolder(planeNode, mandibularFolderID)
     planeNode.SetName(slicer.mrmlScene.GetUniqueNameByString("mandibularPlane"))
     planeNode.SetAttribute("isMandibularPlane","True")
     planeNode.SetSize(slicer.PLANE_SIDE_SIZE,slicer.PLANE_SIDE_SIZE)
@@ -2248,9 +2230,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       interCondylarBeamBox.SetName("temp")
       slicer.mrmlScene.AddNode(interCondylarBeamBox)
       interCondylarBeamBox.CreateDefaultDisplayNodes()
-      shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-      interCondylarBeamBoxItemID = shNode.GetItemByDataNode(interCondylarBeamBox)
-      shNode.SetItemParent(interCondylarBeamBoxItemID, self.getMandibleReconstructionFolderItemID())
+      moveNodeToFolder(interCondylarBeamBox, self.getMandibleReconstructionFolderItemID())
       interCondylarBeamBox.SetName(slicer.mrmlScene.GetUniqueNameByString("interCondylarBeamBox"))
       parameterNode.SetNodeReferenceID("interCondylarBeamBox",interCondylarBeamBox.GetID())
 
@@ -2439,8 +2419,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         if not (mandibularPlaneTransformationSuccess):
           Exception('Hardening transforms was not successful')
         
-        transformNodeItemID = shNode.GetItemByDataNode(transformNode)
-        shNode.SetItemParent(transformNodeItemID, mandiblePlanesTransformsFolder)
+        moveNodeToFolder(transformNode, mandiblePlanesTransformsFolder)
       
     if mandiblePlanesTransformsFolder:
       shNode.RemoveItem(mandiblePlanesTransformsFolder)
@@ -2572,8 +2551,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaToRASRotationTransformNode.SetMatrixTransformToParent(fibulaToRASRotationTransform.GetMatrix())
     fibulaToRASRotationTransformNode.UpdateScene(slicer.mrmlScene)
 
-    fibulaToRASRotationTransformNodeItemID = shNode.GetItemByDataNode(fibulaToRASRotationTransformNode)
-    shNode.SetItemParent(fibulaToRASRotationTransformNodeItemID, intersectionsFolder)
+    moveNodeToFolder(fibulaToRASRotationTransformNode, intersectionsFolder)
 
     intersectionsList = []
     j=0
@@ -2641,8 +2619,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         intersectionsList.append(intersectionModelB)
         intersectionsList[j].SetAndObserveTransformNodeID(fibulaToRASRotationTransformNode.GetID())
         intersectionsList[j].HardenTransform()
-        intersectionModelBItemID = shNode.GetItemByDataNode(intersectionModelB)
-        shNode.SetItemParent(intersectionModelBItemID, intersectionsFolder)
+        moveNodeToFolder(intersectionModelB, intersectionsFolder)
         j += 1
 
       else:
@@ -2659,8 +2636,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, beforeMandibleToBeforeFibulaRegistrationTransformMatrix, mandiblePlane0, intersectionModelA)
         intersectionsList.append(intersectionModelA)
-        intersectionModelAItemID = shNode.GetItemByDataNode(intersectionModelA)
-        shNode.SetItemParent(intersectionModelAItemID, intersectionsFolder)
+        moveNodeToFolder(intersectionModelA, intersectionsFolder)
         intersectionsList[j].SetAndObserveTransformNodeID(fibulaToRASRotationTransformNode.GetID())
         intersectionsList[j].HardenTransform()
         j += 1
@@ -2686,8 +2662,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           intersectionModelB.CreateDefaultDisplayNodes()
           getIntersectionBetweenModelAnd1TransformedPlane(fibulaModelNode, afterMandibleToAfterFibulaRegistrationTransformMatrix, mandiblePlane1, intersectionModelB)
           intersectionsList.append(intersectionModelB)
-          intersectionModelBItemID = shNode.GetItemByDataNode(intersectionModelB)
-          shNode.SetItemParent(intersectionModelBItemID, intersectionsFolder)
+          moveNodeToFolder(intersectionModelB, intersectionsFolder)
           intersectionsList[j].SetAndObserveTransformNodeID(fibulaToRASRotationTransformNode.GetID())
           intersectionsList[j].HardenTransform()
           j += 1
@@ -2711,10 +2686,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           intersectionA.CreateDefaultDisplayNodes()
           intersectionB.CreateDefaultDisplayNodes()
           
-          intersectionAModelItemID = shNode.GetItemByDataNode(intersectionA)
-          shNode.SetItemParent(intersectionAModelItemID, intersectionsForCentroidCalculationFolder)
-          intersectionBModelItemID = shNode.GetItemByDataNode(intersectionB)
-          shNode.SetItemParent(intersectionBModelItemID, intersectionsForCentroidCalculationFolder)
+          moveNodeToFolder(intersectionA, intersectionsForCentroidCalculationFolder)
+          moveNodeToFolder(intersectionB, intersectionsForCentroidCalculationFolder)
           
           getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,intersectionA)
           getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,intersectionB)
@@ -2755,8 +2728,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaPlaneA.HardenTransform()
       fibulaPlaneB.HardenTransform()
 
-      mandibleToFibulaRegistrationTransformNodeItemID = shNode.GetItemByDataNode(mandibleToFibulaRegistrationTransformNode)
-      shNode.SetItemParent(mandibleToFibulaRegistrationTransformNodeItemID, mandible2FibulaTransformsFolder)
+      moveNodeToFolder(mandibleToFibulaRegistrationTransformNode, mandible2FibulaTransformsFolder)
       
     if intersectionsFolder:
       shNode.RemoveItem(intersectionsFolder)
@@ -2789,10 +2761,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       intersectionA.CreateDefaultDisplayNodes()
       intersectionB.CreateDefaultDisplayNodes()
       
-      intersectionAModelItemID = shNode.GetItemByDataNode(intersectionA)
-      shNode.SetItemParent(intersectionAModelItemID, intersectionsFolder)
-      intersectionBModelItemID = shNode.GetItemByDataNode(intersectionB)
-      shNode.SetItemParent(intersectionBModelItemID, intersectionsFolder)
+      moveNodeToFolder(intersectionA, intersectionsFolder)
+      moveNodeToFolder(intersectionB, intersectionsFolder)
 
       getIntersectionBetweenModelAnd1Plane(fibulaModelNode,fibulaPlanesList[2*i],intersectionA)
       getIntersectionBetweenModelAnd1Plane(fibulaModelNode,fibulaPlanesList[2*i+1],intersectionB)
@@ -2805,8 +2775,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       lineNode.SetName("S%d" %i)
       slicer.mrmlScene.AddNode(lineNode)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(lineNode)
-      lineNodeItemID = shNode.GetItemByDataNode(lineNode)
-      shNode.SetItemParent(lineNodeItemID, fibulaSegmentsLengthsFolder)
+      moveNodeToFolder(lineNode, fibulaSegmentsLengthsFolder)
 
       displayNode = lineNode.GetDisplayNode()
       fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
@@ -2850,8 +2819,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetPropertiesLabelVisibility(False)
       displayNode.HandlesInteractiveOff()
 
-      fibulaPlaneAItemID = shNode.GetItemByDataNode(fibulaPlaneA)
-      shNode.SetItemParent(fibulaPlaneAItemID, fibulaPlanesFolder)
+      moveNodeToFolder(fibulaPlaneA, fibulaPlanesFolder)
 
       fibulaPlaneA.SetAxes(mandiblePlane0X,mandiblePlane0Y,mandiblePlane0Z)
       fibulaPlaneA.SetOrigin(mandiblePlane0Origin)
@@ -2869,8 +2837,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetPropertiesLabelVisibility(False)
       displayNode.HandlesInteractiveOff()
 
-      fibulaPlaneBItemID = shNode.GetItemByDataNode(fibulaPlaneB)
-      shNode.SetItemParent(fibulaPlaneBItemID, fibulaPlanesFolder)
+      moveNodeToFolder(fibulaPlaneB, fibulaPlanesFolder)
 
       fibulaPlaneB.SetAxes(mandiblePlane1X,mandiblePlane1Y,mandiblePlane1Z)
       fibulaPlaneB.SetOrigin(mandiblePlane1Origin)
@@ -3020,10 +2987,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dynamicModelerNode.SetAttribute("OperationType", "Difference")
         #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
         
-        dynamicModelerNodeItemID = shNode.GetItemByDataNode(dynamicModelerNode)
-        shNode.SetItemParent(dynamicModelerNodeItemID, planeCutsFolder)
-        modelNodeItemID = shNode.GetItemByDataNode(modelNode)
-        shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
+        moveNodeToFolder(dynamicModelerNode, planeCutsFolder)
+        moveNodeToFolder(modelNode, cutBonesFolder)
       
       
       modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -3065,8 +3030,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         slicer.mrmlScene.AddNode(planeToFixCutGoesThroughTheMandibleTwice)
         slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeToFixCutGoesThroughTheMandibleTwice)
         shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-        planeToFixCutGoesThroughTheMandibleTwiceItemID = shNode.GetItemByDataNode(planeToFixCutGoesThroughTheMandibleTwice)
-        shNode.SetItemParent(planeToFixCutGoesThroughTheMandibleTwiceItemID, self.getMandibleReconstructionFolderItemID())
+        moveNodeToFolder(planeToFixCutGoesThroughTheMandibleTwice, self.getMandibleReconstructionFolderItemID())
         parameterNode.SetNodeReferenceID("planeToFixCutGoesThroughTheMandibleTwice",planeToFixCutGoesThroughTheMandibleTwice.GetID())
 
         displayNode = planeToFixCutGoesThroughTheMandibleTwice.GetDisplayNode()
@@ -3096,10 +3060,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputPositiveModel", modelNode.GetID())
       dynamicModelerNode.SetAttribute("OperationType", "Difference")
 
-      dynamicModelerNodeItemID = shNode.GetItemByDataNode(dynamicModelerNode)
-      shNode.SetItemParent(dynamicModelerNodeItemID, planeCutsFolder)
-      modelNodeItemID = shNode.GetItemByDataNode(modelNode)
-      shNode.SetItemParent(modelNodeItemID, cutBonesFolder)
+      moveNodeToFolder(dynamicModelerNode, planeCutsFolder)
+      moveNodeToFolder(modelNode, cutBonesFolder)
 
       if fixCutGoesThroughTheMandibleTwiceCheckBoxChanged:
         parameterNode.SetParameter('fixCutGoesThroughTheMandibleTwiceCheckBoxChanged','False')
@@ -3187,17 +3149,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dynamicModelerNode2.SetNodeReferenceID("Append.InputModel", mandibleModelNode.GetID())
         dynamicModelerNode2.SetNodeReferenceID("Append.OutputModel", fullModelNode.GetID())
 
-        dynamicModelerNodeItemID = shNode.GetItemByDataNode(dynamicModelerNode)
-        shNode.SetItemParent(dynamicModelerNodeItemID, inversePlaneCutsFolder)
-
-        dynamicModelerNode2ItemID = shNode.GetItemByDataNode(dynamicModelerNode2)
-        shNode.SetItemParent(dynamicModelerNode2ItemID, inverseAppendFolder)
-
-        modelNodeItemID = shNode.GetItemByDataNode(modelNode)
-        shNode.SetItemParent(modelNodeItemID, cutMandiblePiecesFolder)
-
-        fullModelNodeItemID = shNode.GetItemByDataNode(fullModelNode)
-        shNode.SetItemParent(fullModelNodeItemID, fullMandiblesFolder)
+        moveNodeToFolder(dynamicModelerNode, inversePlaneCutsFolder)
+        moveNodeToFolder(dynamicModelerNode2, inverseAppendFolder)
+        moveNodeToFolder(modelNode, cutMandiblePiecesFolder)
+        moveNodeToFolder(fullModelNode, fullMandiblesFolder)
         
     
     else:
@@ -3361,8 +3316,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for i in range(len(mandiblePlanesIndicesList)):
       mandiblePlane = mandiblePlanesIndicesList[i][0]
-      mandiblePlaneItemID = shNode.GetItemByDataNode(mandiblePlane)
-      shNode.SetItemParent(mandiblePlaneItemID, mandibularPlanesFolder2)
+      moveNodeToFolder(mandiblePlane, mandibularPlanesFolder2)
 
     if mandibularPlanesFolder:
       shNode.RemoveItem(mandibularPlanesFolder)
@@ -3590,10 +3544,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       slicer.cli.runSync(slicer.modules.decimation, parameters=param)
 
-      modelNodeItemID = shNode.GetItemByDataNode(models[i])
-      shNode.SetItemParent(modelNodeItemID, segmentationModelsFolder)
-      decimatedModelNodeItemID = shNode.GetItemByDataNode(decimatedModels[i])
-      shNode.SetItemParent(decimatedModelNodeItemID, segmentationModelsFolder)
+      moveNodeToFolder(models[i], segmentationModelsFolder)
+      moveNodeToFolder(decimatedModels[i], segmentationModelsFolder)
 
       if i==0:
         singletonTag = slicer.FIBULA_VIEW_SINGLETON_TAG
@@ -3731,8 +3683,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if not (transformedMandiblePieceTransformationSuccess):
         Exception('Hardening transforms was not successful')
 
-      transformedMandiblePieceItemID = shNode.GetItemByDataNode(transformedMandiblePiece)
-      shNode.SetItemParent(transformedMandiblePieceItemID, transformedMandiblePiecesFolder)
+      moveNodeToFolder(transformedMandiblePiece, transformedMandiblePiecesFolder)
 
     mandibleList = createListFromFolderID(shNode.GetItemByName("Full Mandibles"))
     for i in range(len(mandibleList)):
@@ -3751,8 +3702,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if not (transformedMandibleTransformationSuccess):
         Exception('Hardening transforms was not successful')
 
-      transformedMandibleItemID = shNode.GetItemByDataNode(transformedMandible)
-      shNode.SetItemParent(transformedMandibleItemID, transformedFullMandiblesFolder)
+      moveNodeToFolder(transformedMandible, transformedFullMandiblesFolder)
 
     qt.QTimer.singleShot(0, lambda: setFolderItemVisibility(transformedFullMandiblesFolder, 1))
 
@@ -3806,11 +3756,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if not (transformedFibulaPieceTransformationSuccess):
         Exception('Hardening transforms was not successful')
 
-      transformedFibulaPieceItemID = shNode.GetItemByDataNode(transformedFibulaPiece)
-      shNode.SetItemParent(transformedFibulaPieceItemID, transformedFibulaPiecesFolder)
-
-      fibulaPieceToMandibleAxisTransformNodeItemID = shNode.GetItemByDataNode(fibulaPieceToMandibleAxisTransformNode)
-      shNode.SetItemParent(fibulaPieceToMandibleAxisTransformNodeItemID, bonePiecesTransformFolder)
+      moveNodeToFolder(transformedFibulaPiece, transformedFibulaPiecesFolder)
+      moveNodeToFolder(fibulaPieceToMandibleAxisTransformNode, bonePiecesTransformFolder)
 
   @saveExecutedMethodWithTelemetry
   def mandiblePlanesPositioningForMaximumBoneContact(self):
@@ -3870,8 +3817,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if not (planeTransformationSuccess):
         Exception('Hardening transforms was not successful')
       
-      transformNodeItemID = shNode.GetItemByDataNode(transformNode)
-      shNode.SetItemParent(transformNodeItemID, mandiblePlaneTransformsFolder)
+      moveNodeToFolder(transformNode, mandiblePlaneTransformsFolder)
     
     if mandiblePlaneTransformsFolder:
       shNode.RemoveItem(mandiblePlaneTransformsFolder)
@@ -4005,8 +3951,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         duplicateFibulaPiece.CreateDefaultDisplayNodes()
         duplicateFibulaPiece.CopyContent(cutBonesList[i])
 
-        duplicateFibulaPieceItemID = shNode.GetItemByDataNode(duplicateFibulaPiece)
-        shNode.SetItemParent(duplicateFibulaPieceItemID, duplicateFibulaBonePiecesModelsFolder)
+        moveNodeToFolder(duplicateFibulaPiece, duplicateFibulaBonePiecesModelsFolder)
 
       duplicateFibulaBonePiecesList = createListFromFolderID(duplicateFibulaBonePiecesModelsFolder)
 
@@ -4033,8 +3978,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         if not (duplicateFibulaBonePieceTransformationSuccess):
           Exception('Hardening transforms was not successful')
 
-        duplicateFibulaPieceTransformNodeItemID = shNode.GetItemByDataNode(duplicateFibulaPieceTransformNode)
-        shNode.SetItemParent(duplicateFibulaPieceTransformNodeItemID, duplicateFibulaBonePiecesTransformsFolder)
+        moveNodeToFolder(duplicateFibulaPieceTransformNode, duplicateFibulaBonePiecesTransformsFolder)
 
       collisionDetected = False
       for i in range(0,len(duplicateFibulaBonePiecesList) -1):
@@ -4106,8 +4050,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         miterBoxDisplayNode.SetVisibility(False)
         miterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
-        miterBoxModelItemID = shNode.GetItemByDataNode(miterBoxModel)
-        shNode.SetItemParent(miterBoxModelItemID, miterBoxesModelsFolder)
+        moveNodeToFolder(miterBoxModel, miterBoxesModelsFolder)
 
       elif miterBoxesGuideType == "Border":
         pass # not need to create the sawBox
@@ -4132,8 +4075,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
         biggerMiterBoxDisplayNode.AddViewNodeID(redSliceNode.GetID())
 
-      biggerMiterBoxModelItemID = shNode.GetItemByDataNode(biggerMiterBoxModel)
-      shNode.SetItemParent(biggerMiterBoxModelItemID, biggerMiterBoxesModelsFolder)
+      moveNodeToFolder(biggerMiterBoxModel, biggerMiterBoxesModelsFolder)
 
       if miterBoxesGuideType == "Slot":
         # previewMiterBoxes
@@ -4142,8 +4084,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         previewMiterBoxDisplayNode = previewMiterBoxModel.GetDisplayNode()
         previewMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
-        previewMiterBoxModelItemID = shNode.GetItemByDataNode(previewMiterBoxModel)
-        shNode.SetItemParent(previewMiterBoxModelItemID, previewMiterBoxesModelsFolder)
+        moveNodeToFolder(previewMiterBoxModel, previewMiterBoxesModelsFolder)
 
       fibulaPlaneMatrix = vtk.vtkMatrix4x4()
       fibulaPlanesList[i].GetObjectToWorldMatrix(fibulaPlaneMatrix)
@@ -4174,10 +4115,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       pointsIntersectionModel.CreateDefaultDisplayNodes()
       getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionModel,normalToMiterBoxDirectionAndFibulaZ,intersectionModelCentroid,pointsIntersectionModel)
       pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,miterBoxDirection)
-      intersectionModelItemID = shNode.GetItemByDataNode(intersectionModel)
-      shNode.SetItemParent(intersectionModelItemID, intersectionsFolder)
-      pointsIntersectionModelItemID = shNode.GetItemByDataNode(pointsIntersectionModel)
-      shNode.SetItemParent(pointsIntersectionModelItemID, pointsIntersectionsFolder)
+      moveNodeToFolder(intersectionModel, intersectionsFolder)
+      moveNodeToFolder(pointsIntersectionModel, pointsIntersectionsFolder)
 
       miterBoxAxisX = [0,0,0]
       miterBoxAxisY =  [0,0,0]
@@ -4249,8 +4188,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         ):
           Exception('Hardening transforms was not successful')
 
-      miterBoxToWorldChangeOfFrameTransformNodeItemID = shNode.GetItemByDataNode(miterBoxToWorldChangeOfFrameTransformNode)
-      shNode.SetItemParent(miterBoxToWorldChangeOfFrameTransformNodeItemID, miterBoxesTransformsFolder)
+      moveNodeToFolder(miterBoxToWorldChangeOfFrameTransformNode, miterBoxesTransformsFolder)
     
     if miterBoxesTransformsFolder:
       shNode.RemoveItem(miterBoxesTransformsFolder)
@@ -4271,9 +4209,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     dentalImplantFiducialListNode.SetName("temp")
     slicer.mrmlScene.AddNode(dentalImplantFiducialListNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(dentalImplantFiducialListNode)
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    dentalImplantFiducialListNodeItemID = shNode.GetItemByDataNode(dentalImplantFiducialListNode)
-    shNode.SetItemParent(dentalImplantFiducialListNodeItemID, dentalImplantCylindersFiducialsListsFolder)
+    moveNodeToFolder(dentalImplantFiducialListNode, dentalImplantCylindersFiducialsListsFolder)
     dentalImplantFiducialListNode.SetName(slicer.mrmlScene.GetUniqueNameByString("dentalImplantCylindersFiducialsList"))
 
     displayNode = dentalImplantFiducialListNode.GetDisplayNode()
@@ -4341,8 +4277,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       vtk.vtkMath.Perpendiculars(cylinderAxisZ,cylinderAxisX,cylinderAxisY,0)
 
       cylinderModel = createCylinder("cylinder%d" % i, fibulaScrewHoleCylinderRadius)
-      cylinderModelItemID = shNode.GetItemByDataNode(cylinderModel)
-      shNode.SetItemParent(cylinderModelItemID, fibulaCylindersModelsFolder)
+      moveNodeToFolder(cylinderModel, fibulaCylindersModelsFolder)
       
       cylinderToWorldChangeOfFrameMatrix = self.getAxes1ToWorldChangeOfFrameMatrix(cylinderAxisX, cylinderAxisY, cylinderAxisZ, cylinderOrigin)
 
@@ -4364,8 +4299,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode = cylinderModel.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.FIBULA_VIEW_ID)
 
-      cylinderToWorldChangeOfFrameTransformNodeItemID = shNode.GetItemByDataNode(cylinderToWorldChangeOfFrameTransformNode)
-      shNode.SetItemParent(cylinderToWorldChangeOfFrameTransformNodeItemID, cylindersTransformsFolder)
+      moveNodeToFolder(cylinderToWorldChangeOfFrameTransformNode, cylindersTransformsFolder)
     
     if cylindersTransformsFolder:
       shNode.RemoveItem(cylindersTransformsFolder)
@@ -4404,8 +4338,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       vtk.vtkMath.Perpendiculars(cylinderAxisZ,cylinderAxisX,cylinderAxisY,0)
 
       cylinderModel = createCylinder("cylinder%d" % i, mandibleScrewHoleCylinderRadius)
-      cylinderModelItemID = shNode.GetItemByDataNode(cylinderModel)
-      shNode.SetItemParent(cylinderModelItemID, mandibleCylindersModelsFolder)
+      moveNodeToFolder(cylinderModel, mandibleCylindersModelsFolder)
       
       cylinderToWorldChangeOfFrameMatrix = self.getAxes1ToWorldChangeOfFrameMatrix(cylinderAxisX, cylinderAxisY, cylinderAxisZ, cylinderOrigin)
 
@@ -4427,8 +4360,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode = cylinderModel.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
       
-      cylinderToWorldChangeOfFrameTransformNodeItemID = shNode.GetItemByDataNode(cylinderToWorldChangeOfFrameTransformNode)
-      shNode.SetItemParent(cylinderToWorldChangeOfFrameTransformNodeItemID, cylindersTransformsFolder)
+      moveNodeToFolder(cylinderToWorldChangeOfFrameTransformNode, cylindersTransformsFolder)
 
     if cylindersTransformsFolder:
       shNode.RemoveItem(cylindersTransformsFolder)
@@ -4491,8 +4423,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       connectivityFilter.Update()
 
       noCapsTransformedFibulaPiece.SetAndObserveMesh(calculateNormals(connectivityFilter.GetOutput()))
-      noCapsTransformedFibulaPieceItemID = shNode.GetItemByDataNode(noCapsTransformedFibulaPiece)
-      shNode.SetItemParent(noCapsTransformedFibulaPieceItemID, noCapsTransformedFibulaPiecesFolder)
+      moveNodeToFolder(noCapsTransformedFibulaPiece, noCapsTransformedFibulaPiecesFolder)
 
     noCapsTransformedFibulaPiecesList = createListFromFolderID(noCapsTransformedFibulaPiecesFolder)
     
@@ -4507,16 +4438,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for i in range(dentalImplantsFiducialList.GetNumberOfControlPoints()):
       dentalImplantCylinderModel = createCylinder("implantCylinder%d" % i,dentalImplantCylinderRadius,dentalImplantCylinderHeight)
-      dentalImplantCylinderModelItemID = shNode.GetItemByDataNode(dentalImplantCylinderModel)
-      shNode.SetItemParent(dentalImplantCylinderModelItemID, dentalImplantsCylindersModelsFolder)
+      moveNodeToFolder(dentalImplantCylinderModel, dentalImplantsCylindersModelsFolder)
 
       dentalImplantCylinderDisplayNode = dentalImplantCylinderModel.GetDisplayNode()
       dentalImplantCylinderDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
       dentalImplantCylinderDisplayNode.SetColor(color)
 
       fibulaDentalImplantCylinderModel = createCylinder("fibulaImplantCylinder%d" % i,dentalImplantCylinderRadius)
-      fibulaDentalImplantCylinderModelItemID = shNode.GetItemByDataNode(fibulaDentalImplantCylinderModel)
-      shNode.SetItemParent(fibulaDentalImplantCylinderModelItemID, fibulaDentalImplantsCylindersModelsFolder)
+      moveNodeToFolder(fibulaDentalImplantCylinderModel, fibulaDentalImplantsCylindersModelsFolder)
       
       fibulaDentalImplantCylinderDisplayNode = fibulaDentalImplantCylinderModel.GetDisplayNode()
       fibulaDentalImplantCylinderDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
@@ -4524,8 +4453,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaDentalImplantCylinderDisplayNode.SetColor(color)
 
       biggerFibulaDentalImplantCylinderModel = createCylinder("biggerFibulaImplantCylinder%d" % i,dentalImplantCylinderRadius + dentalImplantDrillGuideWall,dentalImplantCylinderHeight)
-      biggerFibulaDentalImplantCylinderModelItemID = shNode.GetItemByDataNode(biggerFibulaDentalImplantCylinderModel)
-      shNode.SetItemParent(biggerFibulaDentalImplantCylinderModelItemID, biggerFibulaDentalImplantsCylindersModelsFolder)
+      moveNodeToFolder(biggerFibulaDentalImplantCylinderModel, biggerFibulaDentalImplantsCylindersModelsFolder)
       
       biggerFibulaDentalImplantCylinderDisplayNode = biggerFibulaDentalImplantCylinderModel.GetDisplayNode()
       biggerFibulaDentalImplantCylinderDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
@@ -4535,8 +4463,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       #Create dentalImplant plane
       dentalImplantPlane = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "dentalImplant Plane%d" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(dentalImplantPlane)
-      dentalImplantPlaneItemID = shNode.GetItemByDataNode(dentalImplantPlane)
-      shNode.SetItemParent(dentalImplantPlaneItemID, dentalImplantsPlanesFolder)
+      moveNodeToFolder(dentalImplantPlane, dentalImplantsPlanesFolder)
 
       dentalImplantPlane.SetAxes([1,0,0],[0,1,0],[0,0,1])
       dentalImplantPlane.SetOrigin([0,0,0])
@@ -4613,8 +4540,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       dentalImplantCylinderModel.SetAndObserveTransformNodeID(dentalImplantCylinderTransformNode.GetID())
       
-      dentalImplantCylinderTransformNodeItemID = shNode.GetItemByDataNode(dentalImplantCylinderTransformNode)
-      shNode.SetItemParent(dentalImplantCylinderTransformNodeItemID, dentalImplantsCylindersTransformsFolder)
+      moveNodeToFolder(dentalImplantCylinderTransformNode, dentalImplantsCylindersTransformsFolder)
 
       observer = dentalImplantPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onDentalImplantPlaneMoved)
       self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList.append([observer,dentalImplantPlane.GetID(),dentalImplantCylinderTransformNode.GetID()])
@@ -4708,8 +4634,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaDentalImplantCylinderModel.SetAndObserveTransformNodeID(fibulaDentalImplantCylinderTransformNode.GetID())
       biggerFibulaDentalImplantCylinderModel.SetAndObserveTransformNodeID(fibulaDentalImplantCylinderTransformNode.GetID())
       
-      fibulaDentalImplantCylinderTransformNodeItemID = shNode.GetItemByDataNode(fibulaDentalImplantCylinderTransformNode)
-      shNode.SetItemParent(fibulaDentalImplantCylinderTransformNodeItemID, fibulaDentalImplantsCylindersTransformsFolder)
+      moveNodeToFolder(fibulaDentalImplantCylinderTransformNode, fibulaDentalImplantsCylindersTransformsFolder)
 
   @saveExecutedMethodWithTelemetry
   def makeBooleanOperationsToFibulaSurgicalGuideBase(self):
@@ -4733,8 +4658,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(fibulaSurgicalGuideBaseModel.GetPolyData())
     surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibulaSurgicalGuidePrototype'))
-    surgicalGuideModelItemID = shNode.GetItemByDataNode(surgicalGuideModel)
-    shNode.SetItemParent(surgicalGuideModelItemID, self.getMandibleReconstructionFolderItemID())
+    moveNodeToFolder(surgicalGuideModel, self.getMandibleReconstructionFolderItemID())
 
     displayNode = surgicalGuideModel.GetDisplayNode()
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
@@ -4858,8 +4782,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       sawBoxHeight = 70
       if sawBoxesGuideType == "Slot":
         sawBoxModel = createBox(sawBoxLength,sawBoxHeight,sawBoxWidth,sawBoxName)
-        sawBoxModelItemID = shNode.GetItemByDataNode(sawBoxModel)
-        shNode.SetItemParent(sawBoxModelItemID, sawBoxesModelsFolder)
+        moveNodeToFolder(sawBoxModel, sawBoxesModelsFolder)
 
         sawBoxDisplayNode = sawBoxModel.GetDisplayNode()
         sawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
@@ -4877,8 +4800,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         biggerSawBoxLength = sawBoxSlotLength
       biggerSawBoxHeight = sawBoxSlotHeight
       biggerSawBoxModel = createBox(biggerSawBoxLength,biggerSawBoxHeight,biggerSawBoxWidth,biggerSawBoxName)
-      biggerSawBoxModelItemID = shNode.GetItemByDataNode(biggerSawBoxModel)
-      shNode.SetItemParent(biggerSawBoxModelItemID, biggerSawBoxesModelsFolder)
+      moveNodeToFolder(biggerSawBoxModel, biggerSawBoxesModelsFolder)
 
       biggerSawBoxDisplayNode = biggerSawBoxModel.GetDisplayNode()
       biggerSawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
@@ -4890,14 +4812,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         previewSawBoxDisplayNode = previewSawBoxModel.GetDisplayNode()
         previewSawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
 
-        previewSawBoxModelItemID = shNode.GetItemByDataNode(previewSawBoxModel)
-        shNode.SetItemParent(previewSawBoxModelItemID, previewSawBoxesModelsFolder)
+        moveNodeToFolder(previewSawBoxModel, previewSawBoxesModelsFolder)
 
       #Create sawBox plane
       sawBoxPlane = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode", "sawBox Plane%d" % i)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(sawBoxPlane)
-      sawBoxPlaneItemID = shNode.GetItemByDataNode(sawBoxPlane)
-      shNode.SetItemParent(sawBoxPlaneItemID, sawBoxesPlanesFolder)
+      moveNodeToFolder(sawBoxPlane, sawBoxesPlanesFolder)
       biggerSawBoxDisplayNode.SetVisibility2D(True)
       if sawBoxesGuideType == "Slot":
         biggerSawBoxDisplayNode.SetVisibility3D(False)
@@ -4947,10 +4867,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         pointOfIntersection = [0,0,0]
         resectionPlanesList[i].GetOrigin(pointOfIntersection)
-      intersectionModelItemID = shNode.GetItemByDataNode(intersectionModel)
-      shNode.SetItemParent(intersectionModelItemID, intersectionsFolder)
-      pointsIntersectionModelItemID = shNode.GetItemByDataNode(pointsIntersectionModel)
-      shNode.SetItemParent(pointsIntersectionModelItemID, pointsIntersectionsFolder)
+      moveNodeToFolder(intersectionModel, intersectionsFolder)
+      moveNodeToFolder(pointsIntersectionModel, pointsIntersectionsFolder)
 
       if intersectionModel.GetPolyData().GetNumberOfPoints() != 0:
         sawBoxDirection = getAverageNormalFromModelPoint2(mandibleModelNode,pointOfIntersection)
@@ -5010,8 +4928,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         sawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
         previewSawBoxModel.SetAndObserveTransformNodeID(transformNode.GetID())
       
-      transformNodeItemID = shNode.GetItemByDataNode(transformNode)
-      shNode.SetItemParent(transformNodeItemID, sawBoxesTransformsFolder)
+      moveNodeToFolder(transformNode, sawBoxesTransformsFolder)
 
       observer = sawBoxPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onSawBoxPlaneMoved)
       self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList.append([observer,sawBoxPlane.GetID(),transformNode.GetID()])
@@ -5140,8 +5057,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(mandibleSurgicalGuideBaseModel.GetPolyData())
     surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('MandibleSurgicalGuidePrototype'))
-    surgicalGuideModelItemID = shNode.GetItemByDataNode(surgicalGuideModel)
-    shNode.SetItemParent(surgicalGuideModelItemID, self.getMandibleReconstructionFolderItemID())
+    moveNodeToFolder(surgicalGuideModel, self.getMandibleReconstructionFolderItemID())
 
     displayNode = surgicalGuideModel.GetDisplayNode()
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
@@ -5229,10 +5145,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaStartIntersectionModel.CreateDefaultDisplayNodes()
       fibulaEndIntersectionModel.CreateDefaultDisplayNodes()
 
-      fibulaStartIntersectionModelItemID = shNode.GetItemByDataNode(fibulaStartIntersectionModel)
-      shNode.SetItemParent(fibulaStartIntersectionModelItemID, intersectionsFolder)
-      fibulaEndIntersectionModelItemID = shNode.GetItemByDataNode(fibulaEndIntersectionModel)
-      shNode.SetItemParent(fibulaEndIntersectionModelItemID, intersectionsFolder)
+      moveNodeToFolder(fibulaStartIntersectionModel, intersectionsFolder)
+      moveNodeToFolder(fibulaEndIntersectionModel, intersectionsFolder)
 
       getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,fibulaStartIntersectionModel)
       getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,fibulaEndIntersectionModel)
@@ -5288,8 +5202,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     parameterNode.SetNodeReferenceID("mandibleReconstructionModel", mandibleReconstructionModel.GetID())
 
-    mandibleReconstructionModelItemID = shNode.GetItemByDataNode(mandibleReconstructionModel)
-    shNode.SetItemParent(mandibleReconstructionModelItemID, self.getMandibleReconstructionFolderItemID())
+    moveNodeToFolder(mandibleReconstructionModel, self.getMandibleReconstructionFolderItemID())
 
     cutBonesList = createListFromFolderID(shNode.GetItemByName("Cut Bones"))
     resectedMandible = cutBonesList[-1]
@@ -5346,8 +5259,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       scaledFibulaPieceModel.CreateDefaultDisplayNodes()
       scaledFibulaPieceModel.SetAndObservePolyData(scaledFibulaPiece)
 
-      scaledFibulaPieceModelItemID = shNode.GetItemByDataNode(scaledFibulaPieceModel)
-      shNode.SetItemParent(scaledFibulaPieceModelItemID, scaledFibulaPiecesFolder)
+      moveNodeToFolder(scaledFibulaPieceModel, scaledFibulaPiecesFolder)
 
     return
 
@@ -5356,9 +5268,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     curveNode.SetName("temp")
     slicer.mrmlScene.AddNode(curveNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(curveNode)
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    curveNodeItemID = shNode.GetItemByDataNode(curveNode)
-    shNode.SetItemParent(curveNodeItemID, self.getParentFolderItemID())
+    moveNodeToFolder(curveNode, self.getParentFolderItemID())
     curveNode.SetName(slicer.mrmlScene.GetUniqueNameByString("plateCurve"))
 
     displayNode = curveNode.GetDisplayNode()
@@ -6396,20 +6306,3 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
 
     self.delayDisplay("CreateAndUpdateSawBoxesFromMandiblePlanes test successful")
-
-def createListFromFolderID(folderID):
-  shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-  createdList = []
-
-  if folderID != shNode.GetInvalidItemID():
-    myList = vtk.vtkIdList()
-    shNode.GetItemChildren(folderID,myList)
-    for i in range(myList.GetNumberOfIds()):
-      createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
-  
-  return createdList
-
-def setFolderItemVisibility(folderItemID, visibility):
-  pluginHandler = slicer.qSlicerSubjectHierarchyPluginHandler().instance()
-  folderPlugin = pluginHandler.pluginByName("Folder")
-  folderPlugin.setDisplayVisibility(folderItemID, visibility)
