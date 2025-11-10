@@ -659,48 +659,13 @@ def createListFromFolderID(folderID):
 
 def createListFromFolderName(folderName):
   shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-  createdList = []
-
   folderID = shNode.GetItemByName(folderName)
-  if folderID != shNode.GetInvalidItemID():
-    myList = vtk.vtkIdList()
-    shNode.GetItemChildren(folderID,myList)
-    for i in range(myList.GetNumberOfIds()):
-      createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
-  
-  return createdList
+  return createListFromFolderID(folderID)
 
 def setFolderItemVisibility(folderItemID, visibility):
   pluginHandler = slicer.qSlicerSubjectHierarchyPluginHandler().instance()
   folderPlugin = pluginHandler.pluginByName("Folder")
   folderPlugin.setDisplayVisibility(folderItemID, visibility)
-
-# get all childrenIDs inside a folder
-
-# get folderID from a folderName and create it if it doesn't exist
-# but it needs to know the parentFolderId too
-
-# my main use is to delete previous folders and replace them by new ones to populate
-# and to create lists from the nodes for further processing
-
-def getFolder(folderName, parentFolderName="", reset=False):
-  # TODO: use this function where needed on the code
-  shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
-  folderID = shNode.GetItemByName(folderName)
-  if reset and folderID:
-    shNode.RemoveItem(folderID)
-    folderID = 0
-  if not folderID:
-    parentFolderID = shNode.GetItemByName(parentFolderName)
-    if not parentFolderID:
-      parentFolderID = shNode.GetSceneItemID()
-    folderID = shNode.CreateFolderItem(parentFolderID,folderName)
-  return folderID
-  
-  # if folder already exists, delete it
-  # create a new folder
-  # return the folderID
-
 
 # one use is to put some nodes inside a particular folder
 def moveNodeToFolder(dataNode, folderID):
@@ -713,3 +678,113 @@ def removeFolder(folderID):
   shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
   if folderID:
       shNode.RemoveItem(folderID)
+
+def renameFolder(folderID, newName):
+  shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+  if folderID:
+    shNode.SetItemName(folderID, newName)
+
+parentChildrenDict = {
+  "": [
+    "BoneReconstructionPlanner"
+  ],
+  "BoneReconstructionPlanner": [
+    "Mandible reconstruction", 
+    "Inverse mandible reconstruction", 
+    "Dental Implants planning", 
+    "Mandibular planes",
+    "Mandibular planes 2",
+    "Intersections For Centroid Calculation",
+    "Fibula Segments Lengths",
+    "Intersections For Lines Calculation",
+    "Fibula planes",
+    "Segmentation Models",
+  ],
+  "Mandible reconstruction": [
+    "Mandible Planes Transforms",
+    "Mandible2Fibula transforms",
+    "Intersections",
+    "Plane Cuts",
+    "Cut Bones",
+    "Bone Pieces Transforms",
+    "Transformed Fibula Pieces",
+    "Duplicate Fibula Bone Pieces",
+    "Duplicate Fibula Bone Pieces Transforms",
+    "biggerMiterBoxes Models",
+    "miterBoxes Models",
+    "previewMiterBoxes Models",
+    "miterBoxes Transforms",
+    "Intersections",
+    "Points Intersections",
+    "Fibula Cylinders Models",
+    "Cylinders Transforms",
+    "Mandible Cylinders Models",
+    "biggerSawBoxes Models",
+    "sawBoxes Models",
+    "previewSawBoxes Models",
+    "sawBoxes Planes",
+    "sawBoxes Transforms",
+    "Points Intersections",
+    "Scaled Fibula Pieces",
+  ],
+  "Inverse mandible reconstruction": [
+    "Inverse Plane Cuts",
+    "Inverse Append",
+    "Cut Mandible Pieces",
+    "Full Mandibles",
+    "Transformed Mandible Pieces",
+    "Transformed Full Mandible",
+  ],
+  "Dental Implants planning": [
+    "Dental Implants Cylinders Fiducials",
+    "Dental Implants Cylinders Models",
+    "dentalImplants Planes",
+    "Dental Implants Cylinders Transforms",
+    "Fibula Dental Implants Cylinders Models",
+    "Bigger Fibula Dental Implants Cylinders Models",
+    "No Caps Transformed Fibula Pieces",
+  ]
+}
+
+# improve the folders logic
+def getFolder(requestedFolderName, unused = None, reset = False):
+  currentFolderName = requestedFolderName
+  parentFolderslist = []
+  reachedSceneLevel = False
+  while not reachedSceneLevel:
+    for parentFolderName, childFolderNames in parentChildrenDict.items():
+      if currentFolderName in childFolderNames:
+        parentFolderslist.append(parentFolderName)
+        currentFolderName = parentFolderName
+        if currentFolderName == "":
+          reachedSceneLevel = True
+        break
+
+  #print(parentFolderslist)
+  #return
+  
+  shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+  topLevelID = shNode.GetSceneItemID()
+  requestedFolderID = shNode.GetItemByName(requestedFolderName)
+  if reset and requestedFolderID:
+    shNode.RemoveItem(requestedFolderID)
+    requestedFolderID = 0
+  if not requestedFolderID:
+    childToParentFoldersList = [requestedFolderName] + parentFolderslist
+    # create the folder hierarchy
+    for i in range(len(childToParentFoldersList)-1):
+      folderName = childToParentFoldersList[i]
+      folderID = shNode.GetItemByName(folderName)
+      if not folderID:
+        folderID = shNode.CreateFolderItem(topLevelID,folderName)
+      if i == 0:
+        requestedFolderID = folderID
+      parentFolderName = childToParentFoldersList[i+1]
+      # last level, that corresponds to the scene, does not need to be created
+      if parentFolderName == "":
+        continue
+      parentFolderID = shNode.GetItemByName(parentFolderName)
+      if not parentFolderID:
+        parentFolderID = shNode.CreateFolderItem(topLevelID,parentFolderName)
+      shNode.SetItemParent(folderID, parentFolderID)
+  return requestedFolderID
