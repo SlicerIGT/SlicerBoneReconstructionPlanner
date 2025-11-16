@@ -788,3 +788,117 @@ def getFolder(requestedFolderName, unused = None, reset = False):
         parentFolderID = shNode.CreateFolderItem(topLevelID,parentFolderName)
       shNode.SetItemParent(folderID, parentFolderID)
   return requestedFolderID
+
+# decorator to update the GUI before and after running a method
+def updateGUI(method):
+  def wrapper(*args, **kwargs):
+    slicer.app.processEvents()
+    method(*args, **kwargs)
+    slicer.app.processEvents()
+  return wrapper
+
+def areSegmentationsEqual(seg1, seg2):
+    """Compare two segmentation nodes for equality"""
+    
+    # Check if both exist
+    if seg1 is None or seg2 is None:
+        return seg1 == seg2
+    
+    # Compare number of segments
+    segmentation1 = seg1.GetSegmentation()
+    segmentation2 = seg2.GetSegmentation()
+    
+    if segmentation1.GetNumberOfSegments() != segmentation2.GetNumberOfSegments():
+        return False
+    
+    # Compare each segment
+    for i in range(segmentation1.GetNumberOfSegments()):
+        segmentID1 = segmentation1.GetNthSegmentID(i)
+        segmentID2 = segmentation2.GetNthSegmentID(i)
+        
+        segment1 = segmentation1.GetSegment(segmentID1)
+        segment2 = segmentation2.GetSegment(segmentID2)
+        
+        # Compare segment names
+        if segment1.GetName() != segment2.GetName():
+            return False
+        
+        # Compare segment representations (e.g., binary labelmap)
+        if not compareSegmentRepresentationsV2(segment1, segment2):
+            return False
+    
+    return True
+
+def compareSegmentRepresentations(segment1, segment2):
+    """Compare the actual segment data"""
+    import numpy as np
+    
+    # Get binary labelmap representation
+    rep1 = segment1.GetRepresentation(
+        slicer.vtkSegmentationConverter.GetBinaryLabelmapRepresentationName()
+    )
+    rep2 = segment2.GetRepresentation(
+        slicer.vtkSegmentationConverter.GetBinaryLabelmapRepresentationName()
+    )
+    
+    if rep1 is None or rep2 is None:
+        return rep1 == rep2
+    
+    # Convert to numpy arrays and compare
+    array1 = slicer.util.arrayFromVolume(rep1)
+    array2 = slicer.util.arrayFromVolume(rep2)
+    
+    return np.array_equal(array1, array2)
+
+def compareSegmentRepresentationsV2(segment1, segment2):
+    """Compare the actual segment data"""
+    import numpy as np
+    
+    # Get binary labelmap representation
+    rep1 = segment1.GetRepresentation(
+        slicer.vtkSegmentationConverter.GetBinaryLabelmapRepresentationName()
+    )
+    rep2 = segment2.GetRepresentation(
+        slicer.vtkSegmentationConverter.GetBinaryLabelmapRepresentationName()
+    )
+    
+    if rep1 is None or rep2 is None:
+        return rep1 == rep2
+    
+    # Convert vtkOrientedImageData to numpy arrays
+    from vtk.util import numpy_support
+    array1 = numpy_support.vtk_to_numpy(rep1.GetPointData().GetScalars())
+    array2 = numpy_support.vtk_to_numpy(rep2.GetPointData().GetScalars())
+    
+    # Reshape arrays to match image dimensions
+    dims1 = rep1.GetDimensions()
+    dims2 = rep2.GetDimensions()
+    
+    # Check if dimensions match
+    if dims1 != dims2:
+        return False
+    
+    array1 = array1.reshape(dims1[::-1])  # VTK uses (x,y,z), numpy uses (z,y,x)
+    array2 = array2.reshape(dims2[::-1])
+    
+    return np.array_equal(array1, array2)
+
+def areVolumesEqual(vol1, vol2):
+    """Compare two volume nodes for equality"""
+    
+    # Check if both exist
+    if vol1 is None or vol2 is None:
+        return vol1 == vol2
+    
+    # Compare image data dimensions
+    imgData1 = vol1.GetImageData()
+    imgData2 = vol2.GetImageData()
+    
+    if imgData1.GetDimensions() != imgData2.GetDimensions():
+        return False
+    
+    # Compare voxel data
+    array1 = slicer.util.arrayFromVolume(vol1)
+    array2 = slicer.util.arrayFromVolume(vol2)
+    
+    return np.array_equal(array1, array2)

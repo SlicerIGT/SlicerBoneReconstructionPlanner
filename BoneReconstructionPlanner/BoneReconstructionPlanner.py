@@ -960,13 +960,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     The module GUI is updated to show the current state of the parameter node.
     """
 
+    if self._parameterNode is None:
+      return
+    
     # only put here code that updates the GUI but does not cause any changes in the parameterNode,
     # in other words, only widgets that do not have any connections, otherwise put them below
     # the _updatingGUIFromParameterNode flag
     currentlyProcessing = self._parameterNode.GetParameter("currentlyProcessing") == str(True)
     self.processingLabelShow(currentlyProcessing)
 
-    if self._parameterNode is None or self._updatingGUIFromParameterNode:
+    if self._updatingGUIFromParameterNode:
       return
 
     # Make sure GUI changes do not call updateParameterNodeFromGUI (it could cause infinite loop)
@@ -5316,26 +5319,33 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def setUp(self):
     """ Do whatever is needed to reset the state - typically a scene clear will be enough.
     """
+    #slicer.util.mainWindow().enabled = False
     slicer.mrmlScene.Clear()
 
+  def closeUp(self):
+    """ Do whatever is needed to reset the state - typically a scene clear will be enough.
+    """
+    slicer.mrmlScene.Clear()
+    #slicer.util.mainWindow().enabled = True
+    
   def runTest(self):
     """Run as few or as many tests as needed here.
     """
-    #slicer.util.mainWindow().enabled = False
     self.setUp()
     self.section_EnterBRP()
     self.section_GetWidget()
     self.section_GetLogic()
-    self.section_LoadSampleData()
-    self.section_MakeModels()
-    self.section_AddMandibularCurve()
-    self.section_AddMandiblePlanes()
-    self.section_AddFibulaLineAndCenterIt()
-    self.section_SimulateAndImproveMandibleReconstruction()
-    self.section_createMiterBoxesFromCorrespondingLine()
-    #self.section_prepareGuideBaseForFibulaGuide()
-    self.section_createAndUpdateSawBoxesFromMandiblePlanes()
-    #slicer.util.mainWindow().enabled = True
+    self.section_LoadSampleDataV2()
+    self.section_SelectSampleSegmentations()
+    self.section_MakeBoneModels()
+    self.section_SetMandibularCurve()
+    self.section_SetFibulaLine()
+    #self.section_AddMandiblePlanes()
+    #self.section_SimulateAndImproveMandibleReconstruction()
+    #self.section_createMiterBoxesFromCorrespondingLine()
+    ##self.section_prepareGuideBaseForFibulaGuide()
+    #self.section_createAndUpdateSawBoxesFromMandiblePlanes()
+    self.closeUp()
 
   def section_EnterBRP(self):
     self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
@@ -5451,6 +5461,76 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       self.mandibleSegmentation.GetID()
     )
       
+  def section_LoadSampleDataV2(self):
+    # load using GUI
+    slicer.app.processEvents()
+    self.widgetBRP.ui.loadTestCaseButton.click()
+    slicer.app.processEvents()
+    fibulaVolumeThroughGUI = slicer.util.getNode('CTFibula')
+    mandibleVolumeThroughGUI = slicer.util.getNode('CTMandible')
+    fibulaSegmentationThroughGUI = slicer.util.getNode('FibulaSegmentation')
+    mandibleSegmentationThroughGUI = slicer.util.getNode('MandibleSegmentation')
+
+    # load using SampleData module for comparison
+    import SampleData
+    fibulaVolumeThroughSampleData = SampleData.downloadSample('CTFibula')
+    mandibleVolumeThroughSampleData = SampleData.downloadSample('CTMandible')
+    fibulaSegmentationThroughSampleData = SampleData.downloadSample('FibulaSegmentation')
+    mandibleSegmentationThroughSampleData = SampleData.downloadSample('MandibleSegmentation')
+
+    self.assertTrue(
+      areVolumesEqual(
+        fibulaVolumeThroughGUI, 
+        fibulaVolumeThroughSampleData
+      )      
+    )
+    self.assertTrue(
+      areVolumesEqual(
+        mandibleVolumeThroughGUI, 
+        mandibleVolumeThroughSampleData
+      )      
+    )
+    self.assertTrue(
+      areSegmentationsEqual(
+        fibulaSegmentationThroughGUI, 
+        fibulaSegmentationThroughSampleData
+      )      
+    )
+    self.assertTrue(
+      areSegmentationsEqual(
+        mandibleSegmentationThroughGUI, 
+        mandibleSegmentationThroughSampleData
+      )      
+    )
+
+    # remove duplicate of data
+    slicer.mrmlScene.RemoveNode(fibulaVolumeThroughSampleData)
+    slicer.mrmlScene.RemoveNode(mandibleVolumeThroughSampleData)
+    slicer.mrmlScene.RemoveNode(fibulaSegmentationThroughSampleData)
+    slicer.mrmlScene.RemoveNode(mandibleSegmentationThroughSampleData)
+
+  def section_SelectSampleSegmentations(self):
+    fibulaSegmentationThroughGUI = slicer.util.getNode('FibulaSegmentation')
+    mandibleSegmentationThroughGUI = slicer.util.getNode('MandibleSegmentation')
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaSegmentationSelector.setCurrentNode(fibulaSegmentationThroughGUI)
+    self.widgetBRP.ui.mandibularSegmentationSelector.setCurrentNode(mandibleSegmentationThroughGUI)
+    slicer.app.processEvents()
+
+    parameterNode = self.logicBRP.getParameterNode()
+    fibulaSegmentationThroughLogic = parameterNode.GetNodeReference("fibulaSegmentation")
+    mandibleSegmentationThroughLogic = parameterNode.GetNodeReference("mandibularSegmentation")
+    
+    self.assertEqual(
+      fibulaSegmentationThroughGUI.GetID(),
+      fibulaSegmentationThroughLogic.GetID()
+    )
+    self.assertEqual(
+      mandibleSegmentationThroughGUI.GetID(),
+      mandibleSegmentationThroughLogic.GetID()
+    )
+
   def section_MakeModels(self):
     """ Ideally you should have several levels of tests.  At the lowest level
     tests should exercise the functionality of the logic with different inputs
@@ -5544,6 +5624,69 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("MakeModelsTest successful")
 
+  def section_MakeBoneModels(self):
+    slicer.app.processEvents()
+    self.widgetBRP.ui.makeModelsButton.click()
+    slicer.app.processEvents()
+
+    parameterNode = self.logicBRP.getParameterNode()
+
+    # assertions
+    # assertions on meshes centroids
+    fibulaCentroid = [
+      float(parameterNode.GetParameter("fibulaCentroidX")),
+      float(parameterNode.GetParameter("fibulaCentroidY")),
+      float(parameterNode.GetParameter("fibulaCentroidZ"))
+    ]    
+    mandibleCentroid = [
+      float(parameterNode.GetParameter("mandibleCentroidX")),
+      float(parameterNode.GetParameter("mandibleCentroidY")),
+      float(parameterNode.GetParameter("mandibleCentroidZ"))
+    ]
+
+    precomputedFibulaCentroid = [-95.32889, -8.86916, -18.44151]
+    precomputedMandibleCentroid = [0.1073946, 65.49171, -57.415688]
+
+    relativeTolerance = 0.01
+    self.assertTrue(
+      np.allclose(fibulaCentroid,precomputedFibulaCentroid, rtol=relativeTolerance)
+    )
+    self.assertTrue(
+      np.allclose(mandibleCentroid,precomputedMandibleCentroid, rtol=relativeTolerance)
+    )
+
+    # assert models are not None
+    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
+    self.assertIsNotNone(fibulaModelNode)
+    self.assertIsNotNone(mandibleModelNode)
+    self.assertIsNotNone(decimatedFibulaModelNode)
+    self.assertIsNotNone(decimatedMandibleModelNode)
+
+
+    # assertions on meshes number of points
+    allowedRelativeDifference = 0.02
+    targetFibulaPoints = 197962
+    targetMandiblePoints = 109820
+    targetDecimatedFibulaPoints = 11120
+    targetDecimatedMandiblePoints = 6602
+
+    self.assertTrue(
+      np.allclose(fibulaModelNode.GetMesh().GetNumberOfPoints(), targetFibulaPoints, rtol=allowedRelativeDifference)
+    )
+    self.assertTrue(
+      np.allclose(mandibleModelNode.GetMesh().GetNumberOfPoints(), targetMandiblePoints, rtol=allowedRelativeDifference)
+    )
+    self.assertTrue(
+      np.allclose(decimatedFibulaModelNode.GetMesh().GetNumberOfPoints(), targetDecimatedFibulaPoints, rtol=allowedRelativeDifference)
+    )
+    self.assertTrue(
+      np.allclose(decimatedMandibleModelNode.GetMesh().GetNumberOfPoints(), targetDecimatedMandiblePoints, rtol=allowedRelativeDifference)
+    )
+
+
   def section_AddMandibularCurve(self):
     self.delayDisplay("Starting the AddMandibularCurveTest")
 
@@ -5590,6 +5733,45 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("AddMandibularCurveTest successful")
   
+  def section_SetMandibularCurve(self):
+    mandibularCurvePoints = [
+      [ 43.02632904,  61.06202698, -60.92616272],
+      [ 33.40823746,  83.49567413, -71.52266693],
+      [ 20.23157501, 103.01984406, -78.46653748],
+      [  3.63758111, 110.96538544, -82.94055939],
+      [-15.31359386, 103.96769714, -83.5898056 ],
+      [-31.47601509,  77.34331512, -76.59559631],
+      [-44.32816696,  47.25786209, -64.23408508],
+    ]
+
+    mandibularCurveNode = self.logicBRP.getMandibularCurve()
+    for point in mandibularCurvePoints:
+      mandibularCurveNode.AddControlPoint(*point)
+    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+    interactionNode.SwitchToViewTransformMode()
+
+    self.assertEqual(
+      len(mandibularCurvePoints),
+      mandibularCurveNode.GetNumberOfControlPoints()
+    )
+
+    # check placement in the SH
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
+    mandibularCurveItemID = shNode.GetItemByDataNode(mandibularCurveNode)
+    self.assertEqual(
+      BRPFolder,
+      shNode.GetItemParent(mandibularCurveItemID)
+    )
+
+    # the mandibleCurveSelector autopopulates and updates the parameterNode
+    parameterNode = self.logicBRP.getParameterNode()
+    mandibleCurveFromParameterNode = parameterNode.GetNodeReference("mandibleCurve")
+    self.assertEqual(
+      mandibularCurveNode.GetID(),
+      mandibleCurveFromParameterNode.GetID()
+    )
+
   def section_AddMandiblePlanes(self):
     self.delayDisplay("Starting the AddMandibularPlanesTest")
 
@@ -5757,6 +5939,57 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("AddFibulaLineAndCenterItTest successful")
 
+  def section_SetFibulaLine(self):
+    fibulaLinePoints = [
+      [-91.39446258544922, -12.100865364074707, -90.508544921875],
+      [-104.19928741455078, -9.48827075958252, 47.4937744140625],
+    ]
+
+    fibulaLineNode = self.logicBRP.getFibulaLine()
+    for point in fibulaLinePoints:
+      fibulaLineNode.AddControlPoint(*point)
+    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+    interactionNode.SwitchToViewTransformMode()
+
+    self.assertEqual(
+      len(fibulaLinePoints),
+      fibulaLineNode.GetNumberOfControlPoints()
+    )
+
+    # check placement in the SH
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
+    fibulaLineItemID = shNode.GetItemByDataNode(fibulaLineNode)
+    self.assertEqual(
+      BRPFolder,
+      shNode.GetItemParent(fibulaLineItemID)
+    )
+
+    #the fibulaLineSelector autopopulates and updates the parameterNode
+    parameterNode = self.logicBRP.getParameterNode()
+    fibulaLineFromParameterNode = parameterNode.GetNodeReference("fibulaLine")
+    self.assertEqual(
+      fibulaLineNode.GetID(),
+      fibulaLineFromParameterNode.GetID()
+    )
+
+    centeredLinePoints = np.array(
+      [
+        [ -88.32122039794922, -10.915949821472168, -90.24563598632812],
+        [-100.49141693115234, -9.320514678955078, 47.834014892578125]
+      ]
+    )
+
+    relativeTolerance = 0.01
+    for i in range(2):
+      self.assertTrue(
+        np.allclose(
+          fibulaLineNode.GetNthControlPointPosition(i),
+          centeredLinePoints[i],
+          rtol=relativeTolerance
+        )
+      )
+
   def section_SimulateAndImproveMandibleReconstruction(self):
     self.delayDisplay("Starting the SimulateAndImproveMandibleReconstruction")
     self.delayDisplay("Create the reconstruction for first time")
@@ -5839,10 +6072,10 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     
     if USING_GUI:
       # hide original mandible
-      self.widgetBRP.setOriginalMandibleVisibility(False)
+      self.widgetBRP.ui.setOriginalMandibleVisibility(False)
       # hide mandible plane handles
-      self.widgetBRP.setMandiblePlanesInteractionHandlesVisibility(False)
-    
+      self.widgetBRP.ui.setMandiblePlanesInteractionHandlesVisibility(False)
+
     self.delayDisplay("Optimize bones contact in reconstruction")
     parameterNode = self.logicBRP.getParameterNode()
     parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","True")
@@ -6009,9 +6242,9 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       else:
         layoutManager.setMaximizedViewNode(None)
       # show mandible plane handles
-      self.widgetBRP.setMandiblePlanesInteractionHandlesVisibility(True)
+      self.widgetBRP.ui.setMandiblePlanesInteractionHandlesVisibility(True)
       # hide saw boxes handles
-      self.widgetBRP.setBiggerSawBoxesInteractionHandlesVisibility(False)
+      self.widgetBRP.ui.setBiggerSawBoxesInteractionHandlesVisibility(False)
 
     # asserts below
 
