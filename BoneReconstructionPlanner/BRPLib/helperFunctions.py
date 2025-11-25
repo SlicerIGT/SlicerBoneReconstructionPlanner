@@ -667,6 +667,10 @@ def setFolderItemVisibility(folderItemID, visibility):
   folderPlugin = pluginHandler.pluginByName("Folder")
   folderPlugin.setDisplayVisibility(folderItemID, visibility)
 
+def setFolderItemExpanded(folderItemID, expanded):
+  shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+  shNode.SetItemExpanded(folderItemID, expanded)
+
 # one use is to put some nodes inside a particular folder
 def moveNodeToFolder(dataNode, folderID):
   shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
@@ -766,6 +770,7 @@ def getFolder(requestedFolderName, unused = None, reset = False):
   shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
   topLevelID = shNode.GetSceneItemID()
   requestedFolderID = shNode.GetItemByName(requestedFolderName)
+  # TODO: check that there is no a dataNode with that name. E.g. use: shNode.GetItemOwnerPluginName() == "Folder"
   if reset and requestedFolderID:
     shNode.RemoveItem(requestedFolderID)
     requestedFolderID = 0
@@ -788,6 +793,11 @@ def getFolder(requestedFolderName, unused = None, reset = False):
         parentFolderID = shNode.CreateFolderItem(topLevelID,parentFolderName)
       shNode.SetItemParent(folderID, parentFolderID)
   return requestedFolderID
+
+def getItem(dataNode):
+  shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+  nodeItemID = shNode.GetItemByDataNode(dataNode)
+  return nodeItemID
 
 # decorator to update the GUI before and after running a method
 def updateGUI(method):
