@@ -691,26 +691,36 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
               observerIndex = i
           callData.RemoveObserver(self.logic.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList.pop(observerIndex)[0])
     
-    # TODO: remove observers
     if callData.GetClassName() == 'vtkMRMLMarkupsLineNode':
       if callData.GetAttribute("isFibulaLine") == 'True':
-        pass
+        callData.RemoveObserver(self.logic.fibulaLineControlPointPlacedObserver)
+        self.logic.fibulaLineControlPointPlacedObserver = 0
       if callData.GetAttribute("isInterCondylarBeamLine") == 'True':
-        pass
+        callData.RemoveObserver(self.logic.interCondylarBeamLineControlPointModifiedObserver)
+        callData.RemoveObserver(self.logic.interCondylarBeamLineControlPointRemovedObserver)
+        self.logic.interCondylarBeamLineControlPointModifiedObserver = 0
+        self.logic.interCondylarBeamLineControlPointRemovedObserver = 0
       if callData.GetAttribute("isMiterBoxDirectionLine") == 'True':
-        pass
+        callData.RemoveObserver(self.logic.miterBoxDirectionLineObserver)
+        self.logic.miterBoxDirectionLineObserver = 0
     
     if callData.GetClassName() == 'vtkMRMLMarkupsFiducialNode':
       if callData.GetAttribute("isFibulaFiducials") == 'True':
-        pass
+        callData.RemoveObserver(self.logic.fibulaFiducialListObserver)
+        self.logic.fibulaFiducialListObserver = 0
       if callData.GetAttribute("isMandibleFiducials") == 'True':
-        pass
+        callData.RemoveObserver(self.logic.mandibleFiducialListObserver)
+        self.logic.mandibleFiducialListObserver = 0
 
     if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode':
-      if callData.GetAttribute("isMandibleCurve") == 'True':
-        pass
+      #if callData.GetAttribute("isMandibleCurve") == 'True':
+      #  callData.RemoveObserver(self.logic.mandibleCurveModifiedObserver)
+      #  self.logic.mandibleCurveModifiedObserver = 0
       if callData.GetAttribute("isMandibleBridgeCurve") == 'True':
-        pass
+        callData.RemoveObserver(self.logic.mandibleBridgeCurveControlPointModifiedObserver)
+        callData.RemoveObserver(self.logic.mandibleBridgeCurveControlPointRemovedObserver)
+        self.logic.mandibleBridgeCurveControlPointModifiedObserver = 0
+        self.logic.mandibleBridgeCurveControlPointRemovedObserver = 0
 
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeRemovedEvent(self, caller, event, callData):
@@ -1674,6 +1684,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.mandiblePlaneObserversAndNodeIDList = []
     self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList = []
     self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList = []
+    # self.mandibleCurveModifiedObserver = 0 # TODO: could be implemented on the future
     self.interCondylarBeamLineControlPointModifiedObserver = 0
     self.interCondylarBeamLineControlPointRemovedObserver = 0
     self.mandibleBridgeCurveControlPointModifiedObserver = 0
@@ -2010,6 +2021,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleBridgeTube = parameterNode.GetNodeReference("mandibleBridgeTube")
     if mandibleBridgeCurve.GetNumberOfControlPoints() <= 1:
       if mandibleBridgeTube is not None:
+        parameterNode.SetNodeReference("mandibleBridgeTube", "")
         slicer.mrmlScene.RemoveNode(mandibleBridgeTube)
     elif mandibleBridgeCurve.GetNumberOfControlPoints() >= 2:
       self.updateMandibleBridgeTube()
@@ -2154,6 +2166,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
     if interCondylarBeamLine.GetNumberOfControlPoints() <= 1:
       if interCondylarBeamBox is not None:
+        parameterNode.SetNodeReference("interCondylarBeamBox", "")
         slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
   
   def onInterCondylarLineTimerTimeout(self):
@@ -2921,7 +2934,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       
       if fixCutGoesThroughTheMandibleTwiceChecked:
         #if planeToFixCutGoesThroughTheMandibleTwice == None:
+
+        # TODO, maybe the 2 lines below or the whole if block could be avoided by
+        # using dynamicModelerNode.RemoveNodeReferenceIDs("") in combination with other methods
+        parameterNode.SetNodeReferenceID("planeToFixCutGoesThroughTheMandibleTwice", "")
         slicer.mrmlScene.RemoveNode(planeToFixCutGoesThroughTheMandibleTwice)
+
         mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
         mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
         mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
@@ -4452,6 +4470,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if surgicalGuideModel.GetPolyData().GetNumberOfPoints() == 0:
       slicer.mrmlScene.RemoveNode(surgicalGuideModel)
       slicer.util.errorDisplay("ERROR: Boolean operations to make fibula surgical guide failed")
+      return
+    
+    parameterNode.SetNodeReferenceID("fibulaSurgicalGuidePrototypeModel", surgicalGuideModel.GetID())
 
   def createSawBoxesFromFirstAndLastMandiblePlanes(self):
     parameterNode = self.getParameterNode()
@@ -4828,6 +4849,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if surgicalGuideModel.GetPolyData().GetNumberOfPoints() == 0:
       slicer.mrmlScene.RemoveNode(surgicalGuideModel)
       slicer.util.errorDisplay("ERROR: Boolean operations to make mandible surgical failed")
+      return
+    
+    parameterNode.SetNodeReferenceID("mandibleSurgicalGuidePrototypeModel", surgicalGuideModel.GetID())
 
   def getRightAndLeftMandibleResectionPlanes(self):
     parameterNode = self.getParameterNode()
@@ -4939,8 +4963,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
-    parameterNode.SetNodeReferenceID("mandibleReconstructionModel", mandibleReconstructionModel.GetID())
-
     parentFolder = getFolder("Mandible reconstruction")
     moveNodeToFolder(mandibleReconstructionModel, parentFolder)
 
@@ -4964,8 +4986,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if mandibleReconstructionModel.GetPolyData().GetNumberOfPoints() == 0:
       slicer.mrmlScene.RemoveNode(mandibleReconstructionModel)
       slicer.util.errorDisplay("ERROR: Boolean operations to make neomandible model failed")
+      return
     
-    return
+    parameterNode.SetNodeReferenceID("mandibleReconstructionModel", mandibleReconstructionModel.GetID())
 
   def exportScaledFibulaPiecesForNeomandibleReconstructionToFolder(self, scaledFibulaPiecesFolder, scaleFactor=1.001):
     planeList = createListFromFolderName("Mandibular planes")
