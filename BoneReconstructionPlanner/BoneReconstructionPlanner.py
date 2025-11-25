@@ -690,12 +690,36 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
             if self.logic.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList[i][1] == callData.GetID():
               observerIndex = i
           callData.RemoveObserver(self.logic.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList.pop(observerIndex)[0])
+    
+    # TODO: remove observers
+    if callData.GetClassName() == 'vtkMRMLMarkupsLineNode':
+      if callData.GetAttribute("isFibulaLine") == 'True':
+        pass
+      if callData.GetAttribute("isInterCondylarBeamLine") == 'True':
+        pass
+      if callData.GetAttribute("isMiterBoxDirectionLine") == 'True':
+        pass
+    
+    if callData.GetClassName() == 'vtkMRMLMarkupsFiducialNode':
+      if callData.GetAttribute("isFibulaFiducials") == 'True':
+        pass
+      if callData.GetAttribute("isMandibleFiducials") == 'True':
+        pass
+
+    if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode':
+      if callData.GetAttribute("isMandibleCurve") == 'True':
+        pass
+      if callData.GetAttribute("isMandibleBridgeCurve") == 'True':
+        pass
 
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeRemovedEvent(self, caller, event, callData):
     """
     Processing to do after a node is removed from the scene
     """
+    if self._parameterNode is None:
+      return
+
     if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode' and callData.GetAttribute("isMandibleCurve") == 'True':
       #print(callData.GetName())
       placeWidget = self.ui.mandibleCurvePlaceWidget
@@ -1995,7 +2019,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   
   def updateMandibleBridgeTube(self):
     parameterNode = self.getParameterNode()
-    mandibleBridgeCurve = parameterNode.GetNodeReference("mandibleBridgeCurve")
+    mandibleBridgeCurve = self.getMandibleBridgeCurve()
     mandibleBridgeTube = parameterNode.GetNodeReference("mandibleBridgeTube")
     mandibleBridgeRadius = float(parameterNode.GetParameter("mandibleBridgeRadius_mm"))
 
@@ -5320,13 +5344,17 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     """ Do whatever is needed to reset the state - typically a scene clear will be enough.
     """
     #slicer.util.mainWindow().enabled = False
+    slicer.app.processEvents()
     slicer.mrmlScene.Clear()
+    slicer.app.processEvents()
 
   def closeUp(self):
     """ Do whatever is needed to reset the state - typically a scene clear will be enough.
     """
+    slicer.app.processEvents()
     slicer.mrmlScene.Clear()
     #slicer.util.mainWindow().enabled = True
+    slicer.app.processEvents()
     
   def runTest(self):
     """Run as few or as many tests as needed here.
@@ -5340,12 +5368,12 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_MakeBoneModels()
     self.section_SetMandibularCurve()
     self.section_SetFibulaLine()
-    #self.section_AddMandiblePlanes()
+    self.section_AddMandiblePlanes()
     #self.section_SimulateAndImproveMandibleReconstruction()
     #self.section_createMiterBoxesFromCorrespondingLine()
     ##self.section_prepareGuideBaseForFibulaGuide()
     #self.section_createAndUpdateSawBoxesFromMandiblePlanes()
-    self.closeUp()
+    #self.closeUp()
 
   def section_EnterBRP(self):
     self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
@@ -5591,13 +5619,12 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     np.testing.assert_almost_equal(mandibleCentroidZ,-57.415688,decimal=1)
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
-    segmentationModelsFolder = shNode.GetItemByName("Segmentation Models")
-    fibulaModelItemID = shNode.GetItemByDataNode(fibulaModelNode)
-    mandibleModelItemID = shNode.GetItemByDataNode(mandibleModelNode)
-    decimatedFibulaModelItemID = shNode.GetItemByDataNode(decimatedFibulaModelNode)
-    decimatedMandibleModelItemID = shNode.GetItemByDataNode(decimatedMandibleModelNode)
-
+    BRPFolder = getFolder("BoneReconstructionPlanner")
+    segmentationModelsFolder = getFolder("Segmentation Models")
+    fibulaModelItemID = getItem(fibulaModelNode)
+    mandibleModelItemID = getItem(mandibleModelNode)
+    decimatedFibulaModelItemID = getItem(decimatedFibulaModelNode)
+    decimatedMandibleModelItemID = getItem(decimatedMandibleModelNode)
     self.assertNotEqual(BRPFolder,shNode.GetInvalidItemID())
     self.assertNotEqual(segmentationModelsFolder,shNode.GetInvalidItemID())
 
@@ -5716,8 +5743,8 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     )
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
-    mandibularCurveItemID = shNode.GetItemByDataNode(mandibularCurveNode)
+    BRPFolder = getFolder("BoneReconstructionPlanner")
+    mandibularCurveItemID = getItem(mandibularCurveNode)
     self.assertEqual(
       BRPFolder,
       shNode.GetItemParent(mandibularCurveItemID)
@@ -5757,8 +5784,8 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     # check placement in the SH
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
-    mandibularCurveItemID = shNode.GetItemByDataNode(mandibularCurveNode)
+    BRPFolder = getFolder("BoneReconstructionPlanner")
+    mandibularCurveItemID = getItem(mandibularCurveNode)
     self.assertEqual(
       BRPFolder,
       shNode.GetItemParent(mandibularCurveItemID)
@@ -5783,7 +5810,9 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     ]
 
     for origin in planeOrigins:
-      self.logicBRP.addCutPlane()
+      slicer.app.processEvents()
+      self.widgetBRP.ui.addCutPlaneButton.click()
+      slicer.app.processEvents()
       selectionNode = slicer.app.applicationLogic().GetSelectionNode()
       mandibularPlaneNode = slicer.mrmlScene.GetNodeByID(
         selectionNode.GetActivePlaceNodeID()
@@ -5794,7 +5823,6 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-
     BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
     mandibularPlanesFolderItemID = shNode.GetItemByName("Mandibular planes")
 
@@ -5822,7 +5850,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       self.assertTrue(
         np.allclose(
           np.array(planeNode.GetSize()),
-          np.array([self.logicBRP.PLANE_SIDE_SIZE,self.logicBRP.PLANE_SIDE_SIZE])
+          np.array([slicer.PLANE_SIDE_SIZE,slicer.PLANE_SIDE_SIZE])
         )
       )
       self.assertEqual(
@@ -5833,7 +5861,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       displayNode = planeNode.GetDisplayNode()
       self.assertEqual(
         displayNode.GetGlyphScale(),
-        self.logicBRP.PLANE_GLYPH_SCALE
+        slicer.PLANE_GLYPH_SCALE
       )
       self.assertTrue(
         displayNode.GetHandlesInteractive(),
@@ -5864,8 +5892,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
           )
     
     # check planes order
-    parameterNode = self.logicBRP.getParameterNode()
-    mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
+    mandibleCurve = self.logicBRP.getMandibularCurve()
     closestCurvePoint = [0,0,0]
     smallerCurvePointIndex = 0
     for i in range(len(mandibularPlanesList)):
