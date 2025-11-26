@@ -883,6 +883,9 @@ neomandible</string>
           <height>400</height>
          </size>
         </property>
+        <property name="animated">
+         <bool>true</bool>
+        </property>
         <property name="nodeTypes">
          <stringlist>
           <string>vtkMRMLMarkupsNode</string>
