@@ -7,7 +7,10 @@ from slicer.ScriptedLoadableModule import *
 from slicer.util import VTKObservationMixin
 from BRPLib.helperFunctions import *
 from BRPLib.guiWidgets import *
+from BRPLib.MOOSEHelper import *
+from BRPLib.DentalSegmentatorHelper import *
 import json
+import traceback
 
 #
 # BoneReconstructionPlanner
@@ -554,6 +557,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
+    self.ui.headCTSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.legsCTSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibularSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -601,6 +606,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.emailFeatureRequestButton.connect('clicked(bool)',self.onEmailFeatureRequestButton)
     self.ui.openDocumentationButton.connect('clicked(bool)',self.onOpenDocumentationButton)
     self.ui.loadTestCaseButton.connect('clicked(bool)', self.onLoadTestCaseButton)
+    self.ui.installAISegmentationsButton.connect('clicked(bool)', self.onInstallAISegmentationsButton)
+    self.ui.runHeadSegmentationButton.connect('clicked(bool)', self.onRunHeadSegmentationButton)
+    self.ui.runLegsSegmentationButton.connect('clicked(bool)', self.onRunLegsSegmentationButton)
+    self.ui.runHeadAndLegsSegmentationButton.connect('clicked(bool)', self.onRunHeadAndLegsSegmentationButton)
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.removeCutPlaneButton.connect('clicked(bool)',self.onRemoveCutPlaneButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
@@ -626,6 +635,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.fixCutGoesThroughTheMandibleTwiceCheckBox.connect('stateChanged(int)', self.onFixCutGoesThroughTheMandibleTwiceCheckBox)
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.AISegmentationsCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.customTitaniumPlateDesingCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.makeAllDentalImplanCylindersParallelCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -651,6 +661,31 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("currentlyProcessing", str(True))
     confirm_clean_and_load_test_data()
     self._parameterNode.SetParameter("currentlyProcessing", str(False))
+
+  def onInstallAISegmentationsButton(self):
+    """
+    Install Head and Legs segmentation
+    """
+    self.logic.installAISegmentations()
+
+  def onRunHeadSegmentationButton(self):
+    """
+    Run head segmentation
+    """
+    self.logic.runHeadSegmentation()
+
+  def onRunLegsSegmentationButton(self):
+    """
+    Run legs segmentation
+    """
+    self.logic.runLegsSegmentation()
+
+  def onRunHeadAndLegsSegmentationButton(self):
+    """
+    Run head and legs segmentations
+    """
+    self.logic.runHeadSegmentation()
+    self.logic.runLegsSegmentation()
 
   def updateMiterBoxes(self, caller=None, event=None):
     """
@@ -1020,7 +1055,18 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
           self.logic.setRedSliceForBoneModelsDisplayNodes()
           self.logic.setRedSliceForBoxModelsDisplayNodes()
 
+    self.ui.installAISegmentationsButton.enabled = self._parameterNode.GetParameter("AISegmentationsInstalled") == "False"
+    self.ui.runAISegmentationsFrame.enabled = self._parameterNode.GetParameter("AISegmentationsInstalled") == "True"
+    self.ui.runHeadSegmentationButton.enabled = self._parameterNode.GetNodeReference("headCT") is not None
+    self.ui.runLegsSegmentationButton.enabled = self._parameterNode.GetNodeReference("legsCT") is not None
+    self.ui.runHeadAndLegsSegmentationButton.enabled = (
+      (self._parameterNode.GetNodeReference("headCT") is not None) and 
+      (self._parameterNode.GetNodeReference("legsCT") is not None)
+    )
+
     # Update node selectors and sliders
+    self.ui.headCTSelector.setCurrentNode(self._parameterNode.GetNodeReference("headCT"))
+    self.ui.legsCTSelector.setCurrentNode(self._parameterNode.GetNodeReference("legsCT"))
     self.ui.mandibularSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularSegmentation"))
     self.ui.fibulaSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSegmentation"))
     self.ui.fibulaSurgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel"))
@@ -1106,13 +1152,20 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.miterBoxesGuideTypeComboBox.currentText = self._parameterNode.GetParameter("miterBoxesGuideType")
     self.ui.sawBoxesGuideTypeComboBox.currentText = self._parameterNode.GetParameter("sawBoxesGuideType")
     
+    AISegmentationsChecked = self._parameterNode.GetParameter("AISegmentations") == "True"
     dentalImplantsPlanningAndFibulaDrillGuidesChecked = self._parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
     customTitaniumPlateDesingChecked = self._parameterNode.GetParameter("customTitaniumPlateDesing") == "True"
     makeAllDentalImplanCylindersParallelChecked = self._parameterNode.GetParameter("makeAllDentalImplanCylindersParallel") == "True"
+    self.ui.AISegmentationsCheckBox.checked = AISegmentationsChecked
     self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.checked = dentalImplantsPlanningAndFibulaDrillGuidesChecked
     self.ui.customTitaniumPlateDesingCheckBox.checked = customTitaniumPlateDesingChecked
     self.ui.makeAllDentalImplanCylindersParallelCheckBox.checked = makeAllDentalImplanCylindersParallelChecked
 
+    if AISegmentationsChecked:
+      self.ui.AISegmentationCollapsibleButton.show()
+    else:
+      self.ui.AISegmentationCollapsibleButton.hide()
+    
     if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
       self.ui.dentalImplantsPlanningCollapsibleButton.show()
       self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.text = (
@@ -1244,6 +1297,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if currentScalarVolumeChanged == "True":
       self._parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode", "True")
 
+    self._parameterNode.SetNodeReferenceID("headCT", self.ui.headCTSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("legsCT", self.ui.legsCTSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibularSegmentation", self.ui.mandibularSegmentationSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fibulaSegmentation", self.ui.fibulaSegmentationSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", self.ui.fibulaSurgicalGuideBaseSelector.currentNodeID)
@@ -1330,6 +1385,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("updateOnDentalImplantPlanesMovement","True")
     else:
       self._parameterNode.SetParameter("updateOnDentalImplantPlanesMovement","False")
+    if self.ui.AISegmentationsCheckBox.checked:
+      self._parameterNode.SetParameter("AISegmentations","True")
+    else:
+      self._parameterNode.SetParameter("AISegmentations","False")
+    self.logic.overwriteParameter("AISegmentations")
     if self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.checked:
       self._parameterNode.SetParameter("dentalImplantsPlanningAndFibulaDrillGuides","True")
     else:
@@ -1732,7 +1792,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if valueFromSettings is None:
         ws(parameterName, parameterValue)
         wp(parameterNode, parameterName, parameterValue)
-      else:
+      elif not parameterNode.GetParameter(parameterName):
         wp(parameterNode, parameterName, valueFromSettings)
 
   def restoreDefaultParameters(self):
@@ -1754,6 +1814,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for parameterName in defaultParametersDict.keys():
       valueFromParameterNode = rp(parameterNode, parameterName)
       ws(parameterName, valueFromParameterNode)
+  
+  def overwriteParameter(self, parameterName):
+    """
+    Overwrite default setting to current value on the parameterNode
+    """
+    parameterNode = self.getParameterNode()
+    valueFromParameterNode = rp(parameterNode, parameterName)
+    ws(parameterName, valueFromParameterNode)
 
   @saveExecutedMethodWithTelemetry
   def prepareSendEmailOnWebBrowser(self, emailVariable, subjectVariable, bodyVariable, ccVariable="", bccVariable=""):
@@ -2100,6 +2168,87 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode.SetParameter("interCondylarBeamBoxSize_mm", str(interCondylarBeamBoxSize))
 
     self.updateInterCondylarBeamBox()
+  
+  def installAISegmentations(self):
+    try:
+      mooseHelper = MOOSEHelper()
+      mooseHelper.installAIDependenciesIfNeeded()
+
+      dentalSegmentatorAIModelDir = os.path.join(os.path.dirname(__file__), 'Resources/ML')
+      dentalSegmentatorHelper = DentalSegmentatorHelper(
+        dentalSegmentatorAIModelDir
+      )
+      dentalSegmentatorHelper.installAIDependenciesIfNeeded()
+    except Exception as e:
+      logging.error("Error installing AI dependencies: " + str(e))
+      if USING_GUI:
+        qt.QMessageBox.critical(
+          slicer.util.mainWindow(), 
+          "Error installing AI dependencies", 
+          "An error occurred while installing AI dependencies. Please do a complete restart of Slicer and try again."
+        )
+    else:
+      parameterNode = self.getParameterNode()
+      parameterNode.SetParameter("AISegmentationsInstalled", "True")
+      self.overwriteParameter("AISegmentationsInstalled")
+  
+  def runHeadSegmentation(self):
+    parameterNode = self.getParameterNode()
+    headVolume = parameterNode.GetNodeReference("headCT")
+    mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
+    
+    dentalSegmentatorAIModelDir = os.path.join(os.path.dirname(__file__), 'Resources/ML')
+
+    dentalSegmentatorHelper = DentalSegmentatorHelper(
+      dentalSegmentatorAIModelDir
+    )
+    dentalSegmentatorHelper.setVolumeNode(headVolume)
+    dentalSegmentatorHelper.setSegmentationNode(mandibularSegmentation)
+    dentalSegmentatorHelper.setParameter(
+      "limitBoneHUValueDental", 
+      int(parameterNode.GetParameter("limitBoneHUValueDental"))
+    )
+
+    # add ProgressDialog from helperFunctions below with all needed parameters
+    progressDialog = slicer.util.createProgressDialog(
+      windowTitle = "Running AI Workflow", 
+      labelText = "Processing...", 
+      value = 0, 
+      maximum = 100
+    )
+    dentalSegmentatorHelper.doFullAIWorkflow()
+    progressDialog.close()
+    
+    mandibularSegmentation = dentalSegmentatorHelper.getSegmentationNode()
+    print("mandibularSegmentationName " + mandibularSegmentation.GetName())
+    parameterNode.SetNodeReferenceID("mandibularSegmentation", mandibularSegmentation.GetID())
+  
+  def runLegsSegmentation(self):
+    parameterNode = self.getParameterNode()
+    legsVolume = parameterNode.GetNodeReference("legsCT")
+    fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
+    
+    mooseHelper = MOOSEHelper()
+    mooseHelper.setVolumeNode(legsVolume)
+    mooseHelper.setSegmentationNode(fibulaSegmentation)
+    mooseHelper.setParameter(
+      "limitBoneHUValueMoose", 
+      int(parameterNode.GetParameter("limitBoneHUValueMoose"))
+    )
+
+    # add ProgressDialog from helperFunctions below with all needed parameters
+    progressDialog = slicer.util.createProgressDialog(
+      windowTitle = "Running AI Workflow", 
+      labelText = "Processing...", 
+      value = 0, 
+      maximum = 100
+    )
+    mooseHelper.doFullAIWorkflow()
+    progressDialog.close()
+    
+    legsAISegmentation = mooseHelper.getSegmentationNode()
+    print("legsAISegmentationName " + legsAISegmentation.GetName())
+    parameterNode.SetNodeReferenceID("fibulaSegmentation", legsAISegmentation.GetID())
 
   def addCutPlane(self):
     parameterNode = self.getParameterNode()
