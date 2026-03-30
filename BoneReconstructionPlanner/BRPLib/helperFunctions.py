@@ -2,7 +2,7 @@
 #   helperFunctions.py: Stores functions used on multiple modules of this extension
 #
 
-from __main__ import vtk, slicer
+from __main__ import vtk, slicer, qt
 import numpy as np
 import logging
 

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>508</width>
-    <height>2809</height>
+    <height>2944</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -69,6 +69,119 @@
     </widget>
    </item>
    <item>
+    <widget class="ctkCollapsibleButton" name="AISegmentationCollapsibleButton">
+     <property name="text">
+      <string>CTs and AI</string>
+     </property>
+     <property name="collapsed">
+      <bool>true</bool>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_21">
+      <item>
+       <layout class="QFormLayout" name="formLayout_18">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_54">
+          <property name="text">
+           <string>Head CT</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_55">
+          <property name="text">
+           <string>Leg/s CT</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="qMRMLNodeComboBox" name="headCTSelector">
+          <property name="nodeTypes">
+           <stringlist notr="true">
+            <string>vtkMRMLScalarVolumeNode</string>
+           </stringlist>
+          </property>
+          <property name="hideChildNodeTypes">
+           <stringlist notr="true"/>
+          </property>
+          <property name="addEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="interactionNodeSingletonTag">
+           <string notr="true"/>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="qMRMLNodeComboBox" name="legsCTSelector">
+          <property name="nodeTypes">
+           <stringlist notr="true">
+            <string>vtkMRMLScalarVolumeNode</string>
+           </stringlist>
+          </property>
+          <property name="hideChildNodeTypes">
+           <stringlist notr="true"/>
+          </property>
+          <property name="addEnabled">
+           <bool>false</bool>
+          </property>
+          <property name="interactionNodeSingletonTag">
+           <string notr="true"/>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QPushButton" name="installAISegmentationsButton">
+        <property name="text">
+         <string>Install AI segmentations</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="runAISegmentationsFrame">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_22">
+         <item>
+          <widget class="QPushButton" name="runHeadSegmentationButton">
+           <property name="text">
+            <string>Run head segmentation</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="runLegsSegmentationButton">
+           <property name="text">
+            <string>Run legs segmentation</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="runHeadAndLegsSegmentationButton">
+           <property name="text">
+            <string>Run head and
+legs segmentation</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="ctkCollapsibleButton" name="CollapsibleButton">
      <property name="text">
       <string>Mandible Reconstruction Planning</string>
@@ -95,6 +208,78 @@
             <enum>QFrame::Plain</enum>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_12">
+            <item>
+             <layout class="QFormLayout" name="formLayout">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="text">
+                 <string>Mandibular segmentation</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="qMRMLNodeComboBox" name="mandibularSegmentationSelector">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="nodeTypes">
+                 <stringlist>
+                  <string>vtkMRMLSegmentationNode</string>
+                 </stringlist>
+                </property>
+                <property name="noneEnabled">
+                 <bool>true</bool>
+                </property>
+                <property name="addEnabled">
+                 <bool>true</bool>
+                </property>
+                <property name="removeEnabled">
+                 <bool>false</bool>
+                </property>
+                <property name="noneDisplay">
+                 <string>None</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_11">
+                <property name="text">
+                 <string>Fibula segmentation</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="qMRMLNodeComboBox" name="fibulaSegmentationSelector">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="nodeTypes">
+                 <stringlist>
+                  <string>vtkMRMLSegmentationNode</string>
+                 </stringlist>
+                </property>
+                <property name="noneEnabled">
+                 <bool>true</bool>
+                </property>
+                <property name="addEnabled">
+                 <bool>true</bool>
+                </property>
+                <property name="removeEnabled">
+                 <bool>false</bool>
+                </property>
+                <property name="noneDisplay">
+                 <string>None</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
             <item>
              <layout class="QFormLayout" name="formLayout_12">
               <property name="leftMargin">
@@ -128,78 +313,6 @@
                   <string>Right</string>
                  </property>
                 </item>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <layout class="QFormLayout" name="formLayout">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_9">
-                <property name="text">
-                 <string>Mandibular segmentation</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="qMRMLNodeComboBox" name="mandibularSegmentationSelector">
-                <property name="enabled">
-                 <bool>true</bool>
-                </property>
-                <property name="nodeTypes">
-                 <stringlist>
-                  <string>vtkMRMLSegmentationNode</string>
-                 </stringlist>
-                </property>
-                <property name="noneEnabled">
-                 <bool>true</bool>
-                </property>
-                <property name="addEnabled">
-                 <bool>false</bool>
-                </property>
-                <property name="removeEnabled">
-                 <bool>false</bool>
-                </property>
-                <property name="noneDisplay">
-                 <string>None</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_11">
-                <property name="text">
-                 <string>Fibula segmentation</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="qMRMLNodeComboBox" name="fibulaSegmentationSelector">
-                <property name="enabled">
-                 <bool>true</bool>
-                </property>
-                <property name="nodeTypes">
-                 <stringlist>
-                  <string>vtkMRMLSegmentationNode</string>
-                 </stringlist>
-                </property>
-                <property name="noneEnabled">
-                 <bool>true</bool>
-                </property>
-                <property name="addEnabled">
-                 <bool>false</bool>
-                </property>
-                <property name="removeEnabled">
-                 <bool>false</bool>
-                </property>
-                <property name="noneDisplay">
-                 <string>None</string>
-                </property>
                </widget>
               </item>
              </layout>
@@ -2116,14 +2229,6 @@ p, li { white-space: pre-wrap; }
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
-            <widget class="QCheckBox" name="dentalImplantsPlanningAndFibulaDrillGuidesCheckBox">
-             <property name="text">
-              <string>Dental Implants Planning
-and Fibula Drill Guides</string>
-             </property>
-            </widget>
-           </item>
            <item row="5" column="0">
             <widget class="QLabel" name="label_44">
              <property name="text">
@@ -2152,6 +2257,28 @@ settings</string>
              <property name="text">
               <string>Overwrite default
 settings</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="label_56">
+             <property name="text">
+              <string>Experimental Feature:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QCheckBox" name="dentalImplantsPlanningAndFibulaDrillGuidesCheckBox">
+             <property name="text">
+              <string>Dental Implants Planning
+and Fibula Drill Guides</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QCheckBox" name="AISegmentationsCheckBox">
+             <property name="text">
+              <string>AI Segmentation</string>
              </property>
             </widget>
            </item>
@@ -2361,38 +2488,6 @@ settings</string>
   <connection>
    <sender>BoneReconstructionPlanner</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>fibulaSegmentationSelector</receiver>
-   <slot>setMRMLScene(vtkMRMLScene*)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>189</x>
-     <y>265</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>268</x>
-     <y>101</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>BoneReconstructionPlanner</sender>
-   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>mandibularSegmentationSelector</receiver>
-   <slot>setMRMLScene(vtkMRMLScene*)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>189</x>
-     <y>265</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>268</x>
-     <y>75</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>BoneReconstructionPlanner</sender>
-   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>interCondylarBeamLinePlaceWidget</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
    <hints>
@@ -2467,6 +2562,70 @@ settings</string>
     <hint type="destinationlabel">
      <x>331</x>
      <y>2419</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>fibulaSegmentationSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>189</x>
+     <y>265</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>268</x>
+     <y>101</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>mandibularSegmentationSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>189</x>
+     <y>265</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>268</x>
+     <y>75</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>headCTSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>253</x>
+     <y>1454</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>290</x>
+     <y>203</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BoneReconstructionPlanner</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>legsCTSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>253</x>
+     <y>1454</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>290</x>
+     <y>236</y>
     </hint>
    </hints>
   </connection>
