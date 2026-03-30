@@ -2772,8 +2772,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           moveNodeToFolder(intersectionA, intersectionsForCentroidCalculationFolder)
           moveNodeToFolder(intersectionB, intersectionsForCentroidCalculationFolder)
           
-          getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,intersectionA)
-          getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,intersectionB)
+          getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(fibulaModelNode,fibulaLineDirection,lineStartPos,intersectionA)
+          getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(fibulaModelNode,fibulaLineDirection,lineEndPos,intersectionB)
           lineStartPos = getCentroid(intersectionA)
           lineEndPos = getCentroid(intersectionB)
 
@@ -4102,8 +4102,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d_B' % (i//2))
       pointsIntersectionModel.CreateDefaultDisplayNodes()
-      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionModel,normalToMiterBoxDirectionAndFibulaZ,intersectionModelCentroid,pointsIntersectionModel)
-      pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,miterBoxDirection)
+      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(intersectionModel,normalToMiterBoxDirectionAndFibulaZ,intersectionModelCentroid,pointsIntersectionModel)
+      pointOfIntersection = nearestPointOverLineWithTheVectorDirection(pointsIntersectionModel,miterBoxDirection)
       moveNodeToFolder(intersectionModel, intersectionsFolder)
       moveNodeToFolder(pointsIntersectionModel, pointsIntersectionsFolder)
 
@@ -4770,7 +4770,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d' % (len(mandibularPlanesList)-1))
       intersectionModel.CreateDefaultDisplayNodes()
-      getNearestIntersectionBetweenModelAnd1Plane(mandibleModelNode,resectionPlanesList[i],intersectionModel)
+      getFurthestIntersectionBetweenModelAnd1Plane(mandibleModelNode,resectionPlanesList[i],intersectionModel)
       
       curvePlanarConvexityDirection = [0,0,0]
       vtk.vtkMath.Cross(mandiblePlaneZ, bestFittingPlaneNormalOfCurvePoints, curvePlanarConvexityDirection)
@@ -4782,8 +4782,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         else:
           pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d' % (len(mandibularPlanesList)-1))
         pointsIntersectionModel.CreateDefaultDisplayNodes()
-        getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(intersectionModel,bestFittingPlaneNormalOfCurvePoints,intersectionModelCentroid,pointsIntersectionModel)
-        pointOfIntersection = getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(pointsIntersectionModel,curvePlanarConvexityDirection)
+        getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(intersectionModel,bestFittingPlaneNormalOfCurvePoints,intersectionModelCentroid,pointsIntersectionModel)
+        pointOfIntersection = nearestPointOverLineWithTheVectorDirection(pointsIntersectionModel,curvePlanarConvexityDirection)
       else:
         pointOfIntersection = [0,0,0]
         resectionPlanesList[i].GetOrigin(pointOfIntersection)
@@ -5064,8 +5064,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       moveNodeToFolder(fibulaStartIntersectionModel, intersectionsFolder)
       moveNodeToFolder(fibulaEndIntersectionModel, intersectionsFolder)
 
-      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineStartPos,fibulaStartIntersectionModel)
-      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(fibulaModelNode,fibulaLineDirection,lineEndPos,fibulaEndIntersectionModel)
+      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(fibulaModelNode,fibulaLineDirection,lineStartPos,fibulaStartIntersectionModel)
+      getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(fibulaModelNode,fibulaLineDirection,lineEndPos,fibulaEndIntersectionModel)
       lineStartPos = getCentroid(fibulaStartIntersectionModel)
       lineEndPos = getCentroid(fibulaEndIntersectionModel)
       if lineStartPos is None or lineEndPos is None:
