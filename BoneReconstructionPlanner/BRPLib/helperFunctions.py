@@ -22,29 +22,75 @@ def getIntersectionBetweenModelAnd1Plane(modelNode,planeNode,intersectionModel):
 
   intersectionModel.SetAndObservePolyData(cutter.GetOutput())
 
-def getNearestIntersectionBetweenModelAnd1Plane(modelNode,planeNode,intersectionModel):
-  plane = vtk.vtkPlane()
+def getFurthestIntersectionBetweenModelAnd1Plane(modelNode,planeNode,intersectionModel):
   origin = [0,0,0]
   normal = [0,0,0]
   planeNode.GetOrigin(origin)
   planeNode.GetNormal(normal)
-  plane.SetOrigin(origin)
-  plane.SetNormal(normal)
+  getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(modelNode, normal, origin, intersectionModel)
 
-  cutter = vtk.vtkCutter()
-  cutter.SetInputData(modelNode.GetPolyData())
-  cutter.SetCutFunction(plane)
-  cutter.Update()
+  furthestRegionPD = extractFurthestRegion(intersectionModel.GetPolyData(),origin)
 
-  connectivityFilter = vtk.vtkConnectivityFilter()
-  connectivityFilter.SetInputData(cutter.GetOutput())
-  connectivityFilter.SetClosestPoint(origin)
-  connectivityFilter.SetExtractionModeToClosestPointRegion()
-  connectivityFilter.Update()
+  intersectionModel.SetAndObservePolyData(furthestRegionPD)
 
-  intersectionModel.SetAndObservePolyData(connectivityFilter.GetOutput())
+def extractFurthestRegion(polyData, point):
+    # Label all connected regions
+    connectivity = vtk.vtkConnectivityFilter()
+    connectivity.SetInputData(polyData)
+    connectivity.SetExtractionModeToAllRegions()
+    connectivity.ColorRegionsOn()
+    connectivity.Update()
 
-def getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(modelNode,normal,origin,intersectionModel):
+    numRegions = connectivity.GetNumberOfExtractedRegions()
+
+    maxDist = -1
+    furthestRegionId = 0
+
+    for regionId in range(numRegions):
+        # Extract each region individually
+        regionExtractor = vtk.vtkConnectivityFilter()
+        regionExtractor.SetInputData(polyData)
+        regionExtractor.SetExtractionModeToSpecifiedRegions()
+        regionExtractor.AddSpecifiedRegion(regionId)
+        regionExtractor.Update()
+
+        # Convert to polydata (vtkConnectivityFilter outputs vtkUnstructuredGrid)
+        surfaceFilter = vtk.vtkDataSetSurfaceFilter()
+        surfaceFilter.SetInputConnection(regionExtractor.GetOutputPort())
+        surfaceFilter.Update()
+
+        regionPolyData = surfaceFilter.GetOutput()
+        if regionPolyData.GetNumberOfPoints() == 0:
+            continue
+
+        # Find closest point in this region to the reference point
+        pointLocator = vtk.vtkPointLocator()
+        pointLocator.SetDataSet(regionPolyData)
+        pointLocator.BuildLocator()
+        closestPointId = pointLocator.FindClosestPoint(point)
+        closestPoint = regionPolyData.GetPoint(closestPointId)
+
+        import math
+        dist = math.sqrt(vtk.vtkMath.Distance2BetweenPoints(point, closestPoint))
+
+        if dist > maxDist:
+            maxDist = dist
+            furthestRegionId = regionId
+
+    # Extract the furthest region
+    finalExtractor = vtk.vtkConnectivityFilter()
+    finalExtractor.SetInputData(polyData)
+    finalExtractor.SetExtractionModeToSpecifiedRegions()
+    finalExtractor.AddSpecifiedRegion(furthestRegionId)
+    finalExtractor.Update()
+
+    toPolyData = vtk.vtkDataSetSurfaceFilter()
+    toPolyData.SetInputConnection(finalExtractor.GetOutputPort())
+    toPolyData.Update()
+
+    return toPolyData.GetOutput()
+
+def getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(modelNode,normal,origin,intersectionModel):
   plane = vtk.vtkPlane()
   plane.SetOrigin(origin)
   plane.SetNormal(normal)
@@ -56,7 +102,7 @@ def getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin_2(modelNode,normal,o
 
   intersectionModel.SetAndObservePolyData(cutter.GetOutput())
 
-def getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(modelNode,normal,origin,intersectionModel):
+def getCutHalfBetweenModelAnd1PlaneWithNormalAndOrigin(modelNode,normal,origin,intersectionModel):
   plane = vtk.vtkPlane()
   plane.SetOrigin(origin)
   plane.SetNormal(normal)
@@ -252,6 +298,35 @@ def getPointOfATwoPointsModelThatMakesLineDirectionSimilarToVector(twoPointsMode
     return points[1]
   else:
     return points[0]
+
+def nearestPointOverLineWithTheVectorDirection(pointsModel, vector):
+  """
+  Given array1 and array2 of 3D points in numpy, 
+  create a matrix from substracting every ith point in array1 
+  to every jth point in array2
+  
+
+  """
+  pointsData = pointsModel.GetPolyData().GetPoints().GetData()
+  from vtk.util.numpy_support import vtk_to_numpy
+  points = vtk_to_numpy(pointsData)
+
+  # result[i, j] = array1[i] - array2[j], shape: (N, M, 3)
+  result = points[:, np.newaxis, :] - points[np.newaxis, :, :]
+  
+  unitVector = vector/np.linalg.norm(vector)
+  
+  dots = np.dot(result, unitVector)
+
+  # find the ith and jth that maximize the dot product
+  maxDotIndex = np.unravel_index(np.argmax(dots), dots.shape)
+  # return points[maxDotIndex[0]], points[maxDotIndex[1]]
+
+  if vtk.vtkMath.Dot(points[maxDotIndex[0]], unitVector) > 0:
+    return points[maxDotIndex[0]]
+  else:
+    return points[maxDotIndex[1]]
+
 
 def getLineNorm(line):
   lineStartPos = np.array([0,0,0])
