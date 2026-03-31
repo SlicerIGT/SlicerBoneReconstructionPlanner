@@ -1,5 +1,39 @@
 import slicer
 
+bone_names = {
+    "carpal_left": "Left Carpal",
+    "carpal_right": "Right Carpal",
+    "clavicle_left": "Left Clavicle",
+    "clavicle_right": "Right Clavicle",
+    "femur_left": "Left Femur",
+    "femur_right": "Right Femur",
+    "fibula_left": "Left Fibula",
+    "fibula_right": "Right Fibula",
+    "fingers_left": "Left Fingers",
+    "fingers_right": "Right Fingers",
+    "humerus_left": "Left Humerus",
+    "humerus_right": "Right Humerus",
+    "metacarpal_left": "Left Metacarpal",
+    "metacarpal_right": "Right Metacarpal",
+    "metatarsal_left": "Left Metatarsal",
+    "metatarsal_right": "Right Metatarsal",
+    "patella_left": "Left Patella",
+    "patella_right": "Right Patella",
+    "radius_left": "Left Radius",
+    "radius_right": "Right Radius",
+    "scapula_left": "Left Scapula",
+    "scapula_right": "Right Scapula",
+    "skull": "Skull",
+    "tarsal_left": "Left Tarsal",
+    "tarsal_right": "Right Tarsal",
+    "tibia_left": "Left Tibia",
+    "tibia_right": "Right Tibia",
+    "toes_left": "Left Toes",
+    "toes_right": "Right Toes",
+    "ulna_left": "Left Ulna",
+    "ulna_right": "Right Ulna",
+}
+
 class MOOSEHelper:
     def __init__(self):
         # default values for the parameters, can be changed through code
@@ -22,6 +56,7 @@ class MOOSEHelper:
         self.runSegmentationAI()
         self.optimizeSegmentation()
         self.setVisibleSegments(self.segmentsNamesOfInterest)
+        self.renameSegments(bone_names)
 
     def installAIDependenciesIfNeeded(self, forceReinstall=False):
         from MOOSE import DependencyManager
@@ -287,3 +322,13 @@ class MOOSEHelper:
         
         segmentationNode.CreateClosedSurfaceRepresentation()
 
+    def renameSegments(self, renameDict: dict):
+        segmentationNode = self.getSegmentationNode()
+        segmentation_vtk = segmentationNode.GetSegmentation()
+        for segmentIndex in range(segmentation_vtk.GetNumberOfSegments()):
+            segmentID = segmentation_vtk.GetNthSegmentID(segmentIndex)
+            segment = segmentation_vtk.GetSegment(segmentID)
+            oldName = segment.GetName()
+            if oldName in renameDict:
+                newName = renameDict[oldName]
+                segment.SetName(newName)
