@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>508</width>
-    <height>2944</height>
+    <height>3061</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -74,7 +74,7 @@
       <string>CTs and AI</string>
      </property>
      <property name="collapsed">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_21">
       <item>
@@ -173,6 +173,49 @@
             <string>Run head and
 legs segmentation</string>
            </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox">
+           <property name="title">
+            <string>Cortical bone value</string>
+           </property>
+           <layout class="QFormLayout" name="formLayout_19">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_57">
+              <property name="text">
+               <string>Head CT</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_58">
+              <property name="text">
+               <string>Leg/s CT</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="ctkSliderWidget" name="headCTCorticalBoneThresholdSlider">
+              <property name="decimals">
+               <number>0</number>
+              </property>
+              <property name="maximum">
+               <double>1000.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="ctkSliderWidget" name="legsCTCorticalBoneThresholdSlider">
+              <property name="decimals">
+               <number>0</number>
+              </property>
+              <property name="maximum">
+               <double>1000.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
         </layout>
@@ -2326,6 +2369,11 @@ and Fibula Drill Guides</string>
    <class>ctkPushButton</class>
    <extends>QPushButton</extends>
    <header>ctkPushButton.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ctkSliderWidget</class>
+   <extends>QWidget</extends>
+   <header>ctkSliderWidget.h</header>
   </customwidget>
   <customwidget>
    <class>qMRMLNodeComboBox</class>

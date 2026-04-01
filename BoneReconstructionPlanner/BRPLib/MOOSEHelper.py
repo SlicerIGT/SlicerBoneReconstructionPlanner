@@ -38,7 +38,7 @@ class MOOSEHelper:
     def __init__(self):
         # default values for the parameters, can be changed through code
         self.AI_MODEL_NAME = "clin_ct_peripheral_bones"
-        self.limitBoneHUValueMoose = 200
+        self.legsCTCorticalBoneThreshold = 200
         self.growShrinkIterations = 5
         self.LEFT_FIBULA_SEGMENT_NAME = "Left Fibula"
         self.RIGHT_FIBULA_SEGMENT_NAME = "Right Fibula"
@@ -95,8 +95,8 @@ class MOOSEHelper:
         self.segmentationNode = segmentationNode
 
     def setParameter(self, parameterName, parameterValue):
-        if parameterName == "limitBoneHUValueMoose":
-            self.limitBoneHUValueMoose = parameterValue
+        if parameterName == "legsCTCorticalBoneThreshold":
+            self.legsCTCorticalBoneThreshold = parameterValue
         elif parameterName == "growShrinkIterations":
             self.growShrinkIterations = parameterValue
         elif parameterName == "segmentsNamesOfInterest":
@@ -104,9 +104,9 @@ class MOOSEHelper:
         else:
             raise ValueError(f"Parameter {parameterName} not found")
     
-    # the argument should be a dict with the keys "limitBoneHUValueMoose", "growShrinkIterations" and "segmentsNamesOfInterest"
+    # the argument should be a dict with the keys "legsCTCorticalBoneThreshold", "growShrinkIterations" and "segmentsNamesOfInterest"
     def setParameters(self, parameters: dict):
-        self.limitBoneHUValueMoose = parameters.get("limitBoneHUValueMoose", self.limitBoneHUValueMoose)
+        self.legsCTCorticalBoneThreshold = parameters.get("legsCTCorticalBoneThreshold", self.legsCTCorticalBoneThreshold)
         self.growShrinkIterations = parameters.get("growShrinkIterations", self.growShrinkIterations)
         self.segmentsNamesOfInterest = parameters.get("segmentsNamesOfInterest", self.segmentsNamesOfInterest)
 
@@ -118,8 +118,8 @@ class MOOSEHelper:
         return self.segmentationNode
     
     def getParameter(self, parameterName):
-        if parameterName == "limitBoneHUValueMoose":
-            return self.limitBoneHUValueMoose
+        if parameterName == "legsCTCorticalBoneThreshold":
+            return self.legsCTCorticalBoneThreshold
         elif parameterName == "growShrinkIterations":
             return self.growShrinkIterations
         elif parameterName == "segmentsNamesOfInterest":
@@ -129,7 +129,7 @@ class MOOSEHelper:
 
     def getParameters(self):
         return {
-            "limitBoneHUValueMoose": self.limitBoneHUValueMoose,
+            "legsCTCorticalBoneThreshold": self.legsCTCorticalBoneThreshold,
             "growShrinkIterations": self.growShrinkIterations,
             "segmentsNamesOfInterest": self.segmentsNamesOfInterest
         }
@@ -194,7 +194,7 @@ class MOOSEHelper:
     ):        
         volumeNode = self.getVolumeNode()
         segmentationNode = self.getSegmentationNode()
-        threshold = self.limitBoneHUValueMoose
+        threshold = self.legsCTCorticalBoneThreshold
         algorithmIterations = self.growShrinkIterations
         segmentNamesList = self.segmentsNamesOfInterest
         
