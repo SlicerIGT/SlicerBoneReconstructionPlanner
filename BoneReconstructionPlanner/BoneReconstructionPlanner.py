@@ -3556,7 +3556,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         segmentID = seg.GetSegmentation().GetNthSegmentID(0)
       segment = seg.GetSegmentation().GetSegment(segmentID)
       segDisplayNode = seg.GetDisplayNode()
-      segDisplayNode.SetSegmentVisibility(segmentID,False)
+      segDisplayNode.SetVisibility(False)
 
       logic = slicer.modules.segmentations.logic()
       # this replaces original model names by segment names
