@@ -9,7 +9,7 @@ class DentalSegmentatorHelper:
     def __init__(self, dentalSegmentatorAIModelDir = ""):
         # default values for the parameters, can be changed through code
         self.DENTAL_SEGMENTATOR_AI_MODEL_DIR = dentalSegmentatorAIModelDir or qt.QStandardPaths.writableLocation(qt.QStandardPaths.AppDataLocation) + "/DentalSegmentatorAIModel/"
-        self.limitBoneHUValueDental = 200
+        self.headCTCorticalBoneThreshold = 200
         self.islandMinimumSize = 1000 # in mm3, used in the wrapBigIslands function to determine which islands should be wrapped
         #self.growShrinkIterations = 5
         self.CORTICAL_MANDIBLE_SEGMENT_NAME = "Mandible"
@@ -70,16 +70,16 @@ class DentalSegmentatorHelper:
         self.segmentationNode = segmentationNode
 
     def setParameter(self, parameterName, parameterValue):
-        if parameterName == "limitBoneHUValueDental":
-            self.limitBoneHUValueDental = parameterValue
+        if parameterName == "headCTCorticalBoneThreshold":
+            self.headCTCorticalBoneThreshold = parameterValue
         elif parameterName == "segmentNamesToAdd":
             self.segmentNamesToAdd = parameterValue
         else:
             raise ValueError(f"Parameter {parameterName} not found")
 
-    # the argument should be a dict with the keys "limitBoneHUValueDental", "growShrinkIterations" and "segmentsNamesOfInterest"
+    # the argument should be a dict with the keys "headCTCorticalBoneThreshold", "growShrinkIterations" and "segmentsNamesOfInterest"
     def setParameters(self, parameters: dict):
-        self.limitBoneHUValueDental = parameters.get("limitBoneHUValueDental", self.limitBoneHUValueDental)
+        self.headCTCorticalBoneThreshold = parameters.get("headCTCorticalBoneThreshold", self.headCTCorticalBoneThreshold)
         #self.growShrinkIterations = parameters.get("growShrinkIterations", self.growShrinkIterations)
         self.segmentNamesToAdd = parameters.get("segmentNamesToAdd", self.segmentNamesToAdd)
 
@@ -91,8 +91,8 @@ class DentalSegmentatorHelper:
         return self.segmentationNode
     
     def getParameter(self, parameterName):
-        if parameterName == "limitBoneHUValueDental":
-            return self.limitBoneHUValueDental
+        if parameterName == "headCTCorticalBoneThreshold":
+            return self.headCTCorticalBoneThreshold
         #elif parameterName == "growShrinkIterations":
         #    return self.growShrinkIterations
         elif parameterName == "segmentNamesToAdd":
@@ -102,7 +102,7 @@ class DentalSegmentatorHelper:
 
     def getParameters(self):
         return {
-            "limitBoneHUValueDental": self.limitBoneHUValueDental,
+            "headCTCorticalBoneThreshold": self.headCTCorticalBoneThreshold,
             #"growShrinkIterations": self.growShrinkIterations,
             "segmentNamesToAdd": self.segmentNamesToAdd
         }
@@ -240,7 +240,7 @@ class DentalSegmentatorHelper:
         volumeNode = self.getVolumeNode()
         segmentationNode = self.getSegmentationNode()
         segmentNamesList = targetSegmentsNamesList
-        threshold = self.limitBoneHUValueDental
+        threshold = self.headCTCorticalBoneThreshold
         
         # find the segment IDs to be edited
         segmentation_vtk = segmentationNode.GetSegmentation()
