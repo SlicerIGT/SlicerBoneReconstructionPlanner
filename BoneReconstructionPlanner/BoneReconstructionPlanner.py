@@ -568,6 +568,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     #self.ui.dentalImplantCylinderSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.plateCurveSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
 
+    self.ui.headCTCorticalBoneThresholdSlider.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.legsCTCorticalBoneThresholdSlider.valueChanged.connect(self.updateParameterNodeFromGUI)
+
     self.ui.initialSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.betweenSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.securityMarginOfFibulaPiecesSpinBox.valueChanged.connect(self.updateMiterBoxes)
@@ -1063,8 +1066,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       (self._parameterNode.GetNodeReference("headCT") is not None) and 
       (self._parameterNode.GetNodeReference("legsCT") is not None)
     )
+    #if self._parameterNode.GetNodeReference("headCT") is not None:
+    #scalarRange = self._parameterNode.GetNodeReference("headCT").GetImageData().GetScalarRange()
+    #self.ui.headCTCorticalBoneThresholdSlider.maximum = scalarRange[1]
+    self.ui.headCTCorticalBoneThresholdSlider.enabled = self._parameterNode.GetNodeReference("headCT") is not None
+    self.ui.legsCTCorticalBoneThresholdSlider.enabled = self._parameterNode.GetNodeReference("legsCT") is not None
+    self.ui.headCTCorticalBoneThresholdSlider.value = float(self._parameterNode.GetParameter("headCTCorticalBoneThreshold"))
+    self.ui.legsCTCorticalBoneThresholdSlider.value = float(self._parameterNode.GetParameter("legsCTCorticalBoneThreshold"))
 
-    # Update node selectors and sliders
+    # Update node selectors
     self.ui.headCTSelector.setCurrentNode(self._parameterNode.GetNodeReference("headCT"))
     self.ui.legsCTSelector.setCurrentNode(self._parameterNode.GetNodeReference("legsCT"))
     self.ui.mandibularSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularSegmentation"))
@@ -1306,6 +1316,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetNodeReferenceID("dentalImplantsFiducialList", self.ui.dentalImplantFiducialListSelector.currentNodeID)
     #self._parameterNode.SetNodeReferenceID("selectedDentalImplantCylinderModel", self.ui.dentalImplantCylinderSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("plateCurve", self.ui.plateCurveSelector.currentNodeID)
+
+    self._parameterNode.SetParameter("headCTCorticalBoneThreshold", str(self.ui.headCTCorticalBoneThresholdSlider.value))
+    self._parameterNode.SetParameter("legsCTCorticalBoneThreshold", str(self.ui.legsCTCorticalBoneThresholdSlider.value))
 
     self._parameterNode.SetParameter("initialSpace_mm", str(self.ui.initialSpinBox.value))
     self._parameterNode.SetParameter("additionalBetweenSpaceOfFibulaPlanes_mm", str(self.ui.betweenSpinBox.value))
@@ -2205,8 +2218,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     dentalSegmentatorHelper.setVolumeNode(headVolume)
     dentalSegmentatorHelper.setSegmentationNode(mandibularSegmentation)
     dentalSegmentatorHelper.setParameter(
-      "limitBoneHUValueDental", 
-      int(parameterNode.GetParameter("limitBoneHUValueDental"))
+      "headCTCorticalBoneThreshold", 
+      int(float(parameterNode.GetParameter("headCTCorticalBoneThreshold")))
     )
 
     # add ProgressDialog from helperFunctions below with all needed parameters
@@ -2232,8 +2245,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mooseHelper.setVolumeNode(legsVolume)
     mooseHelper.setSegmentationNode(fibulaSegmentation)
     mooseHelper.setParameter(
-      "limitBoneHUValueMoose", 
-      int(parameterNode.GetParameter("limitBoneHUValueMoose"))
+      "legsCTCorticalBoneThreshold", 
+      int(float(parameterNode.GetParameter("legsCTCorticalBoneThreshold")))
     )
 
     # add ProgressDialog from helperFunctions below with all needed parameters
