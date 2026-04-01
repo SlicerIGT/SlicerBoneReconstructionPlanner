@@ -987,3 +987,19 @@ def areVolumesEqual(vol1, vol2):
     array2 = slicer.util.arrayFromVolume(vol2)
     
     return np.array_equal(array1, array2)
+
+def getSegmentIDWithName(segmentName, segmentationNode):
+    """Get a segment by name from a segmentation node"""
+    if segmentationNode is None:
+        return None
+    
+    segmentation = segmentationNode.GetSegmentation()
+    
+    for i in range(segmentation.GetNumberOfSegments()):
+        segmentID = segmentation.GetNthSegmentID(i)
+        segment = segmentation.GetSegment(segmentID)
+        
+        if segment.GetName() == segmentName:
+            return segmentID    
+    
+    return None

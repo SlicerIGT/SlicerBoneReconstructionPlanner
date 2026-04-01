@@ -3528,6 +3528,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     segmentations = [fibulaSegmentation,mandibularSegmentation]
     models = [fibulaModelNode,mandibleModelNode]
     decimatedModels = [decimatedFibulaModelNode,decimatedMandibleModelNode]
+    segmentNames = ["Fibula","Mandible"]
+    laterality = [parameterNode.GetParameter("donorLeg") + " ", ""]
 
     for i in range(2):
       models[i].CreateDefaultDisplayNodes()
@@ -3535,7 +3537,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       seg = segmentations[i]
       seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
-      segmentID = seg.GetSegmentation().GetNthSegmentID(0)
+      name = laterality[i] + segmentNames[i]
+      segmentID = getSegmentIDWithName(name, segmentations[i])
+      if segmentID is None:
+        segmentID = seg.GetSegmentation().GetNthSegmentID(0)
       segment = seg.GetSegmentation().GetSegment(segmentID)
       segDisplayNode = seg.GetDisplayNode()
       segDisplayNode.SetSegmentVisibility(segmentID,False)
