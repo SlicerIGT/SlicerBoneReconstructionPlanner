@@ -40,8 +40,8 @@ class MOOSEHelper:
         self.AI_MODEL_NAME = "clin_ct_peripheral_bones"
         self.limitBoneHUValueMoose = 200
         self.growShrinkIterations = 5
-        self.LEFT_FIBULA_SEGMENT_NAME = "fibula_left"
-        self.RIGHT_FIBULA_SEGMENT_NAME = "fibula_right"
+        self.LEFT_FIBULA_SEGMENT_NAME = "Left Fibula"
+        self.RIGHT_FIBULA_SEGMENT_NAME = "Right Fibula"
         self.segmentsNamesOfInterest = [
             self.LEFT_FIBULA_SEGMENT_NAME,
             self.RIGHT_FIBULA_SEGMENT_NAME
@@ -54,9 +54,9 @@ class MOOSEHelper:
     ):
         #self.installAIDependenciesIfNeeded()
         self.runSegmentationAI()
+        self.renameSegments(bone_names)
         self.optimizeSegmentation()
         self.setVisibleSegments(self.segmentsNamesOfInterest)
-        self.renameSegments(bone_names)
 
     def installAIDependenciesIfNeeded(self, forceReinstall=False):
         from MOOSE import DependencyManager
