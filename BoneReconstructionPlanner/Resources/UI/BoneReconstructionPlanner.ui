@@ -74,7 +74,7 @@
       <string>CTs and AI</string>
      </property>
      <property name="collapsed">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_21">
       <item>
@@ -109,6 +109,9 @@
           <property name="hideChildNodeTypes">
            <stringlist notr="true"/>
           </property>
+          <property name="noneEnabled">
+           <bool>true</bool>
+          </property>
           <property name="addEnabled">
            <bool>false</bool>
           </property>
@@ -126,6 +129,9 @@
           </property>
           <property name="hideChildNodeTypes">
            <stringlist notr="true"/>
+          </property>
+          <property name="noneEnabled">
+           <bool>true</bool>
           </property>
           <property name="addEnabled">
            <bool>false</bool>
