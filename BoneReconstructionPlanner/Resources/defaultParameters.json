@@ -47,6 +47,7 @@
     "plateCrossSectionalLength_mm": 7.0,
     "plateCrossSectionalWidth_mm": 2.5,
     "plateTipsBevelRadius": 49,
+    "safeDistanceToMalleolus_mm": 75.0,
     "sawBoxSlotHeight_mm": 15.0,
     "sawBoxSlotLength_mm": 20.0,
     "sawBoxSlotWall_mm": 3.0,
