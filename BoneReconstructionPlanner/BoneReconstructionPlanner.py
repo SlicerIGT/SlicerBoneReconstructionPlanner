@@ -3667,12 +3667,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     print("fibulaFirstPoint: " + str(fibulaFirstPoint))
     print("fibulaLastPoint: " + str(fibulaLastPoint))
 
-    self.getFibulaLine().DisableModifiedEventOn()
     self.getFibulaLine().RemoveAllControlPoints()
     self.getFibulaLine().AddControlPoint(fibulaFirstPoint)
     self.getFibulaLine().AddControlPoint(fibulaLastPoint)
-    self.getFibulaLine().DisableModifiedEventOff()
-    self.centerFibulaLine()
   
   def updateFibulaPieces(self):
     planeCutsList = createListFromFolderName("Plane Cuts")
