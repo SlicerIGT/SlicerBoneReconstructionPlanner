@@ -3617,6 +3617,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         parameterNode.SetParameter("mandibleCentroidY",str(centroid[1]))
         parameterNode.SetParameter("mandibleCentroidZ",str(centroid[2]))
 
+      if i==0:
+        fibulaSegmentID = segmentID
+
     fibulaModelNode.SetName("fibula")
     mandibleModelNode.SetName("mandible")
 
@@ -3628,6 +3631,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     decimatedFibulaModelNode.SetAndObserveMesh(calculateNormals(decimatedFibulaModelNode.GetMesh()))
     decimatedMandibleModelNode.SetAndObserveMesh(calculateNormals(decimatedMandibleModelNode.GetMesh()))
 
+    self.autocreateFibulaLine(fibulaSegmentID, fibulaSegmentation)
+
     parameterNode.EndModify(wasModified)
 
     if USING_GUI:
@@ -3635,6 +3640,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     parameterNode.SetParameter("currentlyProcessing", str(False))
 
+  def autocreateFibulaLine(self, segmentID, segmentationNode):
+    obbOrigin, obbDiameters, principalZAxis = getSegmentStatistics(segmentID, segmentationNode)
+
+    safeDistanceToMalleolus = float(self.getParameterNode().GetParameter("safeDistanceToMalleolus_mm"))
+
+    superiorDirection = np.array([0.,0.,1.])
+    if vtk.vtkMath.Dot(principalZAxis, superiorDirection) < 0:
+      endPoint = obbOrigin - principalZAxis * (0 - safeDistanceToMalleolus)
+      startPoint = obbOrigin + principalZAxis * (obbDiameters[2] - safeDistanceToMalleolus)
+    else:
+      endPoint = obbOrigin + principalZAxis * (0 - safeDistanceToMalleolus)
+      startPoint = obbOrigin - principalZAxis * (obbDiameters[2] - safeDistanceToMalleolus)
+    
+    self.getFibulaLine().DisableModifiedEventOn()
+    self.getFibulaLine().RemoveAllControlPoints()
+    self.getFibulaLine().AddControlPoint(startPoint)
+    self.getFibulaLine().AddControlPoint(endPoint)
+    self.getFibulaLine().DisableModifiedEventOff()
+    self.centerFibulaLine()
+  
   def updateFibulaPieces(self):
     planeCutsList = createListFromFolderName("Plane Cuts")
     for i in range(len(planeCutsList)):
@@ -5088,8 +5113,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       lineEndPos = getCentroid(fibulaEndIntersectionModel)
       if lineStartPos is None or lineEndPos is None:
         removeFolder(intersectionsFolder)
-        slicer.util.errorDisplay("ERROR: Line has invalid direction, please re-draw it")
-        return
+        raise slicer.util.errorDisplay("ERROR: Line has invalid direction, please re-draw it")
 
     fibulaLine.SetNthControlPointPosition(0,lineStartPos)
     fibulaLine.SetNthControlPointPosition(1,lineEndPos)

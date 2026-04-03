@@ -406,6 +406,26 @@ def getBestFittingPlaneNormalFromPoints(points):
   # the corresponding left singular vector is the normal vector of the best-fitting plane
   return left[:, -1]
 
+def getSegmentStatistics(segmentID, segmentationNode):
+  import SegmentStatistics
+
+  segStatLogic = SegmentStatistics.SegmentStatisticsLogic()
+  segStatLogic.getParameterNode().SetParameter("Segmentation", segmentationNode.GetID())
+  segStatLogic.getParameterNode().SetParameter("LabelmapSegmentStatisticsPlugin.enabled", "True")
+  segStatLogic.getParameterNode().SetParameter("ScalarVolumeSegmentStatisticsPlugin.enabled", "False")
+  segStatLogic.getParameterNode().SetParameter("ClosedSurfaceSegmentStatisticsPlugin.enabled", "False")
+  segStatLogic.getParameterNode().SetParameter("LabelmapSegmentStatisticsPlugin.obb_origin_ras.enabled", "True")
+  segStatLogic.getParameterNode().SetParameter("LabelmapSegmentStatisticsPlugin.obb_diameter_mm.enabled", "True")
+  segStatLogic.getParameterNode().SetParameter("LabelmapSegmentStatisticsPlugin.principal_axis_z.enabled", "True")
+  segStatLogic.computeStatistics()
+  stats = segStatLogic.getStatistics()
+
+  import numpy as np
+  obbOrigin = np.array(stats[segmentID, "LabelmapSegmentStatisticsPlugin.obb_origin_ras"])
+  obbDiameters = np.array(stats[segmentID, "LabelmapSegmentStatisticsPlugin.obb_diameter_mm"])
+  principalZAxis = np.array(stats[segmentID, "LabelmapSegmentStatisticsPlugin.principal_axis_z"])
+  return obbOrigin, obbDiameters, principalZAxis
+
 def calculateSurfaceArea(polydata):
   triangleFilter = vtk.vtkTriangleFilter()
   triangleFilter.SetInputData(polydata)
