@@ -3646,16 +3646,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     safeDistanceToFibulaTip = float(self.getParameterNode().GetParameter("safeDistanceToFibulaTip_mm"))
 
     superiorDirection = np.array([0.,0.,1.])
+    # the next if expression body is not intuitive but its because of how segmentStatistics works
     if vtk.vtkMath.Dot(principalZAxis, superiorDirection) > 0:
-      #works
       startPoint = obbOrigin
       endPoint = obbOrigin + principalZAxis*obbDiameters[2]
       fibulaFirstPoint = startPoint + principalZAxis*safeDistanceToFibulaTip
       fibulaLastPoint = endPoint - principalZAxis*safeDistanceToFibulaTip
     else:
-      #works
-      endPoint = obbOrigin
       startPoint = obbOrigin + principalZAxis*obbDiameters[2]
+      endPoint = obbOrigin
       fibulaFirstPoint = startPoint - principalZAxis*safeDistanceToFibulaTip
       fibulaLastPoint = endPoint + principalZAxis*safeDistanceToFibulaTip
 
