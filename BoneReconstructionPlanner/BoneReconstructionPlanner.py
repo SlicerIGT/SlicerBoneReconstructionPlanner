@@ -3643,16 +3643,29 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def autocreateFibulaLine(self, segmentID, segmentationNode):
     obbOrigin, obbDiameters, principalZAxis = getSegmentStatistics(segmentID, segmentationNode)
 
-    superiorDirection = np.array([0.,0.,1.])
-    if vtk.vtkMath.Dot(principalZAxis, superiorDirection) < 0:
-      principalZAxis *= -1
+    safeDistanceToFibulaTip = float(self.getParameterNode().GetParameter("safeDistanceToFibulaTip_mm"))
 
-    startPoint = obbOrigin - principalZAxis*obbDiameters[2]
-    endPoint = obbOrigin
-    
-    safeDistanceToMalleolus = float(self.getParameterNode().GetParameter("safeDistanceToMalleolus_mm"))
-    fibulaFirstPoint = startPoint + principalZAxis*safeDistanceToMalleolus
-    fibulaLastPoint = endPoint - principalZAxis*safeDistanceToMalleolus
+    superiorDirection = np.array([0.,0.,1.])
+    if vtk.vtkMath.Dot(principalZAxis, superiorDirection) > 0:
+      #works
+      startPoint = obbOrigin
+      endPoint = obbOrigin + principalZAxis*obbDiameters[2]
+      fibulaFirstPoint = startPoint + principalZAxis*safeDistanceToFibulaTip
+      fibulaLastPoint = endPoint - principalZAxis*safeDistanceToFibulaTip
+    else:
+      #works
+      endPoint = obbOrigin
+      startPoint = obbOrigin + principalZAxis*obbDiameters[2]
+      fibulaFirstPoint = startPoint - principalZAxis*safeDistanceToFibulaTip
+      fibulaLastPoint = endPoint + principalZAxis*safeDistanceToFibulaTip
+
+    print("principalZAxis: " + str(principalZAxis))
+    print("obbDiameters[2]: " + str(obbDiameters[2]))
+    print("obbOrigin: " + str(obbOrigin))
+    print("startPoint: " + str(startPoint))
+    print("endPoint: " + str(endPoint))
+    print("fibulaFirstPoint: " + str(fibulaFirstPoint))
+    print("fibulaLastPoint: " + str(fibulaLastPoint))
 
     self.getFibulaLine().DisableModifiedEventOn()
     self.getFibulaLine().RemoveAllControlPoints()
