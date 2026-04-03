@@ -3643,20 +3643,21 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def autocreateFibulaLine(self, segmentID, segmentationNode):
     obbOrigin, obbDiameters, principalZAxis = getSegmentStatistics(segmentID, segmentationNode)
 
-    safeDistanceToMalleolus = float(self.getParameterNode().GetParameter("safeDistanceToMalleolus_mm"))
-
     superiorDirection = np.array([0.,0.,1.])
     if vtk.vtkMath.Dot(principalZAxis, superiorDirection) < 0:
-      endPoint = obbOrigin - principalZAxis * (0 - safeDistanceToMalleolus)
-      startPoint = obbOrigin + principalZAxis * (obbDiameters[2] - safeDistanceToMalleolus)
-    else:
-      endPoint = obbOrigin + principalZAxis * (0 - safeDistanceToMalleolus)
-      startPoint = obbOrigin - principalZAxis * (obbDiameters[2] - safeDistanceToMalleolus)
+      principalZAxis *= -1
+
+    startPoint = obbOrigin - principalZAxis*obbDiameters[2]
+    endPoint = obbOrigin
     
+    safeDistanceToMalleolus = float(self.getParameterNode().GetParameter("safeDistanceToMalleolus_mm"))
+    fibulaFirstPoint = startPoint + principalZAxis*safeDistanceToMalleolus
+    fibulaLastPoint = endPoint - principalZAxis*safeDistanceToMalleolus
+
     self.getFibulaLine().DisableModifiedEventOn()
     self.getFibulaLine().RemoveAllControlPoints()
-    self.getFibulaLine().AddControlPoint(startPoint)
-    self.getFibulaLine().AddControlPoint(endPoint)
+    self.getFibulaLine().AddControlPoint(fibulaFirstPoint)
+    self.getFibulaLine().AddControlPoint(fibulaLastPoint)
     self.getFibulaLine().DisableModifiedEventOff()
     self.centerFibulaLine()
   
