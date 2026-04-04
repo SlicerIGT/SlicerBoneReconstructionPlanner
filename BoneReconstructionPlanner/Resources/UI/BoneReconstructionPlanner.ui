@@ -837,7 +837,7 @@ neomandible</string>
             <string>Visualization Options</string>
            </property>
            <property name="collapsed">
-            <bool>true</bool>
+            <bool>false</bool>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_13">
             <item>
@@ -859,24 +859,21 @@ neomandible</string>
                 <number>7</number>
                </property>
                <item>
-                <layout class="QFormLayout" name="formLayout_11">
-                 <property name="verticalSpacing">
-                  <number>7</number>
-                 </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_13">
                  <property name="leftMargin">
                   <number>0</number>
                  </property>
                  <property name="topMargin">
                   <number>0</number>
                  </property>
-                 <item row="0" column="0">
+                 <item>
                   <widget class="QLabel" name="label">
                    <property name="text">
                     <string>Scalar volume</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="0" column="1">
+                 <item>
                   <widget class="qMRMLNodeComboBox" name="scalarVolumeSelector">
                    <property name="enabled">
                     <bool>true</bool>
@@ -894,6 +891,16 @@ neomandible</string>
                    </property>
                    <property name="removeEnabled">
                     <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QToolButton" name="transformVolumeButton">
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>

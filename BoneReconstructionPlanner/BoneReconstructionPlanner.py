@@ -421,6 +421,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     boneIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/bone_48.svg')
     self.ui.makeModelsButton.setIcon(qt.QIcon(boneIconPath))
 
+    transformVolumeIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/transform_volume.png')
+    self.ui.transformVolumeButton.setIcon(qt.QIcon(transformVolumeIconPath))
+
     #targetIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/target_48.svg')
     #self.ui.centerFibulaLineButton.setIcon(qt.QIcon(targetIconPath))
     
@@ -632,6 +635,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.interCondylarBeamDecreaseSizeButton.connect('clicked(bool)', self.onInterCondylarBeamDecreaseSizeButton)
     self.ui.interCondylarBeamVisibilityToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.lockVSPButton.connect('toggled(bool)', self.onLockVSPButton)
+    self.ui.transformVolumeButton.connect('toggled(bool)', self.onTransformVolumeButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -1112,6 +1116,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.plateCrossSectionalBevelRadiusPorcentageSpinBox.setValue(float(self._parameterNode.GetParameter("plateCrossSectionalBevelRadiusPorcentage")))
     self.ui.plateTipsBevelRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("plateTipsBevelRadius")))
 
+    self.ui.transformVolumeButton.checked = self._parameterNode.GetParameter("transformVolume") == "True"
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = self._parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
@@ -1302,10 +1307,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     previousScalarVolume = self._parameterNode.GetNodeReference("currentScalarVolume")
     self._parameterNode.SetNodeReferenceID("currentScalarVolume", self.ui.scalarVolumeSelector.currentNodeID)
     currentScalarVolumeChanged = str(
-      not(self.ui.scalarVolumeSelector.currentNode() == previousScalarVolume)
+      self.ui.scalarVolumeSelector.currentNode() is not previousScalarVolume
     )
     if currentScalarVolumeChanged == "True":
       self._parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode", "True")
+      if previousScalarVolume is not None:
+        self.ui.scalarVolumeSelector.currentNode().SetAndObserveTransformNodeID(
+          previousScalarVolume.GetTransformNodeID()
+        )
+        previousScalarVolume.SetAndObserveTransformNodeID("")
 
     self._parameterNode.SetNodeReferenceID("headCT", self.ui.headCTSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("legsCT", self.ui.legsCTSelector.currentNodeID)
@@ -1580,6 +1590,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     self.logic.interCondylarBeamSizeChange(positive = False)
 
+  def onTransformVolumeButton(self,checked):
+    """
+    Callback function to avoid GUI modification of VSP parameters
+    """
+    self.logic.updateNormalizationFibulaLineTransform(checked)
+  
   def onLockVSPButton(self,checked):
     """
     Callback function to avoid GUI modification of VSP parameters
@@ -5130,6 +5146,48 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     removeFolder(intersectionsFolder)
 
+    transformVolumeChecked = parameterNode.GetParameter("transformVolume") == "True"
+    self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
+
+  def updateNormalizationFibulaLineTransform(self, transformVolumeChecked):
+    parameterNode = self.getParameterNode()
+    parameterNode.SetParameter("transformVolume", str(transformVolumeChecked))
+    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
+    
+    fibulaNormalizationTransformNode = parameterNode.GetNodeReference("fibulaNormalizationTransformNode")
+    if fibulaNormalizationTransformNode is None:
+      fibulaNormalizationTransformNode = slicer.vtkMRMLLinearTransformNode()
+      fibulaNormalizationTransformNode.SetName("FibulaNormalizationTransform")
+      slicer.mrmlScene.AddNode(fibulaNormalizationTransformNode)
+      parameterNode.SetNodeReferenceID("fibulaNormalizationTransformNode", fibulaNormalizationTransformNode.GetID())
+    
+    currentScalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
+    if currentScalarVolume is not None:
+      currentScalarVolume.SetAndObserveTransformNodeID(fibulaNormalizationTransformNode.GetID())
+    
+    if not transformVolumeChecked:
+      identityMatrix = vtk.vtkMatrix4x4()
+      identityMatrix.Identity()
+      fibulaNormalizationTransformNode.SetMatrixTransformToParent(identityMatrix)
+      return
+
+    lineStartPos = np.zeros(3)
+    lineEndPos = np.zeros(3)
+    fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
+    fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+    fibulaLineDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+    lineCenter = (lineStartPos+lineEndPos)/2
+    #get rotation
+    referenceDirection = np.array([0,0,1])
+    rotationAxis = np.cross(fibulaLineDirection, referenceDirection)
+    rotationAngle = np.arccos(np.dot(fibulaLineDirection, referenceDirection))
+    rotationTransform = vtk.vtkTransform()
+    rotationTransform.PostMultiply()
+    rotationTransform.Translate(-lineCenter)
+    rotationTransform.RotateWXYZ(np.degrees(rotationAngle), rotationAxis)
+    rotationTransform.Translate(lineCenter)
+    fibulaNormalizationTransformNode.SetMatrixTransformToParent(rotationTransform.GetMatrix())
+  
   def setBackgroundVolumeFromID(self,scalarVolumeID):
     redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
     redSliceLogic.GetSliceCompositeNode().SetBackgroundVolumeID(scalarVolumeID)
