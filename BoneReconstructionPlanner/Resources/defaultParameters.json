@@ -19,6 +19,7 @@
     "showMandiblePlanes": true,
     "showMandiblePlanesInteractionHandles": true,
     "showOriginalMandible": true,
+    "transformVolume": false,
     "updateOnDentalImplantPlanesMovement": true,
     "updateOnMandiblePlanesMovement": true,
     "useMoreExactVersionOfPositioningAlgorithm": false,
