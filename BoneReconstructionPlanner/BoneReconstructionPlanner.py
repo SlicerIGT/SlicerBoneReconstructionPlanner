@@ -3316,6 +3316,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.setRedSliceForBoneModelsDisplayNodes()
 
+    transformVolumeChecked = parameterNode.GetParameter("transformVolume") == "True"
+    self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
+
   def reorderMandiblePlanes(self):
     planeList = createListFromFolderName("Mandibular planes")
     parameterNode = self.getParameterNode()
@@ -4254,6 +4257,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.setRedSliceForBoxModelsDisplayNodes()
 
+    transformVolumeChecked = parameterNode.GetParameter("transformVolume") == "True"
+    self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
+
   def createDentalImplantCylindersFiducialList(self):
     dentalImplantCylindersFiducialsListsFolder = getFolder("Dental Implants Cylinders Fiducials", reset = True)
     
@@ -4644,6 +4650,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       biggerFibulaDentalImplantCylinderModel.SetAndObserveTransformNodeID(fibulaDentalImplantCylinderTransformNode.GetID())
       
       moveNodeToFolder(fibulaDentalImplantCylinderTransformNode, fibulaDentalImplantsCylindersTransformsFolder)
+
+    transformVolumeChecked = self.getParameterNode().GetParameter("transformVolume") == "True"
+    self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
   
   @saveExecutedMethodWithTelemetry
   def makeBooleanOperationsToFibulaSurgicalGuideBase(self):
@@ -4691,6 +4700,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       return
     
     parameterNode.SetNodeReferenceID("fibulaSurgicalGuidePrototypeModel", surgicalGuideModel.GetID())
+
+    transformVolumeChecked = parameterNode.GetParameter("transformVolume") == "True"
+    self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
 
   def createSawBoxesFromFirstAndLastMandiblePlanes(self):
     parameterNode = self.getParameterNode()
@@ -5149,6 +5161,39 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     transformVolumeChecked = parameterNode.GetParameter("transformVolume") == "True"
     self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
 
+  def getNodesLinkedToFibula(self):
+    parameterNode = self.getParameterNode()
+    nodes = []
+
+    for refKey in ["fibulaModelNode", "decimatedFibulaModelNode", "fibulaLine",
+                   "fibulaSurgicalGuidePrototypeModel"]:
+      node = parameterNode.GetNodeReference(refKey)
+      if node is not None:
+        nodes.append(node)
+
+    # Cut Bones: skip last item because it is the resected mandible, not a fibula piece
+    cutBonesList = createListFromFolderName("Cut Bones")
+    nodes.extend(cutBonesList[:-1])
+
+    folderNames = [
+      "Fibula planes",
+      "Fibula Segments Lengths",
+      "Transformed Mandible Pieces",
+      "Transformed Full Mandible",
+      "miterBoxes Models",
+      "biggerMiterBoxes Models",
+      "previewMiterBoxes Models",
+      "Fibula Cylinders Models",
+      "Dental Implants Cylinders Models",
+      "Fibula Dental Implants Cylinders Models",
+      "Bigger Fibula Dental Implants Cylinders Models",
+    ]
+    for folderName in folderNames:
+      nodesList = createListFromFolderName(folderName)
+      nodes.extend(nodesList)
+
+    return nodes
+
   def updateNormalizationFibulaLineTransform(self, transformVolumeChecked):
     parameterNode = self.getParameterNode()
     parameterNode.SetParameter("transformVolume", str(transformVolumeChecked))
@@ -5169,24 +5214,27 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       identityMatrix = vtk.vtkMatrix4x4()
       identityMatrix.Identity()
       fibulaNormalizationTransformNode.SetMatrixTransformToParent(identityMatrix)
-      return
+    else:
+      lineStartPos = np.zeros(3)
+      lineEndPos = np.zeros(3)
+      fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
+      fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+      fibulaLineDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+      lineCenter = (lineStartPos+lineEndPos)/2
+      #get rotation
+      referenceDirection = np.array([0,0,1])
+      rotationAxis = np.cross(fibulaLineDirection, referenceDirection)
+      rotationAngle = np.arccos(np.dot(fibulaLineDirection, referenceDirection))
+      rotationTransform = vtk.vtkTransform()
+      rotationTransform.PostMultiply()
+      rotationTransform.Translate(-lineCenter)
+      rotationTransform.RotateWXYZ(np.degrees(rotationAngle), rotationAxis)
+      rotationTransform.Translate(lineCenter)
+      fibulaNormalizationTransformNode.SetMatrixTransformToParent(rotationTransform.GetMatrix())
 
-    lineStartPos = np.zeros(3)
-    lineEndPos = np.zeros(3)
-    fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
-    fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
-    fibulaLineDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
-    lineCenter = (lineStartPos+lineEndPos)/2
-    #get rotation
-    referenceDirection = np.array([0,0,1])
-    rotationAxis = np.cross(fibulaLineDirection, referenceDirection)
-    rotationAngle = np.arccos(np.dot(fibulaLineDirection, referenceDirection))
-    rotationTransform = vtk.vtkTransform()
-    rotationTransform.PostMultiply()
-    rotationTransform.Translate(-lineCenter)
-    rotationTransform.RotateWXYZ(np.degrees(rotationAngle), rotationAxis)
-    rotationTransform.Translate(lineCenter)
-    fibulaNormalizationTransformNode.SetMatrixTransformToParent(rotationTransform.GetMatrix())
+    fibulaLinkedNodes = self.getNodesLinkedToFibula()
+    for node in fibulaLinkedNodes:
+      node.SetAndObserveTransformNodeID(fibulaNormalizationTransformNode.GetID())
   
   def setBackgroundVolumeFromID(self,scalarVolumeID):
     redSliceLogic = slicer.app.layoutManager().sliceWidget('Red').sliceLogic()
