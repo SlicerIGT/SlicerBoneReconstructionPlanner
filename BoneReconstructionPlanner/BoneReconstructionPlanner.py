@@ -4068,10 +4068,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         return
 
 
-    biggerMiterBoxesModelsFolder = getFolder("biggerMiterBoxes Models")
+    biggerMiterBoxesModelsFolder = getFolder("biggerMiterBoxes Models", reset = True)
     if miterBoxesGuideType == "Slot":
-      miterBoxesModelsFolder = getFolder("miterBoxes Models")
-      previewMiterBoxesModelsFolder = getFolder("previewMiterBoxes Models")
+      miterBoxesModelsFolder = getFolder("miterBoxes Models", reset = True)
+      previewMiterBoxesModelsFolder = getFolder("previewMiterBoxes Models", reset = True)
     miterBoxesTransformsFolder = getFolder("miterBoxes Transforms")
     intersectionsFolder = getFolder("Intersections")
     pointsIntersectionsFolder = getFolder("Points Intersections")
