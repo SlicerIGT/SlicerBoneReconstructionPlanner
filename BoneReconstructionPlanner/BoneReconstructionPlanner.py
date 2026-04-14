@@ -5166,7 +5166,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     nodes = []
 
     for refKey in ["fibulaModelNode", "decimatedFibulaModelNode", "fibulaLine",
-                   "fibulaSurgicalGuidePrototypeModel"]:
+                   "fibulaSurgicalGuidePrototypeModel", "miterBoxDirectionLine"]:
       node = parameterNode.GetNodeReference(refKey)
       if node is not None:
         nodes.append(node)
