@@ -895,7 +895,7 @@ neomandible</string>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QToolButton" name="transformVolumeButton">
+                  <widget class="QToolButton" name="fibulaNormalizationTransformButton">
                    <property name="text">
                     <string/>
                    </property>

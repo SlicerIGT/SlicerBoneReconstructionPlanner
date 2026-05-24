@@ -421,8 +421,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     boneIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/bone_48.svg')
     self.ui.makeModelsButton.setIcon(qt.QIcon(boneIconPath))
 
-    transformVolumeIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/transform_volume.png')
-    self.ui.transformVolumeButton.setIcon(qt.QIcon(transformVolumeIconPath))
+    fibulaNormalizationTransformIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/fibula_normalization_transform.png')
+    self.ui.fibulaNormalizationTransformButton.setIcon(qt.QIcon(fibulaNormalizationTransformIconPath))
 
     #targetIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/target_48.svg')
     #self.ui.centerFibulaLineButton.setIcon(qt.QIcon(targetIconPath))
@@ -635,7 +635,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.interCondylarBeamDecreaseSizeButton.connect('clicked(bool)', self.onInterCondylarBeamDecreaseSizeButton)
     self.ui.interCondylarBeamVisibilityToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.lockVSPButton.connect('toggled(bool)', self.onLockVSPButton)
-    self.ui.transformVolumeButton.connect('toggled(bool)', self.onTransformVolumeButton)
+    self.ui.fibulaNormalizationTransformButton.connect('toggled(bool)', self.onFibulaNormalizationTransformButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -1116,7 +1116,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.plateCrossSectionalBevelRadiusPorcentageSpinBox.setValue(float(self._parameterNode.GetParameter("plateCrossSectionalBevelRadiusPorcentage")))
     self.ui.plateTipsBevelRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("plateTipsBevelRadius")))
 
-    self.ui.transformVolumeButton.checked = self._parameterNode.GetParameter("transformVolume") == "True"
+    self.ui.fibulaNormalizationTransformButton.checked = self._parameterNode.GetParameter("fibulaNormalizationTransform") == "True"
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = self._parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
@@ -1590,7 +1590,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     self.logic.interCondylarBeamSizeChange(positive = False)
 
-  def onTransformVolumeButton(self,checked):
+  def onFibulaNormalizationTransformButton(self,checked):
     """
     Callback function to avoid GUI modification of VSP parameters
     """
@@ -3316,8 +3316,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.setRedSliceForBoneModelsDisplayNodes()
 
-    transformVolumeChecked = parameterNode.GetParameter("transformVolume") == "True"
-    self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
+    self.updateNormalizationFibulaLineTransform(None)
 
   def reorderMandiblePlanes(self):
     planeList = createListFromFolderName("Mandibular planes")
@@ -4257,8 +4256,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.setRedSliceForBoxModelsDisplayNodes()
 
-    transformVolumeChecked = parameterNode.GetParameter("transformVolume") == "True"
-    self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
+    self.updateNormalizationFibulaLineTransform(None)
 
   def createDentalImplantCylindersFiducialList(self):
     dentalImplantCylindersFiducialsListsFolder = getFolder("Dental Implants Cylinders Fiducials", reset = True)
@@ -4651,8 +4649,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       
       moveNodeToFolder(fibulaDentalImplantCylinderTransformNode, fibulaDentalImplantsCylindersTransformsFolder)
 
-    transformVolumeChecked = self.getParameterNode().GetParameter("transformVolume") == "True"
-    self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
+    self.updateNormalizationFibulaLineTransform(None)
   
   @saveExecutedMethodWithTelemetry
   def makeBooleanOperationsToFibulaSurgicalGuideBase(self):
@@ -4701,8 +4698,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     parameterNode.SetNodeReferenceID("fibulaSurgicalGuidePrototypeModel", surgicalGuideModel.GetID())
 
-    transformVolumeChecked = parameterNode.GetParameter("transformVolume") == "True"
-    self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
+    self.updateNormalizationFibulaLineTransform(None)
 
   def createSawBoxesFromFirstAndLastMandiblePlanes(self):
     parameterNode = self.getParameterNode()
@@ -5158,8 +5154,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     removeFolder(intersectionsFolder)
 
-    transformVolumeChecked = parameterNode.GetParameter("transformVolume") == "True"
-    self.updateNormalizationFibulaLineTransform(transformVolumeChecked)
+    fibulaNormalizationTransformChecked = parameterNode.GetParameter("fibulaNormalizationTransform") == "True"
+    self.updateNormalizationFibulaLineTransform(fibulaNormalizationTransformChecked)
 
   def getNodesLinkedToFibula(self):
     parameterNode = self.getParameterNode()
@@ -5194,9 +5190,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     return nodes
 
-  def updateNormalizationFibulaLineTransform(self, transformVolumeChecked):
+  def updateNormalizationFibulaLineTransform(self, fibulaNormalizationTransformChecked):
     parameterNode = self.getParameterNode()
-    parameterNode.SetParameter("transformVolume", str(transformVolumeChecked))
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     
     fibulaNormalizationTransformNode = parameterNode.GetNodeReference("fibulaNormalizationTransformNode")
@@ -5210,27 +5205,29 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if currentScalarVolume is not None:
       currentScalarVolume.SetAndObserveTransformNodeID(fibulaNormalizationTransformNode.GetID())
     
-    if not transformVolumeChecked:
-      identityMatrix = vtk.vtkMatrix4x4()
-      identityMatrix.Identity()
-      fibulaNormalizationTransformNode.SetMatrixTransformToParent(identityMatrix)
-    else:
-      lineStartPos = np.zeros(3)
-      lineEndPos = np.zeros(3)
-      fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
-      fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
-      fibulaLineDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
-      lineCenter = (lineStartPos+lineEndPos)/2
-      #get rotation
-      referenceDirection = np.array([0,0,1])
-      rotationAxis = np.cross(fibulaLineDirection, referenceDirection)
-      rotationAngle = np.arccos(np.dot(fibulaLineDirection, referenceDirection))
-      rotationTransform = vtk.vtkTransform()
-      rotationTransform.PostMultiply()
-      rotationTransform.Translate(-lineCenter)
-      rotationTransform.RotateWXYZ(np.degrees(rotationAngle), rotationAxis)
-      rotationTransform.Translate(lineCenter)
-      fibulaNormalizationTransformNode.SetMatrixTransformToParent(rotationTransform.GetMatrix())
+    if fibulaNormalizationTransformChecked is not None:
+      parameterNode.SetParameter("fibulaNormalizationTransform", str(fibulaNormalizationTransformChecked))
+      if not fibulaNormalizationTransformChecked:
+        identityMatrix = vtk.vtkMatrix4x4()
+        identityMatrix.Identity()
+        fibulaNormalizationTransformNode.SetMatrixTransformToParent(identityMatrix)
+      else:
+        lineStartPos = np.zeros(3)
+        lineEndPos = np.zeros(3)
+        fibulaLine.GetNthControlPointPosition(0, lineStartPos)
+        fibulaLine.GetNthControlPointPosition(1, lineEndPos)
+        fibulaLineDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+        lineCenter = (lineStartPos+lineEndPos)/2
+        #get rotation
+        referenceDirection = np.array([0,0,1])
+        rotationAxis = np.cross(fibulaLineDirection, referenceDirection)
+        rotationAngle = np.arccos(np.dot(fibulaLineDirection, referenceDirection))
+        rotationTransform = vtk.vtkTransform()
+        rotationTransform.PostMultiply()
+        rotationTransform.Translate(-lineCenter)
+        rotationTransform.RotateWXYZ(np.degrees(rotationAngle), rotationAxis)
+        rotationTransform.Translate(lineCenter)
+        fibulaNormalizationTransformNode.SetMatrixTransformToParent(rotationTransform.GetMatrix())
 
     fibulaLinkedNodes = self.getNodesLinkedToFibula()
     for node in fibulaLinkedNodes:
