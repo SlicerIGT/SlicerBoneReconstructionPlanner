@@ -2118,7 +2118,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleBridgeTube = parameterNode.GetNodeReference("mandibleBridgeTube")
     if mandibleBridgeCurve.GetNumberOfControlPoints() <= 1:
       if mandibleBridgeTube is not None:
-        parameterNode.SetNodeReference("mandibleBridgeTube", "")
+        parameterNode.SetNodeReferenceID("mandibleBridgeTube", "")
         slicer.mrmlScene.RemoveNode(mandibleBridgeTube)
     elif mandibleBridgeCurve.GetNumberOfControlPoints() >= 2:
       self.updateMandibleBridgeTube()
@@ -2344,7 +2344,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
     if interCondylarBeamLine.GetNumberOfControlPoints() <= 1:
       if interCondylarBeamBox is not None:
-        parameterNode.SetNodeReference("interCondylarBeamBox", "")
+        parameterNode.SetNodeReferenceID("interCondylarBeamBox", "")
         slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
   
   def onInterCondylarLineTimerTimeout(self):
