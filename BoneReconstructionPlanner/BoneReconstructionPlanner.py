@@ -584,6 +584,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.clearanceFitPrintingToleranceSpinBox.valueChanged.connect(self.updateMiterBoxes)
     self.ui.biggerMiterBoxDistanceToFibulaSpinBox.valueChanged.connect(self.updateMiterBoxes)
+    self.ui.fibulaGuidebaseThicknessSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.fibulaGuidebaseMarginSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.fibulaGuidebaseAngleSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotWidthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotLengthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -619,7 +622,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.addCutPlaneButton.connect('clicked(bool)',self.onAddCutPlaneButton)
     self.ui.removeCutPlaneButton.connect('clicked(bool)',self.onRemoveCutPlaneButton)
     self.ui.makeModelsButton.connect('clicked(bool)',self.onMakeModelsButton)
-    #self.ui.createMiterBoxesFromFibulaPlanesButton.connect('clicked(bool)',self.onCreateMiterBoxesFromFibulaPlanesButton)
+    self.ui.generateFibulaGuidebaseButton.connect('clicked(bool)',self.onGenerateFibulaGuidebaseButton)
     self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToFibulaSurgicalGuideBaseButton)
     self.ui.createSawBoxesFromFirstAndLastMandiblePlanesButton.connect('clicked(bool)', self.onCreateSawBoxesFromFirstAndLastMandiblePlanesButton)
     self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.connect('clicked(bool)', self.onMakeBooleanOperationsToMandibleSurgicalGuideBaseButton)
@@ -1100,6 +1103,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.miterBoxSlotWallSpinBox.setValue(float(self._parameterNode.GetParameter("miterBoxSlotWall_mm")))
     self.ui.fibulaScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("fibulaScrewHoleCylinderRadius_mm")))
     self.ui.clearanceFitPrintingToleranceSpinBox.setValue(float(self._parameterNode.GetParameter("clearanceFitPrintingTolerance_mm")))
+    self.ui.fibulaGuidebaseThicknessSpinBox.setValue(float(self._parameterNode.GetParameter("fibulaGuidebaseThickness_mm")))
+    self.ui.fibulaGuidebaseMarginSpinBox.setValue(float(self._parameterNode.GetParameter("fibulaGuidebaseMargin_mm")))
+    self.ui.fibulaGuidebaseAngleSpinBox.setValue(float(self._parameterNode.GetParameter("fibulaGuidebaseAngle_mm")))
     self.ui.biggerMiterBoxDistanceToFibulaSpinBox.setValue(float(self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula_mm")))
     self.ui.sawBoxSlotWidthSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotWidth_mm")))
     self.ui.sawBoxSlotLengthSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotLength_mm")))
@@ -1340,6 +1346,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("fibulaScrewHoleCylinderRadius_mm", str(self.ui.fibulaScrewHoleCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("clearanceFitPrintingTolerance_mm", str(self.ui.clearanceFitPrintingToleranceSpinBox.value))
     self._parameterNode.SetParameter("biggerMiterBoxDistanceToFibula_mm", str(self.ui.biggerMiterBoxDistanceToFibulaSpinBox.value))
+    self._parameterNode.SetParameter("fibulaGuidebaseThickness_mm", str(self.ui.fibulaGuidebaseThicknessSpinBox.value))
+    self._parameterNode.SetParameter("fibulaGuidebaseMargin_mm", str(self.ui.fibulaGuidebaseMarginSpinBox.value))
+    self._parameterNode.SetParameter("fibulaGuidebaseAngle_mm", str(self.ui.fibulaGuidebaseAngleSpinBox.value))
     self._parameterNode.SetParameter("sawBoxSlotWidth_mm", str(self.ui.sawBoxSlotWidthSpinBox.value))
     self._parameterNode.SetParameter("sawBoxSlotLength_mm", str(self.ui.sawBoxSlotLengthSpinBox.value))
     self._parameterNode.SetParameter("sawBoxSlotHeight_mm", str(self.ui.sawBoxSlotHeightSpinBox.value))
@@ -1535,6 +1544,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     self.logic.makeModels()
 
+  def onGenerateFibulaGuidebaseButton(self):
+    """
+    Callback function to create the fibula surgical guide base before boolean operations
+    """
+    self.logic.generateFibulaGuidebase()
+  
   def onMakeBooleanOperationsToFibulaSurgicalGuideBaseButton(self):
     """
     Callback function to create the fibula surgical guide
@@ -4068,6 +4083,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
 
     biggerMiterBoxesModelsFolder = getFolder("biggerMiterBoxes Models", reset = True)
+    lowResolutionBiggerMiterBoxesModelsFolder = getFolder("lowResolutionBiggerMiterBoxes Models", reset = True)
     if miterBoxesGuideType == "Slot":
       miterBoxesModelsFolder = getFolder("miterBoxes Models", reset = True)
       previewMiterBoxesModelsFolder = getFolder("previewMiterBoxes Models", reset = True)
@@ -4123,8 +4139,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         biggerMiterBoxLength = miterBoxSlotLength
       biggerMiterBoxHeight = miterBoxSlotHeight
       biggerMiterBoxModel = createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
-      biggerMiterBoxDisplayNode = biggerMiterBoxModel.GetDisplayNode()
+      lowResolutionBiggerMiterBoxModel = createBox(
+        biggerMiterBoxLength,
+        biggerMiterBoxHeight,
+        biggerMiterBoxWidth,
+        biggerMiterBoxName + "_lowRes",
+        highResolution=False
+      )
+      lowResolutionBiggerMiterBoxModel.GetDisplayNode().SetVisibility3D(False)
 
+      biggerMiterBoxDisplayNode = biggerMiterBoxModel.GetDisplayNode()
       biggerMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
       if miterBoxesGuideType == "Slot":
         biggerMiterBoxDisplayNode.SetVisibility3D(False)
@@ -4136,6 +4160,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         biggerMiterBoxDisplayNode.AddViewNodeID(redSliceNode.GetID())
 
       moveNodeToFolder(biggerMiterBoxModel, biggerMiterBoxesModelsFolder)
+      moveNodeToFolder(lowResolutionBiggerMiterBoxModel, lowResolutionBiggerMiterBoxesModelsFolder)
 
       if miterBoxesGuideType == "Slot":
         # previewMiterBoxes
@@ -4214,6 +4239,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         biggerSawBoxTransformationSuccess = biggerMiterBoxModel.HardenTransform()
         if not (biggerSawBoxTransformationSuccess):
           Exception('Hardening transforms was not successful')
+        lowResolutionBiggerMiterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
+        lowResolutionBiggerMiterBoxTransformationSuccess = lowResolutionBiggerMiterBoxModel.HardenTransform()
+        if not (lowResolutionBiggerMiterBoxTransformationSuccess):
+          Exception('Hardening transforms was not successful')
 
       if i%2 == 0:
         miterBoxAxisXTranslation = 0
@@ -4234,6 +4263,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       biggerMiterBoxTransformationSuccess = biggerMiterBoxModel.HardenTransform()
       if not (
         biggerMiterBoxTransformationSuccess
+      ):
+        Exception('Hardening transforms was not successful')
+      lowResolutionBiggerMiterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
+      lowResolutionBiggerMiterBoxTransformationSuccess = lowResolutionBiggerMiterBoxModel.HardenTransform()
+      if not (
+        lowResolutionBiggerMiterBoxTransformationSuccess
       ):
         Exception('Hardening transforms was not successful')
       
@@ -4258,6 +4293,150 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.updateNormalizationFibulaLineTransform(None)
 
+  def generateFibulaGuidebase(self):
+    parameterNode = self.getParameterNode()
+    fibulaGuidebaseThickness = float(parameterNode.GetParameter("fibulaGuidebaseThickness_mm"))
+    fibulaGuidebaseMargin = float(parameterNode.GetParameter("fibulaGuidebaseMargin_mm"))
+    fibulaGuidebaseAngle = float(parameterNode.GetParameter("fibulaGuidebaseAngle_mm"))
+
+    fibulaLine = self.getFibulaLine()
+    miterBoxDirectionLine = self.getMiterBoxDirectionLine()
+    fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
+    lowResolutionBiggerMiterBoxesModelsList = createListFromFolderName("lowResolutionBiggerMiterBoxes Models")
+
+
+    projectedPointsStartingBoxPoints, projectedPointsEndingBoxPoints = projectBoxesOverFibulaLine(
+      lowResolutionBiggerMiterBoxesModelsList,
+      fibulaLine
+    )
+    distantPoint1, distantPoint2 = getMostDistantPoints(
+      projectedPointsStartingBoxPoints, projectedPointsEndingBoxPoints
+    )
+    distantPoint1 = np.array(distantPoint1)
+    distantPoint2 = np.array(distantPoint2)
+    # THE DISTANT POINTS MAY NEED TO BE (UN)TRANSFORMED ACCORDING TO THE FIBULANORMALIZATIONTRANSFORM
+
+
+    middlePoint = (distantPoint1 + distantPoint2)/2
+    verticalPlaneNormal1 = middlePoint - distantPoint1
+    verticalPlaneNormal1 = verticalPlaneNormal1/np.linalg.norm(verticalPlaneNormal1)
+    verticalPlaneNormal2 = middlePoint - distantPoint2
+    verticalPlaneNormal2 = verticalPlaneNormal2/np.linalg.norm(verticalPlaneNormal2)
+    verticalPlaneOrigin1 = distantPoint1
+    verticalPlaneOrigin2 = distantPoint2
+
+    fibulaLineStartPoint = np.zeros(3)
+    fibulaLineEndPoint = np.zeros(3)
+    # REMEMBER THAT THESE LINES COULD BE GetNthControlPointPositionWorld
+    fibulaLine.GetNthControlPointPosition(0, fibulaLineStartPoint)
+    fibulaLine.GetNthControlPointPosition(1, fibulaLineEndPoint)
+    fibulaLineDirection = fibulaLineEndPoint - fibulaLineStartPoint
+    fibulaLineDirection = fibulaLineDirection/np.linalg.norm(fibulaLineDirection)
+
+    miterBoxDirectionLineStartPoint = np.zeros(3)
+    miterBoxDirectionLineEndPoint = np.zeros(3)
+    # REMEMBER THAT THESE LINES COULD BE GetNthControlPointPositionWorld
+    miterBoxDirectionLine.GetNthControlPointPosition(0, miterBoxDirectionLineStartPoint)
+    miterBoxDirectionLine.GetNthControlPointPosition(1, miterBoxDirectionLineEndPoint)
+    miterBoxDirectionLineDirection = miterBoxDirectionLineEndPoint - miterBoxDirectionLineStartPoint
+    miterBoxDirectionLineDirection = miterBoxDirectionLineDirection/np.linalg.norm(miterBoxDirectionLineDirection)
+
+    correctedMiterBoxDirectionLineDirection = np.zeros(3) 
+    auxiliarVector = np.zeros(3)
+    vtk.vtkMath.Cross(fibulaLineDirection, miterBoxDirectionLineDirection, auxiliarVector)
+    vtk.vtkMath.Cross(auxiliarVector, fibulaLineDirection, correctedMiterBoxDirectionLineDirection)
+
+    rotatedMiterBoxDirectionLine1 = np.zeros(3)
+    rotatedMiterBoxDirectionLine2 = np.zeros(3)
+    wxyz = np.zeros(4)
+    radians = vtk.vtkMath.RadiansFromDegrees(fibulaGuidebaseAngle/2 - 90)
+    wxyz[0] = radians
+    wxyz[1:] = fibulaLineDirection
+    vtk.vtkMath.RotateVectorByWXYZ(
+      correctedMiterBoxDirectionLineDirection,
+      wxyz,
+      rotatedMiterBoxDirectionLine1
+    )
+    rotatedMiterBoxDirectionLine1 = rotatedMiterBoxDirectionLine1/np.linalg.norm(rotatedMiterBoxDirectionLine1)
+    wxyz[0] = -radians
+    vtk.vtkMath.RotateVectorByWXYZ(
+      correctedMiterBoxDirectionLineDirection,
+      wxyz,
+      rotatedMiterBoxDirectionLine2
+    )
+    rotatedMiterBoxDirectionLine2 = rotatedMiterBoxDirectionLine2/np.linalg.norm(rotatedMiterBoxDirectionLine2)
+
+    sidePlane1Normal = rotatedMiterBoxDirectionLine2
+    sidePlane2Normal = rotatedMiterBoxDirectionLine1
+    sidePlane1Origin = middlePoint
+    sidePlane2Origin = middlePoint
+
+    normalsList = [verticalPlaneNormal1, verticalPlaneNormal2, sidePlane1Normal, sidePlane2Normal]
+    originsList = [verticalPlaneOrigin1, verticalPlaneOrigin2, sidePlane1Origin, sidePlane2Origin]
+    #origins = vtk.vtkPoints()
+    #normals = vtk.vtkFloatArray()
+    #normals.SetNumberOfComponents(3)
+    planeCollection = vtk.vtkPlaneCollection()
+    for normal, origin in zip(normalsList, originsList):
+      plane = vtk.vtkPlane()
+      plane.SetNormal(normal)
+      plane.SetOrigin(origin)
+      planeCollection.AddItem(plane)
+      continue
+      planeMarkup = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode")
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeMarkup)
+      planeMarkup.SetNormal(normal)
+      planeMarkup.SetOrigin(origin)
+      planeMarkup.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneTypePointNormal)
+      planeDisplayNode = planeMarkup.GetDisplayNode()
+      planeDisplayNode.SetVisibility(True)
+    
+
+
+
+
+    laterality = parameterNode.GetParameter("donorLeg") + " "
+    organ = "Fibula"
+    hollowWithMarginSegmentID = createHollowWithMargin(
+      fibulaSegmentation,
+      laterality + organ,
+      fibulaGuidebaseMargin,
+      fibulaGuidebaseThickness
+    )
+
+    hollowWithMarginModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "fibulaHollowWithMarginModel")
+    hollowWithMarginModel.CreateDefaultDisplayNodes()
+
+    seg = fibulaSegmentation
+    seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
+
+    segment = seg.GetSegmentation().GetSegment(hollowWithMarginSegmentID)
+
+    logic = slicer.modules.segmentations.logic()
+    # this replaces original model names by segment names
+    logic.ExportSegmentToRepresentationNode(segment, hollowWithMarginModel)
+    hollowWithMarginModel.SetName(slicer.mrmlScene.GetUniqueNameByString('fibulaHollowWithMarginModel'))
+    hollowWithMarginModel.GetDisplayNode().SetVisibility(False)
+
+
+
+
+
+    clipper = vtk.vtkClipClosedSurface()
+    clipper.SetInputData(hollowWithMarginModel.GetPolyData())
+    clipper.SetClippingPlanes(planeCollection)
+    clipper.InsideOutOff()
+    clipper.Update()
+
+    modelsLogic = slicer.modules.models.logic()
+    fibulaGuideBaseModel = modelsLogic.AddModel(clipper.GetOutput())
+    fibulaGuideBaseModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibulaGuideBaseModel'))
+    parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", fibulaGuideBaseModel.GetID())
+
+    slicer.mrmlScene.RemoveNode(hollowWithMarginModel)
+
+    self.updateNormalizationFibulaLineTransform(None)
+  
   def createDentalImplantCylindersFiducialList(self):
     dentalImplantCylindersFiducialsListsFolder = getFolder("Dental Implants Cylinders Fiducials", reset = True)
     
@@ -5162,7 +5341,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     nodes = []
 
     for refKey in ["fibulaModelNode", "decimatedFibulaModelNode", "fibulaLine",
-                   "fibulaSurgicalGuidePrototypeModel", "miterBoxDirectionLine"]:
+                   "fibulaSurgicalGuidePrototypeModel", "miterBoxDirectionLine",
+                   "fibulaSurgicalGuideBaseModel"]:
       node = parameterNode.GetNodeReference(refKey)
       if node is not None:
         nodes.append(node)
@@ -5178,6 +5358,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       "Transformed Full Mandible",
       "miterBoxes Models",
       "biggerMiterBoxes Models",
+      "lowResolutionBiggerMiterBoxes Models",
       "previewMiterBoxes Models",
       "Fibula Cylinders Models",
       "Dental Implants Cylinders Models",
