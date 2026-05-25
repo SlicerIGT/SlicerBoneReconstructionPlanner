@@ -327,6 +327,63 @@ def nearestPointOverLineWithTheVectorDirection(pointsModel, vector):
   else:
     return points[maxDotIndex[1]]
 
+def projectBoxesOverFibulaLine(boxesModelsList, fibulaLineMarkup):
+  #fibulaLine = vtk.vtkLine()
+  startPoint = np.zeros(3)
+  endPoint = np.zeros(3)
+  fibulaLineMarkup.GetNthControlPointPositionWorld(0, startPoint)
+  fibulaLineMarkup.GetNthControlPointPositionWorld(1, endPoint)
+  fibulaLineDirection = endPoint - startPoint
+  fibulaLineDirection = fibulaLineDirection/np.linalg.norm(fibulaLineDirection)
+  fibulaLineCenter = (startPoint + endPoint)/2
+
+  startingBox = boxesModelsList[0]
+  endingBox = boxesModelsList[-1]
+
+  projectedPointsOfStartingBoxPoints = projectPolyDataPointsOntoLine(
+    startingBox.GetPolyData(), 
+    startPoint, 
+    endPoint
+  )
+  projectedPointsOfEndingBoxPoints = projectPolyDataPointsOntoLine(
+    endingBox.GetPolyData(), 
+    startPoint, 
+    endPoint
+  )
+
+  return projectedPointsOfStartingBoxPoints, projectedPointsOfEndingBoxPoints
+
+def getMostDistantPoints(points1, points2):
+  # using math to get the two most distant points between projectedPointsOfStartingBoxPoints and projectedPointsOfEndingBoxPoints
+  maxDistance = -1
+  for i in range(points1.GetNumberOfPoints()):
+    pointOfStartingBox = points1.GetPoint(i)
+    for j in range(points2.GetNumberOfPoints()):
+      pointOfEndingBox = points2.GetPoint(j)
+      distance = np.linalg.norm(np.array(pointOfStartingBox)-np.array(pointOfEndingBox))
+      if distance > maxDistance:
+        maxDistance = distance
+        furthestPointOfStartingBox = pointOfStartingBox
+        furthestPointOfEndingBox = pointOfEndingBox 
+  
+  return furthestPointOfStartingBox, furthestPointOfEndingBox
+
+def projectPolyDataPointsOntoLine(polyData, p1, p2):
+  """
+  Projects each point of polyData onto the infinite line defined by p1->p2.
+  Returns a new vtkPoints with the projected positions.
+  """
+  projectedPoints = vtk.vtkPoints()
+  projectedPoints.SetNumberOfPoints(polyData.GetNumberOfPoints())
+
+  p1, p2 = np.array(p1), np.array(p2)
+  d = p2 - p1
+  for i in range(polyData.GetNumberOfPoints()):
+      p = np.array(polyData.GetPoint(i))
+      t = np.dot(p - p1, d) / np.dot(d, d)   # no clamping
+      projectedPoints.SetPoint(i, p1 + t * d)
+
+  return projectedPoints
 
 def getLineNorm(line):
   lineStartPos = np.array([0,0,0])
@@ -335,7 +392,7 @@ def getLineNorm(line):
   line.GetNthControlPointPositionWorld(1, lineEndPos)
   return np.linalg.norm(lineEndPos-lineStartPos)
 
-def createBox(X, Y, Z, name, defaultVisible = True):
+def createBox(X, Y, Z, name, defaultVisible = True, highResolution = True):
   miterBox = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
   miterBox.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
   slicer.mrmlScene.AddNode(miterBox)
@@ -356,7 +413,10 @@ def createBox(X, Y, Z, name, defaultVisible = True):
   adaptiveSubdivisionFilter.SetMaximumEdgeLength(maximumEdgeLengthMm)
   adaptiveSubdivisionFilter.SetMaximumTriangleArea(adaptiveSubdivisionFilter.GetMaximumTriangleAreaMaxValue()) # set to infinity
   #
-  miterBox.SetPolyDataConnection(adaptiveSubdivisionFilter.GetOutputPort())
+  if highResolution:
+    miterBox.SetPolyDataConnection(adaptiveSubdivisionFilter.GetOutputPort())
+  else:
+    miterBox.SetPolyDataConnection(triangleFilter.GetOutputPort())
   return miterBox
 
 def createCylinder(name,R,H=50):
@@ -810,6 +870,7 @@ parentChildrenDict = {
     "Duplicate Fibula Bone Pieces",
     "Duplicate Fibula Bone Pieces Transforms",
     "biggerMiterBoxes Models",
+    "lowResolutionBiggerMiterBoxes Models",
     "miterBoxes Models",
     "previewMiterBoxes Models",
     "miterBoxes Transforms",
@@ -1023,3 +1084,67 @@ def getSegmentIDWithName(segmentName, segmentationNode):
             return segmentID    
     
     return None
+
+def createHollowWithMargin(
+    segmentationNode,
+    fibulaSegmentName,
+    marginSizeMm,
+    vesselThicknessMm
+):
+  seg = segmentationNode
+  seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
+  fibulaSegmentID = getSegmentIDWithName(fibulaSegmentName, segmentationNode)
+  if fibulaSegmentID is None:
+    fibulaSegmentID = seg.GetSegmentation().GetNthSegmentID(0)
+  
+  segDisplayNode = seg.GetDisplayNode()
+  segmentationVisibilityState = segDisplayNode.GetVisibility()
+  segDisplayNode.SetVisibility(True)
+
+
+  # set up segment editor and configure it
+  segmentEditorWidget = slicer.modules.segmenteditor.widgetRepresentation().self().editor
+  segmentEditorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+  segmentEditorWidget.setMRMLSegmentEditorNode(segmentEditorNode)
+  segmentEditorWidget.setSegmentationNode(segmentationNode)
+  #segmentEditorWidget.setSourceVolumeNode(volumeNode)
+
+  segmentEditorNode.SetOverwriteMode(slicer.vtkMRMLSegmentEditorNode.OverwriteNone)
+  segmentEditorNode.SetMaskMode(slicer.vtkMRMLSegmentationNode.EditAllowedEverywhere)
+  segmentEditorNode.SetSourceVolumeIntensityMask(False)
+
+
+
+
+
+  # Do the margin here, needs to crop and resample the volume
+
+
+
+
+
+
+  hollowSegmentID = fibulaSegmentName + "_Hollow"
+  seg.GetSegmentation().AddEmptySegment(
+    hollowSegmentID,
+    hollowSegmentID
+  )
+
+
+  segmentEditorNode.SetSelectedSegmentID(hollowSegmentID)
+  segmentEditorWidget.setActiveEffectByName("Logical operators")
+  effect = segmentEditorWidget.activeEffect()
+  effect.setParameter("Operation","COPY") # change the operation here
+  effect.setParameter("ModifierSegmentID",fibulaSegmentID)
+  effect.self().onApply()
+
+  segmentEditorWidget.setCurrentSegmentID(hollowSegmentID)
+  segmentEditorWidget.setActiveEffectByName("Hollow")
+  effect = segmentEditorWidget.activeEffect()
+  effect.setParameter("ShellThicknessMm", str(vesselThicknessMm))
+  effect.self().onApply()
+
+  segDisplayNode.SetSegmentVisibility(hollowSegmentID, False)
+  segDisplayNode.SetVisibility(segmentationVisibilityState)
+  
+  return hollowSegmentID
