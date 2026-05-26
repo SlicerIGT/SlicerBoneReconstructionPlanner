@@ -4084,6 +4084,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
 
     biggerMiterBoxesModelsFolder = getFolder("biggerMiterBoxes Models", reset = True)
+    rectangletModelsFolder = getFolder("rectanglet Models", reset = True)
     lowResolutionBiggerMiterBoxesModelsFolder = getFolder("lowResolutionBiggerMiterBoxes Models", reset = True)
     if miterBoxesGuideType == "Slot":
       miterBoxesModelsFolder = getFolder("miterBoxes Models", reset = True)
@@ -4162,7 +4163,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       
       biggerMiterBoxHeight = miterBoxSlotHeight
       #biggerMiterBoxModel = createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
-      biggerMiterBoxModel = createAdaptedBox(
+      biggerMiterBoxModel, rectangletModel = createAdaptedBox(
         biggerMiterBoxLength,
         biggerMiterBoxHeight,
         biggerMiterBoxWidth,
@@ -4191,8 +4192,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
         redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
         biggerMiterBoxDisplayNode.AddViewNodeID(redSliceNode.GetID())
+      rectangletDisplayNode = rectangletModel.GetDisplayNode()
+      rectangletDisplayNode.SetVisibility(False)
 
       moveNodeToFolder(biggerMiterBoxModel, biggerMiterBoxesModelsFolder)
+      moveNodeToFolder(rectangletModel, rectangletModelsFolder)
       moveNodeToFolder(lowResolutionBiggerMiterBoxModel, lowResolutionBiggerMiterBoxesModelsFolder)
 
       if miterBoxesGuideType == "Slot":
@@ -4276,6 +4280,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if not (
         biggerMiterBoxTransformationSuccess
       ):
+        Exception('Hardening transforms was not successful')
+      rectangletModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
+      rectangletTransformationSuccess = rectangletModel.HardenTransform()
+      if not (rectangletTransformationSuccess):
         Exception('Hardening transforms was not successful')
       lowResolutionBiggerMiterBoxModel.SetAndObserveTransformNodeID(miterBoxToWorldChangeOfFrameTransformNode.GetID())
       lowResolutionBiggerMiterBoxTransformationSuccess = lowResolutionBiggerMiterBoxModel.HardenTransform()

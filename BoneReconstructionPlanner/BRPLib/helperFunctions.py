@@ -870,6 +870,7 @@ parentChildrenDict = {
     "Duplicate Fibula Bone Pieces",
     "Duplicate Fibula Bone Pieces Transforms",
     "biggerMiterBoxes Models",
+    "rectanglet Models",
     "lowResolutionBiggerMiterBoxes Models",
     "miterBoxes Models",
     "previewMiterBoxes Models",
@@ -1249,4 +1250,86 @@ def createAdaptedBox(X, Y, Z, name, boxX, boxZ, referenceZ, highResolution = Tru
   else:
     adaptedBoxModel.SetPolyDataConnection(normalsFilter.GetOutput())
   
-  return adaptedBoxModel
+
+  boxLowerFacePointIds = [6,5,3,2]
+  rect_points_vtk = vtk.vtkPoints()
+  for point_id in boxLowerFacePointIds:
+    rect_points_vtk.InsertNextPoint(points_vtk.GetPoint(point_id))
+
+  rectCellArray = vtk.vtkCellArray()
+  rect_polygon = vtk.vtkPolygon()
+  rect_polygon.GetPointIds().SetNumberOfIds(3)
+  rect_polygon.GetPointIds().SetId(0, 0)
+  rect_polygon.GetPointIds().SetId(1, 1)
+  rect_polygon.GetPointIds().SetId(2, 3)
+  rectCellArray.InsertNextCell(rect_polygon)
+  rect_polygon = vtk.vtkPolygon()
+  rect_polygon.GetPointIds().SetNumberOfIds(3)
+  rect_polygon.GetPointIds().SetId(0, 3)
+  rect_polygon.GetPointIds().SetId(1, 1)
+  rect_polygon.GetPointIds().SetId(2, 2)
+  rectCellArray.InsertNextCell(rect_polygon)
+
+  rectpolydata = vtk.vtkPolyData()
+  rectpolydata.SetPoints(rect_points_vtk)
+  rectpolydata.SetPolys(rectCellArray)
+
+  rectangletModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+  slicer.mrmlScene.AddNode(rectangletModel)
+  rectangletModel.SetName(slicer.mrmlScene.GetUniqueNameByString(name + "_rectanglet"))
+  rectangletModel.CreateDefaultDisplayNodes()
+  rectangletModel.SetAndObservePolyData(rectpolydata)
+
+
+  return adaptedBoxModel, rectangletModel
+
+
+
+
+def build_surface_locator(surface_polydata):
+  """Call once; reuse the locator across many collision checks."""
+  obb_tree = vtk.vtkOBBTree()
+  obb_tree.SetDataSet(surface_polydata)
+  obb_tree.BuildLocator()
+  return obb_tree
+
+def rectangles_edges(rect_polydata):
+  """Return (p1, p2) for each edge in the rectangle."""
+  lines = rect_polydata.GetLines()
+  pts = rect_polydata.GetPoints()
+  lines.InitTraversal()
+  id_list = vtk.vtkIdList()
+  edges = []
+  while lines.GetNextCell(id_list):
+    p1 = pts.GetPoint(id_list.GetId(0))
+    p2 = pts.GetPoint(id_list.GetId(1))
+    edges.append((p1, p2))
+  return edges
+
+def has_collision(rect_polydata, surface_polydata, obb_tree):
+  # 0. Quick bounding-box rejection (microseconds)
+  r_bounds = rect_polydata.GetBounds()
+  s_bounds = surface_polydata.GetBounds()
+  for axis in range(3):
+    if r_bounds[2*axis+1] < s_bounds[2*axis] or r_bounds[2*axis] > s_bounds[2*axis+1]:
+      return False   # no overlap on this axis → no collision
+
+  # 1. Edge-intersection test (each edge is O(log N) with OBBTree)
+  hit_pts = vtk.vtkPoints()
+  for p1, p2 in rectangles_edges(rect_polydata):
+    if obb_tree.IntersectWithLine(p1, p2, hit_pts, None) > 0:
+      return True
+
+  # 2. Check if any rectangle vertex is *inside* the closed surface
+  #    (handles case where rectangle is fully contained)
+  enc = vtk.vtkSelectEnclosedPoints()
+  enc.SetInputData(rect_polydata)
+  enc.SetSurfaceData(surface_polydata)
+  enc.CheckSurfaceOff()   # skip surface-integrity check for speed
+  enc.Update()
+  pts = rect_polydata.GetPoints()
+  for i in range(pts.GetNumberOfPoints()):
+    if enc.IsInside(i):
+      return True
+
+  return False
