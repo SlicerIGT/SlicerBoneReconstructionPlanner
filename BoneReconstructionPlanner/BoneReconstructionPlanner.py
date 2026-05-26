@@ -4138,8 +4138,40 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       elif miterBoxesGuideType == "Border":
         biggerMiterBoxWidth = miterBoxSlotWidth+clearanceFitPrintingTolerance
         biggerMiterBoxLength = miterBoxSlotLength
+      
+      fibulaPlaneMatrix = vtk.vtkMatrix4x4()
+      fibulaPlanesList[i].GetObjectToWorldMatrix(fibulaPlaneMatrix)
+      fibulaPlaneZ = np.array([fibulaPlaneMatrix.GetElement(0,2),fibulaPlaneMatrix.GetElement(1,2),fibulaPlaneMatrix.GetElement(2,2)])
+      fibulaPlaneOrigin = np.array([fibulaPlaneMatrix.GetElement(0,3),fibulaPlaneMatrix.GetElement(1,3),fibulaPlaneMatrix.GetElement(2,3)])
+
+      lineStartPos = np.zeros(3)
+      lineEndPos = np.zeros(3)
+      miterBoxDirectionLine.GetNthControlPointPositionWorld(0, lineStartPos)
+      miterBoxDirectionLine.GetNthControlPointPositionWorld(1, lineEndPos)
+      miterBoxDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+
+      miterBoxAxisX = [0,0,0]
+      miterBoxAxisY =  [0,0,0]
+      miterBoxAxisZ = fibulaPlaneZ
+      if vtk.vtkMath.Dot(fibulaZ, miterBoxAxisZ) < 0:
+        miterBoxAxisZ = -miterBoxAxisZ
+      vtk.vtkMath.Cross(miterBoxDirection, miterBoxAxisZ, miterBoxAxisX)
+      miterBoxAxisX = miterBoxAxisX/np.linalg.norm(miterBoxAxisX)
+      vtk.vtkMath.Cross(miterBoxAxisZ, miterBoxAxisX, miterBoxAxisY)
+      miterBoxAxisY = miterBoxAxisY/np.linalg.norm(miterBoxAxisY)
+      
       biggerMiterBoxHeight = miterBoxSlotHeight
-      biggerMiterBoxModel = createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
+      #biggerMiterBoxModel = createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
+      biggerMiterBoxModel = createAdaptedBox(
+        biggerMiterBoxLength,
+        biggerMiterBoxHeight,
+        biggerMiterBoxWidth,
+        biggerMiterBoxName,
+        miterBoxAxisX,
+        miterBoxAxisZ,
+        fibulaZ,
+        highResolution = True
+      )
       lowResolutionBiggerMiterBoxModel = createBox(
         biggerMiterBoxLength,
         biggerMiterBoxHeight,
@@ -4172,17 +4204,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
         moveNodeToFolder(previewMiterBoxModel, previewMiterBoxesModelsFolder)
 
-      fibulaPlaneMatrix = vtk.vtkMatrix4x4()
-      fibulaPlanesList[i].GetObjectToWorldMatrix(fibulaPlaneMatrix)
-      fibulaPlaneZ = np.array([fibulaPlaneMatrix.GetElement(0,2),fibulaPlaneMatrix.GetElement(1,2),fibulaPlaneMatrix.GetElement(2,2)])
-      fibulaPlaneOrigin = np.array([fibulaPlaneMatrix.GetElement(0,3),fibulaPlaneMatrix.GetElement(1,3),fibulaPlaneMatrix.GetElement(2,3)])
-
-      lineStartPos = np.zeros(3)
-      lineEndPos = np.zeros(3)
-      miterBoxDirectionLine.GetNthControlPointPositionWorld(0, lineStartPos)
-      miterBoxDirectionLine.GetNthControlPointPositionWorld(1, lineEndPos)
-      miterBoxDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
-
       normalToMiterBoxDirectionAndFibulaZ = [0,0,0]
       vtk.vtkMath.Cross(miterBoxDirection, fibulaZ, normalToMiterBoxDirectionAndFibulaZ)
       normalToMiterBoxDirectionAndFibulaZ = normalToMiterBoxDirectionAndFibulaZ/np.linalg.norm(normalToMiterBoxDirectionAndFibulaZ)
@@ -4203,16 +4224,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       pointOfIntersection = nearestPointOverLineWithTheVectorDirection(pointsIntersectionModel,miterBoxDirection)
       moveNodeToFolder(intersectionModel, intersectionsFolder)
       moveNodeToFolder(pointsIntersectionModel, pointsIntersectionsFolder)
-
-      miterBoxAxisX = [0,0,0]
-      miterBoxAxisY =  [0,0,0]
-      miterBoxAxisZ = fibulaPlaneZ
-      if vtk.vtkMath.Dot(fibulaZ, miterBoxAxisZ) < 0:
-        miterBoxAxisZ = -miterBoxAxisZ
-      vtk.vtkMath.Cross(miterBoxDirection, miterBoxAxisZ, miterBoxAxisX)
-      miterBoxAxisX = miterBoxAxisX/np.linalg.norm(miterBoxAxisX)
-      vtk.vtkMath.Cross(miterBoxAxisZ, miterBoxAxisX, miterBoxAxisY)
-      miterBoxAxisY = miterBoxAxisY/np.linalg.norm(miterBoxAxisY)
 
       #Calculations for deltaMiterBoxAxisY
       sinOfMiterBoxAxisZAndFibulaZVector = [0,0,0]
