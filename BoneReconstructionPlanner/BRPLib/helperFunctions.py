@@ -1149,3 +1149,104 @@ def createHollowWithMargin(
   segDisplayNode.SetVisibility(segmentationVisibilityState)
   
   return hollowSegmentID
+
+def createAdaptedBox(X, Y, Z, name, boxX, boxZ, referenceZ, highResolution = True):
+  import math
+
+  alpha = math.acos(boxZ @ referenceZ.T)
+  delta = Z*math.tan(alpha)
+
+  comparisonVector = np.cross(boxZ, referenceZ)
+  comparisonVector = comparisonVector/np.linalg.norm(comparisonVector)
+
+  points = []
+  if (comparisonVector @ boxX.T) > 0:
+    points.append(np.array([X/2, Y/2 - delta, Z/2,], dtype=float))
+    points.append(np.array([X/2, Y/2, -Z/2,], dtype=float))
+    points.append(np.array([X/2, -Y/2, -Z/2,], dtype=float))
+    points.append(np.array([X/2, -Y/2 - delta, Z/2,], dtype=float))
+    
+    points.append(np.array([-X/2, Y/2 - delta, Z/2,], dtype=float))
+    points.append(np.array([-X/2, -Y/2 - delta, Z/2,], dtype=float))
+    points.append(np.array([-X/2, -Y/2, -Z/2,], dtype=float))
+    points.append(np.array([-X/2, Y/2, -Z/2,], dtype=float))
+  
+  else:
+    points.append(np.array([X/2, Y/2, Z/2,], dtype=float))
+    points.append(np.array([X/2, Y/2 - delta, -Z/2,], dtype=float))
+    points.append(np.array([X/2, -Y/2 - delta, -Z/2,], dtype=float))
+    points.append(np.array([X/2, -Y/2, Z/2,], dtype=float))
+
+    points.append(np.array([-X/2, Y/2, Z/2,], dtype=float))
+    points.append(np.array([-X/2, -Y/2, Z/2,], dtype=float))
+    points.append(np.array([-X/2, -Y/2 - delta, -Z/2,], dtype=float))
+    points.append(np.array([-X/2, Y/2 - delta, -Z/2,], dtype=float))
+
+
+  points_vtk = vtk.vtkPoints()
+  pointID = 0
+
+  for i in range(len(points)):
+    points_vtk.InsertNextPoint(points[i])
+    pointID += 1
+
+  cellArray = vtk.vtkCellArray()
+
+  facesPointsIDs = []
+  #X/2 Constant
+  facesPointsIDs.append([0,1,2,3])
+  #-X/2 face
+  facesPointsIDs.append([4,5,6,7])
+  #-Z/2 constant face
+  facesPointsIDs.append([7,6,2,1])
+  #Z/2 constant face
+  facesPointsIDs.append([0,3,5,4])
+  #Y/2 constant face
+  facesPointsIDs.append([0,4,7,1])
+  #-Y/2 constant face
+  facesPointsIDs.append([6,5,3,2])
+
+  for pointIDs in facesPointsIDs:
+    polygon = vtk.vtkPolygon()
+    polygon.GetPointIds().SetNumberOfIds(len(pointIDs))
+    for i in range(len(pointIDs)):
+        polygon.GetPointIds().SetId(i, pointIDs[i])
+    cellArray.InsertNextCell(polygon)
+  
+  polydata = vtk.vtkPolyData()
+  polydata.SetPoints(points_vtk)
+  polydata.SetPolys(cellArray)
+
+  # remove duplicate points
+  cleanFilter = vtk.vtkCleanPolyData()
+  cleanFilter.SetInputData(polydata)
+  cleanFilter.Update()
+
+  triangleFilter = vtk.vtkTriangleFilter()
+  triangleFilter.SetInputData(cleanFilter.GetOutput())
+  triangleFilter.Update()
+
+  normalsFilter = vtk.vtkPolyDataNormals()
+  normalsFilter.SetInputData(triangleFilter.GetOutput())
+  normalsFilter.AutoOrientNormalsOn()
+  normalsFilter.Update()
+
+
+  maximumEdgeLengthMm = 1
+  adaptiveSubdivisionFilter = vtk.vtkAdaptiveSubdivisionFilter()
+  adaptiveSubdivisionFilter.SetInputConnection(normalsFilter.GetOutputPort())
+  adaptiveSubdivisionFilter.SetMaximumEdgeLength(maximumEdgeLengthMm)
+  adaptiveSubdivisionFilter.SetMaximumTriangleArea(adaptiveSubdivisionFilter.GetMaximumTriangleAreaMaxValue()) # set to infinity
+
+
+  adaptedBoxModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+  slicer.mrmlScene.AddNode(adaptedBoxModel)
+  adaptedBoxModel.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
+  adaptedBoxModel.CreateDefaultDisplayNodes()
+
+  if highResolution:
+    adaptedBoxModel.SetPolyDataConnection(adaptiveSubdivisionFilter.GetOutputPort())
+  else:
+    adaptedBoxModel.SetPolyDataConnection(normalsFilter.GetOutput())
+  
+  return adaptedBoxModel
