@@ -331,8 +331,8 @@ def projectBoxesOverFibulaLine(boxesModelsList, fibulaLineMarkup):
   #fibulaLine = vtk.vtkLine()
   startPoint = np.zeros(3)
   endPoint = np.zeros(3)
-  fibulaLineMarkup.GetNthControlPointPositionWorld(0, startPoint)
-  fibulaLineMarkup.GetNthControlPointPositionWorld(1, endPoint)
+  fibulaLineMarkup.GetNthControlPointPosition(0, startPoint)
+  fibulaLineMarkup.GetNthControlPointPosition(1, endPoint)
   fibulaLineDirection = endPoint - startPoint
   fibulaLineDirection = fibulaLineDirection/np.linalg.norm(fibulaLineDirection)
   fibulaLineCenter = (startPoint + endPoint)/2
@@ -388,8 +388,8 @@ def projectPolyDataPointsOntoLine(polyData, p1, p2):
 def getLineNorm(line):
   lineStartPos = np.array([0,0,0])
   lineEndPos = np.array([0,0,0])
-  line.GetNthControlPointPositionWorld(0, lineStartPos)
-  line.GetNthControlPointPositionWorld(1, lineEndPos)
+  line.GetNthControlPointPosition(0, lineStartPos)
+  line.GetNthControlPointPosition(1, lineEndPos)
   return np.linalg.norm(lineEndPos-lineStartPos)
 
 def createBox(X, Y, Z, name, defaultVisible = True, highResolution = True):
