@@ -3423,6 +3423,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     bounds = np.array(bounds)
     centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
     
+    fibulaSurgicalGuideBase = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
     cutBonesList = createListFromFolderName("Cut Bones")
     transformedFibulaPiecesList = createListFromFolderName("Transformed Fibula Pieces")
     transformedMandiblePiecesList = createListFromFolderName("Transformed Mandible Pieces")
@@ -3433,13 +3434,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
       #When fibulaScalarVolume:
-      addIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList
+      addIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase]
       removeIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox]
       
     else:
       #When mandibleScalarVolume:
       addIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox]
-      removeIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList
+      removeIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase]
     
     for i in range(len(removeIterationList)):
       if removeIterationList[i] is not None:
@@ -4314,7 +4315,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     )
     distantPoint1 = np.array(distantPoint1)
     distantPoint2 = np.array(distantPoint2)
-    # THE DISTANT POINTS MAY NEED TO BE (UN)TRANSFORMED ACCORDING TO THE FIBULANORMALIZATIONTRANSFORM
 
 
     middlePoint = (distantPoint1 + distantPoint2)/2
@@ -4327,7 +4327,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     fibulaLineStartPoint = np.zeros(3)
     fibulaLineEndPoint = np.zeros(3)
-    # REMEMBER THAT THESE LINES COULD BE GetNthControlPointPositionWorld
     fibulaLine.GetNthControlPointPosition(0, fibulaLineStartPoint)
     fibulaLine.GetNthControlPointPosition(1, fibulaLineEndPoint)
     fibulaLineDirection = fibulaLineEndPoint - fibulaLineStartPoint
@@ -4335,7 +4334,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     miterBoxDirectionLineStartPoint = np.zeros(3)
     miterBoxDirectionLineEndPoint = np.zeros(3)
-    # REMEMBER THAT THESE LINES COULD BE GetNthControlPointPositionWorld
     miterBoxDirectionLine.GetNthControlPointPosition(0, miterBoxDirectionLineStartPoint)
     miterBoxDirectionLine.GetNthControlPointPosition(1, miterBoxDirectionLineEndPoint)
     miterBoxDirectionLineDirection = miterBoxDirectionLineEndPoint - miterBoxDirectionLineStartPoint
@@ -4373,26 +4371,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     normalsList = [verticalPlaneNormal1, verticalPlaneNormal2, sidePlane1Normal, sidePlane2Normal]
     originsList = [verticalPlaneOrigin1, verticalPlaneOrigin2, sidePlane1Origin, sidePlane2Origin]
-    #origins = vtk.vtkPoints()
-    #normals = vtk.vtkFloatArray()
-    #normals.SetNumberOfComponents(3)
     planeCollection = vtk.vtkPlaneCollection()
     for normal, origin in zip(normalsList, originsList):
       plane = vtk.vtkPlane()
       plane.SetNormal(normal)
       plane.SetOrigin(origin)
       planeCollection.AddItem(plane)
-      continue
-      planeMarkup = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode")
-      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeMarkup)
-      planeMarkup.SetNormal(normal)
-      planeMarkup.SetOrigin(origin)
-      planeMarkup.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneTypePointNormal)
-      planeDisplayNode = planeMarkup.GetDisplayNode()
-      planeDisplayNode.SetVisibility(True)
-    
-
-
 
 
     laterality = parameterNode.GetParameter("donorLeg") + " "
@@ -4419,9 +4403,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     hollowWithMarginModel.GetDisplayNode().SetVisibility(False)
 
 
-
-
-
     clipper = vtk.vtkClipClosedSurface()
     clipper.SetInputData(hollowWithMarginModel.GetPolyData())
     clipper.SetClippingPlanes(planeCollection)
@@ -4429,9 +4410,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     clipper.Update()
 
     modelsLogic = slicer.modules.models.logic()
-    fibulaGuideBaseModel = modelsLogic.AddModel(clipper.GetOutput())
+    fibulaGuideBaseModel = modelsLogic.AddModel(calculateNormals(clipper.GetOutput()))
     fibulaGuideBaseModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibulaGuideBaseModel'))
     parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", fibulaGuideBaseModel.GetID())
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+    fibulaGuideBaseModel.GetDisplayNode().AddViewNodeID(fibulaViewNode.GetID())
+    fibulaGuideBaseModel.GetDisplayNode().SetVisibility2D(True)
+    moveNodeToFolder(fibulaGuideBaseModel, getFolder("BoneReconstructionPlanner"))
 
     slicer.mrmlScene.RemoveNode(hollowWithMarginModel)
 

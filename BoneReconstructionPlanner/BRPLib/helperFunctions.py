@@ -1124,12 +1124,14 @@ def createHollowWithMargin(
 
 
 
-  hollowSegmentID = fibulaSegmentName + "_Hollow"
-  seg.GetSegmentation().AddEmptySegment(
-    hollowSegmentID,
-    hollowSegmentID
-  )
-
+  hollowSegmentName = fibulaSegmentName + "_Hollow"
+  hollowSegmentID = getSegmentIDWithName(hollowSegmentName, segmentationNode)
+  if not hollowSegmentID:
+    hollowSegmentID = hollowSegmentName
+    seg.GetSegmentation().AddEmptySegment(
+      hollowSegmentID,
+      hollowSegmentID
+    )
 
   segmentEditorNode.SetSelectedSegmentID(hollowSegmentID)
   segmentEditorWidget.setActiveEffectByName("Logical operators")
@@ -1144,7 +1146,6 @@ def createHollowWithMargin(
   effect.setParameter("ShellThicknessMm", str(vesselThicknessMm))
   effect.self().onApply()
 
-  segDisplayNode.SetSegmentVisibility(hollowSegmentID, False)
   segDisplayNode.SetVisibility(segmentationVisibilityState)
   
   return hollowSegmentID
