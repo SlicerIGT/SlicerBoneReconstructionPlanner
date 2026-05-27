@@ -1294,9 +1294,13 @@ def build_surface_locator(surface_polydata):
   return obb_tree
 
 def rectangles_edges(rect_polydata):
-  """Return (p1, p2) for each edge in the rectangle."""
-  lines = rect_polydata.GetLines()
-  pts = rect_polydata.GetPoints()
+  """Return (p1, p2) for each edge in the rectangle, works for both line and polygon cells."""
+  extract = vtk.vtkExtractEdges()
+  extract.SetInputData(rect_polydata)
+  extract.Update()
+  edge_poly = extract.GetOutput()
+  lines = edge_poly.GetLines()
+  pts = edge_poly.GetPoints()
   lines.InitTraversal()
   id_list = vtk.vtkIdList()
   edges = []
@@ -1306,7 +1310,14 @@ def rectangles_edges(rect_polydata):
     edges.append((p1, p2))
   return edges
 
-def has_collision(rect_polydata, surface_polydata, obb_tree):
+def has_collision(rect_polydata_original, rect_matrix, surface_polydata, obb_tree):
+  # transform filter
+  transformFilter = vtk.vtkTransformPolyDataFilter()
+  transformFilter.SetInputData(rect_polydata_original)
+  transformFilter.SetTransform(rect_matrix)
+  transformFilter.Update()
+  rect_polydata = transformFilter.GetOutput()
+  
   # 0. Quick bounding-box rejection (microseconds)
   r_bounds = rect_polydata.GetBounds()
   s_bounds = surface_polydata.GetBounds()

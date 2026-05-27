@@ -4099,6 +4099,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
 
+    obb_tree = build_surface_locator(fibulaModelNode.GetPolyData())
+    
     combineModelsLogic = combineModelsRobustLogic
     for i in range(len(fibulaPlanesList)):
       if useMoreExactVersionOfPositioningAlgorithmChecked:
@@ -4262,15 +4264,86 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       if i%2 == 0:
         miterBoxAxisXTranslation = 0
-        miterBoxAxisYTranslation = biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula/cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY
+        miterBoxAxisYTranslation = biggerMiterBoxHeight/2
         miterBoxAxisZTranslation = -miterBoxSlotWidth/2
       else:
         miterBoxAxisXTranslation = 0
-        miterBoxAxisYTranslation = biggerMiterBoxHeight/2+deltaMiterBoxAxisY+biggerMiterBoxDistanceToFibula/cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY
+        miterBoxAxisYTranslation = biggerMiterBoxHeight/2
         miterBoxAxisZTranslation = miterBoxSlotWidth/2
       
+
+
       miterBoxOrigin = pointOfIntersection + miterBoxAxisX*miterBoxAxisXTranslation + miterBoxAxisY*miterBoxAxisYTranslation + miterBoxAxisZ*miterBoxAxisZTranslation
       miterBoxToWorldChangeOfFrameMatrix = self.getAxes1ToWorldChangeOfFrameMatrix(miterBoxAxisX, miterBoxAxisY, miterBoxAxisZ, miterBoxOrigin)
+
+
+      # iterative rectanglet position correction until no bone collision is detected (in case of collision, the miter box is moved away from the fibula along the miter box direction)
+
+      touchingBone = True
+      while touchingBone:
+    
+
+        surface_polydata = fibulaModelNode.GetPolyData()
+
+        # transform filter
+        transformFilter = vtk.vtkTransformPolyDataFilter()
+        transformFilter.SetInputData(rectangletModel.GetPolyData())
+        transform = vtk.vtkTransform()
+        transform.PostMultiply()
+        transform.SetMatrix(miterBoxToWorldChangeOfFrameMatrix)
+        transformFilter.SetTransform(transform)
+        transformFilter.Update()
+        rect_polydata = transformFilter.GetOutput()
+        
+
+        touchingBone = False  # reset: assume no collision, prove otherwise
+        skipSecondTest = False
+        skipThirdTest = False
+        # 0. Quick bounding-box rejection (microseconds)
+        r_bounds = rect_polydata.GetBounds()
+        s_bounds = surface_polydata.GetBounds()
+        for axis in range(3):
+          if r_bounds[2*axis+1] < s_bounds[2*axis] or r_bounds[2*axis] > s_bounds[2*axis+1]:
+            skipSecondTest = True
+            skipThirdTest = True
+            break
+
+        if not skipSecondTest:
+          # 1. Edge-intersection test (each edge is O(log N) with OBBTree)
+          hit_pts = vtk.vtkPoints()
+          for p1, p2 in rectangles_edges(rect_polydata):
+            if obb_tree.IntersectWithLine(p1, p2, hit_pts, None) > 0:
+              touchingBone = True
+              skipThirdTest = True
+              break
+
+        if not skipThirdTest:
+          # 2. Check if any rectangle vertex is *inside* the closed surface
+          #    (handles case where rectangle is fully contained)
+          enc = vtk.vtkSelectEnclosedPoints()
+          enc.SetInputData(rect_polydata)
+          enc.SetSurfaceData(surface_polydata)
+          enc.CheckSurfaceOff()   # skip surface-integrity check for speed
+          enc.Update()
+          pts = rect_polydata.GetPoints()
+          for i in range(pts.GetNumberOfPoints()):
+            if enc.IsInside(i):
+              touchingBone = True
+              break
+
+        if touchingBone:
+          miterBoxAxisYTranslation += 0.5
+          miterBoxOrigin = pointOfIntersection + miterBoxAxisX*miterBoxAxisXTranslation + miterBoxAxisY*miterBoxAxisYTranslation + miterBoxAxisZ*miterBoxAxisZTranslation
+          miterBoxToWorldChangeOfFrameMatrix = self.getAxes1ToWorldChangeOfFrameMatrix(miterBoxAxisX, miterBoxAxisY, miterBoxAxisZ, miterBoxOrigin)
+
+
+
+
+      miterBoxAxisYTranslation += biggerMiterBoxDistanceToFibula
+      miterBoxOrigin = pointOfIntersection + miterBoxAxisX*miterBoxAxisXTranslation + miterBoxAxisY*miterBoxAxisYTranslation + miterBoxAxisZ*miterBoxAxisZTranslation
+      miterBoxToWorldChangeOfFrameMatrix = self.getAxes1ToWorldChangeOfFrameMatrix(miterBoxAxisX, miterBoxAxisY, miterBoxAxisZ, miterBoxOrigin)
+
+
 
       miterBoxToWorldChangeOfFrameTransformNode.SetMatrixTransformToParent(miterBoxToWorldChangeOfFrameMatrix)
       miterBoxToWorldChangeOfFrameTransformNode.UpdateScene(slicer.mrmlScene)
