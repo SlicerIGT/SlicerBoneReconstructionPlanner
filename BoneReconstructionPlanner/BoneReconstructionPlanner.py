@@ -4100,7 +4100,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
 
     obb_tree = build_surface_locator(fibulaModelNode.GetPolyData())
-    
+    enc = vtk.vtkSelectEnclosedPoints()
+    enc.SetSurfaceData(fibulaModelNode.GetPolyData())
+    enc.CheckSurfaceOff()   # skip surface-integrity check for speed
+
     combineModelsLogic = combineModelsRobustLogic
     for i in range(len(fibulaPlanesList)):
       if useMoreExactVersionOfPositioningAlgorithmChecked:
@@ -4320,10 +4323,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         if not skipThirdTest:
           # 2. Check if any rectangle vertex is *inside* the closed surface
           #    (handles case where rectangle is fully contained)
-          enc = vtk.vtkSelectEnclosedPoints()
           enc.SetInputData(rect_polydata)
-          enc.SetSurfaceData(surface_polydata)
-          enc.CheckSurfaceOff()   # skip surface-integrity check for speed
           enc.Update()
           pts = rect_polydata.GetPoints()
           for i in range(pts.GetNumberOfPoints()):
