@@ -5436,6 +5436,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       "miterBoxes Models",
       "biggerMiterBoxes Models",
       "lowResolutionBiggerMiterBoxes Models",
+      "rectanglet Models",
       "previewMiterBoxes Models",
       "Fibula Cylinders Models",
       "Dental Implants Cylinders Models",
