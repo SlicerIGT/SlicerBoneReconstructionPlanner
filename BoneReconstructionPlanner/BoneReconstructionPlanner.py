@@ -2518,6 +2518,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         import traceback
         traceback.print_exc()  
 
+    
+    # TODO show that the plan has changed and user needs to update the boxes, not like this because is annoying
+    #self.createMiterBoxesFromFibulaPlanes()
+    #self.createSawBoxesFromFirstAndLastMandiblePlanes()
+
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
     parameterNode.SetParameter("currentlyProcessing", str(False))
