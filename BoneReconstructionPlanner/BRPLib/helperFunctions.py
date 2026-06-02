@@ -430,7 +430,16 @@ def createBox(X, Y, Z, name, defaultVisible = True, highResolution = True):
   triangulatedPlane = vtk.vtkTriangleFilter()
   triangulatedPlane.SetInputConnection(plane.GetOutputPort())
   triangulatedPlane.Update()
-  rectanglet.SetAndObservePolyData(triangulatedPlane.GetOutput())
+  scaleTransform = vtk.vtkTransform()
+  scaleTransform.PostMultiply()
+  scaleTransform.Scale(X, Z, 1)
+  scaleTransform.RotateX(90)
+  scaleTransform.Translate(0, -Z, 0)
+  transformFilter = vtk.vtkTransformPolyDataFilter()
+  transformFilter.SetInputConnection(triangulatedPlane.GetOutputPort())
+  transformFilter.SetTransform(scaleTransform)
+  transformFilter.Update()
+  rectanglet.SetAndObservePolyData(transformFilter.GetOutput())
   
   return miterBox, rectanglet
 
