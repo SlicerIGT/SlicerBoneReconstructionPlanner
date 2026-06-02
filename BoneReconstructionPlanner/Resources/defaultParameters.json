@@ -62,6 +62,8 @@
     "lightingInterpolationMethod": "Gouraud",
     "lightingMode": "Lamp",
     "mandibleSideToRemove": "Removing right side",
+    "miterBoxesBoxType": "Adapted",
     "miterBoxesGuideType": "Slot",
+    "sawBoxesBoxType": "Regular",
     "sawBoxesGuideType": "Slot"
 }

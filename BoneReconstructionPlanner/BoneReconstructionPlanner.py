@@ -285,6 +285,7 @@ slicer.FIBULA_VIEW_ID = "vtkMRMLViewNode2"
 slicer.BRPLayoutId=101
 slicer.PLANE_SIDE_SIZE = 50.
 slicer.PLANE_GLYPH_SCALE = 2.5
+slicer.SURGICAL_GUIDE_COLOR = [243/255, 149/255, 42/255] # orange
 
 USING_GUI = not(slicer.app.commandOptions().noMainWindow)
 
@@ -608,6 +609,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.kindOfMandibleResectionComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleSideToRemoveComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.miterBoxesGuideTypeComboBox.currentTextChanged.connect(self.updateMiterBoxes)
+    self.ui.miterBoxesBoxTypeComboBox.currentTextChanged.connect(self.updateMiterBoxes)
     self.ui.sawBoxesGuideTypeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
@@ -1166,12 +1168,33 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.mandibleSideToRemoveComboBox.removeItem(2)
       self.ui.mandibleSideToRemoveComboBox.currentText = self._parameterNode.GetParameter("mandibleSideToRemove")
 
+
     # TODO: finish implementation, probably needs turning around the fibula centerline support of miterBoxes
     self.ui.miterBoxesGuideTypeLabel.hide()
     self.ui.miterBoxesGuideTypeComboBox.hide()
-    #
     self.ui.miterBoxesGuideTypeComboBox.currentText = self._parameterNode.GetParameter("miterBoxesGuideType")
+    self.ui.sawBoxesGuideTypeLabel.hide()
+    self.ui.sawBoxesGuideTypeComboBox.hide()
     self.ui.sawBoxesGuideTypeComboBox.currentText = self._parameterNode.GetParameter("sawBoxesGuideType")
+
+
+    #if self._parameterNode.GetParameter("miterBoxesGuideType") == "Slot":
+    #  self.ui.miterBoxesBoxTypeLabel.show()
+    #  self.ui.miterBoxesBoxTypeComboBox.show()
+    #else:
+    #  self.ui.miterBoxesBoxTypeLabel.hide()
+    #  self.ui.miterBoxesBoxTypeComboBox.hide()
+    self.ui.miterBoxesBoxTypeComboBox.currentText = self._parameterNode.GetParameter("miterBoxesBoxType")
+
+
+    #if self._parameterNode.GetParameter("sawBoxesGuideType") == "Slot":
+    #  self.ui.sawBoxesBoxTypeLabel.show()
+    #  self.ui.sawBoxesBoxTypeComboBox.show()
+    #else:
+    #  self.ui.sawBoxesBoxTypeLabel.hide()
+    #  self.ui.sawBoxesBoxTypeComboBox.hide()
+    #self.ui.sawBoxesBoxTypeComboBox.currentText = self._parameterNode.GetParameter("sawBoxesBoxType")
+
     
     AISegmentationsChecked = self._parameterNode.GetParameter("AISegmentations") == "True"
     dentalImplantsPlanningAndFibulaDrillGuidesChecked = self._parameterNode.GetParameter("dentalImplantsPlanningAndFibulaDrillGuides") == "True"
@@ -1366,6 +1389,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.SetParameter("fibulaSegmentsMeasurementMode", self.ui.fibulaSegmentsMeasurementModeComboBox.currentText)
     self._parameterNode.SetParameter("miterBoxesGuideType", self.ui.miterBoxesGuideTypeComboBox.currentText)
+    self._parameterNode.SetParameter("miterBoxesBoxType", self.ui.miterBoxesBoxTypeComboBox.currentText)
     self._parameterNode.SetParameter("sawBoxesGuideType", self.ui.sawBoxesGuideTypeComboBox.currentText)
     self._parameterNode.SetParameter("kindOfMandibleResection", self.ui.kindOfMandibleResectionComboBox.currentText)
     if self.ui.mandibleSideToRemoveComboBox.currentText != "":
@@ -3979,6 +4003,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   
   @saveExecutedMethodWithTelemetry
   def createMiterBoxesFromFibulaPlanes(self):
+    __unusedVar = None
+
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     miterBoxDirectionLine = parameterNode.GetNodeReference("miterBoxDirectionLine")
@@ -3999,6 +4025,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     checkSecurityMarginOnMiterBoxCreationChecked = parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") == "True"
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     miterBoxesGuideType = parameterNode.GetParameter("miterBoxesGuideType")
+    miterBoxesBoxType = parameterNode.GetParameter("miterBoxesBoxType")
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
 
     scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
@@ -4127,7 +4154,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxLength = miterBoxSlotLength
       miterBoxHeight = 70
       if miterBoxesGuideType == "Slot":
-        miterBoxModel = createBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
+        miterBoxModel, __unusedVar = createBox(miterBoxLength,miterBoxHeight,miterBoxWidth,miterBoxName)
+        slicer.mrmlScene.RemoveNode(__unusedVar)
 
         miterBoxDisplayNode = miterBoxModel.GetDisplayNode()
         miterBoxDisplayNode.SetVisibility(False)
@@ -4167,24 +4195,27 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxAxisY = miterBoxAxisY/np.linalg.norm(miterBoxAxisY)
       
       biggerMiterBoxHeight = miterBoxSlotHeight
-      #biggerMiterBoxModel = createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
-      biggerMiterBoxModel, rectangletModel = createAdaptedBox(
-        biggerMiterBoxLength,
-        biggerMiterBoxHeight,
-        biggerMiterBoxWidth,
-        biggerMiterBoxName,
-        miterBoxAxisX,
-        miterBoxAxisZ,
-        fibulaZ,
-        highResolution = True
-      )
-      lowResolutionBiggerMiterBoxModel = createBox(
+      if miterBoxesBoxType == "Regular":
+        biggerMiterBoxModel, rectangletModel = createBox(biggerMiterBoxLength,biggerMiterBoxHeight,biggerMiterBoxWidth,biggerMiterBoxName)
+      elif miterBoxesBoxType == "Adapted":
+        biggerMiterBoxModel, rectangletModel = createAdaptedBox(
+          biggerMiterBoxLength,
+          biggerMiterBoxHeight,
+          biggerMiterBoxWidth,
+          biggerMiterBoxName,
+          miterBoxAxisX,
+          miterBoxAxisZ,
+          fibulaZ,
+          highResolution = True
+        )
+      lowResolutionBiggerMiterBoxModel, __unusedVar = createBox(
         biggerMiterBoxLength,
         biggerMiterBoxHeight,
         biggerMiterBoxWidth,
         biggerMiterBoxName + "_lowRes",
         highResolution=False
       )
+      slicer.mrmlScene.RemoveNode(__unusedVar)
       lowResolutionBiggerMiterBoxModel.GetDisplayNode().SetVisibility3D(False)
 
       biggerMiterBoxDisplayNode = biggerMiterBoxModel.GetDisplayNode()
@@ -4207,7 +4238,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if miterBoxesGuideType == "Slot":
         # previewMiterBoxes
         previewMiterBoxModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", previewMiterBoxName)
-        combineModelsLogic.process(biggerMiterBoxModel, miterBoxModel, previewMiterBoxModel, 'difference')
+        combineModelsLogic.process(
+          biggerMiterBoxModel, miterBoxModel, previewMiterBoxModel, 'difference', numberOfRetries = 6
+        )
         previewMiterBoxDisplayNode = previewMiterBoxModel.GetDisplayNode()
         previewMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
@@ -4502,13 +4535,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     clipper.Update()
 
     modelsLogic = slicer.modules.models.logic()
-    fibulaGuideBaseModel = modelsLogic.AddModel(calculateNormals(clipper.GetOutput()))
-    fibulaGuideBaseModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibulaGuideBaseModel'))
-    parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", fibulaGuideBaseModel.GetID())
+    fibulaSurgicalGuideBaseModel = modelsLogic.AddModel(calculateNormals(clipper.GetOutput()))
+    fibulaSurgicalGuideBaseModel.SetName(slicer.mrmlScene.GetUniqueNameByString('fibulaSurgicalGuideBaseModel'))
+    parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", fibulaSurgicalGuideBaseModel.GetID())
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-    fibulaGuideBaseModel.GetDisplayNode().AddViewNodeID(fibulaViewNode.GetID())
-    fibulaGuideBaseModel.GetDisplayNode().SetVisibility2D(True)
-    moveNodeToFolder(fibulaGuideBaseModel, getFolder("BoneReconstructionPlanner"))
+    fibulaSurgicalGuideBaseModel.GetDisplayNode().AddViewNodeID(fibulaViewNode.GetID())
+    fibulaSurgicalGuideBaseModel.GetDisplayNode().SetVisibility2D(True)
+    moveNodeToFolder(fibulaSurgicalGuideBaseModel, getFolder("BoneReconstructionPlanner"))
 
     slicer.mrmlScene.RemoveNode(hollowWithMarginModel)
 
@@ -4929,6 +4962,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode = surgicalGuideModel.GetDisplayNode()
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(fibulaViewNode.GetID())
+    displayNode.SetColor(slicer.SURGICAL_GUIDE_COLOR)
 
     for i in range(len(biggerMiterBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, biggerMiterBoxesModelsList[i], surgicalGuideModel, 'union')
@@ -5034,7 +5068,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       sawBoxLength = sawBoxSlotLength
       sawBoxHeight = 70
       if sawBoxesGuideType == "Slot":
-        sawBoxModel = createBox(sawBoxLength,sawBoxHeight,sawBoxWidth,sawBoxName)
+        sawBoxModel, __unusedVar = createBox(sawBoxLength,sawBoxHeight,sawBoxWidth,sawBoxName)
+        slicer.mrmlScene.RemoveNode(__unusedVar)
         moveNodeToFolder(sawBoxModel, sawBoxesModelsFolder)
 
         sawBoxDisplayNode = sawBoxModel.GetDisplayNode()
@@ -5052,7 +5087,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         biggerSawBoxWidth = sawBoxSlotWidth+clearanceFitPrintingTolerance
         biggerSawBoxLength = sawBoxSlotLength
       biggerSawBoxHeight = sawBoxSlotHeight
-      biggerSawBoxModel = createBox(biggerSawBoxLength,biggerSawBoxHeight,biggerSawBoxWidth,biggerSawBoxName)
+      biggerSawBoxModel, __unusedVar = createBox(biggerSawBoxLength,biggerSawBoxHeight,biggerSawBoxWidth,biggerSawBoxName)
+      slicer.mrmlScene.RemoveNode(__unusedVar)
       moveNodeToFolder(biggerSawBoxModel, biggerSawBoxesModelsFolder)
 
       biggerSawBoxDisplayNode = biggerSawBoxModel.GetDisplayNode()
