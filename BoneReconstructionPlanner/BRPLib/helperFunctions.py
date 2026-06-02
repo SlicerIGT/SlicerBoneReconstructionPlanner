@@ -417,7 +417,22 @@ def createBox(X, Y, Z, name, defaultVisible = True, highResolution = True):
     miterBox.SetPolyDataConnection(adaptiveSubdivisionFilter.GetOutputPort())
   else:
     miterBox.SetPolyDataConnection(triangleFilter.GetOutputPort())
-  return miterBox
+
+  rectanglet = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+  rectanglet.SetName(slicer.mrmlScene.GetUniqueNameByString(name + "_rectanglet"))
+  slicer.mrmlScene.AddNode(rectanglet)
+  rectanglet.CreateDefaultDisplayNodes()
+  rectanglet.GetDisplayNode().SetVisibility(False)
+  plane = vtk.vtkPlaneSource()
+  plane.SetXResolution(1)
+  plane.SetYResolution(1)
+  plane.Update()
+  triangulatedPlane = vtk.vtkTriangleFilter()
+  triangulatedPlane.SetInputConnection(plane.GetOutputPort())
+  triangulatedPlane.Update()
+  rectanglet.SetAndObservePolyData(triangulatedPlane.GetOutput())
+  
+  return miterBox, rectanglet
 
 def createCylinder(name,R,H=50):
   cylinder = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
