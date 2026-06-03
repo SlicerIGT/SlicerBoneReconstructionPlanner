@@ -1129,9 +1129,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaNormalizationTransformButton.checked = self._parameterNode.GetParameter("fibulaNormalizationTransform") == "True"
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = self._parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
-    self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
     
+    useNonDecimatedBoneModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = useNonDecimatedBoneModelsForPreviewChecked
+    self.showBoneModelsAsNonDecimated(useNonDecimatedBoneModelsForPreviewChecked)
+
     fibulaSurgicalGuideElementsVisible = self._parameterNode.GetParameter("fibulaSurgicalGuideElementsVisible") == "True"
     self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked = fibulaSurgicalGuideElementsVisible
     self.setFibulaGuideBaseElementsVisibility(fibulaSurgicalGuideElementsVisible)
@@ -1722,6 +1725,50 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode = interCondylarBeamBox.GetDisplayNode()
       displayNode.SetVisibility(visibility)
 
+  def showBoneModelsAsNonDecimated(self, nonDecimated):
+    """
+    Set visibility of fibula surgical guide elements
+    """
+    if not USING_GUI:
+      return
+    
+    showOriginalMandibleChecked = self._parameterNode.GetParameter("showOriginalMandible") == "True"
+
+    nonDecimatedFibulaModelNode = self._parameterNode.GetNodeReference("fibulaModelNode")
+    decimatedFibulaModelNode = self._parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    nonDecimatedMandibleModelNode = self._parameterNode.GetNodeReference("mandibleModelNode")
+    decimatedMandibleModelNode = self._parameterNode.GetNodeReference("decimatedMandibleModelNode")
+
+    if not (
+      nonDecimatedFibulaModelNode and 
+      decimatedFibulaModelNode and 
+      nonDecimatedMandibleModelNode and 
+      decimatedMandibleModelNode
+    ):
+      return
+    
+    if nonDecimated:
+      nonDecimatedFibulaModelDisplayNode = nonDecimatedFibulaModelNode.GetDisplayNode()
+      decimatedFibulaModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
+      nonDecimatedFibulaModelDisplayNode.SetVisibility(True)
+      decimatedFibulaModelDisplayNode.SetVisibility(False)
+
+      nonDecimatedMandibleModelDisplayNode =  nonDecimatedMandibleModelNode.GetDisplayNode()
+      decimatedMandibleModelDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
+      nonDecimatedMandibleModelDisplayNode.SetVisibility(True and showOriginalMandibleChecked)
+      decimatedMandibleModelDisplayNode.SetVisibility(False)
+      
+    else:
+      nonDecimatedFibulaModelDisplayNode = nonDecimatedFibulaModelNode.GetDisplayNode()
+      decimatedFibulaModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
+      nonDecimatedFibulaModelDisplayNode.SetVisibility(False)
+      decimatedFibulaModelDisplayNode.SetVisibility(True)
+
+      nonDecimatedMandibleModelDisplayNode =  nonDecimatedMandibleModelNode.GetDisplayNode()
+      decimatedMandibleModelDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
+      nonDecimatedMandibleModelDisplayNode.SetVisibility(False)
+      decimatedMandibleModelDisplayNode.SetVisibility(True and showOriginalMandibleChecked)
+  
   def setFibulaGuideBaseElementsVisibility(self, visibility):
     """
     Set visibility of fibula surgical guide elements
@@ -3117,41 +3164,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeList = createListFromFolderName("Mandibular planes")
      
     fibulaPlanesList = createListFromFolderName("Fibula planes")
-    
-    if useNonDecimatedBoneModelsForPreviewChecked:
-      nonDecimatedFibulaModelDisplayNode = nonDecimatedFibulaModelNode.GetDisplayNode()
-      decimatedFibulaModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
-      nonDecimatedFibulaModelDisplayNode.SetVisibility(True)
-      decimatedFibulaModelDisplayNode.SetVisibility(False)
 
-      nonDecimatedMandibleModelDisplayNode =  nonDecimatedMandibleModelNode.GetDisplayNode()
-      decimatedMandibleModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
-      previousMandibleModelVisibility = (
-        nonDecimatedMandibleModelDisplayNode.GetVisibility() or
-        decimatedMandibleModelDisplayNode.GetVisibility()
-      )
-      nonDecimatedMandibleModelDisplayNode.SetVisibility(True and previousMandibleModelVisibility)
-      decimatedMandibleModelDisplayNode.SetVisibility(False)
-
-      fibulaModelNode = nonDecimatedFibulaModelNode
-      mandibleModelNode = nonDecimatedMandibleModelNode
-    else:
-      nonDecimatedFibulaModelDisplayNode = nonDecimatedFibulaModelNode.GetDisplayNode()
-      decimatedFibulaModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
-      nonDecimatedFibulaModelDisplayNode.SetVisibility(False)
-      decimatedFibulaModelDisplayNode.SetVisibility(True)
-
-      nonDecimatedMandibleModelDisplayNode =  nonDecimatedMandibleModelNode.GetDisplayNode()
-      decimatedMandibleModelDisplayNode = decimatedFibulaModelNode.GetDisplayNode()
-      previousMandibleModelVisibility = (
-        nonDecimatedMandibleModelDisplayNode.GetVisibility() or
-        decimatedMandibleModelDisplayNode.GetVisibility()
-      )
-      nonDecimatedMandibleModelDisplayNode.SetVisibility(False)
-      decimatedMandibleModelDisplayNode.SetVisibility(True and previousMandibleModelVisibility)
-
-      fibulaModelNode = decimatedFibulaModelNode
-      mandibleModelNode = decimatedMandibleModelNode
+    fibulaModelNode = self.getCurrentFibulaModel()
+    mandibleModelNode = self.getCurrentMandibleModel()
 
     planeCutsList = createListFromFolderName("Plane Cuts")
     if len(planeCutsList) == 0 or fixCutGoesThroughTheMandibleTwiceCheckBoxChanged:
@@ -3692,13 +3707,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       decimatedModelDisplayNode = decimatedModels[i].GetDisplayNode()
       decimatedModelDisplayNode.SetColor(models[i].GetDisplayNode().GetColor())
-
-      if useNonDecimatedBoneModelsForPreviewChecked:
-        modelDisplayNode.SetVisibility(True)
-        decimatedModelDisplayNode.SetVisibility(False)
-      else:
-        modelDisplayNode.SetVisibility(False)
-        decimatedModelDisplayNode.SetVisibility(True)
 
       param = {
               "inputModel": models[i],
