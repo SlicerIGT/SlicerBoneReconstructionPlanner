@@ -1417,6 +1417,27 @@ list and mandible reconstruction</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_18">
          <item>
+          <widget class="QLabel" name="miterBoxesNeedUpdateLabel">
+           <property name="font">
+            <font>
+             <pointsize>16</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+             <kerning>true</kerning>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLabel {
+color: red;
+}</string>
+           </property>
+           <property name="text">
+            <string>Miter boxes need update
+because plan has changed</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QCheckBox" name="checkSecurityMarginOnMiterBoxCreationCheckBox">
            <property name="text">
             <string>Check security margin
@@ -1855,6 +1876,14 @@ visible</string>
             </widget>
            </item>
            <item>
+            <widget class="QCheckBox" name="fibulaSurgicalGuideVisibleCheckBox">
+             <property name="text">
+              <string>Guide
+visible</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="makeBooleanOperationsToFibulaSurgicalGuideBaseButton">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -1899,6 +1928,26 @@ surgical guide</string>
          <enum>QFrame::Raised</enum>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_19">
+         <item>
+          <widget class="QLabel" name="sawBoxesNeedUpdateLabel">
+           <property name="font">
+            <font>
+             <pointsize>16</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLabel {
+color: red;
+}</string>
+           </property>
+           <property name="text">
+            <string>Saw boxes need update
+because plan has changed</string>
+           </property>
+          </widget>
+         </item>
          <item>
           <widget class="QCheckBox" name="showBiggerSawBoxesInteractionHandlesCheckBox">
            <property name="text">
