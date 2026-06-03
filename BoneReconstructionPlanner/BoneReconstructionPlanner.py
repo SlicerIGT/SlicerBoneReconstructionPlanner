@@ -647,6 +647,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.fixCutGoesThroughTheMandibleTwiceCheckBox.connect('stateChanged(int)', self.onFixCutGoesThroughTheMandibleTwiceCheckBox)
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.fibulaSurgicalGuideVisibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.AISegmentationsCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.customTitaniumPlateDesingCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -1130,6 +1132,17 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
     
+    fibulaSurgicalGuideElementsVisible = self._parameterNode.GetParameter("fibulaSurgicalGuideElementsVisible") == "True"
+    self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked = fibulaSurgicalGuideElementsVisible
+    self.setFibulaGuideBaseElementsVisibility(fibulaSurgicalGuideElementsVisible)
+
+    fibulaSurgicalGuideVisible = self._parameterNode.GetParameter("fibulaSurgicalGuideVisible") == "True"
+    self.ui.fibulaSurgicalGuideVisibleCheckBox.checked = fibulaSurgicalGuideVisible
+    self.setFibulaSurgicalGuideVisibility(fibulaSurgicalGuideVisible)
+    self.ui.fibulaSurgicalGuideVisibleCheckBox.enabled = (
+      self._parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel") is not None
+    )
+
     doDisplayOrientation3DCube = self._parameterNode.GetParameter("displayOrientation3DCube") == "True"
     self.ui.orientation3DCubeCheckBox.checked = doDisplayOrientation3DCube
     displayOrientation3DCube(doDisplayOrientation3DCube)
@@ -1433,6 +1446,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","True")
     else:
       self._parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","False")
+    if self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked:
+      self._parameterNode.SetParameter("fibulaSurgicalGuideElementsVisible","True")
+    else:
+      self._parameterNode.SetParameter("fibulaSurgicalGuideElementsVisible","False")
+    if self.ui.fibulaSurgicalGuideVisibleCheckBox.checked:
+      self._parameterNode.SetParameter("fibulaSurgicalGuideVisible","True")
+    else:
+      self._parameterNode.SetParameter("fibulaSurgicalGuideVisible","False")
     if self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState == qt.Qt.Checked:
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","True")
     else:
@@ -1691,6 +1712,39 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode = interCondylarBeamBox.GetDisplayNode()
       displayNode.SetVisibility(visibility)
 
+  def setFibulaGuideBaseElementsVisibility(self, visibility):
+    """
+    Set visibility of fibula surgical guide elements
+    """
+    if not USING_GUI:
+      return
+    
+    fibulaSurgicalGuideBase = self._parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
+    
+    if fibulaSurgicalGuideBase is not None:
+      fibulaSurgicalGuideBase.GetDisplayNode().SetVisibility(visibility)
+
+    folderNames = [
+      "previewMiterBoxes Models",
+      "Fibula Cylinders Models"
+    ]
+
+    for folderName in folderNames:
+      folderItem = getFolder(folderName)
+      setFolderItemVisibility(folderItem, visibility)
+
+  def setFibulaSurgicalGuideVisibility(self, visibility):
+    """
+    Set visibility of fibula surgical guide
+    """
+    if not USING_GUI:
+      return
+    
+    fibulaSurgicalGuide = self._parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel")
+    
+    if fibulaSurgicalGuide is not None:
+      fibulaSurgicalGuide.GetDisplayNode().SetVisibility(visibility)
+  
   def setMandiblePlanesInteractionHandlesVisibility(self, visibility):
     """
     Set visibility of mandible planes interactive handles
@@ -4986,11 +5040,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       for i in range(len(fibulaDentalImplantsCylindersModelsList)):
         combineModelsLogic.process(surgicalGuideModel, fibulaDentalImplantsCylindersModelsList[i], surgicalGuideModel, 'difference')
 
-    if surgicalGuideModel.GetPolyData().GetNumberOfPoints() == 0:
+    if (
+      surgicalGuideModel.GetPolyData().GetNumberOfPoints() <
+      fibulaSurgicalGuideBaseModel.GetPolyData().GetNumberOfPoints()
+    ):
       slicer.mrmlScene.RemoveNode(surgicalGuideModel)
       slicer.util.errorDisplay("ERROR: Boolean operations to make fibula surgical guide failed")
       return
     
+    parameterNode.SetParameter("fibulaSurgicalGuideElementsVisible", str(False))
+    parameterNode.SetParameter("fibulaSurgicalGuideVisible", str(True))
     parameterNode.SetNodeReferenceID("fibulaSurgicalGuidePrototypeModel", surgicalGuideModel.GetID())
 
     self.updateNormalizationFibulaLineTransform(None)

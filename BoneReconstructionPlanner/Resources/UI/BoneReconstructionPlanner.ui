@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>508</width>
-    <height>3061</height>
+    <height>3183</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -1839,17 +1839,41 @@ cylinders</string>
           </layout>
          </item>
          <item>
-          <widget class="QPushButton" name="makeBooleanOperationsToFibulaSurgicalGuideBaseButton">
-           <property name="toolTip">
-            <string>Make boolean operations to surgical
+          <layout class="QHBoxLayout" name="horizontalLayout_14">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QCheckBox" name="fibulaSurgicalGuideElementsVisibleCheckBox">
+             <property name="text">
+              <string>Guide elements
+visible</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="makeBooleanOperationsToFibulaSurgicalGuideBaseButton">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>2</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="toolTip">
+              <string>Make boolean operations to surgical
  guide base with screwHolesCylinders,
  fibulaDentalImplantCylinders and miterBoxes</string>
-           </property>
-           <property name="text">
-            <string>Create fibula
+             </property>
+             <property name="text">
+              <string>Create fibula
 surgical guide</string>
-           </property>
-          </widget>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
