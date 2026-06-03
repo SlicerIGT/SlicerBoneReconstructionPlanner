@@ -1143,6 +1143,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel") is not None
     )
 
+    if self._parameterNode.GetParameter("miterBoxesNeedUpdate") == "True":
+      self.ui.miterBoxesNeedUpdateLabel.show()
+    else:
+      self.ui.miterBoxesNeedUpdateLabel.hide()
+
+    if self._parameterNode.GetParameter("sawBoxesNeedUpdate") == "True":
+      self.ui.sawBoxesNeedUpdateLabel.show()
+    else:
+      self.ui.sawBoxesNeedUpdateLabel.hide()
+
     doDisplayOrientation3DCube = self._parameterNode.GetParameter("displayOrientation3DCube") == "True"
     self.ui.orientation3DCubeCheckBox.checked = doDisplayOrientation3DCube
     displayOrientation3DCube(doDisplayOrientation3DCube)
@@ -2573,9 +2583,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         traceback.print_exc()  
 
     
-    # TODO show that the plan has changed and user needs to update the boxes, not like this because is annoying
-    #self.createMiterBoxesFromFibulaPlanes()
-    #self.createSawBoxesFromFirstAndLastMandiblePlanes()
+    parameterNode.SetParameter("miterBoxesNeedUpdate", str(True))
+    parameterNode.SetParameter("sawBoxesNeedUpdate", str(True))
 
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
@@ -4474,6 +4483,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     removeFolder(intersectionsFolder)
     removeFolder(pointsIntersectionsFolder)
 
+    parameterNode.SetParameter("miterBoxesNeedUpdate", str(False))
+
     self.setRedSliceForBoxModelsDisplayNodes()
 
     self.updateNormalizationFibulaLineTransform(None)
@@ -5290,6 +5301,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     removeFolder(pointsIntersectionsFolder)
     
     self.setRedSliceForBoxModelsDisplayNodes()
+
+    parameterNode.SetParameter("sawBoxesNeedUpdate", str(False))
 
     parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","True")
     
