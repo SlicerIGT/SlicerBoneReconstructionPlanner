@@ -15,6 +15,8 @@
     "makeAllDentalImplanCylindersParallel": false,
     "makeAllMandiblePlanesRotateTogether": true,
     "mandiblePlanesPositioningForMaximumBoneContact": true,
+    "miterBoxesNeedUpdate": true,
+    "sawBoxesNeedUpdate": true,
     "scalarVolumeChangedThroughParameterNode": false,
     "showBiggerSawBoxesInteractionHandles": false,
     "showFibulaSegmentsLengths": true,
