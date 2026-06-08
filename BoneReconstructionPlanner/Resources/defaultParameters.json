@@ -3,7 +3,6 @@
     "AISegmentationsInstalled": false,
     "checkSecurityMarginOnMiterBoxCreation": true,
     "customTitaniumPlateDesing": false,
-    "currentlyProcessing": false,
     "dentalImplantsPlanningAndFibulaDrillGuides": false,
     "displayOrientation3DCube": false,
     "fibulaSurgicalGuideVisible": false,
@@ -28,6 +27,7 @@
     "updateOnMandiblePlanesMovement": true,
     "useMoreExactVersionOfPositioningAlgorithm": false,
     "useNonDecimatedBoneModelsForPreview": false,
+    "virtualPlanWasSuccessful": false,
     "additionalBetweenSpaceOfFibulaPlanes_mm": 1.5,
     "biggerMiterBoxDistanceToFibula_mm": 1.5,
     "biggerSawBoxDistanceToMandible_mm": 3.0,
@@ -68,6 +68,7 @@
     "mandibleSideToRemove": "Removing right side",
     "miterBoxesBoxType": "Adapted",
     "miterBoxesGuideType": "Slot",
+    "planningInformativeText": "- Please click 'Load test case' if using BRP for the first time.\n- Please select the fibula segmentation.\n- Please select the mandibular segmentation.\n",
     "sawBoxesBoxType": "Regular",
     "sawBoxesGuideType": "Slot"
 }

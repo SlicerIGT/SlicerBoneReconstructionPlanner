@@ -180,10 +180,10 @@ def confirm_clean_and_load_test_data():
   if result_code == qt.QMessageBox.AcceptRole:
     import SampleData
     sampleDataLogic = SampleData.SampleDataLogic()
-    sampleDataLogic.downloadSample('CTFibula')
     sampleDataLogic.downloadSample('CTMandible')
-    sampleDataLogic.downloadSample('FibulaSegmentation')
+    sampleDataLogic.downloadSample('CTFibula')
     sampleDataLogic.downloadSample('MandibleSegmentation')
+    sampleDataLogic.downloadSample('FibulaSegmentation')
   return True
 
 def setLightingMode(renderingMode = "Lamp"):
@@ -365,6 +365,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     VTKObservationMixin.__init__(self)  # needed for parameter node observation
     self.logic = None
     self._parameterNode = None
+    self._shNode = None
     self._updatingGUIFromParameterNode = False
 
   def setup(self):
@@ -384,11 +385,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # "setMRMLScene(vtkMRMLScene*)" slot.
     uiWidget.setMRMLScene(slicer.mrmlScene)
 
-    processingLabel = qt.QLabel("Processing...")
-    processingLabel.setAlignment(qt.Qt.AlignCenter)
-    processingLabel.setStyleSheet("QLabel {color: green; font-family: 'Lato Semibold'; font-size: 30pt;}")
-    slicer.util.mainWindow().statusBar().insertWidget(0,processingLabel)
-    self.ui.processingLabel = processingLabel
+    #processingLabel = qt.QLabel("Processing...")
+    #processingLabel.setAlignment(qt.Qt.AlignCenter)
+    #processingLabel.setStyleSheet("QLabel {color: green; font-family: 'Lato Semibold'; font-size: 30pt;}")
+    #slicer.util.mainWindow().statusBar().insertWidget(0,processingLabel)
+    #self.ui.processingLabel = processingLabel
 
     # additional UI setup
     self.ui.versionLabel.text = f"Version: {self.version}" 
@@ -726,7 +727,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
             if self.logic.mandiblePlaneObserversAndNodeIDList[i][1] == callData.GetID():
               observerIndex = i
           callData.RemoveObserver(self.logic.mandiblePlaneObserversAndNodeIDList.pop(observerIndex)[0])
-        self.logic.onPlaneModifiedTimer(None,None)
+        self.logic.onPlaneModifiedSetTimer(None,None)
       if callData.GetAttribute("isSawBoxPlane") == 'True':
         if len(self.logic.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList) > 0:
           for i in range(len(self.logic.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList)):
@@ -744,6 +745,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       if callData.GetAttribute("isFibulaLine") == 'True':
         callData.RemoveObserver(self.logic.fibulaLineControlPointPlacedObserver)
         self.logic.fibulaLineControlPointPlacedObserver = 0
+        for observer in self.logic.fibulaLineInstructionsEventsObserversList:
+          callData.RemoveObserver(observer)
+        self.logic.fibulaLineInstructionsEventsObserversList = []
       if callData.GetAttribute("isInterCondylarBeamLine") == 'True':
         callData.RemoveObserver(self.logic.interCondylarBeamLineControlPointModifiedObserver)
         callData.RemoveObserver(self.logic.interCondylarBeamLineControlPointRemovedObserver)
@@ -762,9 +766,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         self.logic.mandibleFiducialListObserver = 0
 
     if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode':
-      #if callData.GetAttribute("isMandibleCurve") == 'True':
-      #  callData.RemoveObserver(self.logic.mandibleCurveModifiedObserver)
-      #  self.logic.mandibleCurveModifiedObserver = 0
+      if callData.GetAttribute("isMandibleCurve") == 'True':
+        for observer in self.logic.mandibularCurveInstructionsEventsObserversList:
+          callData.RemoveObserver(observer)
+        self.logic.mandibularCurveInstructionsEventsObserversList = []
       if callData.GetAttribute("isMandibleBridgeCurve") == 'True':
         callData.RemoveObserver(self.logic.mandibleBridgeCurveControlPointModifiedObserver)
         callData.RemoveObserver(self.logic.mandibleBridgeCurveControlPointRemovedObserver)
@@ -1015,7 +1020,25 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # so that when the scene is saved and reloaded, these settings are restored.
 
     self.setParameterNode(self.logic.getParameterNode())
+    self.setShNode(slicer.mrmlScene.GetSubjectHierarchyNode())
 
+  def setShNode(self, inputShNode):
+    """
+    Set and observe subject hierarchy node.
+    Observation is needed because when the subject hierarchy node is changed then the GUI must be updated immediately.
+    """
+    
+    # Unobserve previously selected subject hierarchy node and add an observer to the newly selected.
+    # Changes of subject hierarchy node are observed so that whenever it is changed by a script or any other module
+    # those are reflected immediately in the GUI.
+    if self._shNode is not None:
+      self.removeObserver(self._shNode, slicer.vtkMRMLSubjectHierarchyNode.SubjectHierarchyItemModifiedEvent, self.logic.onShNodeModified)
+    self._shNode = inputShNode
+    if self._shNode is not None:
+      self.addObserver(self._shNode, slicer.vtkMRMLSubjectHierarchyNode.SubjectHierarchyItemModifiedEvent, self.logic.onShNodeModified)
+
+    self.logic.onShNodeModified()
+  
   def setParameterNode(self, inputParameterNode):
     """
     Set and observe parameter node.
@@ -1049,8 +1072,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # only put here code that updates the GUI but does not cause any changes in the parameterNode,
     # in other words, only widgets that do not have any connections, otherwise put them below
     # the _updatingGUIFromParameterNode flag
-    currentlyProcessing = self._parameterNode.GetParameter("currentlyProcessing") == str(True)
-    self.processingLabelShow(currentlyProcessing)
 
     if self._updatingGUIFromParameterNode:
       return
@@ -1301,7 +1322,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if lockVSPChecked:
       self.setMandiblePlanesVisibility(showMandiblePlanesChecked)
       self.logic.setMarkupsListLocked(planningObjectsList,locked=True)
-      self.logic.removeMandiblePlaneObservers()
+      #self.logic.removeMandiblePlaneObservers()
       #
       self.ui.lockVSPButton.checked = True
       self.ui.parametersOfVSPFrame.enabled = False
@@ -1310,8 +1331,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       #self.setMandiblePlanesVisibility(True)
       self.logic.setMarkupsListLocked(planningObjectsList,locked=False)
-      self.logic.removeMandiblePlaneObservers() # in case they already exist
-      self.logic.addMandiblePlaneObservers()
+      #self.logic.removeMandiblePlaneObservers() # in case they already exist
+      #self.logic.addMandiblePlaneObservers()
       #
       self.ui.lockVSPButton.checked = False
       self.ui.parametersOfVSPFrame.enabled = True
@@ -1340,6 +1361,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     showBiggerSawBoxesInteractionHandlesChecked = self._parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles") == "True"
     self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.checked = showBiggerSawBoxesInteractionHandlesChecked
     self.setBiggerSawBoxesInteractionHandlesVisibility(showBiggerSawBoxesInteractionHandlesChecked)
+
+    self.ui.planningInformativeLabel.text = self._parameterNode.GetParameter("planningInformativeText")
 
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
@@ -1512,6 +1535,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.SetParameter("lightingInterpolationMethod", self.ui.lightingInterpolationMethodComboBox.currentText)
     self._parameterNode.SetParameter("lightingMode", self.ui.lightingModeComboBox.currentText)
+
+    # we are going to change the instructions any time the parameterNode is modified
+    self.logic.setPlanningInformativeText()
 
     self._parameterNode.EndModify(wasModified)
 
@@ -1923,6 +1949,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.mandiblePlaneObserversAndNodeIDList = []
     self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList = []
     self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList = []
+    self.fibulaLineInstructionsEventsObserversList = []
+    self.mandibularCurveInstructionsEventsObserversList = []
     # self.mandibleCurveModifiedObserver = 0 # TODO: could be implemented on the future
     self.interCondylarBeamLineControlPointModifiedObserver = 0
     self.interCondylarBeamLineControlPointRemovedObserver = 0
@@ -2028,6 +2056,215 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     documentationUrl = qt.QUrl("https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner#table-of-contents")
     qt.QDesktopServices.openUrl(documentationUrl)
   
+  @vtk.calldata_type(vtk.VTK_LONG)
+  def onShNodeModified(self, caller, event, callData):
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    shItemIDModified = callData
+    
+    if shNode.GetItemByName("Mandibular planes 2"):
+      return
+
+    mandibularPlanesFolderID = shNode.GetItemByName("Mandibular planes")
+    
+    if shItemIDModified == mandibularPlanesFolderID:
+      self.setPlanningInformativeText()
+  
+  def setPlanningInformativeText(self, sourceNode=None, event=None):
+    """
+    Set informative text for the user during the planning
+    """
+    if not USING_GUI:
+      return
+    
+    parameterNode = self.getParameterNode()
+    
+    fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
+    mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
+    fibulaModel = self.getCurrentFibulaModel()
+    mandibleModel = self.getCurrentMandibleModel()
+    mandibularCurve = self.getMandibularCurve()
+    fibulaLine = self.getFibulaLine()
+    mandibleReconstructionModel = parameterNode.GetNodeReference("mandibleReconstructionModel")
+
+    virtualPlanWasSuccessful = parameterNode.GetParameter("virtualPlanWasSuccessful") == "True"
+    lockVSPChecked = parameterNode.GetParameter("lockVSP") == "True"
+
+    # events needed for
+    # mandibularCurve -> vtk.vtkCommand.ModifiedEvent OR 
+    #                    slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent OR PointEndInteractionEvent OR PointModifiedEvent
+    # fibulaLine -> vtk.vtkCommand.ModifiedEvent
+    # mandible planes folder -> slicer.vtkMRMLSubjectHierarchyNode.SubjectHierarchyItemModifiedEvent
+    # virtualPlanFailedDueToCutGoesThroughMandibleTwice -> resectedMandible  slicer.vtkMRMLModelNode.MeshModifiedEvent
+    
+    numberOfMandiblePlanes = len(createListFromFolderName("Mandibular planes"))
+    virtualPlanComponentsExist = (
+      fibulaModel and 
+      mandibleModel and 
+      (mandibularCurve.GetNumberOfControlPoints() >= 2) and
+      (fibulaLine.GetNumberOfControlPoints() == 2) and
+      (numberOfMandiblePlanes >= 2)
+    )
+
+    numberOfCutBones = len(createListFromFolderName("Transformed Fibula Pieces"))
+    numberOfFibulaPieces = len(createListFromFolderName("Fibula pieces"))
+    numberOfCutBonesValid = numberOfCutBones == numberOfMandiblePlanes
+    numberOfFibulaPiecesValid = numberOfFibulaPieces == (numberOfMandiblePlanes - 1)
+    virtualPlanResultsExist = numberOfCutBonesValid and numberOfFibulaPiecesValid
+
+    # conditions list
+    instruction1 = not fibulaSegmentation or not mandibularSegmentation
+    instruction2 = not instruction1 and (not fibulaModel and not mandibleModel)
+    instruction3a = not instruction2 and (mandibularCurve.GetNumberOfControlPoints() < 2)
+    instruction3b = not instruction2 and (fibulaLine.GetNumberOfControlPoints() != 2)
+    instruction4 = not instruction3a and (numberOfMandiblePlanes < 2)
+    instruction5 = virtualPlanComponentsExist and not virtualPlanResultsExist and not virtualPlanWasSuccessful
+    instruction6a = virtualPlanComponentsExist and virtualPlanResultsExist and not virtualPlanWasSuccessful
+    instruction6b = virtualPlanComponentsExist and virtualPlanResultsExist and virtualPlanWasSuccessful
+    instruction7a = not instruction6b and not lockVSPChecked
+    instruction7b = not instruction6b and not mandibleReconstructionModel
+    #instruction8 = not instruction6b and self.logic.virtualPlanFailedDueToCutGoesThroughMandibleTwice()
+    instruction8 = False
+
+
+    instructionsDict = {
+      "- Please click 'Load test case' if using BRP for the first time.\n" +
+      "- Please select the fibula segmentation.\n" +
+      "- Please select the mandibular segmentation.\n": instruction1,
+      
+      "- Please select donor leg.\n" +
+      "- Please click create bone models.\n": instruction2,
+      
+      "- Please verify the mandibular curve has at least 2 points.\n": instruction3a,
+      
+      "- Please verify the fibula line has 2 points.\n": instruction3b,
+      
+      "- Please create at least 2 mandible planes.\n": instruction4,
+      
+      "- Please move a mandibular plane or click on\n'update virtual plan' to continue with the workflow.\n": instruction5,
+      
+      "- Plan failed, please click the reset button next to 'update virtual plan'.\n": instruction6a,
+      
+      "- Plan successful.\n": instruction6b,
+      
+      "- Click on the lock button to avoid accidental modifications of the plan.\n": instruction7a,
+      
+      "- You can create a neo-mandible 3D printable model if desired and, optionally, " + 
+      "you can add an intercondylar beam to it.\n": instruction7b,
+
+      "- Please use 'Fix cut goes through the mandible twice' if needed.\n": instruction8
+    }
+
+    planningInformativeText = ""
+    for instruction, condition in instructionsDict.items():
+      if condition:
+        planningInformativeText = instruction
+        break
+    
+    parameterNode.SetParameter(
+      "planningInformativeText", planningInformativeText
+    )
+    return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # needToKnow if the parameterNodeChanged (
+    #   e.g. some state-parameter: virtualPlanWasSuccessful,
+    #   or a node was created so a new reference is added,
+    #   or a node was removed so a reference is changed,
+    #   or a selector reference was changed
+
+
+
+    # consider using, they look very nice:
+    slicer.modules.BoneReconstructionPlannerWidget.ui.mandibleCurvePlaceWidget.setStyleSheet("background-color:red;")
+    slicer.modules.BoneReconstructionPlannerWidget.ui.mandibleCurvePlaceWidget.setStyleSheet("background-color:yellow;")
+    slicer.modules.BoneReconstructionPlannerWidget.ui.mandibleCurvePlaceWidget.setStyleSheet("background-color:green;")
+    slicer.modules.BoneReconstructionPlannerWidget.ui.reconstructionPlanningFrame.setStyleSheet("background-color:lightgreen;")
+
+
+
+  def setPlanningInformativeText2(self):
+    """
+    Set informative text for the user during the planning
+    """
+    if not USING_GUI:
+      return
+    
+    parameterNode = self._parameterNode
+    fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
+    mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
+    
+    giveMoreInstructions = True
+    planningInformativeText = ""
+
+    if not fibulaSegmentation:
+      planningInformativeText += "- Please select the fibula segmentation.\n"
+      giveMoreInstructions = False
+    if not mandibularSegmentation:
+      planningInformativeText += "- Please select the mandibular segmentation.\n"
+      giveMoreInstructions = False
+    if not giveMoreInstructions:
+      parameterNode.SetParameter(
+        "planningInformativeText", planningInformativeText
+      )
+      return
+    
+    giveMoreInstructions = True
+    planningInformativeText = ""
+    
+    fibulaModelNode = self.logic.getCurrentFibulaModel()
+    mandibleModelNode = self.logic.getCurrentMandibleModel()
+    if not fibulaModelNode and not mandibleModelNode:
+      planningInformativeText += "- Please select donor leg.\n"
+      planningInformativeText += "- Please click create bone models.\n"
+      giveMoreInstructions = False
+
+    if not giveMoreInstructions:
+      parameterNode.SetParameter(
+        "planningInformativeText", planningInformativeText
+      )
+      return
+    
+    giveMoreInstructions = True
+    planningInformativeText = ""
+
+    mandibleCurve = self.logic.getMandibularCurve()
+    if mandibleCurve.GetNumberOfControlPoints() < 2:
+      planningInformativeText += "- Please verify the mandibular curve has at least 2 points.\n"
+      giveMoreInstructions = False
+    
+    fibulaLine = self.logic.getFibulaLine()
+    if fibulaLine.GetNumberOfControlPoints() != 2:
+      planningInformativeText += "- Please verify the fibula line has 2 points.\n"
+      giveMoreInstructions = False
+
+    if not giveMoreInstructions:
+      parameterNode.SetParameter(
+        "planningInformativeText", planningInformativeText
+      )
+      return
+    
+    parameterNode.SetParameter(
+      "planningInformativeText", ""
+    )
+  
   def getMandibularCurve(self, startPlacementMode = False):
     parameterNode = self.getParameterNode()
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
@@ -2043,6 +2280,20 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = mandibularCurve.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+
+      # update instructions events
+      instructionsEvents = [
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent, 
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent, 
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent
+      ]
+      self.mandibularCurveInstructionsEventsObserversList = []
+      for event in instructionsEvents:
+        observer = mandibularCurve.AddObserver(
+          event,
+          self.setPlanningInformativeText
+        )
+        self.mandibularCurveInstructionsEventsObserversList.append(observer)
 
     if startPlacementMode:
       #setup placement
@@ -2077,6 +2328,20 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
         self.onFibulaLineEndInteraction
       )
+
+      # update instructions events
+      instructionsEvents = [
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent, 
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent, 
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent
+      ]
+      self.fibulaLineInstructionsEventsObserversList = []
+      for event in instructionsEvents:
+        observer = fibulaLine.AddObserver(
+          event,
+          self.setPlanningInformativeText
+        )
+        self.fibulaLineInstructionsEventsObserversList.append(observer)
 
     if startPlacementMode:
       #setup placement
@@ -2470,7 +2735,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
     #conections
-    self.planeNodeObserver = planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
+    self.planeNodeAndObserver = [
+      planeNode,
+      planeNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,self.onPlanePointAdded)
+    ]
 
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(planeNode)
@@ -2557,18 +2825,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     temporalOrigin = [0,0,0]
     sourceNode.GetNthControlPointPosition(0,temporalOrigin)
     
-    self.setupMandiblePlaneStraightOverMandibleCurve(sourceNode,temporalOrigin, mandibleCurve, self.planeNodeObserver)
+    self.setupMandiblePlaneStraightOverMandibleCurve(sourceNode,temporalOrigin, mandibleCurve)
 
     displayNode = sourceNode.GetDisplayNode()
     displayNode.HandlesInteractiveOn()
     for i in range(3):
       sourceNode.SetNthControlPointVisibility(i,False)
-    observer = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer)
+    observer = sourceNode.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedSetTimer)
     self.mandiblePlaneObserversAndNodeIDList.append([observer,sourceNode.GetID()])
 
     self.reorderMandiblePlanes()
   
-  def onPlaneModifiedTimer(self,sourceNode,event):
+  def onPlaneModifiedSetTimer(self,sourceNode,event):
     parameterNode = self.getParameterNode()
     updateOnMandiblePlanesMovementChecked = parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True"
     makeAllMandiblePlanesRotateTogetherChecked = parameterNode.GetParameter("makeAllMandiblePlanesRotateTogether") == "True"
@@ -2582,6 +2850,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   @saveExecutedMethodWithTelemetry
   def onGenerateFibulaPlanesTimerTimeout(self):
     parameterNode = self.getParameterNode()
+    parameterNode.SetParameter("virtualPlanWasSuccessful", str(False))
     parameterNode.SetParameter("currentlyProcessing", str(True))
     lockVSPChecked = parameterNode.GetParameter("lockVSP") == "True"
     if lockVSPChecked:
@@ -2632,6 +2901,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     parameterNode.SetParameter("miterBoxesNeedUpdate", str(True))
     parameterNode.SetParameter("sawBoxesNeedUpdate", str(True))
+    parameterNode.SetParameter("virtualPlanWasSuccessful", str(True))
 
     stopTime = time.time()
     logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
@@ -2724,7 +2994,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularPlanesList = createListFromFolderName("Mandibular planes")
 
     for i in range(len(mandibularPlanesList)):
-      observer = mandibularPlanesList[i].AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedTimer)
+      if len(self.planeNodeAndObserver) != 0:
+        if (self.planeNodeAndObserver[0] == mandibularPlanesList[i]):
+          continue
+      observer = mandibularPlanesList[i].AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onPlaneModifiedSetTimer)
       self.mandiblePlaneObserversAndNodeIDList.append([observer,mandibularPlanesList[i].GetID()])
 
   def removeMandiblePlaneObservers(self):
@@ -4011,7 +4284,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     removeFolder(mandiblePlaneTransformsFolder)
   
-  def setupMandiblePlaneStraightOverMandibleCurve(self,planeNode,temporalOrigin, mandibleCurve, planeNodeObserver):
+  def setupMandiblePlaneStraightOverMandibleCurve(self,planeNode,temporalOrigin, mandibleCurve):
     closestCurvePoint = [0,0,0]
     closestCurvePointIndex = mandibleCurve.GetClosestPointPositionAlongCurveWorld(temporalOrigin,closestCurvePoint)
     matrix = vtk.vtkMatrix4x4()
@@ -4027,7 +4300,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandiblePlaneStraightX = mandiblePlaneStraightX/np.linalg.norm(mandiblePlaneStraightX)
     dx = 25#Numbers choosen so the planes are visible enough
     dy = 25
-    planeNode.RemoveObserver(planeNodeObserver)
+    self.planeNodeAndObserver[0].RemoveObserver(self.planeNodeAndObserver[1])
+    self.planeNodeAndObserver = []
     planeNode.SetNormal(mandiblePlaneStraightZ)
     planeNode.SetNthControlPointPosition(0,mandiblePlaneStraightOrigin)
     planeNode.SetNthControlPointPosition(1,mandiblePlaneStraightOrigin + mandiblePlaneStraightX*dx)
