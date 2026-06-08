@@ -258,6 +258,13 @@ legs segmentation</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_12">
             <item>
+             <widget class="QLabel" name="planningInformativeLabel">
+              <property name="text">
+               <string>planningInformativeLabel</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <layout class="QFormLayout" name="formLayout">
               <property name="leftMargin">
                <number>0</number>
