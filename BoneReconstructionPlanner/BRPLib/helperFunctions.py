@@ -1359,3 +1359,42 @@ def has_collision(rect_polydata_original, rect_matrix, surface_polydata, obb_tre
       return True
 
   return False
+
+def countComponentsInPolyData(polydata):
+  connectivityFilter = vtk.vtkConnectivityFilter()
+  connectivityFilter.SetInputDataObject(0, polydata)
+  connectivityFilter.Update()
+  return connectivityFilter.GetNumberOfExtractedRegions()
+
+def extractEachRegionAsAModel(polydata, baseName):
+  connectivityFilter = vtk.vtkConnectivityFilter()
+  connectivityFilter.SetInputDataObject(0, polydata)
+  connectivityFilter.SetExtractionModeToAllRegions()
+  connectivityFilter.ColorRegionsOn()
+  connectivityFilter.Update()
+  numberOfRegions = connectivityFilter.GetNumberOfExtractedRegions()
+
+  regionModels = []
+  for i in range(numberOfRegions):
+    threshold = vtk.vtkThreshold()
+    threshold.SetInputConnection(connectivityFilter.GetOutputPort())
+    threshold.SetLowerThreshold(i-0.1)
+    threshold.SetUpperThreshold(i+0.1)
+    
+    threshold.Update()
+
+    geometryFilter = vtk.vtkGeometryFilter()
+    geometryFilter.SetInputConnection(threshold.GetOutputPort())
+    geometryFilter.Update()
+
+    regionPolyData = geometryFilter.GetOutput()
+
+    regionModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+    slicer.mrmlScene.AddNode(regionModel)
+    regionModel.SetName(slicer.mrmlScene.GetUniqueNameByString(f"{baseName}_region_{i}"))
+    regionModel.CreateDefaultDisplayNodes()
+    regionModel.SetAndObservePolyData(regionPolyData)
+
+    regionModels.append(regionModel)
+
+  return regionModels
