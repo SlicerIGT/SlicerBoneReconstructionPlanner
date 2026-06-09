@@ -1037,7 +1037,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if self._shNode is not None:
       self.addObserver(self._shNode, slicer.vtkMRMLSubjectHierarchyNode.SubjectHierarchyItemModifiedEvent, self.logic.onShNodeModified)
 
-    self.logic.onShNodeModified()
+    self.logic.onShNodeModified(caller = self._shNode, event = None, callData = 0)
   
   def setParameterNode(self, inputParameterNode):
     """
@@ -1362,6 +1362,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.checked = showBiggerSawBoxesInteractionHandlesChecked
     self.setBiggerSawBoxesInteractionHandlesVisibility(showBiggerSawBoxesInteractionHandlesChecked)
 
+    # we are going to change the instructions any time the parameterNode is modified
+    self.logic.setPlanningInformativeText()
     self.ui.planningInformativeLabel.text = self._parameterNode.GetParameter("planningInformativeText")
 
     # All the GUI updates are done
@@ -1535,9 +1537,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.SetParameter("lightingInterpolationMethod", self.ui.lightingInterpolationMethodComboBox.currentText)
     self._parameterNode.SetParameter("lightingMode", self.ui.lightingModeComboBox.currentText)
-
-    # we are going to change the instructions any time the parameterNode is modified
-    self.logic.setPlanningInformativeText()
 
     self._parameterNode.EndModify(wasModified)
 
@@ -2061,12 +2060,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     shItemIDModified = callData
     
-    if shNode.GetItemByName("Mandibular planes 2"):
-      return
+    #if shNode.GetItemByName("Mandibular planes 2"):
+    #  return
 
-    mandibularPlanesFolderID = shNode.GetItemByName("Mandibular planes")
-    
-    if shItemIDModified == mandibularPlanesFolderID:
+    validFolderIDs = [
+      shNode.GetItemByName("Mandibular planes"),
+      shNode.GetItemByName("Cut Bones"),
+      shNode.GetItemByName("Transformed Fibula Pieces")
+    ]
+
+    if shItemIDModified in validFolderIDs:
       self.setPlanningInformativeText()
   
   def setPlanningInformativeText(self, sourceNode=None, event=None):
@@ -2086,79 +2089,112 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaLine = self.getFibulaLine()
     mandibleReconstructionModel = parameterNode.GetNodeReference("mandibleReconstructionModel")
 
-    virtualPlanWasSuccessful = parameterNode.GetParameter("virtualPlanWasSuccessful") == "True"
+    virtualPlanWasSuccessfulFlag = parameterNode.GetParameter("virtualPlanWasSuccessful") == "True"
     lockVSPChecked = parameterNode.GetParameter("lockVSP") == "True"
 
     # events needed for
-    # mandibularCurve -> vtk.vtkCommand.ModifiedEvent OR 
-    #                    slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent OR PointEndInteractionEvent OR PointModifiedEvent
-    # fibulaLine -> vtk.vtkCommand.ModifiedEvent
-    # mandible planes folder -> slicer.vtkMRMLSubjectHierarchyNode.SubjectHierarchyItemModifiedEvent
     # virtualPlanFailedDueToCutGoesThroughMandibleTwice -> resectedMandible  slicer.vtkMRMLModelNode.MeshModifiedEvent
     
     numberOfMandiblePlanes = len(createListFromFolderName("Mandibular planes"))
-    virtualPlanComponentsExist = (
+
+    numberOfCutBones = len(createListFromFolderName("Cut Bones"))
+    numberOfTransformedFibulaPieces = len(createListFromFolderName("Transformed Fibula Pieces"))
+    numberOfCutBonesValid = numberOfCutBones == numberOfMandiblePlanes
+    numberOfTransformedFibulaPiecesValid = numberOfTransformedFibulaPieces == (numberOfMandiblePlanes - 1)
+    virtualPlanResultsExist = (numberOfCutBones >= 2) and (numberOfTransformedFibulaPieces >= 1)
+    virtualPlanResultsAreValid = numberOfCutBonesValid and numberOfTransformedFibulaPiecesValid
+
+    # conditions list
+    instruction_loadTestData = not fibulaSegmentation and not mandibularSegmentation
+    instruction_selectFibulaSegmentation = not fibulaSegmentation
+    instruction_selectMandibularSegmentation = not mandibularSegmentation
+    finishedSelectingSegmentations = fibulaSegmentation and mandibularSegmentation
+    instruction_selectDonorLeg = finishedSelectingSegmentations and (not fibulaModel and not mandibleModel)
+    instruction_createBoneModels = finishedSelectingSegmentations and (not fibulaModel and not mandibleModel)
+    finishedCreatingBoneModels = fibulaModel and mandibleModel
+    instruction_verifyMandibularCurvePoints = finishedCreatingBoneModels and (mandibularCurve.GetNumberOfControlPoints() < 2)
+    instruction_verifyFibulaLinePoints = finishedCreatingBoneModels and (fibulaLine.GetNumberOfControlPoints() != 2)
+    finishedVerifyingMandibularCurveAndFibulaLine = (
+      finishedCreatingBoneModels and 
+      (mandibularCurve.GetNumberOfControlPoints() >= 2) and 
+      (fibulaLine.GetNumberOfControlPoints() == 2)
+    )
+    instruction_addMandiblePlanes = finishedVerifyingMandibularCurveAndFibulaLine and (numberOfMandiblePlanes < 2)
+    finishedVirtualPlanComponentsCreation = (
       fibulaModel and 
       mandibleModel and 
       (mandibularCurve.GetNumberOfControlPoints() >= 2) and
       (fibulaLine.GetNumberOfControlPoints() == 2) and
       (numberOfMandiblePlanes >= 2)
     )
+    instruction_createFirstPlan = finishedVirtualPlanComponentsCreation and (not virtualPlanResultsExist)
+    instruction_virtualPlanFailed = (
+      finishedVirtualPlanComponentsCreation and 
+      virtualPlanResultsExist and
+      (
+        (not virtualPlanResultsAreValid) or (not virtualPlanWasSuccessfulFlag)
+      )
+    )
+    instruction_updateVirtualPlan = (
+      finishedVirtualPlanComponentsCreation and 
+      virtualPlanResultsExist and
+      virtualPlanResultsAreValid and
+      virtualPlanWasSuccessfulFlag and
+      (not lockVSPChecked)
+    )
+    finishedVirtualPlan = (
+      finishedVirtualPlanComponentsCreation and 
+      virtualPlanResultsExist and
+      virtualPlanResultsAreValid and
+      virtualPlanWasSuccessfulFlag
+    )
+    instruction_lockPlan = finishedVirtualPlan and not lockVSPChecked
+    instruction_planLocked = finishedVirtualPlan and lockVSPChecked
 
-    numberOfCutBones = len(createListFromFolderName("Transformed Fibula Pieces"))
-    numberOfFibulaPieces = len(createListFromFolderName("Fibula pieces"))
-    numberOfCutBonesValid = numberOfCutBones == numberOfMandiblePlanes
-    numberOfFibulaPiecesValid = numberOfFibulaPieces == (numberOfMandiblePlanes - 1)
-    virtualPlanResultsExist = numberOfCutBonesValid and numberOfFibulaPiecesValid
 
-    # conditions list
-    instruction1 = not fibulaSegmentation or not mandibularSegmentation
-    instruction2 = not instruction1 and (not fibulaModel and not mandibleModel)
-    instruction3a = not instruction2 and (mandibularCurve.GetNumberOfControlPoints() < 2)
-    instruction3b = not instruction2 and (fibulaLine.GetNumberOfControlPoints() != 2)
-    instruction4 = not instruction3a and (numberOfMandiblePlanes < 2)
-    instruction5 = virtualPlanComponentsExist and not virtualPlanResultsExist and not virtualPlanWasSuccessful
-    instruction6a = virtualPlanComponentsExist and virtualPlanResultsExist and not virtualPlanWasSuccessful
-    instruction6b = virtualPlanComponentsExist and virtualPlanResultsExist and virtualPlanWasSuccessful
-    instruction7a = not instruction6b and not lockVSPChecked
-    instruction7b = not instruction6b and not mandibleReconstructionModel
-    #instruction8 = not instruction6b and self.logic.virtualPlanFailedDueToCutGoesThroughMandibleTwice()
-    instruction8 = False
+    #instruction7b = not instruction6b and not mandibleReconstructionModel
+    ##instruction8 = not instruction6b and self.logic.virtualPlanFailedDueToCutGoesThroughMandibleTwice()
+    #instruction8 = False
 
 
     instructionsDict = {
-      "- Please click 'Load test case' if using BRP for the first time.\n" +
-      "- Please select the fibula segmentation.\n" +
-      "- Please select the mandibular segmentation.\n": instruction1,
+      "- Please click 'Load test case' if using BRP for the first time.\n": instruction_loadTestData,
+
+      "- Please select the fibula segmentation.\n": instruction_selectFibulaSegmentation,
+
+      "- Please select the mandibular segmentation.\n": instruction_selectMandibularSegmentation,
       
-      "- Please select donor leg.\n" +
-      "- Please click create bone models.\n": instruction2,
+      "- Please select donor leg.\n": instruction_selectDonorLeg,
+
+      "- Please click create bone models.\n": instruction_createBoneModels,
       
-      "- Please verify the mandibular curve has at least 2 points.\n": instruction3a,
+      "- Please verify the mandibular curve has at least 2 points.\n": instruction_verifyMandibularCurvePoints,
       
-      "- Please verify the fibula line has 2 points.\n": instruction3b,
+      "- Please verify the fibula line has 2 points.\n": instruction_verifyFibulaLinePoints,
       
-      "- Please create at least 2 mandible planes.\n": instruction4,
+      "- Please create at least 2 mandible planes.\n": instruction_addMandiblePlanes,
       
-      "- Please move a mandibular plane or click on\n'update virtual plan' to continue with the workflow.\n": instruction5,
+      "- Please move a mandibular plane or click on\n'update virtual plan' to continue with the workflow.\n": instruction_createFirstPlan,
       
-      "- Plan failed, please click the reset button next to 'update virtual plan'.\n": instruction6a,
+      "- Plan failed, please click the reset button next to 'update virtual plan'.\n": instruction_virtualPlanFailed,
       
-      "- Plan successful.\n": instruction6b,
+      "- Plan successful. Keep editing if desired. \n": instruction_updateVirtualPlan,
       
-      "- Click on the lock button to avoid accidental modifications of the plan.\n": instruction7a,
+      "- Click on the lock button if finished to avoid accidental modifications of the plan.\n": instruction_lockPlan,
+
+      "- Plan locked. Please unlock if you want to keep editing the plan.\n": instruction_planLocked,
       
       "- You can create a neo-mandible 3D printable model if desired and, optionally, " + 
-      "you can add an intercondylar beam to it.\n": instruction7b,
+      "you can add an intercondylar beam to it.\n": False,
 
-      "- Please use 'Fix cut goes through the mandible twice' if needed.\n": instruction8
+      "- Please use 'Fix cut goes through the mandible twice' if needed.\n": False
     }
 
     planningInformativeText = ""
     for instruction, condition in instructionsDict.items():
       if condition:
-        planningInformativeText = instruction
-        break
+        planningInformativeText += instruction
+        #break
     
     parameterNode.SetParameter(
       "planningInformativeText", planningInformativeText
@@ -2197,73 +2233,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     slicer.modules.BoneReconstructionPlannerWidget.ui.mandibleCurvePlaceWidget.setStyleSheet("background-color:yellow;")
     slicer.modules.BoneReconstructionPlannerWidget.ui.mandibleCurvePlaceWidget.setStyleSheet("background-color:green;")
     slicer.modules.BoneReconstructionPlannerWidget.ui.reconstructionPlanningFrame.setStyleSheet("background-color:lightgreen;")
-
-
-
-  def setPlanningInformativeText2(self):
-    """
-    Set informative text for the user during the planning
-    """
-    if not USING_GUI:
-      return
-    
-    parameterNode = self._parameterNode
-    fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
-    mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
-    
-    giveMoreInstructions = True
-    planningInformativeText = ""
-
-    if not fibulaSegmentation:
-      planningInformativeText += "- Please select the fibula segmentation.\n"
-      giveMoreInstructions = False
-    if not mandibularSegmentation:
-      planningInformativeText += "- Please select the mandibular segmentation.\n"
-      giveMoreInstructions = False
-    if not giveMoreInstructions:
-      parameterNode.SetParameter(
-        "planningInformativeText", planningInformativeText
-      )
-      return
-    
-    giveMoreInstructions = True
-    planningInformativeText = ""
-    
-    fibulaModelNode = self.logic.getCurrentFibulaModel()
-    mandibleModelNode = self.logic.getCurrentMandibleModel()
-    if not fibulaModelNode and not mandibleModelNode:
-      planningInformativeText += "- Please select donor leg.\n"
-      planningInformativeText += "- Please click create bone models.\n"
-      giveMoreInstructions = False
-
-    if not giveMoreInstructions:
-      parameterNode.SetParameter(
-        "planningInformativeText", planningInformativeText
-      )
-      return
-    
-    giveMoreInstructions = True
-    planningInformativeText = ""
-
-    mandibleCurve = self.logic.getMandibularCurve()
-    if mandibleCurve.GetNumberOfControlPoints() < 2:
-      planningInformativeText += "- Please verify the mandibular curve has at least 2 points.\n"
-      giveMoreInstructions = False
-    
-    fibulaLine = self.logic.getFibulaLine()
-    if fibulaLine.GetNumberOfControlPoints() != 2:
-      planningInformativeText += "- Please verify the fibula line has 2 points.\n"
-      giveMoreInstructions = False
-
-    if not giveMoreInstructions:
-      parameterNode.SetParameter(
-        "planningInformativeText", planningInformativeText
-      )
-      return
-    
-    parameterNode.SetParameter(
-      "planningInformativeText", ""
-    )
   
   def getMandibularCurve(self, startPlacementMode = False):
     parameterNode = self.getParameterNode()
