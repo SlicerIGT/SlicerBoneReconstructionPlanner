@@ -5400,7 +5400,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #get best fitting plane to curve with curveCrescent normal direction
     curvePoints = slicer.util.arrayFromMarkupsCurvePoints(mandibularCurve)
-    bestFittingPlaneNormalOfCurvePoints = getBestFittingPlaneNormalFromPoints(curvePoints)
+    if len(curvePoints) <= 2:
+      bestFittingPlaneNormalOfCurvePoints = np.array([0,0,1])
+    else:
+      bestFittingPlaneNormalOfCurvePoints = getBestFittingPlaneNormalFromPoints(curvePoints)
 
     startIndex = 0
     curveLength = mandibularCurve.GetCurveLengthWorld()
@@ -5521,7 +5524,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           pointsIntersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Points Intersection%d' % (len(mandibularPlanesList)-1))
         pointsIntersectionModel.CreateDefaultDisplayNodes()
         getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(intersectionModel,bestFittingPlaneNormalOfCurvePoints,intersectionModelCentroid,pointsIntersectionModel)
-        pointOfIntersection = nearestPointOverLineWithTheVectorDirection(pointsIntersectionModel,curvePlanarConvexityDirection)
+        if pointsIntersectionModel.GetPolyData().GetNumberOfPoints() != 0:
+          pointOfIntersection = nearestPointOverLineWithTheVectorDirection(pointsIntersectionModel,curvePlanarConvexityDirection)
+        else:
+          pointOfIntersection = intersectionModelCentroid
       else:
         pointOfIntersection = [0,0,0]
         resectionPlanesList[i].GetOrigin(pointOfIntersection)
