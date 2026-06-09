@@ -769,6 +769,19 @@ preview (takes more time)</string>
            </property>
            <layout class="QGridLayout" name="gridLayout">
             <item row="0" column="1">
+             <widget class="QPushButton" name="create3DModelOfTheReconstructionButton">
+              <property name="toolTip">
+               <string>Create 3D model
+of the reconstruction for
+3D printing</string>
+              </property>
+              <property name="text">
+               <string>Create
+neomandible</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="2">
              <widget class="QLabel" name="label_2">
               <property name="text">
                <string>Create beam </string>
@@ -778,7 +791,7 @@ preview (takes more time)</string>
               </property>
              </widget>
             </item>
-            <item row="0" column="2">
+            <item row="0" column="3">
              <layout class="QVBoxLayout" name="verticalLayout_9">
               <property name="leftMargin">
                <number>0</number>
@@ -826,15 +839,12 @@ preview (takes more time)</string>
              </layout>
             </item>
             <item row="0" column="0">
-             <widget class="QPushButton" name="create3DModelOfTheReconstructionButton">
-              <property name="toolTip">
-               <string>Create 3D model
-of the reconstruction for
-3D printing</string>
-              </property>
+             <widget class="QToolButton" name="neomandibleVisibilityButton">
               <property name="text">
-               <string>Create
-neomandible</string>
+               <string/>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
