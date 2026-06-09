@@ -3429,12 +3429,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def createAndUpdateDynamicModelerNodes(self):
     parameterNode = self.getParameterNode()
-    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
-    mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
-    nonDecimatedFibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
-    decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
-    nonDecimatedMandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
-    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
+    #useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    #mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
+    #nonDecimatedFibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    #decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    #nonDecimatedMandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    #decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     fixCutGoesThroughTheMandibleTwiceCheckBoxChanged = parameterNode.GetParameter('fixCutGoesThroughTheMandibleTwiceCheckBoxChanged') == "True"
     fixCutGoesThroughTheMandibleTwiceChecked = parameterNode.GetParameter('fixCutGoesThroughTheMandibleTwice') == "True"
     planeToFixCutGoesThroughTheMandibleTwice = parameterNode.GetNodeReference("planeToFixCutGoesThroughTheMandibleTwice")
@@ -3578,6 +3578,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           dynamicModelerNodesList[i].RemoveNodeReferenceIDs("PlaneCut.InputPlane")
           dynamicModelerNodesList[i].AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
           dynamicModelerNodesList[i].AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID()) 
+          if fixCutGoesThroughTheMandibleTwiceChecked:
+            dynamicModelerNodesList[i].AddNodeReferenceID("PlaneCut.InputPlane", planeToFixCutGoesThroughTheMandibleTwice.GetID())
 
 
     inversePlaneCutsList = createListFromFolderName("Inverse Plane Cuts")
@@ -3659,6 +3661,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     removeFolder(getFolder("Plane Cuts"))
     removeFolder(getFolder("Cut Bones"))
     removeFolder(getFolder("Transformed Fibula Pieces"))
+    #self.getParameterNode().SetParameter("fixCutGoesThroughTheMandibleTwiceCheckBoxChanged", str(True))
   
   @saveExecutedMethodWithTelemetry
   def hardVSPUpdate(self):
