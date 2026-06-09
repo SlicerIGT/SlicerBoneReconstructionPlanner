@@ -565,7 +565,7 @@ class combineModelsRobustLogic:
       operation, 
       numberOfRetries = 5, 
       translateRandomly = 4, 
-      triangulateInputs = True
+      triangulateInputs = False
     ):
     """
     Run the processing algorithm.
