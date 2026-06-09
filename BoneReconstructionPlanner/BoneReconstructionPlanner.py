@@ -4601,7 +4601,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         # previewMiterBoxes
         previewMiterBoxModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", previewMiterBoxName)
         combineModelsLogic.process(
-          biggerMiterBoxModel, miterBoxModel, previewMiterBoxModel, 'difference', numberOfRetries = 6
+          biggerMiterBoxModel, miterBoxModel, previewMiterBoxModel, 'difference'
         )
         previewMiterBoxDisplayNode = previewMiterBoxModel.GetDisplayNode()
         previewMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
