@@ -15,7 +15,7 @@
     "makeAllMandiblePlanesRotateTogether": true,
     "mandiblePlanesPositioningForMaximumBoneContact": true,
     "miterBoxesNeedUpdate": true,
-    "neomandibleVisible": true,
+    "neomandibleVisible": false,
     "sawBoxesNeedUpdate": true,
     "scalarVolumeChangedThroughParameterNode": false,
     "showBiggerSawBoxesInteractionHandles": false,
