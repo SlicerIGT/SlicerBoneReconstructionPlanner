@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>508</width>
-    <height>3219</height>
+    <height>3244</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -261,6 +261,9 @@ legs segmentation</string>
              <widget class="QLabel" name="planningInformativeLabel">
               <property name="text">
                <string>planningInformativeLabel</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
