@@ -1962,6 +1962,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList = []
     self.fibulaLineInstructionsEventsObserversList = []
     self.mandibularCurveInstructionsEventsObserversList = []
+    self.resectedMandibleAndObserver = []
     # self.mandibleCurveModifiedObserver = 0 # TODO: could be implemented on the future
     self.interCondylarBeamLineControlPointModifiedObserver = 0
     self.interCondylarBeamLineControlPointRemovedObserver = 0
@@ -2084,7 +2085,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if shItemIDModified in validFolderIDs:
       self.setPlanningInformativeText()
   
-  def setPlanningInformativeText(self, sourceNode=None, event=None):
+  def setPlanningInformativeText(self, sourceNode=None, event=None, callData=None):
     """
     Set informative text for the user during the planning
     """
@@ -2103,9 +2104,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     virtualPlanWasSuccessfulFlag = parameterNode.GetParameter("virtualPlanWasSuccessful") == "True"
     lockVSPChecked = parameterNode.GetParameter("lockVSP") == "True"
-
-    # events needed for
-    # virtualPlanFailedDueToCutGoesThroughMandibleTwice -> resectedMandible  slicer.vtkMRMLModelNode.MeshModifiedEvent
+    virtualPlanFailedDueToCutGoesThroughMandibleTwiceChecked = (
+      parameterNode.GetParameter("virtualPlanFailedDueToCutGoesThroughMandibleTwice") == "True"
+    )
     
     numberOfMandiblePlanes = len(createListFromFolderName("Mandibular planes"))
 
@@ -2115,6 +2116,24 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     numberOfTransformedFibulaPiecesValid = numberOfTransformedFibulaPieces == (numberOfMandiblePlanes - 1)
     virtualPlanResultsExist = (numberOfCutBones >= 2) and (numberOfTransformedFibulaPieces >= 1)
     virtualPlanResultsAreValid = numberOfCutBonesValid and numberOfTransformedFibulaPiecesValid
+    
+
+    # I'm not sure if this variable is robust
+    probablyNeedsFixCutGoesThroughTheMandibleTwice = False
+    if numberOfCutBones >= 2:
+      # numberOfComponentsOfResectedMandible is not a good measurement because there could be small floating 
+      #   islands cut that change the count
+      resectedMandibleModel = createListFromFolderName("Cut Bones")[-1]
+      if resectedMandibleModel:
+        if resectedMandibleModel.GetPolyData():
+          if resectedMandibleModel.GetPolyData().GetNumberOfPoints() > 0:
+            numberOfComponentsOfResectedMandible = countComponentsInPolyData(
+              resectedMandibleModel.GetPolyData()
+            )
+            kindOfMandibleResection = parameterNode.GetParameter("kindOfMandibleResection")
+            if kindOfMandibleResection == "Segmental Mandibulectomy":
+              probablyNeedsFixCutGoesThroughTheMandibleTwice = numberOfComponentsOfResectedMandible > 4
+
 
     # conditions list
     instruction_loadTestData = not fibulaSegmentation and not mandibularSegmentation
@@ -2172,9 +2191,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       (not lockVSPChecked) and
       mandibleReconstructionModel
     )
-    
 
-    ##instruction8 = not instruction6b and self.logic.virtualPlanFailedDueToCutGoesThroughMandibleTwice()
+    instruction_fixCutGoesThroughMandibleTwice = (
+      finishedVirtualPlan and
+      (not lockVSPChecked) and
+      (not virtualPlanFailedDueToCutGoesThroughMandibleTwiceChecked) and
+      probablyNeedsFixCutGoesThroughTheMandibleTwice
+    )
 
     instructionsDict = {
       "- Please click 'Load test case' if using BRP for the first time.\n": instruction_loadTestData,
@@ -2208,7 +2231,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       "- Neomandible model created successfully. \n": instruction_neoMandibleModelSuccessful,
 
-      "- Please use 'Fix cut goes through the mandible twice' if needed.\n": False
+      "- Please use 'Fix cut goes through the mandible twice' if needed.\n": instruction_fixCutGoesThroughMandibleTwice
     }
 
     planningInformativeText = ""
@@ -2222,30 +2245,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     )
     return
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # needToKnow if the parameterNodeChanged (
-    #   e.g. some state-parameter: virtualPlanWasSuccessful,
-    #   or a node was created so a new reference is added,
-    #   or a node was removed so a reference is changed,
-    #   or a selector reference was changed
 
 
 
@@ -3491,6 +3490,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       modelDisplayNode = modelNode.GetDisplayNode()
       modelDisplayNode.SetVisibility2D(True)
       modelNode.SetAttribute("isResectedMandibleModel","True")
+
+      self.resectedMandibleAndObserver = [
+        modelNode, 
+        modelNode.AddObserver(slicer.vtkMRMLModelNode.MeshModifiedEvent, self.setPlanningInformativeText)
+      ]
 
       mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
       modelDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
