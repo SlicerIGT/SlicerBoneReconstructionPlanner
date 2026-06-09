@@ -439,6 +439,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.interCondylarBeamIncreaseSizeButton.setIcon(qt.QIcon(increaseIconPath))
     decreaseIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/remove_48.svg')
     self.ui.interCondylarBeamDecreaseSizeButton.setIcon(qt.QIcon(decreaseIconPath))
+
+    self.ui.neomandibleVisibilityButton.setIcon(qt.QIcon(visibilityIconPath))
     
     recycleIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/recycle_48.svg')
     self.ui.hardVSPUpdateButton.setIcon(qt.QIcon(recycleIconPath))
@@ -641,6 +643,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.interCondylarBeamDecreaseSizeButton.connect('clicked(bool)', self.onInterCondylarBeamDecreaseSizeButton)
     self.ui.interCondylarBeamVisibilityToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.lockVSPButton.connect('toggled(bool)', self.onLockVSPButton)
+    self.ui.neomandibleVisibilityButton.connect('toggled(bool)', self.onNeomandibleVisibilityButton)
     self.ui.fibulaNormalizationTransformButton.connect('toggled(bool)', self.onFibulaNormalizationTransformButton)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -1339,7 +1342,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.updateVSPButtonsFrame.enabled = True
       self.ui.create3DModelOfTheReconstructionFrame.enabled = True
     
-    
+
+    self.ui.neomandibleVisibilityButton.checked = self._parameterNode.GetParameter("neomandibleVisible") == "True"
+
+
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
       self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = 2
     else:
@@ -1699,6 +1705,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     Callback function to avoid GUI modification of VSP parameters
     """
     self.logic.lockVSP(checked)
+
+  def onNeomandibleVisibilityButton(self,checked):
+    """
+    Callback function to avoid GUI modification of VSP parameters
+    """
+    self.logic.setNeomandibleVisibility(checked)
   
   def setBiggerSawBoxesInteractionHandlesVisibility(self, visibility):
     """
@@ -2151,11 +2163,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     instruction_lockPlan = finishedVirtualPlan and not lockVSPChecked
     instruction_planLocked = finishedVirtualPlan and lockVSPChecked
 
+    instruction_createNeoMandibleModel = (
+      finishedVirtualPlan and
+      (not lockVSPChecked)
+    )
+    instruction_neoMandibleModelSuccessful = (
+      finishedVirtualPlan and
+      (not lockVSPChecked) and
+      mandibleReconstructionModel
+    )
+    
 
-    #instruction7b = not instruction6b and not mandibleReconstructionModel
     ##instruction8 = not instruction6b and self.logic.virtualPlanFailedDueToCutGoesThroughMandibleTwice()
-    #instruction8 = False
-
 
     instructionsDict = {
       "- Please click 'Load test case' if using BRP for the first time.\n": instruction_loadTestData,
@@ -2184,8 +2203,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       "- Plan locked. Please unlock if you want to keep editing the plan.\n": instruction_planLocked,
       
-      "- You can create a neo-mandible 3D printable model if desired and, optionally, " + 
-      "you can add an intercondylar beam to it.\n": False,
+      "- You can click 'Create neomandible' to get a 3D printable model and, optionally, " + 
+      "you can add an intercondylar beam to it.\n": instruction_createNeoMandibleModel,
+
+      "- Neomandible model created successfully. \n": instruction_neoMandibleModelSuccessful,
 
       "- Please use 'Fix cut goes through the mandible twice' if needed.\n": False
     }
@@ -2234,6 +2255,21 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     slicer.modules.BoneReconstructionPlannerWidget.ui.mandibleCurvePlaceWidget.setStyleSheet("background-color:green;")
     slicer.modules.BoneReconstructionPlannerWidget.ui.reconstructionPlanningFrame.setStyleSheet("background-color:lightgreen;")
   
+  def setNeomandibleVisibility(self, visibility):
+    """
+    Set neomandible visibility
+    """
+    if not USING_GUI:
+      return
+    
+    parameterNode = self.getParameterNode()
+    parameterNode.SetParameter("neomandibleVisible", str(visibility))
+    
+    mandibleReconstructionModel = parameterNode.GetNodeReference("mandibleReconstructionModel")
+    
+    if mandibleReconstructionModel is not None:
+      mandibleReconstructionModel.GetDisplayNode().SetVisibility(visibility)
+
   def getMandibularCurve(self, startPlacementMode = False):
     parameterNode = self.getParameterNode()
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
