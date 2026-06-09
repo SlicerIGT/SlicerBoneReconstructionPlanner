@@ -5956,6 +5956,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       return
     
     parameterNode.SetNodeReferenceID("mandibleReconstructionModel", mandibleReconstructionModel.GetID())
+    parameterNode.SetParameter("neomandibleVisible", "True")
 
   def exportScaledFibulaPiecesForNeomandibleReconstructionToFolder(self, scaledFibulaPiecesFolder, scaleFactor=1.001):
     planeList = createListFromFolderName("Mandibular planes")
