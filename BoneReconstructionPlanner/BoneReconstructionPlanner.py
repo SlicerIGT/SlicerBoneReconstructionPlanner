@@ -5534,22 +5534,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       moveNodeToFolder(intersectionModel, intersectionsFolder)
       moveNodeToFolder(pointsIntersectionModel, pointsIntersectionsFolder)
 
-      if intersectionModel.GetPolyData().GetNumberOfPoints() != 0:
-        sawBoxDirection = getAverageNormalFromModelPoint2(mandibleModelNode,pointOfIntersection)
-        if sawBoxDirection is None:
-          sawBoxDirection = np.zeros(3)
-          sawBoxDirection[1] = 1
-        #sawBoxDirection = (pointOfIntersection-intersectionModelCentroid)/np.linalg.norm(pointOfIntersection-intersectionModelCentroid)
-      else:
-        sawBoxDirection = curvePlanarConvexityDirection
-
+      # Y is contralingual
+      # Z is curve crescent (and normal of the mandible plane)
+      # X is inferior
       sawBoxAxisX = [0,0,0]
       sawBoxAxisY =  [0,0,0]
       sawBoxAxisZ = mandiblePlaneZ
-      vtk.vtkMath.Cross(sawBoxDirection, sawBoxAxisZ, sawBoxAxisX)
-      sawBoxAxisX = sawBoxAxisX/np.linalg.norm(sawBoxAxisX)
-      vtk.vtkMath.Cross(sawBoxAxisZ, sawBoxAxisX, sawBoxAxisY)
+      vtk.vtkMath.Cross(sawBoxAxisZ, bestFittingPlaneNormalOfCurvePoints, sawBoxAxisY)
       sawBoxAxisY = sawBoxAxisY/np.linalg.norm(sawBoxAxisY)
+      vtk.vtkMath.Cross(sawBoxAxisY, sawBoxAxisZ, sawBoxAxisX)
+      sawBoxAxisX = sawBoxAxisX/np.linalg.norm(sawBoxAxisX)
 
       if i == 0:
         sawBoxAxisXTranslation = 0
