@@ -1171,12 +1171,16 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     )
 
     if self._parameterNode.GetParameter("miterBoxesNeedUpdate") == "True":
-      self.ui.miterBoxesNeedUpdateLabel.show()
+      # always hide till the GUI feedback feature is complete
+      self.ui.miterBoxesNeedUpdateLabel.hide()
+      # self.ui.miterBoxesNeedUpdateLabel.show()
     else:
       self.ui.miterBoxesNeedUpdateLabel.hide()
 
     if self._parameterNode.GetParameter("sawBoxesNeedUpdate") == "True":
-      self.ui.sawBoxesNeedUpdateLabel.show()
+      # always hide till the GUI feedback feature is complete
+      # self.ui.sawBoxesNeedUpdateLabel.show()
+      self.ui.sawBoxesNeedUpdateLabel.hide()
     else:
       self.ui.sawBoxesNeedUpdateLabel.hide()
 
@@ -1371,6 +1375,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # we are going to change the instructions any time the parameterNode is modified
     self.logic.setPlanningInformativeText()
     self.ui.planningInformativeLabel.text = self._parameterNode.GetParameter("planningInformativeText")
+    self.ui.planningInformativeLabel.hide() # hide until new BRP version supports it fully
 
     # All the GUI updates are done
     self._updatingGUIFromParameterNode = False
@@ -2089,6 +2094,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     """
     Set informative text for the user during the planning
     """
+    # abort until new BRP version supports it fully
+    return
+
     if not USING_GUI:
       return
     
