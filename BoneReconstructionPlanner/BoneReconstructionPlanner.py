@@ -3542,37 +3542,38 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         moveNodeToFolder(dynamicModelerNode, planeCutsFolder)
         moveNodeToFolder(modelNode, cutBonesFolder)
       
-      for i in range(0,len(fibulaPlanesList),2):
-        modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-        modelNode.SetName("Vessels Segment {0}A-{1}B".format(i//2,i//2))
-        slicer.mrmlScene.AddNode(modelNode)
-        modelNode.CreateDefaultDisplayNodes()
-        modelDisplayNode = modelNode.GetDisplayNode()
-        modelDisplayNode.SetVisibility2D(True)
+      if vesselsModelNode:
+        for i in range(0,len(fibulaPlanesList),2):
+          modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+          modelNode.SetName("Vessels Segment {0}A-{1}B".format(i//2,i//2))
+          slicer.mrmlScene.AddNode(modelNode)
+          modelNode.CreateDefaultDisplayNodes()
+          modelDisplayNode = modelNode.GetDisplayNode()
+          modelDisplayNode.SetVisibility2D(True)
 
-        fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-        modelDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+          fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+          modelDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
 
-        #Set color of the model
-        aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
-        colorTable = aux.GetLookupTable()
-        nColors = colorTable.GetNumberOfColors()
-        ind = int((nColors-1) - i/2)
-        colorwithalpha = colorTable.GetTableValue(ind)
-        color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
-        modelDisplayNode.SetColor(color)
+          #Set color of the model
+          aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+          colorTable = aux.GetLookupTable()
+          nColors = colorTable.GetNumberOfColors()
+          ind = int((nColors-1) - i/2)
+          colorwithalpha = colorTable.GetTableValue(ind)
+          color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
+          modelDisplayNode.SetColor(color)
 
-        dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
-        dynamicModelerNode.SetToolName("Plane cut")
-        dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", vesselsModelNode.GetID())
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
-        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
-        dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
-        dynamicModelerNode.SetAttribute("OperationType", "Difference")
-        #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
-        
-        moveNodeToFolder(dynamicModelerNode, vesselsPlaneCutsFolder)
-        moveNodeToFolder(modelNode, cutVesselsFolder)
+          dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
+          dynamicModelerNode.SetToolName("Plane cut")
+          dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", vesselsModelNode.GetID())
+          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
+          dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
+          dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
+          dynamicModelerNode.SetAttribute("OperationType", "Difference")
+          #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
+          
+          moveNodeToFolder(dynamicModelerNode, vesselsPlaneCutsFolder)
+          moveNodeToFolder(modelNode, cutVesselsFolder)
       
       modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
       modelNode.SetName("Resected mandible")
@@ -3672,9 +3673,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           if fixCutGoesThroughTheMandibleTwiceChecked:
             dynamicModelerNodesList[i].AddNodeReferenceID("PlaneCut.InputPlane", planeToFixCutGoesThroughTheMandibleTwice.GetID())
 
-      dynamicModelerNodesList = createListFromFolderName("Vessels Plane Cuts")
-      for i in range(len(dynamicModelerNodesList)):
-        dynamicModelerNodesList[i].SetNodeReferenceID("PlaneCut.InputModel", vesselsModelNode.GetID())
+      if vesselsModelNode:
+        dynamicModelerNodesList = createListFromFolderName("Vessels Plane Cuts")
+        for i in range(len(dynamicModelerNodesList)):
+          dynamicModelerNodesList[i].SetNodeReferenceID("PlaneCut.InputModel", vesselsModelNode.GetID())
 
     inversePlaneCutsList = createListFromFolderName("Inverse Plane Cuts")
     inverseAppendList = createListFromFolderName("Inverse Append")
@@ -3776,7 +3778,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     nonDecimatedMandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     planeList = createListFromFolderName("Mandibular planes")
-    
+    includeVesselsOnPlan = parameterNode.GetParameter("includeVesselsOnPlan") == "True"
+
     if useNonDecimatedBoneModelsForPreviewChecked:
       mandibleModelNode = nonDecimatedMandibleModelNode
     else:
@@ -3821,9 +3824,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.tranformFibulaPiecesToMandible()
 
-    self.tranformVesselsPiecesToMandible()
+    if includeVesselsOnPlan:
+      self.tranformVesselsPiecesToMandible()
 
-    self.tranformMandiblePiecesToFibula()
+    # self.tranformMandiblePiecesToFibula()
 
     self.setRedSliceForBoneModelsDisplayNodes()
 
