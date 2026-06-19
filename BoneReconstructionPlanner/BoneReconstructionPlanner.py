@@ -1129,6 +1129,17 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     #self.ui.dentalImplantCylinderSelector.setCurrentNode(self._parameterNode.GetNodeReference("selectedDentalImplantCylinderModel"))
     self.ui.plateCurveSelector.setCurrentNode(self._parameterNode.GetNodeReference("plateCurve"))
 
+    # Keep the planning place widgets pointing to the currently referenced nodes.
+    # They are otherwise only bound at setup or on node removal, so loading a scene
+    # (which switches the referenced nodes) would leave the widgets bound to stale nodes.
+    self.ui.mandibleCurvePlaceWidget.setCurrentNode(self.logic.getMandibularCurve())
+    self.ui.fibulaLinePlaceWidget.setCurrentNode(self.logic.getFibulaLine())
+    self.ui.interCondylarBeamLinePlaceWidget.setCurrentNode(self.logic.getInterCondylarBeamLine())
+    self.ui.miterBoxDirectionLinePlaceWidget.setCurrentNode(self.logic.getMiterBoxDirectionLine())
+    self.ui.fibulaFiducialsPlaceWidget.setCurrentNode(self.logic.getFibulaFiducials())
+    self.ui.mandibleFiducialsPlaceWidget.setCurrentNode(self.logic.getMandibleFiducials())
+    self.ui.mandibleBridgeCurvePlaceWidget.setCurrentNode(self.logic.getMandibleBridgeCurve())
+
     self.ui.donorLegComboBox.currentText = self._parameterNode.GetParameter("donorLeg")
     
     self.ui.initialSpinBox.setValue(float(self._parameterNode.GetParameter("initialSpace_mm")))
