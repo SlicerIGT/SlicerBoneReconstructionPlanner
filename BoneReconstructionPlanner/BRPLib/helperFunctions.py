@@ -686,6 +686,10 @@ parentChildrenDict = {
     "Cut Bones",
     "Bone Pieces Transforms",
     "Transformed Fibula Pieces",
+    "Vessels Plane Cuts",
+    "Cut Vessels",
+    "Transformed Vessels Pieces",
+    "Vessels Pieces Transforms",
     "Duplicate Fibula Bone Pieces",
     "Duplicate Fibula Bone Pieces Transforms",
     "biggerMiterBoxes Models",
@@ -732,13 +736,20 @@ def getFolder(requestedFolderName, unused = None, reset = False):
   parentFolderslist = []
   reachedSceneLevel = False
   while not reachedSceneLevel:
+    foundParent = False
     for parentFolderName, childFolderNames in parentChildrenDict.items():
       if currentFolderName in childFolderNames:
+        foundParent = True
         parentFolderslist.append(parentFolderName)
         currentFolderName = parentFolderName
         if currentFolderName == "":
           reachedSceneLevel = True
         break
+    if not foundParent:
+      raise ValueError(
+        "getFolder: folder name '{0}' is not registered in parentChildrenDict; "
+        "its parent hierarchy cannot be resolved.".format(currentFolderName)
+      )
 
   #print(parentFolderslist)
   #return
