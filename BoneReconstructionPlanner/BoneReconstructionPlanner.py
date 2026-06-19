@@ -757,9 +757,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
           callData.RemoveObserver(observer)
         self.logic.fibulaLineInstructionsEventsObserversList = []
       if callData.GetAttribute("isInterCondylarBeamLine") == 'True':
-        callData.RemoveObserver(self.logic.interCondylarBeamLineControlPointModifiedObserver)
+        callData.RemoveObserver(self.logic.interCondylarBeamLineControlPointDefinedObserver)
+        callData.RemoveObserver(self.logic.interCondylarBeamLineControlPointEndInteractionObserver)
         callData.RemoveObserver(self.logic.interCondylarBeamLineControlPointRemovedObserver)
-        self.logic.interCondylarBeamLineControlPointModifiedObserver = 0
+        self.logic.interCondylarBeamLineControlPointDefinedObserver = 0
+        self.logic.interCondylarBeamLineControlPointEndInteractionObserver = 0
         self.logic.interCondylarBeamLineControlPointRemovedObserver = 0
       if callData.GetAttribute("isMiterBoxDirectionLine") == 'True':
         callData.RemoveObserver(self.logic.miterBoxDirectionLineObserver)
@@ -868,20 +870,27 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     ]
     self.logic.setMarkupsListLocked(markupsList,locked=False)
     
-    if self.logic.interCondylarBeamLineControlPointModifiedObserver == 0:
+    if self.logic.interCondylarBeamLineControlPointDefinedObserver == 0:
       observerTag = self.logic.getInterCondylarBeamLine().AddObserver(
-        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
-        self.logic.onInterCondylarLinePointModified
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+        self.logic.onInterCondylarLinePointUpdated
       )
-      self.logic.interCondylarBeamLineControlPointModifiedObserver = observerTag
+      self.logic.interCondylarBeamLineControlPointDefinedObserver = observerTag
+    
+    if self.logic.interCondylarBeamLineControlPointEndInteractionObserver == 0:
+      observerTag = self.logic.getInterCondylarBeamLine().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.logic.onInterCondylarLinePointUpdated
+      )
+      self.logic.interCondylarBeamLineControlPointEndInteractionObserver = observerTag  
     
     if self.logic.interCondylarBeamLineControlPointRemovedObserver == 0:
       observerTag = self.logic.getInterCondylarBeamLine().AddObserver(
         slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
-        self.logic.onInterCondylarLinePointRemoved
+        self.logic.onInterCondylarLinePointUpdated
       )
       self.logic.interCondylarBeamLineControlPointRemovedObserver = observerTag  
-    
+
     if self.logic.fibulaLineControlPointPlacedObserver == 0:
       observerTag = self.logic.getFibulaLine().AddObserver(
         slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
@@ -981,8 +990,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     ]
     self.logic.setMarkupsListLocked(markupsList,locked=True)
 
-    self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineControlPointModifiedObserver)
-    self.logic.interCondylarBeamLineControlPointModifiedObserver = 0
+    self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineControlPointDefinedObserver)
+    self.logic.interCondylarBeamLineControlPointDefinedObserver = 0
+
+    self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineControlPointEndInteractionObserver)
+    self.logic.interCondylarBeamLineControlPointEndInteractionObserver = 0
 
     self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineControlPointRemovedObserver)
     self.logic.interCondylarBeamLineControlPointRemovedObserver = 0
@@ -2042,7 +2054,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.mandibularCurveInstructionsEventsObserversList = []
     self.resectedMandibleAndObserver = []
     # self.mandibleCurveModifiedObserver = 0 # TODO: could be implemented on the future
-    self.interCondylarBeamLineControlPointModifiedObserver = 0
+    self.interCondylarBeamLineControlPointDefinedObserver = 0
+    self.interCondylarBeamLineControlPointEndInteractionObserver = 0
     self.interCondylarBeamLineControlPointRemovedObserver = 0
     self.mandibleBridgeCurveControlPointModifiedObserver = 0
     self.mandibleBridgeCurveControlPointRemovedObserver = 0
@@ -2054,10 +2067,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.generateFibulaPlanesTimer.setInterval(300)
     self.generateFibulaPlanesTimer.setSingleShot(True)
     self.generateFibulaPlanesTimer.connect('timeout()', self.onGenerateFibulaPlanesTimerTimeout)
-    self.interCondylarBeamBoxCreationTimer = qt.QTimer()
-    self.interCondylarBeamBoxCreationTimer.setInterval(150)
-    self.interCondylarBeamBoxCreationTimer.setSingleShot(True)
-    self.interCondylarBeamBoxCreationTimer.connect('timeout()', self.onInterCondylarLineTimerTimeout)
+    # self.interCondylarBeamBoxCreationTimer = qt.QTimer()
+    # self.interCondylarBeamBoxCreationTimer.setInterval(150)
+    # self.interCondylarBeamBoxCreationTimer.setSingleShot(True)
+    # self.interCondylarBeamBoxCreationTimer.connect('timeout()', self.onInterCondylarLineTimerTimeout)
     self.mandibleBridgeCreationTimer = qt.QTimer()
     self.mandibleBridgeCreationTimer.setInterval(150)
     self.mandibleBridgeCreationTimer.setSingleShot(True)
@@ -2455,15 +2468,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetOccludedVisibility(True)
 
       #conections
-      self.interCondylarBeamLineControlPointModifiedObserver = interCondylarBeamLine.AddObserver(
-        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
-        self.onInterCondylarLinePointModified
+      self.interCondylarBeamLineControlPointDefinedObserver = interCondylarBeamLine.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+        self.onInterCondylarLinePointUpdated
+      )
+      self.interCondylarBeamLineControlPointEndInteractionObserver = interCondylarBeamLine.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.onInterCondylarLinePointUpdated
       )
       self.interCondylarBeamLineControlPointRemovedObserver = interCondylarBeamLine.AddObserver(
         slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
-        self.onInterCondylarLinePointRemoved
+        self.onInterCondylarLinePointUpdated
       )
-      # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
 
     if startPlacementMode:
       #setup placement
@@ -2838,10 +2854,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       planeNode = mandibularPlanesList[-1]
       slicer.mrmlScene.RemoveNode(planeNode)
   
-  def onInterCondylarLinePointModified(self,sourceNode,event):
-      self.interCondylarBeamBoxCreationTimer.start()
+  # def onInterCondylarLinePointModified(self,sourceNode,event):
+  #   self.interCondylarBeamBoxCreationTimer.start()
 
-  def onInterCondylarLinePointRemoved(self,sourceNode,event):
+  def onInterCondylarLinePointUpdated(self,sourceNode,event):
     parameterNode = self.getParameterNode()
     interCondylarBeamLine = parameterNode.GetNodeReference("interCondylarBeamLine")
     interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
@@ -2849,9 +2865,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if interCondylarBeamBox is not None:
         parameterNode.SetNodeReferenceID("interCondylarBeamBox", "")
         slicer.mrmlScene.RemoveNode(interCondylarBeamBox)
+    else:
+      self.updateInterCondylarBeamBox()
   
-  def onInterCondylarLineTimerTimeout(self):
-    self.updateInterCondylarBeamBox()
+  # def onInterCondylarLineTimerTimeout(self):
+  #   self.updateInterCondylarBeamBox()
 
   def updateInterCondylarBeamBox(self):
     parameterNode = self.getParameterNode()
