@@ -2916,6 +2916,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     lockVSPChecked = parameterNode.GetParameter("lockVSP") == "True"
     if lockVSPChecked:
       logging.info('VSP updates are locked. Please set "lockVSP" parameter to "False".')
+      parameterNode.SetParameter("currentlyProcessing", str(False))
       return
     
     import time
@@ -2933,6 +2934,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if len(mandibularPlanesList) == 0:
       stopTime = time.time()
       logging.info('Processing completed in {0:.2f} seconds\n'.format(stopTime-startTime))
+      parameterNode.SetParameter("currentlyProcessing", str(False))
       return    
   
     self.removeMandiblePlaneObservers()
