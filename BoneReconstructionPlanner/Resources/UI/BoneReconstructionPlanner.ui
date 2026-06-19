@@ -325,7 +325,7 @@ legs segmentation</string>
                <string>This feature allows simulation of the resulting position of the grafted vessels</string>
               </property>
               <property name="text">
-               <string>Show vessels next to fibula and neck</string>
+               <string>Show vessels next to fibula and over neck</string>
               </property>
              </widget>
             </item>
