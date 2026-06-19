@@ -566,8 +566,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # (in the selected parameter node).
     self.ui.headCTSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.legsCTSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.mandibularSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
-    self.ui.fibulaSegmentationSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.mandibularSegmentSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.mandibularSegmentSelector.connect("currentSegmentChanged(QString)", self.updateParameterNodeFromGUI)
+    self.ui.fibulaSegmentSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.fibulaSegmentSelector.connect("currentSegmentChanged(QString)", self.updateParameterNodeFromGUI)
+    self.ui.vesselsSegmentSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
+    self.ui.vesselsSegmentSelector.connect("currentSegmentChanged(QString)", self.updateParameterNodeFromGUI)
     self.ui.fibulaSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.scalarVolumeSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
     self.ui.mandibleSurgicalGuideBaseSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.updateParameterNodeFromGUI)
@@ -645,6 +649,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.lockVSPButton.connect('toggled(bool)', self.onLockVSPButton)
     self.ui.neomandibleVisibilityButton.connect('toggled(bool)', self.onNeomandibleVisibilityButton)
     self.ui.fibulaNormalizationTransformButton.connect('toggled(bool)', self.onFibulaNormalizationTransformButton)
+    self.ui.includeVesselsOnPlanCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -1023,7 +1028,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # so that when the scene is saved and reloaded, these settings are restored.
 
     self.setParameterNode(self.logic.getParameterNode())
-    self.setShNode(slicer.mrmlScene.GetSubjectHierarchyNode())
+    #self.setShNode(slicer.mrmlScene.GetSubjectHierarchyNode())
 
   def setShNode(self, inputShNode):
     """
@@ -1112,8 +1117,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Update node selectors
     self.ui.headCTSelector.setCurrentNode(self._parameterNode.GetNodeReference("headCT"))
     self.ui.legsCTSelector.setCurrentNode(self._parameterNode.GetNodeReference("legsCT"))
-    self.ui.mandibularSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularSegmentation"))
-    self.ui.fibulaSegmentationSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSegmentation"))
+    self.ui.mandibularSegmentSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibularSegmentation"))
+    self.ui.mandibularSegmentSelector.setCurrentSegmentID(self._parameterNode.GetParameter("mandibularSegment"))
+    self.ui.fibulaSegmentSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSegmentation"))
+    self.ui.fibulaSegmentSelector.setCurrentSegmentID(self._parameterNode.GetParameter("fibulaSegment"))
+    self.ui.vesselsSegmentSelector.setCurrentNode(self._parameterNode.GetNodeReference("vesselsSegmentation"))
+    self.ui.vesselsSegmentSelector.setCurrentSegmentID(self._parameterNode.GetParameter("vesselsSegment"))
     self.ui.fibulaSurgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel"))
     self.ui.mandibleSurgicalGuideBaseSelector.setCurrentNode(self._parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel"))
     self.ui.dentalImplantFiducialListSelector.setCurrentNode(self._parameterNode.GetNodeReference("dentalImplantsFiducialList"))
@@ -1155,9 +1164,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
     
+    self.ui.includeVesselsOnPlanCheckBox.checked = self._parameterNode.GetParameter("includeVesselsOnPlan") == "True"
+    
     useNonDecimatedBoneModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = useNonDecimatedBoneModelsForPreviewChecked
-    self.showBoneModelsAsNonDecimated(useNonDecimatedBoneModelsForPreviewChecked)
+    self.showInputModelsAsNonDecimated(useNonDecimatedBoneModelsForPreviewChecked)
 
     fibulaSurgicalGuideElementsVisible = self._parameterNode.GetParameter("fibulaSurgicalGuideElementsVisible") == "True"
     self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked = fibulaSurgicalGuideElementsVisible
@@ -1194,8 +1205,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     setModelsLightingInterpolationMethod(self._parameterNode.GetParameter("lightingInterpolationMethod"))
 
     self.ui.makeModelsButton.enabled = (
-      self._parameterNode.GetNodeReference("mandibularSegmentation") is not None and
-      self._parameterNode.GetNodeReference("fibulaSegmentation") is not None
+      (self._parameterNode.GetNodeReference("mandibularSegmentation") is not None) and
+      (self._parameterNode.GetNodeReference("fibulaSegmentation") is not None) and
+      (self._parameterNode.GetParameter("mandibularSegment") != "") and
+      (self._parameterNode.GetParameter("fibulaSegment") != "")
     )
     
     checkSecurityMarginOnMiterBoxCreationChecked = self._parameterNode.GetParameter("checkSecurityMarginOnMiterBoxCreation") != "False"
@@ -1410,8 +1423,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.SetNodeReferenceID("headCT", self.ui.headCTSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("legsCT", self.ui.legsCTSelector.currentNodeID)
-    self._parameterNode.SetNodeReferenceID("mandibularSegmentation", self.ui.mandibularSegmentationSelector.currentNodeID)
-    self._parameterNode.SetNodeReferenceID("fibulaSegmentation", self.ui.fibulaSegmentationSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID("mandibularSegmentation", self.ui.mandibularSegmentSelector.currentNodeID())
+    self._parameterNode.SetParameter("mandibularSegment", self.ui.mandibularSegmentSelector.currentSegmentID())
+    self._parameterNode.SetNodeReferenceID("fibulaSegmentation", self.ui.fibulaSegmentSelector.currentNodeID())
+    self._parameterNode.SetParameter("fibulaSegment", self.ui.fibulaSegmentSelector.currentSegmentID())
+    self._parameterNode.SetNodeReferenceID("vesselsSegmentation", self.ui.vesselsSegmentSelector.currentNodeID())
+    self._parameterNode.SetParameter("vesselsSegment", self.ui.vesselsSegmentSelector.currentSegmentID())
     self._parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", self.ui.fibulaSurgicalGuideBaseSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("mandibleSurgicalGuideBaseModel", self.ui.mandibleSurgicalGuideBaseSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("dentalImplantsFiducialList", self.ui.dentalImplantFiducialListSelector.currentNodeID)
@@ -1459,6 +1476,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.SetParameter("donorLeg", self.ui.donorLegComboBox.currentText)
 
+    if self.ui.includeVesselsOnPlanCheckBox.checked:
+      self._parameterNode.SetParameter("includeVesselsOnPlan","True")
+    else:
+      self._parameterNode.SetParameter("includeVesselsOnPlan","False")
     if self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked:
       self._parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","True")
     else:
@@ -1767,7 +1788,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       displayNode = interCondylarBeamBox.GetDisplayNode()
       displayNode.SetVisibility(visibility)
 
-  def showBoneModelsAsNonDecimated(self, nonDecimated):
+  def showInputModelsAsNonDecimated(self, nonDecimated):
     """
     Set visibility of fibula surgical guide elements
     """
@@ -1780,6 +1801,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     decimatedFibulaModelNode = self._parameterNode.GetNodeReference("decimatedFibulaModelNode")
     nonDecimatedMandibleModelNode = self._parameterNode.GetNodeReference("mandibleModelNode")
     decimatedMandibleModelNode = self._parameterNode.GetNodeReference("decimatedMandibleModelNode")
+    nonDecimatedVesselsModelNode = self._parameterNode.GetNodeReference("vesselsModelNode")
+    decimatedVesselsModelNode = self._parameterNode.GetNodeReference("decimatedVesselsModelNode")
 
     if not (
       nonDecimatedFibulaModelNode and 
@@ -1799,6 +1822,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       decimatedMandibleModelDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
       nonDecimatedMandibleModelDisplayNode.SetVisibility(True and showOriginalMandibleChecked)
       decimatedMandibleModelDisplayNode.SetVisibility(False)
+
+      if nonDecimatedVesselsModelNode and decimatedVesselsModelNode:
+        nonDecimatedVesselsModelDisplayNode = nonDecimatedVesselsModelNode.GetDisplayNode()
+        decimatedVesselsModelDisplayNode = decimatedVesselsModelNode.GetDisplayNode()
+        nonDecimatedVesselsModelDisplayNode.SetVisibility(True)
+        decimatedVesselsModelDisplayNode.SetVisibility(False)
       
     else:
       nonDecimatedFibulaModelDisplayNode = nonDecimatedFibulaModelNode.GetDisplayNode()
@@ -1810,6 +1839,15 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       decimatedMandibleModelDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
       nonDecimatedMandibleModelDisplayNode.SetVisibility(False)
       decimatedMandibleModelDisplayNode.SetVisibility(True and showOriginalMandibleChecked)
+
+      if nonDecimatedVesselsModelNode and decimatedVesselsModelNode:
+        nonDecimatedVesselsModelDisplayNode = nonDecimatedVesselsModelNode.GetDisplayNode()
+        decimatedVesselsModelDisplayNode = decimatedVesselsModelNode.GetDisplayNode()
+        nonDecimatedVesselsModelDisplayNode.SetVisibility(False)
+        decimatedVesselsModelDisplayNode.SetVisibility(True)
+    
+    # and since the other models are created from them (e.g. dynamic modeler ones), they share the current visibility mode
+    # after planning update
   
   def setFibulaGuideBaseElementsVisibility(self, visibility):
     """
@@ -3452,11 +3490,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     fibulaModelNode = self.getCurrentFibulaModel()
     mandibleModelNode = self.getCurrentMandibleModel()
+    vesselsModelNode = self.getCurrentVesselsModel()
 
     planeCutsList = createListFromFolderName("Plane Cuts")
     if len(planeCutsList) == 0 or fixCutGoesThroughTheMandibleTwiceCheckBoxChanged:
       planeCutsFolder = getFolder("Plane Cuts", reset = True)
       cutBonesFolder = getFolder("Cut Bones", reset = True)
+      vesselsPlaneCutsFolder = getFolder("Vessels Plane Cuts", reset = True)
+      cutVesselsFolder = getFolder("Cut Vessels", reset = True)
 
       for i in range(0,len(fibulaPlanesList),2):
         modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
@@ -3490,6 +3531,37 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         moveNodeToFolder(dynamicModelerNode, planeCutsFolder)
         moveNodeToFolder(modelNode, cutBonesFolder)
       
+      for i in range(0,len(fibulaPlanesList),2):
+        modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+        modelNode.SetName("Vessels Segment {0}A-{1}B".format(i//2,i//2))
+        slicer.mrmlScene.AddNode(modelNode)
+        modelNode.CreateDefaultDisplayNodes()
+        modelDisplayNode = modelNode.GetDisplayNode()
+        modelDisplayNode.SetVisibility2D(True)
+
+        fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+        modelDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+
+        #Set color of the model
+        aux = slicer.mrmlScene.GetNodeByID('vtkMRMLColorTableNodeFileMediumChartColors.txt')
+        colorTable = aux.GetLookupTable()
+        nColors = colorTable.GetNumberOfColors()
+        ind = int((nColors-1) - i/2)
+        colorwithalpha = colorTable.GetTableValue(ind)
+        color = [colorwithalpha[0],colorwithalpha[1],colorwithalpha[2]]
+        modelDisplayNode.SetColor(color)
+
+        dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
+        dynamicModelerNode.SetToolName("Plane cut")
+        dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", vesselsModelNode.GetID())
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i+1].GetID())
+        dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
+        dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
+        dynamicModelerNode.SetAttribute("OperationType", "Difference")
+        #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
+        
+        moveNodeToFolder(dynamicModelerNode, vesselsPlaneCutsFolder)
+        moveNodeToFolder(modelNode, cutVesselsFolder)
       
       modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
       modelNode.SetName("Resected mandible")
@@ -3589,6 +3661,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           if fixCutGoesThroughTheMandibleTwiceChecked:
             dynamicModelerNodesList[i].AddNodeReferenceID("PlaneCut.InputPlane", planeToFixCutGoesThroughTheMandibleTwice.GetID())
 
+      dynamicModelerNodesList = createListFromFolderName("Vessels Plane Cuts")
+      for i in range(len(dynamicModelerNodesList)):
+        dynamicModelerNodesList[i].SetNodeReferenceID("PlaneCut.InputModel", vesselsModelNode.GetID())
 
     inversePlaneCutsList = createListFromFolderName("Inverse Plane Cuts")
     inverseAppendList = createListFromFolderName("Inverse Append")
@@ -3669,6 +3744,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     removeFolder(getFolder("Plane Cuts"))
     removeFolder(getFolder("Cut Bones"))
     removeFolder(getFolder("Transformed Fibula Pieces"))
+    removeFolder(getFolder("Vessels Plane Cuts"))
+    removeFolder(getFolder("Cut Vessels"))
+    removeFolder(getFolder("Transformed Vessels Pieces"))
     #self.getParameterNode().SetParameter("fixCutGoesThroughTheMandibleTwiceCheckBoxChanged", str(True))
   
   @saveExecutedMethodWithTelemetry
@@ -3707,6 +3785,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       removeFolder(getFolder("Plane Cuts"))
       removeFolder(getFolder("Cut Bones"))
       removeFolder(getFolder("Transformed Fibula Pieces"))
+      removeFolder(getFolder("Vessels Plane Cuts"))
+      removeFolder(getFolder("Cut Vessels"))
+      removeFolder(getFolder("Transformed Vessels Pieces"))
       fibulaPlanesFolder = getFolder("Fibula planes", reset = True)
       fibulaPlanesList = createListFromFolderName("Fibula planes")
       #Create fibula planes and set their size
@@ -3722,10 +3803,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.createAndUpdateDynamicModelerNodes()
   
     self.updateFibulaPieces()
+    
+    self.updateVesselsPieces()
 
     self.updateInverseMandiblePieces()
 
     self.tranformFibulaPiecesToMandible()
+
+    self.tranformVesselsPiecesToMandible()
 
     self.tranformMandiblePiecesToFibula()
 
@@ -3961,7 +4046,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     parameterNode.SetParameter("currentlyProcessing", str(True))
     fibulaSegmentation = parameterNode.GetNodeReference("fibulaSegmentation")
+    fibulaSegment = parameterNode.GetParameter("fibulaSegment")
     mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
+    mandibularSegment = parameterNode.GetParameter("mandibularSegment")
+    vesselsSegmentation = parameterNode.GetNodeReference("vesselsSegmentation")
+    vesselsSegment = parameterNode.GetParameter("vesselsSegment")
     useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
 
     wasModified = parameterNode.StartModify()
@@ -3976,18 +4065,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     models = [fibulaModelNode,mandibleModelNode]
     decimatedModels = [decimatedFibulaModelNode,decimatedMandibleModelNode]
     segmentNames = ["Fibula","Mandible"]
+    segmentIDs = [fibulaSegment,mandibularSegment]
     laterality = [parameterNode.GetParameter("donorLeg") + " ", ""]
+    if vesselsSegmentation is not None and vesselsSegment != "":
+      vesselsModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "vessels")
+      decimatedVesselsModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','decimatedVessels')
+      segmentations.append(vesselsSegmentation)
+      models.append(vesselsModelNode)
+      decimatedModels.append(decimatedVesselsModelNode)
+      segmentNames.append("Vessels")
+      segmentIDs.append(vesselsSegment)
+      laterality.append("")
 
-    for i in range(2):
+    for i in range(len(models)):
       models[i].CreateDefaultDisplayNodes()
       decimatedModels[i].CreateDefaultDisplayNodes()
 
       seg = segmentations[i]
       seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
       name = laterality[i] + segmentNames[i]
-      segmentID = getSegmentIDWithName(name, segmentations[i])
-      if segmentID is None:
-        segmentID = seg.GetSegmentation().GetNthSegmentID(0)
+      segmentID = segmentIDs[i]
       segment = seg.GetSegmentation().GetSegment(segmentID)
       segDisplayNode = seg.GetDisplayNode()
       segDisplayNode.SetVisibility(False)
@@ -4013,7 +4110,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       moveNodeToFolder(models[i], segmentationModelsFolder)
       moveNodeToFolder(decimatedModels[i], segmentationModelsFolder)
 
-      if i==0:
+      if (i==0) or (i==2):
         singletonTag = slicer.FIBULA_VIEW_SINGLETON_TAG
       else:
         singletonTag = slicer.MANDIBLE_VIEW_SINGLETON_TAG
@@ -4024,7 +4121,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       decimatedModelDisplayNode.AddViewNodeID(viewNode.GetID())
 
       centroid = getCentroid(models[i])
-      if i==0:
+      if (i==0) or (i==2):
         viewUpDirection = np.array([0.,1.,0.])
         cameraDirection = np.array([1.,0.,0.])
       else:
@@ -4035,7 +4132,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       cameraNode.SetViewUp(viewUpDirection)
       cameraNode.ResetClippingRange()
 
-      if i==0:
+      if (i==0) or (i==2):
         parameterNode.SetParameter("fibulaCentroidX",str(centroid[0]))
         parameterNode.SetParameter("fibulaCentroidY",str(centroid[1]))
         parameterNode.SetParameter("fibulaCentroidZ",str(centroid[2]))
@@ -4049,14 +4146,21 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     fibulaModelNode.SetName("fibula")
     mandibleModelNode.SetName("mandible")
+    if vesselsSegmentation is not None and vesselsSegment != "":
+      vesselsModelNode.SetName("vessels")
 
     parameterNode.SetNodeReferenceID("fibulaModelNode", fibulaModelNode.GetID())
     parameterNode.SetNodeReferenceID("mandibleModelNode", mandibleModelNode.GetID())
     parameterNode.SetNodeReferenceID("decimatedFibulaModelNode", decimatedFibulaModelNode.GetID())
     parameterNode.SetNodeReferenceID("decimatedMandibleModelNode", decimatedMandibleModelNode.GetID())
+    if vesselsSegmentation is not None and vesselsSegment != "":
+      parameterNode.SetNodeReferenceID("vesselsModelNode", vesselsModelNode.GetID())
+      parameterNode.SetNodeReferenceID("decimatedVesselsModelNode", decimatedVesselsModelNode.GetID())
 
     decimatedFibulaModelNode.SetAndObserveMesh(calculateNormals(decimatedFibulaModelNode.GetMesh()))
     decimatedMandibleModelNode.SetAndObserveMesh(calculateNormals(decimatedMandibleModelNode.GetMesh()))
+    if vesselsSegmentation is not None and vesselsSegment != "":
+      decimatedVesselsModelNode.SetAndObserveMesh(calculateNormals(decimatedVesselsModelNode.GetMesh()))
 
     self.autocreateFibulaLine(fibulaSegmentID, fibulaSegmentation)
 
@@ -4142,6 +4246,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       closestRegion.DeepCopy(connectivityFilter.GetOutput())
       #
       modelPieces.SetAndObservePolyData(calculateNormals(closestRegion))
+
+  def updateVesselsPieces(self):
+    parameterNode = self.getParameterNode()
+    
+    includeVesselsOnPlan = parameterNode.GetParameter("includeVesselsOnPlan") == "True"
+    if not includeVesselsOnPlan:
+      return
+    
+    vesselsPlaneCutsList = createListFromFolderName("Vessels Plane Cuts")
+    for i in range(len(vesselsPlaneCutsList)):
+      slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(vesselsPlaneCutsList[i])
 
   def updateInverseMandiblePieces(self):
     inversePlaneCutsList = createListFromFolderName("Inverse Plane Cuts")
@@ -4242,6 +4357,41 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       moveNodeToFolder(transformedFibulaPiece, transformedFibulaPiecesFolder)
       moveNodeToFolder(fibulaPieceToMandibleAxisTransformNode, bonePiecesTransformFolder)
+
+  def tranformVesselsPiecesToMandible(self):
+    vesselsPiecesTransformFolder = getFolder("Vessels Pieces Transforms", reset = True)
+    transformedVesselsPiecesFolder = getFolder("Transformed Vessels Pieces", reset = True)
+
+    cutVesselsList = createListFromFolderName("Cut Vessels")
+    for i in range(len(cutVesselsList)):
+      fibulaToMandibleRegistrationTransformMatrix = vtk.vtkMatrix4x4()
+      fibulaToMandibleRegistrationTransformMatrix.DeepCopy(self.mandibleToFibulaRegistrationTransformMatricesList[i])
+      fibulaToMandibleRegistrationTransformMatrix.Invert()
+
+      vesselsPieceToMandibleAxisTransformNode = slicer.vtkMRMLLinearTransformNode()
+      vesselsPieceToMandibleAxisTransformNode.SetName("Vessels Segment {0} Transform".format(i))
+      slicer.mrmlScene.AddNode(vesselsPieceToMandibleAxisTransformNode)
+
+      vesselsPieceToMandibleAxisTransformNode.SetMatrixTransformToParent(fibulaToMandibleRegistrationTransformMatrix)
+      vesselsPieceToMandibleAxisTransformNode.UpdateScene(slicer.mrmlScene)
+
+      transformedVesselsPiece = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode',slicer.mrmlScene.GetUniqueNameByString('Transformed ' + cutVesselsList[i].GetName()))
+      transformedVesselsPiece.CreateDefaultDisplayNodes()
+      transformedVesselsPiece.CopyContent(cutVesselsList[i])
+      transformedVesselsPieceDisplayNode = transformedVesselsPiece.GetDisplayNode()
+      transformedVesselsPieceDisplayNode.SetColor(cutVesselsList[i].GetDisplayNode().GetColor())
+      transformedVesselsPieceDisplayNode.SetVisibility2D(True)
+
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      transformedVesselsPieceDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+
+      transformedVesselsPiece.SetAndObserveTransformNodeID(vesselsPieceToMandibleAxisTransformNode.GetID())
+      transformedVesselsPieceTransformationSuccess = transformedVesselsPiece.HardenTransform()
+      if not (transformedVesselsPieceTransformationSuccess):
+        Exception('Hardening transforms was not successful')
+
+      moveNodeToFolder(transformedVesselsPiece, transformedVesselsPiecesFolder)
+      moveNodeToFolder(vesselsPieceToMandibleAxisTransformNode, vesselsPiecesTransformFolder)
 
   @saveExecutedMethodWithTelemetry
   def mandiblePlanesPositioningForMaximumBoneContact(self):
@@ -4948,6 +5098,22 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
     
     return fibulaModelNode
+
+  def getCurrentVesselsModel(self):
+    parameterNode = self.getParameterNode()
+    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    
+    vesselsModelNode = parameterNode.GetNodeReference("vesselsModelNode")
+    decimatedVesselsModelNode = parameterNode.GetNodeReference("decimatedVesselsModelNode")
+    if vesselsModelNode and decimatedVesselsModelNode:
+      if useNonDecimatedBoneModelsForPreviewChecked:
+        currentVesselsModelNode = vesselsModelNode
+      else:
+        currentVesselsModelNode = decimatedVesselsModelNode
+    else:
+      currentVesselsModelNode = None
+
+    return currentVesselsModelNode
 
   def getCurrentMandibleModel(self):
     parameterNode = self.getParameterNode()
@@ -5834,7 +6000,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for refKey in ["fibulaModelNode", "decimatedFibulaModelNode", "fibulaLine",
                    "fibulaSurgicalGuidePrototypeModel", "miterBoxDirectionLine",
-                   "fibulaSurgicalGuideBaseModel"]:
+                   "fibulaSurgicalGuideBaseModel", "vesselsModelNode", "decimatedVesselsModelNode"]:
       node = parameterNode.GetNodeReference(refKey)
       if node is not None:
         nodes.append(node)
@@ -5857,6 +6023,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       "Dental Implants Cylinders Models",
       "Fibula Dental Implants Cylinders Models",
       "Bigger Fibula Dental Implants Cylinders Models",
+      "Cut Vessels",
     ]
     for folderName in folderNames:
       nodesList = createListFromFolderName(folderName)
@@ -6544,8 +6711,8 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     mandibleSegmentationThroughGUI = slicer.util.getNode('MandibleSegmentation')
 
     slicer.app.processEvents()
-    self.widgetBRP.ui.fibulaSegmentationSelector.setCurrentNode(fibulaSegmentationThroughGUI)
-    self.widgetBRP.ui.mandibularSegmentationSelector.setCurrentNode(mandibleSegmentationThroughGUI)
+    self.widgetBRP.ui.fibulaSegmentSelector.setCurrentNode(fibulaSegmentationThroughGUI)
+    self.widgetBRP.ui.mandibularSegmentSelector.setCurrentNode(mandibleSegmentationThroughGUI)
     slicer.app.processEvents()
 
     parameterNode = self.logicBRP.getParameterNode()
@@ -6580,6 +6747,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
     mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    # NEED TO ADD VESSELS MODEL TESTS
     decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
     decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
 
