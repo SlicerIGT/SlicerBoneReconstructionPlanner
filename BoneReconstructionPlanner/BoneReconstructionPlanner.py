@@ -1175,8 +1175,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.checked = self._parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = self._parameterNode.GetParameter("mandiblePlanesPositioningForMaximumBoneContact") == "True"
     
-    self.ui.includeVesselsOnPlanCheckBox.checked = self._parameterNode.GetParameter("includeVesselsOnPlan") == "True"
-    
+    includeVesselsOnPlanChecked = self._parameterNode.GetParameter("includeVesselsOnPlan") == "True"
+    self.ui.includeVesselsOnPlanCheckBox.checked = includeVesselsOnPlanChecked
+    self.setOriginalAndTranslatedVesselsVisibility(includeVesselsOnPlanChecked)
+
     useNonDecimatedBoneModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
     self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = useNonDecimatedBoneModelsForPreviewChecked
     self.showInputModelsAsNonDecimated(useNonDecimatedBoneModelsForPreviewChecked)
@@ -1807,6 +1809,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       return
     
     showOriginalMandibleChecked = self._parameterNode.GetParameter("showOriginalMandible") == "True"
+    includeVesselsOnPlanChecked = self._parameterNode.GetParameter("includeVesselsOnPlan") == "True"
 
     nonDecimatedFibulaModelNode = self._parameterNode.GetNodeReference("fibulaModelNode")
     decimatedFibulaModelNode = self._parameterNode.GetNodeReference("decimatedFibulaModelNode")
@@ -1837,7 +1840,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       if nonDecimatedVesselsModelNode and decimatedVesselsModelNode:
         nonDecimatedVesselsModelDisplayNode = nonDecimatedVesselsModelNode.GetDisplayNode()
         decimatedVesselsModelDisplayNode = decimatedVesselsModelNode.GetDisplayNode()
-        nonDecimatedVesselsModelDisplayNode.SetVisibility(True)
+        nonDecimatedVesselsModelDisplayNode.SetVisibility(True and includeVesselsOnPlanChecked)
         decimatedVesselsModelDisplayNode.SetVisibility(False)
       
     else:
@@ -1855,7 +1858,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         nonDecimatedVesselsModelDisplayNode = nonDecimatedVesselsModelNode.GetDisplayNode()
         decimatedVesselsModelDisplayNode = decimatedVesselsModelNode.GetDisplayNode()
         nonDecimatedVesselsModelDisplayNode.SetVisibility(False)
-        decimatedVesselsModelDisplayNode.SetVisibility(True)
+        decimatedVesselsModelDisplayNode.SetVisibility(True and includeVesselsOnPlanChecked)
     
     # and since the other models are created from them (e.g. dynamic modeler ones), they share the current visibility mode
     # after planning update
@@ -1875,6 +1878,27 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     folderNames = [
       "previewMiterBoxes Models",
       "Fibula Cylinders Models"
+    ]
+
+    for folderName in folderNames:
+      folderItem = getFolder(folderName)
+      setFolderItemVisibility(folderItem, visibility)
+
+  def setOriginalAndTranslatedVesselsVisibility(self, visibility):
+    """
+    Set visibility of original and translated vessels
+    """
+    if not USING_GUI:
+      return
+    
+    vesselsModel = self.logic.getCurrentVesselsModel()
+    
+    if vesselsModel is not None:
+      vesselsModel.GetDisplayNode().SetVisibility(visibility)
+    
+    folderNames = [
+      "Cut Vessels",
+      "Transformed Vessels Pieces"
     ]
 
     for folderName in folderNames:
