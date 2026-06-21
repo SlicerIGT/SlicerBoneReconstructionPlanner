@@ -850,6 +850,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Make sure parameter node exists and observed
     self.initializeParameterNode()
 
+    # Backward compatibility: older scenes used "Plane Cuts" for what is now "Bone Plane Cuts"
+    renameFolderByName("Plane Cuts", "Bone Plane Cuts")
+
     mandibularPlanesList = createListFromFolderName("Mandibular planes")
     sawBoxesPlanesList = createListFromFolderName("sawBoxes Planes")
     dentalImplantsPlanesList = createListFromFolderName("dentalImplants Planes")
@@ -3719,9 +3722,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleModelNode = self.getCurrentMandibleModel()
     vesselsModelNode = self.getCurrentVesselsModel()
 
-    planeCutsList = createListFromFolderName("Plane Cuts")
-    if len(planeCutsList) == 0 or fixCutGoesThroughTheMandibleTwiceCheckBoxChanged:
-      planeCutsFolder = getFolder("Plane Cuts", reset = True)
+    bonePlaneCutsList = createListFromFolderName("Bone Plane Cuts")
+    if len(bonePlaneCutsList) == 0 or fixCutGoesThroughTheMandibleTwiceCheckBoxChanged:
+      bonePlaneCutsFolder = getFolder("Bone Plane Cuts", reset = True)
       cutBonesFolder = getFolder("Cut Bones", reset = True)
       vesselsPlaneCutsFolder = getFolder("Vessels Plane Cuts", reset = True)
       cutVesselsFolder = getFolder("Cut Vessels", reset = True)
@@ -3877,7 +3880,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         parameterNode.SetParameter('fixCutGoesThroughTheMandibleTwiceCheckBoxChanged','False')
     
     else:
-      dynamicModelerNodesList = createListFromFolderName("Plane Cuts")
+      dynamicModelerNodesList = createListFromFolderName("Bone Plane Cuts")
       for i in range(len(dynamicModelerNodesList)):
         if i != (len(dynamicModelerNodesList) -1):
           dynamicModelerNodesList[i].SetNodeReferenceID("PlaneCut.InputModel", fibulaModelNode.GetID())
@@ -3896,7 +3899,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     inversePlaneCutsList = createListFromFolderName("Inverse Plane Cuts")
     inverseAppendList = createListFromFolderName("Inverse Append")
-    numberOfFibulaPieces = len(createListFromFolderName("Plane Cuts")) -1
+    numberOfFibulaPieces = len(createListFromFolderName("Bone Plane Cuts")) -1
     if (
       (len(inversePlaneCutsList) != numberOfFibulaPieces) or
       (len(inverseAppendList) != numberOfFibulaPieces)
@@ -3970,7 +3973,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def resetPlan(self):
     removeFolder(getFolder("Fibula planes"))
-    removeFolder(getFolder("Plane Cuts"))
+    removeFolder(getFolder("Bone Plane Cuts"))
     removeFolder(getFolder("Cut Bones"))
     removeFolder(getFolder("Transformed Fibula Pieces"))
     removeFolder(getFolder("Vessels Plane Cuts"))
@@ -4012,7 +4015,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #delete all the folders that are not updated
     if (len(fibulaPlanesList) != (2*len(planeList) - 2)) or (len(fibulaPlanesList) == 0):
-      removeFolder(getFolder("Plane Cuts"))
+      removeFolder(getFolder("Bone Plane Cuts"))
       removeFolder(getFolder("Cut Bones"))
       removeFolder(getFolder("Transformed Fibula Pieces"))
       removeFolder(getFolder("Vessels Plane Cuts"))
@@ -4433,7 +4436,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.getFibulaLine().AddControlPoint(fibulaLastPoint)
   
   def updateFibulaPieces(self):
-    planeCutsList = createListFromFolderName("Plane Cuts")
+    planeCutsList = createListFromFolderName("Bone Plane Cuts")
     for i in range(len(planeCutsList)):
       slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(planeCutsList[i])
     
