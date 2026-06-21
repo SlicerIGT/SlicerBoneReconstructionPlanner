@@ -596,7 +596,7 @@ algorithm (takes more time)</string>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="useNonDecimatedBoneModelsForPreviewCheckBox">
+                   <widget class="QCheckBox" name="useNonDecimatedModelsForPreviewCheckBox">
                     <property name="text">
                      <string>Use non-decimated models for
 preview (takes more time)</string>
