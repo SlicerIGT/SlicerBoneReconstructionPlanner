@@ -905,20 +905,48 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       )
       self.logic.fibulaLineControlPointEndInteractionObserver = observerTag
 
-    if self.logic.fibulaFiducialListObserver == 0:
+    if self.logic.fibulaFiducialListControlPointDefinedObserver == 0:
       observerTag = self.logic.getFibulaFiducials().AddObserver(
-        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
         self.logic.onFibulaFiducialsPointModified
       )
-      self.logic.fibulaFiducialListObserver = observerTag
+      self.logic.fibulaFiducialListControlPointDefinedObserver = observerTag
     
-    if self.logic.mandibleFiducialListObserver == 0:
+    if self.logic.fibulaFiducialListControlPointEndInteractionObserver == 0:
+      observerTag = self.logic.getFibulaFiducials().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.logic.onFibulaFiducialsPointModified
+      )
+      self.logic.fibulaFiducialListControlPointEndInteractionObserver = observerTag  
+    
+    if self.logic.fibulaFiducialListControlPointRemovedObserver == 0:
+      observerTag = self.logic.getFibulaFiducials().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.logic.onFibulaFiducialsPointModified
+      )
+      self.logic.fibulaFiducialListControlPointRemovedObserver = observerTag  
+
+    if self.logic.mandibleFiducialListControlPointDefinedObserver == 0:
       observerTag = self.logic.getMandibleFiducials().AddObserver(
-        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
         self.logic.onMandibleFiducialsPointModified
       )
-      self.logic.mandibleFiducialListObserver = observerTag
+      self.logic.mandibleFiducialListControlPointDefinedObserver = observerTag
     
+    if self.logic.mandibleFiducialListControlPointEndInteractionObserver == 0:
+      observerTag = self.logic.getMandibleFiducials().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.logic.onMandibleFiducialsPointModified
+      )
+      self.logic.mandibleFiducialListControlPointEndInteractionObserver = observerTag  
+    
+    if self.logic.mandibleFiducialListControlPointRemovedObserver == 0:
+      observerTag = self.logic.getMandibleFiducials().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.logic.onMandibleFiducialsPointModified
+      )
+      self.logic.mandibleFiducialListControlPointRemovedObserver = observerTag  
+
     if self.logic.mandibleBridgeCurveControlPointModifiedObserver == 0:
       observerTag = self.logic.getMandibleBridgeCurve().AddObserver(
         slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
@@ -998,6 +1026,24 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self.logic.getInterCondylarBeamLine().RemoveObserver(self.logic.interCondylarBeamLineControlPointRemovedObserver)
     self.logic.interCondylarBeamLineControlPointRemovedObserver = 0
+
+    self.logic.getFibulaFiducials().RemoveObserver(self.logic.fibulaFiducialListControlPointDefinedObserver)
+    self.logic.fibulaFiducialListControlPointDefinedObserver = 0
+
+    self.logic.getFibulaFiducials().RemoveObserver(self.logic.fibulaFiducialListControlPointEndInteractionObserver)
+    self.logic.fibulaFiducialListControlPointEndInteractionObserver = 0
+
+    self.logic.getFibulaFiducials().RemoveObserver(self.logic.fibulaFiducialListControlPointRemovedObserver)
+    self.logic.fibulaFiducialListControlPointRemovedObserver = 0
+
+    self.logic.getMandibleFiducials().RemoveObserver(self.logic.mandibleFiducialListControlPointDefinedObserver)
+    self.logic.mandibleFiducialListControlPointDefinedObserver = 0
+
+    self.logic.getMandibleFiducials().RemoveObserver(self.logic.mandibleFiducialListControlPointEndInteractionObserver)
+    self.logic.mandibleFiducialListControlPointEndInteractionObserver = 0
+
+    self.logic.getMandibleFiducials().RemoveObserver(self.logic.mandibleFiducialListControlPointRemovedObserver)
+    self.logic.mandibleFiducialListControlPointRemovedObserver = 0
 
     self.logic.getFibulaLine().RemoveObserver(self.logic.fibulaLineControlPointPlacedObserver)
     self.logic.fibulaLineControlPointPlacedObserver = 0
@@ -2062,27 +2108,21 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.fibulaLineControlPointPlacedObserver = 0
     self.fibulaLineControlPointEndInteractionObserver = 0
     self.fibulaFiducialListObserver = 0
+    self.fibulaFiducialListControlPointDefinedObserver = 0
+    self.fibulaFiducialListControlPointEndInteractionObserver = 0
+    self.fibulaFiducialListControlPointRemovedObserver = 0
+    self.mandibleFiducialListControlPointDefinedObserver = 0
+    self.mandibleFiducialListControlPointEndInteractionObserver = 0
+    self.mandibleFiducialListControlPointRemovedObserver = 0
     self.mandibleFiducialListObserver = 0
     self.generateFibulaPlanesTimer = qt.QTimer()
     self.generateFibulaPlanesTimer.setInterval(300)
     self.generateFibulaPlanesTimer.setSingleShot(True)
     self.generateFibulaPlanesTimer.connect('timeout()', self.onGenerateFibulaPlanesTimerTimeout)
-    # self.interCondylarBeamBoxCreationTimer = qt.QTimer()
-    # self.interCondylarBeamBoxCreationTimer.setInterval(150)
-    # self.interCondylarBeamBoxCreationTimer.setSingleShot(True)
-    # self.interCondylarBeamBoxCreationTimer.connect('timeout()', self.onInterCondylarLineTimerTimeout)
     self.mandibleBridgeCreationTimer = qt.QTimer()
     self.mandibleBridgeCreationTimer.setInterval(150)
     self.mandibleBridgeCreationTimer.setSingleShot(True)
     self.mandibleBridgeCreationTimer.connect('timeout()', self.onMandibleBridgeTimerTimeout)
-    self.fibulaFiducialsCylindersTimer = qt.QTimer()
-    self.fibulaFiducialsCylindersTimer.setInterval(150)
-    self.fibulaFiducialsCylindersTimer.setSingleShot(True)
-    self.fibulaFiducialsCylindersTimer.connect('timeout()', self.onUpdateFibulaFiducialsCylindersTimerTimeout)
-    self.mandibleFiducialsCylindersTimer = qt.QTimer()
-    self.mandibleFiducialsCylindersTimer.setInterval(150)
-    self.mandibleFiducialsCylindersTimer.setSingleShot(True)
-    self.mandibleFiducialsCylindersTimer.connect('timeout()', self.onUpdateMandibleFiducialsCylindersTimerTimeout)
     self.miterBoxDirectionLineTimer = qt.QTimer()
     self.miterBoxDirectionLineTimer.setInterval(400)
     self.miterBoxDirectionLineTimer.setSingleShot(True)
@@ -2541,11 +2581,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetOccludedVisibility(True)
 
       #conections
-      self.fibulaFiducialListObserver = fibulaFiducialList.AddObserver(
-        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+      self.fibulaFiducialListControlPointDefinedObserver = fibulaFiducialList.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
         self.onFibulaFiducialsPointModified
       )
-      # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
+      self.fibulaFiducialListControlPointEndInteractionObserver = fibulaFiducialList.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.onFibulaFiducialsPointModified
+      )
+      self.fibulaFiducialListControlPointRemovedObserver = fibulaFiducialList.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.onFibulaFiducialsPointModified
+      )
 
     if startPlacementMode:
       #setup placement
@@ -2574,11 +2621,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       displayNode.SetOccludedVisibility(True)
 
       #conections
-      self.mandibleFiducialListObserver = mandibleFiducialList.AddObserver(
-        slicer.vtkMRMLMarkupsNode.PointModifiedEvent,
+      self.mandibleFiducialListControlPointDefinedObserver = mandibleFiducialList.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
         self.onMandibleFiducialsPointModified
       )
-      # slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent
+      self.mandibleFiducialListControlPointEndInteractionObserver = mandibleFiducialList.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.onMandibleFiducialsPointModified
+      )
+      self.mandibleFiducialListControlPointRemovedObserver = mandibleFiducialList.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.onMandibleFiducialsPointModified
+      )
 
     if startPlacementMode:
       #setup placement
@@ -2680,13 +2734,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaCylindersModelsList = createListFromFolderName("Fibula Cylinders Models")
     for i in range(len(fibulaCylindersModelsList)):
       fibulaCylindersModelsList[i].GetDisplayNode().SetVisibility(False)
-    self.fibulaFiducialsCylindersTimer.start()
+    self.createCylindersFromFiducialListAndFibulaSurgicalGuideBase()
 
   def onMandibleFiducialsPointModified(self,sourceNode,event):
     mandibleCylindersModelsList = createListFromFolderName("Mandible Cylinders Models")
     for i in range(len(mandibleCylindersModelsList)):
       mandibleCylindersModelsList[i].GetDisplayNode().SetVisibility(False)
-    self.mandibleFiducialsCylindersTimer.start()
+    self.createCylindersFromFiducialListAndMandibleSurgicalGuideBase()
 
   def onMiterBoxDirectionLinePointModified(self,sourceNode,event):
     self.miterBoxDirectionLineTimer.start()
@@ -2853,9 +2907,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       # remove the last plane
       planeNode = mandibularPlanesList[-1]
       slicer.mrmlScene.RemoveNode(planeNode)
-  
-  # def onInterCondylarLinePointModified(self,sourceNode,event):
-  #   self.interCondylarBeamBoxCreationTimer.start()
 
   def onInterCondylarLinePointUpdated(self,sourceNode,event):
     parameterNode = self.getParameterNode()
