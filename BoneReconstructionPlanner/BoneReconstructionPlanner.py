@@ -658,6 +658,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.fibulaSurgicalGuideVisibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.mandibleSurgicalGuideElementsVisibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.mandibleSurgicalGuideVisibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.AISegmentationsCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.dentalImplantsPlanningAndFibulaDrillGuidesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.customTitaniumPlateDesingCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -1300,6 +1302,17 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel") is not None
     )
 
+    mandibleSurgicalGuideElementsVisible = self._parameterNode.GetParameter("mandibleSurgicalGuideElementsVisible") == "True"
+    self.ui.mandibleSurgicalGuideElementsVisibleCheckBox.checked = mandibleSurgicalGuideElementsVisible
+    self.setMandibleGuideBaseElementsVisibility(mandibleSurgicalGuideElementsVisible)
+
+    mandibleSurgicalGuideVisible = self._parameterNode.GetParameter("mandibleSurgicalGuideVisible") == "True"
+    self.ui.mandibleSurgicalGuideVisibleCheckBox.checked = mandibleSurgicalGuideVisible
+    self.setMandibleSurgicalGuideVisibility(mandibleSurgicalGuideVisible)
+    self.ui.mandibleSurgicalGuideVisibleCheckBox.enabled = (
+      self._parameterNode.GetNodeReference("mandibleSurgicalGuidePrototypeModel") is not None
+    )
+
     if self._parameterNode.GetParameter("miterBoxesNeedUpdate") == "True":
       # always hide till the GUI feedback feature is complete
       self.ui.miterBoxesNeedUpdateLabel.hide()
@@ -1643,6 +1656,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("fibulaSurgicalGuideVisible","True")
     else:
       self._parameterNode.SetParameter("fibulaSurgicalGuideVisible","False")
+    if self.ui.mandibleSurgicalGuideElementsVisibleCheckBox.checked:
+      self._parameterNode.SetParameter("mandibleSurgicalGuideElementsVisible","True")
+    else:
+      self._parameterNode.SetParameter("mandibleSurgicalGuideElementsVisible","False")
+    if self.ui.mandibleSurgicalGuideVisibleCheckBox.checked:
+      self._parameterNode.SetParameter("mandibleSurgicalGuideVisible","True")
+    else:
+      self._parameterNode.SetParameter("mandibleSurgicalGuideVisible","False")
     if self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState == qt.Qt.Checked:
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","True")
     else:
@@ -2019,10 +2040,48 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       return
     
     fibulaSurgicalGuide = self._parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel")
-    
+
     if fibulaSurgicalGuide is not None:
       fibulaSurgicalGuide.GetDisplayNode().SetVisibility(visibility)
-  
+
+  def setMandibleGuideBaseElementsVisibility(self, visibility):
+    """
+    Set visibility of mandible surgical guide elements
+    """
+    if not USING_GUI:
+      return
+
+    mandibleSurgicalGuideBase = self._parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel")
+
+    if mandibleSurgicalGuideBase is not None:
+      mandibleSurgicalGuideBase.GetDisplayNode().SetVisibility(visibility)
+
+    mandibleBridgeTube = self._parameterNode.GetNodeReference("mandibleBridgeTube")
+
+    if mandibleBridgeTube is not None:
+      mandibleBridgeTube.GetDisplayNode().SetVisibility(visibility)
+
+    folderNames = [
+      "previewSawBoxes Models",
+      "Mandible Cylinders Models"
+    ]
+
+    for folderName in folderNames:
+      folderItem = getFolder(folderName)
+      setFolderItemVisibility(folderItem, visibility)
+
+  def setMandibleSurgicalGuideVisibility(self, visibility):
+    """
+    Set visibility of mandible surgical guide
+    """
+    if not USING_GUI:
+      return
+
+    mandibleSurgicalGuide = self._parameterNode.GetNodeReference("mandibleSurgicalGuidePrototypeModel")
+
+    if mandibleSurgicalGuide is not None:
+      mandibleSurgicalGuide.GetDisplayNode().SetVisibility(visibility)
+
   def setMandiblePlanesInteractionHandlesVisibility(self, visibility):
     """
     Set visibility of mandible planes interactive handles
@@ -6027,7 +6086,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def makeBooleanOperationsToMandibleSurgicalGuideBase(self):
     parameterNode = self.getParameterNode()
     mandibleSurgicalGuideBaseModel = parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel")
-    mandibleBridgeModel = parameterNode.GetNodeReference("mandibleBridgeModel")
+    mandibleBridgeModel = parameterNode.GetNodeReference("mandibleBridgeTube")
     
     kindOfMandibleResection = parameterNode.GetParameter("kindOfMandibleResection")
 
@@ -6067,7 +6126,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.mrmlScene.RemoveNode(surgicalGuideModel)
       slicer.util.errorDisplay("ERROR: Boolean operations to make mandible surgical failed")
       return
-    
+
+    parameterNode.SetParameter("mandibleSurgicalGuideElementsVisible", str(False))
+    parameterNode.SetParameter("mandibleSurgicalGuideVisible", str(True))
     parameterNode.SetNodeReferenceID("mandibleSurgicalGuidePrototypeModel", surgicalGuideModel.GetID())
 
   def getRightAndLeftMandibleResectionPlanes(self):
