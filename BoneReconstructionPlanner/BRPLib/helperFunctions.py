@@ -662,6 +662,14 @@ def renameFolder(folderID, newName):
   if folderID:
     shNode.SetItemName(folderID, newName)
 
+def renameFolderByName(oldFolderName, newFolderName):
+  """If a folder named oldFolderName exists in the scene, rename it to newFolderName.
+  Used for backward compatibility with scenes created by older module versions."""
+  shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
+  folderID = shNode.GetItemByName(oldFolderName)
+  if folderID and shNode.GetItemOwnerPluginName(folderID) == "Folder":
+    shNode.SetItemName(folderID, newFolderName)
+
 parentChildrenDict = {
   "": [
     "BoneReconstructionPlanner"
@@ -682,7 +690,7 @@ parentChildrenDict = {
     "Mandible Planes Transforms",
     "Mandible2Fibula transforms",
     "Intersections",
-    "Plane Cuts",
+    "Bone Plane Cuts",
     "Cut Bones",
     "Bone Pieces Transforms",
     "Transformed Fibula Pieces",
