@@ -652,7 +652,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.includeVesselsOnPlanCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.makeAllMandiblePlanesRotateTogetherCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMoreExactVersionOfPositioningAlgorithmCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
-    self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.useNonDecimatedModelsForPreviewCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.fixCutGoesThroughTheMandibleTwiceCheckBox.connect('stateChanged(int)', self.onFixCutGoesThroughTheMandibleTwiceCheckBox)
     self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -1301,9 +1301,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.includeVesselsOnPlanCheckBox.checked = includeVesselsOnPlanChecked
     self.setOriginalAndTranslatedVesselsVisibility(includeVesselsOnPlanChecked)
 
-    useNonDecimatedBoneModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
-    self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked = useNonDecimatedBoneModelsForPreviewChecked
-    self.showInputModelsAsNonDecimated(useNonDecimatedBoneModelsForPreviewChecked)
+    useNonDecimatedModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedModelsForPreview") == "True"
+    self.ui.useNonDecimatedModelsForPreviewCheckBox.checked = useNonDecimatedModelsForPreviewChecked
+    self.showInputModelsAsNonDecimated(useNonDecimatedModelsForPreviewChecked)
 
     fibulaSurgicalGuideElementsVisible = self._parameterNode.GetParameter("fibulaSurgicalGuideElementsVisible") == "True"
     self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked = fibulaSurgicalGuideElementsVisible
@@ -1638,10 +1638,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm","True")
     else:
       self._parameterNode.SetParameter("useMoreExactVersionOfPositioningAlgorithm","False")
-    if self.ui.useNonDecimatedBoneModelsForPreviewCheckBox.checked:
-      self._parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview","True")
+    if self.ui.useNonDecimatedModelsForPreviewCheckBox.checked:
+      self._parameterNode.SetParameter("useNonDecimatedModelsForPreview","True")
     else:
-      self._parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview","False")
+      self._parameterNode.SetParameter("useNonDecimatedModelsForPreview","False")
     if self.ui.interCondylarBeamVisibilityToolButton.checked:
       self._parameterNode.SetParameter("showInterCondylarBeamBox","True")
     else:
@@ -2164,12 +2164,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if (mandibleModelNode is None) and (decimatedMandibleModelNode is None):
       return
 
-    useNonDecimatedBoneModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    useNonDecimatedModelsForPreviewChecked = self._parameterNode.GetParameter("useNonDecimatedModelsForPreview") == "True"
 
     mandibleModelDisplayNode = mandibleModelNode.GetDisplayNode()
     decimatedMandibleModelDisplayNode = decimatedMandibleModelNode.GetDisplayNode()
 
-    if useNonDecimatedBoneModelsForPreviewChecked:
+    if useNonDecimatedModelsForPreviewChecked:
       mandibleModelDisplayNode.SetVisibility(visibility)
       decimatedMandibleModelDisplayNode.SetVisibility(False)
     else:
@@ -3702,7 +3702,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def createAndUpdateDynamicModelerNodes(self):
     parameterNode = self.getParameterNode()
-    #useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    #useNonDecimatedModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedModelsForPreview") == "True"
     #mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
     #nonDecimatedFibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
     #decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
@@ -3990,13 +3990,13 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandible(self):
     parameterNode = self.getParameterNode()
-    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    useNonDecimatedModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedModelsForPreview") == "True"
     nonDecimatedMandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     planeList = createListFromFolderName("Mandibular planes")
     includeVesselsOnPlan = parameterNode.GetParameter("includeVesselsOnPlan") == "True"
 
-    if useNonDecimatedBoneModelsForPreviewChecked:
+    if useNonDecimatedModelsForPreviewChecked:
       mandibleModelNode = nonDecimatedMandibleModelNode
     else:
       mandibleModelNode = decimatedMandibleModelNode
@@ -4028,7 +4028,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     kindOfMandibleResection = parameterNode.GetParameter("kindOfMandibleResection")
     if kindOfMandibleResection == "Hemimandibulectomy":
       # this is needed because otherwise decimation will make rendering of one mandible piece fail
-      parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview", "True")
+      parameterNode.SetParameter("useNonDecimatedModelsForPreview", "True")
 
     self.createAndUpdateDynamicModelerNodes()
   
@@ -4282,7 +4282,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularSegment = parameterNode.GetParameter("mandibularSegment")
     vesselsSegmentation = parameterNode.GetNodeReference("vesselsSegmentation")
     vesselsSegment = parameterNode.GetParameter("vesselsSegment")
-    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    useNonDecimatedModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedModelsForPreview") == "True"
 
     wasModified = parameterNode.StartModify()
 
@@ -5321,9 +5321,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def getCurrentFibulaModel(self):
     parameterNode = self.getParameterNode()
-    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    useNonDecimatedModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedModelsForPreview") == "True"
     
-    if useNonDecimatedBoneModelsForPreviewChecked:
+    if useNonDecimatedModelsForPreviewChecked:
       fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
     else:
       fibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
@@ -5332,12 +5332,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def getCurrentVesselsModel(self):
     parameterNode = self.getParameterNode()
-    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    useNonDecimatedModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedModelsForPreview") == "True"
     
     vesselsModelNode = parameterNode.GetNodeReference("vesselsModelNode")
     decimatedVesselsModelNode = parameterNode.GetNodeReference("decimatedVesselsModelNode")
     if vesselsModelNode and decimatedVesselsModelNode:
-      if useNonDecimatedBoneModelsForPreviewChecked:
+      if useNonDecimatedModelsForPreviewChecked:
         currentVesselsModelNode = vesselsModelNode
       else:
         currentVesselsModelNode = decimatedVesselsModelNode
@@ -5348,9 +5348,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def getCurrentMandibleModel(self):
     parameterNode = self.getParameterNode()
-    useNonDecimatedBoneModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") == "True"
+    useNonDecimatedModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedModelsForPreview") == "True"
     
-    if useNonDecimatedBoneModelsForPreviewChecked:
+    if useNonDecimatedModelsForPreviewChecked:
       mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     else:
       mandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
@@ -6323,8 +6323,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     parameterNode = self.getParameterNode()
 
-    if parameterNode.GetParameter("useNonDecimatedBoneModelsForPreview") != "True":
-      parameterNode.SetParameter("useNonDecimatedBoneModelsForPreview","True")
+    if parameterNode.GetParameter("useNonDecimatedModelsForPreview") != "True":
+      parameterNode.SetParameter("useNonDecimatedModelsForPreview","True")
       self.onGenerateFibulaPlanesTimerTimeout()
 
     transformedFibulaPiecesList = createListFromFolderName("Transformed Fibula Pieces")
