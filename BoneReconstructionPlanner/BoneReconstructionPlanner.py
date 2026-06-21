@@ -717,7 +717,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     Update miterBoxes parameters and start update timer countdown
     """
     self.updateParameterNodeFromGUI(caller=None, event=None)
-    self.logic.miterBoxDirectionLineTimer.start()
+    self.logic.createMiterBoxesFromFibulaPlanes()
 
   def cleanup(self):
     """
