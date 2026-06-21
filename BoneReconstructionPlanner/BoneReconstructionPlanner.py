@@ -1220,8 +1220,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       if USING_GUI:
         if scalarVolumeID:
           self.logic.setBackgroundVolumeFromID(scalarVolumeID)
-          self.logic.setRedSliceForBoneModelsDisplayNodes()
-          self.logic.setRedSliceForBoxModelsDisplayNodes()
+          self.logic.setRedSliceForModelsDisplayNodes()
 
     self.ui.installAISegmentationsButton.enabled = self._parameterNode.GetParameter("AISegmentationsInstalled") == "False"
     self.ui.runAISegmentationsFrame.enabled = self._parameterNode.GetParameter("AISegmentationsInstalled") == "True"
@@ -2848,7 +2847,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandibleBridgeTubeDisplayNode.SetVisibility2D(True)
       mandibleBridgeTubeDisplayNode.SetVisibility(True) # now make it visible
       mandibleBridgeTubeDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
-      #self.setRedSliceForBoxModelsDisplayNodes()
+      self.setRedSliceForModelsDisplayNodes()
 
     markupsToModel = slicer.modules.markupstomodel.logic()
     # see https://github.com/SlicerIGT/SlicerMarkupsToModel/blob/312cf9f8ccb84613e191a0a3f18cd3f865026aeb/MarkupsToModel/Logic/vtkSlicerMarkupsToModelLogic.h#L78-L85
@@ -3073,7 +3072,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       interCondylarBeamBoxDisplayNode.SetVisibility2D(True)
       interCondylarBeamBoxDisplayNode.SetVisibility(True) # now make it visible
       interCondylarBeamBoxDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
-      #self.setRedSliceForBoxModelsDisplayNodes()
+      self.setRedSliceForModelsDisplayNodes()
 
     markupsToModel = slicer.modules.markupstomodel.logic()
     # see https://github.com/SlicerIGT/SlicerMarkupsToModel/blob/312cf9f8ccb84613e191a0a3f18cd3f865026aeb/MarkupsToModel/Logic/vtkSlicerMarkupsToModelLogic.h#L78-L85
@@ -4048,7 +4047,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     # self.tranformMandiblePiecesToFibula()
 
-    self.setRedSliceForBoneModelsDisplayNodes()
+    self.setRedSliceForModelsDisplayNodes()
 
     self.updateNormalizationFibulaLineTransform(None)
 
@@ -4121,7 +4120,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     removeFolder(getFolder("Mandibular planes"))
     renameFolder(mandibularPlanesFolder2,"Mandibular planes")
 
-  def setRedSliceForBoneModelsDisplayNodes(self):
+  def setRedSliceForModelsDisplayNodes(self):
     parameterNode = self.getParameterNode()
     scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
     fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
@@ -4143,23 +4142,27 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
     
     fibulaSurgicalGuideBase = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
+    mandibleSurgicalGuideBase = parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel")
     cutBonesList = createListFromFolderName("Cut Bones")
     transformedFibulaPiecesList = createListFromFolderName("Transformed Fibula Pieces")
     transformedMandiblePiecesList = createListFromFolderName("Transformed Mandible Pieces")
     transformedFullMandiblesList = createListFromFolderName("Transformed Full Mandible")
     cutMandiblePiecesList = createListFromFolderName("Cut Mandible Pieces")
     interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
+    mandibleBridgeTube = parameterNode.GetNodeReference("mandibleBridgeTube")
+    biggerSawBoxesModelsList = createListFromFolderName("biggerSawBoxes Models")
+    biggerMiterBoxesList = createListFromFolderName("biggerMiterBoxes Models")
     redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
 
     if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
       #When fibulaScalarVolume:
-      addIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase]
-      removeIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox]
+      addIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase] + biggerMiterBoxesList
+      removeIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase] + biggerSawBoxesModelsList
       
     else:
       #When mandibleScalarVolume:
-      addIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox]
-      removeIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase]
+      addIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase] + biggerSawBoxesModelsList
+      removeIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase] + biggerMiterBoxesList
     
     for i in range(len(removeIterationList)):
       if removeIterationList[i] is not None:
@@ -4170,49 +4173,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if addIterationList[i] is not None:
         displayNode = addIterationList[i].GetDisplayNode()
         displayNode.AddViewNodeID(redSliceNode.GetID())
-  
-  def setRedSliceForBoxModelsDisplayNodes(self):
-    parameterNode = self.getParameterNode()
-    scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
-    fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
-    fibulaCentroidY = parameterNode.GetParameter("fibulaCentroidY")
-    fibulaCentroidZ = parameterNode.GetParameter("fibulaCentroidZ")
-    mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
-    mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
-    mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
-    
-    if fibulaCentroidX == "":
-      return
-
-    fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
-    mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
-
-    bounds = [0,0,0,0,0,0]
-    scalarVolume.GetBounds(bounds)
-    bounds = np.array(bounds)
-    centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
-    
-    biggerSawBoxesModelsList = createListFromFolderName("biggerSawBoxes Models")
-    biggerMiterBoxesList = createListFromFolderName("biggerMiterBoxes Models")
-    redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
-
-   
-    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
-      #When fibulaScalarVolume:
-      addIterationList = biggerMiterBoxesList
-      removeIterationList = biggerSawBoxesModelsList
-    else:
-      #When mandibleScalarVolume:
-      addIterationList = biggerSawBoxesModelsList
-      removeIterationList = biggerMiterBoxesList
-      
-    for i in range(len(removeIterationList)):
-      displayNode = removeIterationList[i].GetDisplayNode()
-      displayNode.RemoveViewNodeID(redSliceNode.GetID())
-
-    for i in range(len(addIterationList)):
-      displayNode = addIterationList[i].GetDisplayNode()
-      displayNode.AddViewNodeID(redSliceNode.GetID())
 
   def getAxes1ToWorldRotationMatrix(self,axis1X,axis1Y,axis1Z):
     "rotationMatrix is the transpose of a non-translation changeOfFrameMatrix"
@@ -5171,7 +5131,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     parameterNode.SetParameter("miterBoxesNeedUpdate", str(False))
 
-    self.setRedSliceForBoxModelsDisplayNodes()
+    self.setRedSliceForModelsDisplayNodes()
 
     self.updateNormalizationFibulaLineTransform(None)
 
@@ -6002,7 +5962,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     removeFolder(intersectionsFolder)
     removeFolder(pointsIntersectionsFolder)
     
-    self.setRedSliceForBoxModelsDisplayNodes()
+    self.setRedSliceForModelsDisplayNodes()
 
     parameterNode.SetParameter("sawBoxesNeedUpdate", str(False))
 
