@@ -159,6 +159,9 @@ qualified technician
 </table>
 
 # Documentation
+## CPT codes
+[Read more...](/Docs/CPT-codes-of-3D-printed-guides.md)
+
 ## Whitepaper
 - [Google slides](https://docs.google.com/presentation/d/1fMJOwBm4-TStrGy0NT975880UG0wlHEA3KAITjMazuw/) 
 - [PDF](https://raw.githubusercontent.com/SlicerIGT/SlicerBoneReconstructionPlanner/main/Docs/BoneReconstructionPlanner-whitepaper.pdf)
