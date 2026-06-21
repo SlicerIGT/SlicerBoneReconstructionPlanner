@@ -2071,6 +2071,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     if mandibleSurgicalGuideBase is not None:
       mandibleSurgicalGuideBase.GetDisplayNode().SetVisibility(visibility)
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      mandibleSurgicalGuideBase.GetDisplayNode().AddViewNodeID(mandibleViewNode.GetID())
+      mandibleSurgicalGuideBase.GetDisplayNode().SetVisibility2D(True)
+      moveNodeToFolder(mandibleSurgicalGuideBase, getFolder("BoneReconstructionPlanner"))
+      self.setRedSliceForModelsDisplayNodes()
 
     mandibleBridgeTube = self._parameterNode.GetNodeReference("mandibleBridgeTube")
 
