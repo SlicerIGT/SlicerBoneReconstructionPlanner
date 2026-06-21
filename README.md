@@ -159,8 +159,8 @@ qualified technician
 </table>
 
 # Documentation
-## CPT codes
-[Read more...](/Docs/CPT-codes-of-3D-printed-guides.md)
+## Coding & Reimbursement Notes
+[Read more...](/Docs/CPT-codes-related.md)
 
 ## Whitepaper
 - [Google slides](https://docs.google.com/presentation/d/1fMJOwBm4-TStrGy0NT975880UG0wlHEA3KAITjMazuw/) 
