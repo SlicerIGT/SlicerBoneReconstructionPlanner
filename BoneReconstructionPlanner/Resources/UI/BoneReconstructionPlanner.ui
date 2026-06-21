@@ -2329,16 +2329,48 @@ cylinders</string>
           </layout>
          </item>
          <item>
-          <widget class="QPushButton" name="makeBooleanOperationsToMandibleSurgicalGuideBaseButton">
-           <property name="toolTip">
-            <string>Make boolean operations to surgical guide bases with
+          <layout class="QHBoxLayout" name="horizontalLayout_15">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QCheckBox" name="mandibleSurgicalGuideElementsVisibleCheckBox">
+             <property name="text">
+              <string>Guide elements
+visible</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="mandibleSurgicalGuideVisibleCheckBox">
+             <property name="text">
+              <string>Guide
+visible</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="makeBooleanOperationsToMandibleSurgicalGuideBaseButton">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>2</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="toolTip">
+              <string>Make boolean operations to surgical guide bases with
  mandibleBridgeModel and sawBoxes</string>
-           </property>
-           <property name="text">
-            <string>Create mandible
+             </property>
+             <property name="text">
+              <string>Create mandible
 surgical guide</string>
-           </property>
-          </widget>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
