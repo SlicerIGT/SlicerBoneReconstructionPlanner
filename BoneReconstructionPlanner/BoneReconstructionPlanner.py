@@ -1357,6 +1357,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         if scalarVolumeID:
           self.logic.setBackgroundVolumeFromID(scalarVolumeID)
           self.logic.setRedSliceForModelsDisplayNodes()
+          self.logic.setRedSliceForMarkupsDisplayNodes()
 
     self.ui.installAISegmentationsButton.enabled = self._parameterNode.GetParameter("AISegmentationsInstalled") == "False"
     self.ui.runAISegmentationsFrame.enabled = self._parameterNode.GetParameter("AISegmentationsInstalled") == "True"
@@ -2224,6 +2225,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       mandibleSurgicalGuideBase.GetDisplayNode().SetVisibility2D(True)
       moveNodeToFolder(mandibleSurgicalGuideBase, getFolder("BoneReconstructionPlanner"))
       self.logic.setRedSliceForModelsDisplayNodes()
+      self.logic.setRedSliceForMarkupsDisplayNodes()
 
     bothSidesMandibleGuideBaseModel = self._parameterNode.GetNodeReference("bothSidesMandibleGuideBaseModel")
     if bothSidesMandibleGuideBaseModel is not None:
@@ -2233,6 +2235,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       bothSidesMandibleGuideBaseModel.GetDisplayNode().SetVisibility2D(True)
       moveNodeToFolder(bothSidesMandibleGuideBaseModel, getFolder("BoneReconstructionPlanner"))
       self.logic.setRedSliceForModelsDisplayNodes()
+      self.logic.setRedSliceForMarkupsDisplayNodes()
 
     mandibleBridgeTube = self._parameterNode.GetNodeReference("mandibleBridgeTube")
 
@@ -2705,6 +2708,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = mandibularCurve.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+      self.setRedSliceForMarkupsDisplayNodes()
 
       # update instructions events
       instructionsEvents = [
@@ -2743,6 +2747,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = fibulaLine.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.FIBULA_VIEW_ID)
+      self.setRedSliceForMarkupsDisplayNodes()
 
       #connections
       self.fibulaLineControlPointDefinedObserver = fibulaLine.AddObserver(
@@ -2795,8 +2800,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = interCondylarBeamLine.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
-      displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
       displayNode.SetOccludedVisibility(True)
+      self.setRedSliceForMarkupsDisplayNodes()
 
       #conections
       self.interCondylarBeamLineControlPointDefinedObserver = interCondylarBeamLine.AddObserver(
@@ -2835,8 +2840,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = miterBoxDirectionLine.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.FIBULA_VIEW_ID)
-      displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
       displayNode.SetOccludedVisibility(True)
+      self.setRedSliceForMarkupsDisplayNodes()
 
       #conections
       self.miterBoxDirectionLineControlPointDefinedObserver = miterBoxDirectionLine.AddObserver(
@@ -2875,8 +2880,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = fibulaFiducialList.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.FIBULA_VIEW_ID)
-      #displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
       displayNode.SetOccludedVisibility(True)
+      self.setRedSliceForMarkupsDisplayNodes()
 
       #conections
       self.fibulaFiducialListControlPointDefinedObserver = fibulaFiducialList.AddObserver(
@@ -2915,8 +2920,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = mandibleFiducialList.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
-      #displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
       displayNode.SetOccludedVisibility(True)
+      self.setRedSliceForMarkupsDisplayNodes()
 
       #conections
       self.mandibleFiducialListControlPointDefinedObserver = mandibleFiducialList.AddObserver(
@@ -2955,8 +2960,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = mandibleBridgeCurve.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
-      displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
       displayNode.SetOccludedVisibility(True)
+      self.setRedSliceForMarkupsDisplayNodes()
 
       #conections
       self.mandibleBridgeCurveControlPointDefinedObserver = mandibleBridgeCurve.AddObserver(
@@ -2995,8 +3000,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = leftSideMandibleGuideBaseCurve.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
-      displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
       displayNode.SetOccludedVisibility(True)
+      self.setRedSliceForMarkupsDisplayNodes()
 
       #conections
       self.leftSideMandibleGuideBaseCurveControlPointDefinedObserver = leftSideMandibleGuideBaseCurve.AddObserver(
@@ -3035,8 +3040,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
       displayNode = rightSideMandibleGuideBaseCurve.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
-      displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
       displayNode.SetOccludedVisibility(True)
+      self.setRedSliceForMarkupsDisplayNodes()
 
       #conections
       self.rightSideMandibleGuideBaseCurveControlPointDefinedObserver = rightSideMandibleGuideBaseCurve.AddObserver(
@@ -3096,6 +3101,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       mandibleBridgeTubeDisplayNode.SetVisibility(True) # now make it visible
       mandibleBridgeTubeDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
       self.setRedSliceForModelsDisplayNodes()
+      self.setRedSliceForMarkupsDisplayNodes()
 
     markupsToModel = slicer.modules.markupstomodel.logic()
     # see https://github.com/SlicerIGT/SlicerMarkupsToModel/blob/312cf9f8ccb84613e191a0a3f18cd3f865026aeb/MarkupsToModel/Logic/vtkSlicerMarkupsToModelLogic.h#L78-L85
@@ -3257,6 +3263,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
 
+    self.setRedSliceForMarkupsDisplayNodes()
+
     #conections
     self.planeNodeAndObserver = [
       planeNode,
@@ -3315,6 +3323,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       interCondylarBeamBoxDisplayNode.SetVisibility(True) # now make it visible
       interCondylarBeamBoxDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
       self.setRedSliceForModelsDisplayNodes()
+      self.setRedSliceForMarkupsDisplayNodes()
 
     markupsToModel = slicer.modules.markupstomodel.logic()
     # see https://github.com/SlicerIGT/SlicerMarkupsToModel/blob/312cf9f8ccb84613e191a0a3f18cd3f865026aeb/MarkupsToModel/Logic/vtkSlicerMarkupsToModelLogic.h#L78-L85
@@ -3538,6 +3547,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       bothSidesMandibleGuideBaseModelDisplayNode.SetVisibility(True) # now make it visible
       bothSidesMandibleGuideBaseModelDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
       self.setRedSliceForModelsDisplayNodes()
+      self.setRedSliceForMarkupsDisplayNodes()
     
     bothSidesMandibleGuideBaseModel.SetAndObservePolyData(finalPolyData)
   
@@ -4156,6 +4166,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           displayNode2 = fibulaPlanesList[2*i].GetDisplayNode()
           displayNode2.SetSelectedColor(color)
 
+    self.setRedSliceForMarkupsDisplayNodes()
+
   def createAndUpdateDynamicModelerNodes(self):
     parameterNode = self.getParameterNode()
     #useNonDecimatedModelsForPreviewChecked = parameterNode.GetParameter("useNonDecimatedModelsForPreview") == "True"
@@ -4502,6 +4514,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     # self.tranformMandiblePiecesToFibula()
 
     self.setRedSliceForModelsDisplayNodes()
+    self.setRedSliceForMarkupsDisplayNodes()
 
     self.updateNormalizationFibulaLineTransform(None)
 
@@ -4619,6 +4632,72 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       addIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase, bothSidesMandibleGuideBaseModel] + biggerSawBoxesModelsList
       removeIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase] + biggerMiterBoxesList
     
+    for i in range(len(removeIterationList)):
+      if removeIterationList[i] is not None:
+        displayNode = removeIterationList[i].GetDisplayNode()
+        displayNode.RemoveViewNodeID(redSliceNode.GetID())
+
+    for i in range(len(addIterationList)):
+      if addIterationList[i] is not None:
+        displayNode = addIterationList[i].GetDisplayNode()
+        displayNode.AddViewNodeID(redSliceNode.GetID())
+
+  def setRedSliceForMarkupsDisplayNodes(self):
+    parameterNode = self.getParameterNode()
+    scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
+    fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
+    fibulaCentroidY = parameterNode.GetParameter("fibulaCentroidY")
+    fibulaCentroidZ = parameterNode.GetParameter("fibulaCentroidZ")
+    mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
+    mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
+    mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
+
+    if fibulaCentroidX == "":
+      return
+
+    fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
+    mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
+
+    bounds = [0,0,0,0,0,0]
+    scalarVolume.GetBounds(bounds)
+    bounds = np.array(bounds)
+    centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
+
+    # if set to None or [] is because I don't consider them important to be shown in the red slice
+    fibulaLine = None
+    fibulaFiducialList = parameterNode.GetNodeReference("fibulaFiducialList")
+    miterBoxDirectionLine = parameterNode.GetNodeReference("miterBoxDirectionLine")
+    fibulaPlanesList = []
+    mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
+    mandibleFiducialList = parameterNode.GetNodeReference("mandibleFiducialList")
+    interCondylarBeamLine = parameterNode.GetNodeReference("interCondylarBeamLine")
+    mandibleBridgeCurve = parameterNode.GetNodeReference("mandibleBridgeCurve")
+    leftSideMandibleGuideBaseCurve = None
+    rightSideMandibleGuideBaseCurve = None
+    plateCurve = parameterNode.GetNodeReference("plateCurve")
+    dentalImplantsFiducialList = parameterNode.GetNodeReference("dentalImplantsFiducialList")
+    mandibularPlanesList = []
+    sawBoxesPlanesList = createListFromFolderName("sawBoxes Planes")
+    dentalImplantsPlanesList = createListFromFolderName("dentalImplants Planes")
+    redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+
+    fibulaMarkupsList = [fibulaLine, fibulaFiducialList, miterBoxDirectionLine] + fibulaPlanesList
+    mandibleMarkupsList = (
+      [mandibleCurve, mandibleFiducialList, interCondylarBeamLine, mandibleBridgeCurve,
+       leftSideMandibleGuideBaseCurve, rightSideMandibleGuideBaseCurve, plateCurve, dentalImplantsFiducialList]
+      + mandibularPlanesList + sawBoxesPlanesList + dentalImplantsPlanesList
+    )
+
+    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+      #When fibulaScalarVolume:
+      addIterationList = fibulaMarkupsList
+      removeIterationList = mandibleMarkupsList
+
+    else:
+      #When mandibleScalarVolume:
+      addIterationList = mandibleMarkupsList
+      removeIterationList = fibulaMarkupsList
+
     for i in range(len(removeIterationList)):
       if removeIterationList[i] is not None:
         displayNode = removeIterationList[i].GetDisplayNode()
@@ -5587,6 +5666,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode.SetParameter("miterBoxesNeedUpdate", str(False))
 
     self.setRedSliceForModelsDisplayNodes()
+    self.setRedSliceForMarkupsDisplayNodes()
 
     self.updateNormalizationFibulaLineTransform(None)
 
@@ -6047,6 +6127,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       observer = dentalImplantPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onDentalImplantPlaneMoved)
       self.dentalImplantPlaneObserversPlaneNodeIDAndTransformIDList.append([observer,dentalImplantPlane.GetID(),dentalImplantCylinderTransformNode.GetID()])
 
+    self.setRedSliceForMarkupsDisplayNodes()
+
     self.onUpdateFibulaDentalImplantsTimerTimeout()
 
   def onUpdateFibulaDentalImplantsTimerTimeout(self):
@@ -6418,6 +6500,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     removeFolder(pointsIntersectionsFolder)
     
     self.setRedSliceForModelsDisplayNodes()
+    self.setRedSliceForMarkupsDisplayNodes()
 
     parameterNode.SetParameter("sawBoxesNeedUpdate", str(False))
 
@@ -6838,6 +6921,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode = curveNode.GetDisplayNode()
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode("1", "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
+
+    self.setRedSliceForMarkupsDisplayNodes()
 
     #setup placement
     slicer.modules.markups.logic().SetActiveListID(curveNode)
