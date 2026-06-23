@@ -564,7 +564,7 @@ class combineModelsRobustLogic:
       outputModel, 
       operation, 
       numberOfRetries = 5, 
-      translateRandomly = 4, 
+      translateRandomly = 3, 
       triangulateInputs = False
     ):
     """
