@@ -553,6 +553,28 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
     placeWidget.setDeleteAllControlPointsOptionVisible(False)
 
+    # leftSideMandibleGuideBaseCurvePlaceWidget
+    placeWidget = self.ui.leftSideMandibleGuideBaseCurvePlaceWidget
+    placeWidget.setInteractionNode(slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton"))
+    placeWidget.setCurrentNode(self.logic.getLeftSideMandibleGuideBaseCurve())
+    placeWidget.buttonsVisible = False
+    placeWidget.placeButton().show()
+    placeWidget.deleteButton().show()
+    #placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
+    placeWidget.setDeleteAllControlPointsOptionVisible(False)
+
+    # rightSideMandibleGuideBaseCurvePlaceWidget
+    placeWidget = self.ui.rightSideMandibleGuideBaseCurvePlaceWidget
+    placeWidget.setInteractionNode(slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton"))
+    placeWidget.setCurrentNode(self.logic.getRightSideMandibleGuideBaseCurve())
+    placeWidget.buttonsVisible = False
+    placeWidget.placeButton().show()
+    placeWidget.deleteButton().show()
+    #placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
+    placeWidget.setDeleteAllControlPointsOptionVisible(False)
+
     # Connections
 
     # These connections ensure that we update parameter node when scene is closed
@@ -602,6 +624,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.biggerSawBoxDistanceToMandibleSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleBridgeRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.mandibleGuidebaseThicknessSpinBox.valueChanged.connect(self.updateMandibleGuideBases)
     self.ui.dentalImplantCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.dentalImplantCylinderHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.dentalImplantDrillGuideWallSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -667,6 +690,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showFibulaSegmentsLengthsCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.showOriginalMandibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
+    self.ui.useMandibleGuideBasesFromCurvesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.showMandiblePlanesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.showMandiblePlanesInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.inCameraPlaneInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
@@ -719,6 +743,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.updateParameterNodeFromGUI(caller=None, event=None)
     self.logic.createMiterBoxesFromFibulaPlanes()
 
+  def updateMandibleGuideBases(self, caller=None, event=None):
+    """
+    Update mandible guide bases parameters and start update timer countdown
+    """
+    self.updateParameterNodeFromGUI(caller=None, event=None)
+    self.logic.onLeftSideMandibleGuideBaseCurvePointUpdated()
+    self.logic.onRightSideMandibleGuideBaseCurvePointUpdated()
+  
   def cleanup(self):
     """
     Called when the application closes and the module widget is destroyed.
@@ -842,6 +874,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       #print(callData.GetName())
       placeWidget = self.ui.mandibleBridgeCurvePlaceWidget
       placeWidget.setCurrentNode(self.logic.getMandibleBridgeCurve())
+    if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode' and callData.GetAttribute("isLeftSideMandibleGuideBaseCurve") == 'True':
+      #print(callData.GetName())
+      placeWidget = self.ui.leftSideMandibleGuideBaseCurvePlaceWidget
+      placeWidget.setCurrentNode(self.logic.getLeftSideMandibleGuideBaseCurve())
+    if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode' and callData.GetAttribute("isRightSideMandibleGuideBaseCurve") == 'True':
+      #print(callData.GetName())
+      placeWidget = self.ui.rightSideMandibleGuideBaseCurvePlaceWidget
+      placeWidget.setCurrentNode(self.logic.getRightSideMandibleGuideBaseCurve())
 
   def enter(self):
     """
@@ -882,6 +922,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.setMarkupControlPointsVisibility(self.logic.getFibulaFiducials(), visibility=True)
     self.setMarkupControlPointsVisibility(self.logic.getMandibleFiducials(), visibility=True)
     self.setMarkupControlPointsVisibility(self.logic.getMandibleBridgeCurve(), visibility=True)
+    self.setMarkupControlPointsVisibility(self.logic.getLeftSideMandibleGuideBaseCurve(), visibility=True)
+    self.setMarkupControlPointsVisibility(self.logic.getRightSideMandibleGuideBaseCurve(), visibility=True)
 
     markupsList = [
       self.logic.getMandibularCurve(),
@@ -889,7 +931,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.logic.getFibulaLine(),
       self.logic.getFibulaFiducials(),
       self.logic.getMandibleFiducials(),
-      self.logic.getMandibleBridgeCurve()
+      self.logic.getMandibleBridgeCurve(),
+      self.logic.getLeftSideMandibleGuideBaseCurve(),
+      self.logic.getRightSideMandibleGuideBaseCurve()
     ]
     self.logic.setMarkupsListLocked(markupsList,locked=False)
     
@@ -1018,6 +1062,48 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         self.logic.onMiterBoxDirectionLinePointUpdated
       )
       self.logic.miterBoxDirectionLineControlPointRemovedObserver = observerTag
+
+    if self.logic.leftSideMandibleGuideBaseCurveControlPointDefinedObserver == 0:
+      observerTag = self.logic.getLeftSideMandibleGuideBaseCurve().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+        self.logic.onLeftSideMandibleGuideBaseCurvePointUpdated
+      )
+      self.logic.leftSideMandibleGuideBaseCurveControlPointDefinedObserver = observerTag
+
+    if self.logic.leftSideMandibleGuideBaseCurveControlPointEndInteractionObserver == 0:
+      observerTag = self.logic.getLeftSideMandibleGuideBaseCurve().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.logic.onLeftSideMandibleGuideBaseCurvePointUpdated
+      )
+      self.logic.leftSideMandibleGuideBaseCurveControlPointEndInteractionObserver = observerTag
+
+    if self.logic.leftSideMandibleGuideBaseCurveControlPointRemovedObserver == 0:
+      observerTag = self.logic.getLeftSideMandibleGuideBaseCurve().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.logic.onLeftSideMandibleGuideBaseCurvePointUpdated
+      )
+      self.logic.leftSideMandibleGuideBaseCurveControlPointRemovedObserver = observerTag
+
+    if self.logic.rightSideMandibleGuideBaseCurveControlPointDefinedObserver == 0:
+      observerTag = self.logic.getRightSideMandibleGuideBaseCurve().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+        self.logic.onRightSideMandibleGuideBaseCurvePointUpdated
+      )
+      self.logic.rightSideMandibleGuideBaseCurveControlPointDefinedObserver = observerTag
+
+    if self.logic.rightSideMandibleGuideBaseCurveControlPointEndInteractionObserver == 0:
+      observerTag = self.logic.getRightSideMandibleGuideBaseCurve().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.logic.onRightSideMandibleGuideBaseCurvePointUpdated
+      )
+      self.logic.rightSideMandibleGuideBaseCurveControlPointEndInteractionObserver = observerTag
+
+    if self.logic.rightSideMandibleGuideBaseCurveControlPointRemovedObserver == 0:
+      observerTag = self.logic.getRightSideMandibleGuideBaseCurve().AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.logic.onRightSideMandibleGuideBaseCurvePointUpdated
+      )
+      self.logic.rightSideMandibleGuideBaseCurveControlPointRemovedObserver = observerTag
     
     if (self.ui.scalarVolumeSelector.nodeCount() != 0) and (self.ui.scalarVolumeSelector.currentNode() == None):
       self.ui.scalarVolumeSelector.setCurrentNodeIndex(0)#0 == first scalarVolume
@@ -1065,6 +1151,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.setMarkupControlPointsVisibility(self.logic.getFibulaFiducials(), visibility=False)
     self.setMarkupControlPointsVisibility(self.logic.getMandibleFiducials(), visibility=False)
     self.setMarkupControlPointsVisibility(self.logic.getMandibleBridgeCurve(), visibility=False)
+    self.setMarkupControlPointsVisibility(self.logic.getRightSideMandibleGuideBaseCurve(), visibility=False)
+    self.setMarkupControlPointsVisibility(self.logic.getRightSideMandibleGuideBaseCurve(), visibility=False)
 
     markupsList = [
       self.logic.getMandibularCurve(),
@@ -1072,7 +1160,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.logic.getFibulaLine(),
       self.logic.getFibulaFiducials(),
       self.logic.getMandibleFiducials(),
-      self.logic.getMandibleBridgeCurve()
+      self.logic.getMandibleBridgeCurve(),
+      self.logic.getLeftSideMandibleGuideBaseCurve(),
+      self.logic.getRightSideMandibleGuideBaseCurve()
     ]
     self.logic.setMarkupsListLocked(markupsList,locked=True)
 
@@ -1129,6 +1219,24 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self.logic.getMiterBoxDirectionLine().RemoveObserver(self.logic.miterBoxDirectionLineControlPointRemovedObserver)
     self.logic.miterBoxDirectionLineControlPointRemovedObserver = 0
+
+    self.logic.getLeftSideMandibleGuideBaseCurve().RemoveObserver(self.logic.leftSideMandibleGuideBaseCurveControlPointDefinedObserver)
+    self.logic.leftSideMandibleGuideBaseCurveControlPointDefinedObserver = 0
+
+    self.logic.getLeftSideMandibleGuideBaseCurve().RemoveObserver(self.logic.leftSideMandibleGuideBaseCurveControlPointEndInteractionObserver)
+    self.logic.leftSideMandibleGuideBaseCurveControlPointEndInteractionObserver = 0
+
+    self.logic.getLeftSideMandibleGuideBaseCurve().RemoveObserver(self.logic.leftSideMandibleGuideBaseCurveControlPointRemovedObserver)
+    self.logic.leftSideMandibleGuideBaseCurveControlPointRemovedObserver = 0
+
+    self.logic.getRightSideMandibleGuideBaseCurve().RemoveObserver(self.logic.rightSideMandibleGuideBaseCurveControlPointDefinedObserver)
+    self.logic.rightSideMandibleGuideBaseCurveControlPointDefinedObserver = 0
+
+    self.logic.getRightSideMandibleGuideBaseCurve().RemoveObserver(self.logic.rightSideMandibleGuideBaseCurveControlPointEndInteractionObserver)
+    self.logic.rightSideMandibleGuideBaseCurveControlPointEndInteractionObserver = 0
+
+    self.logic.getRightSideMandibleGuideBaseCurve().RemoveObserver(self.logic.rightSideMandibleGuideBaseCurveControlPointRemovedObserver)
+    self.logic.rightSideMandibleGuideBaseCurveControlPointRemovedObserver = 0
 
   def onSceneStartClose(self, caller, event):
     """
@@ -1263,6 +1371,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaFiducialsPlaceWidget.setCurrentNode(self.logic.getFibulaFiducials())
     self.ui.mandibleFiducialsPlaceWidget.setCurrentNode(self.logic.getMandibleFiducials())
     self.ui.mandibleBridgeCurvePlaceWidget.setCurrentNode(self.logic.getMandibleBridgeCurve())
+    self.ui.leftSideMandibleGuideBaseCurvePlaceWidget.setCurrentNode(self.logic.getLeftSideMandibleGuideBaseCurve())
+    self.ui.rightSideMandibleGuideBaseCurvePlaceWidget.setCurrentNode(self.logic.getRightSideMandibleGuideBaseCurve())
 
     self.ui.donorLegComboBox.currentText = self._parameterNode.GetParameter("donorLeg")
     
@@ -1286,6 +1396,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.biggerSawBoxDistanceToMandibleSpinBox.setValue(float(self._parameterNode.GetParameter("biggerSawBoxDistanceToMandible_mm")))
     self.ui.mandibleScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius_mm")))
     self.ui.mandibleBridgeRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleBridgeRadius_mm")))
+    self.ui.mandibleGuidebaseThicknessSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleGuidebaseThickness_mm")))
     self.ui.dentalImplantCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantCylinderRadius_mm")))
     self.ui.dentalImplantCylinderHeightSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantCylinderHeight_mm")))
     self.ui.dentalImplantDrillGuideWallSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantDrillGuideWall_mm")))
@@ -1342,6 +1453,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.ui.sawBoxesNeedUpdateLabel.hide()
     else:
       self.ui.sawBoxesNeedUpdateLabel.hide()
+
+    useMandibleGuideBasesFromCurvesChecked = self._parameterNode.GetParameter("useMandibleGuideBasesFromCurves") == "True"
+    self.ui.mandibleSurgicalGuideBaseSelector.enabled = not useMandibleGuideBasesFromCurvesChecked
+    self.ui.useMandibleGuideBasesFromCurvesCheckBox.checked = useMandibleGuideBasesFromCurvesChecked
 
     doDisplayOrientation3DCube = self._parameterNode.GetParameter("displayOrientation3DCube") == "True"
     self.ui.orientation3DCubeCheckBox.checked = doDisplayOrientation3DCube
@@ -1606,6 +1721,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("biggerSawBoxDistanceToMandible_mm", str(self.ui.biggerSawBoxDistanceToMandibleSpinBox.value))
     self._parameterNode.SetParameter("mandibleScrewHoleCylinderRadius_mm", str(self.ui.mandibleScrewHoleCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("mandibleBridgeRadius_mm", str(self.ui.mandibleBridgeRadiusSpinBox.value))
+    self._parameterNode.SetParameter("mandibleGuidebaseThickness_mm", str(self.ui.mandibleGuidebaseThicknessSpinBox.value))
     self._parameterNode.SetParameter("dentalImplantCylinderRadius_mm", str(self.ui.dentalImplantCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("dentalImplantCylinderHeight_mm", str(self.ui.dentalImplantCylinderHeightSpinBox.value))
     self._parameterNode.SetParameter("dentalImplantDrillGuideWall_mm", str(self.ui.dentalImplantDrillGuideWallSpinBox.value))
@@ -1680,6 +1796,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("mandibleSurgicalGuideVisible","True")
     else:
       self._parameterNode.SetParameter("mandibleSurgicalGuideVisible","False")
+    if self.ui.useMandibleGuideBasesFromCurvesCheckBox.checked:
+      self._parameterNode.SetParameter("useMandibleGuideBasesFromCurves","True")
+    else:
+      self._parameterNode.SetParameter("useMandibleGuideBasesFromCurves","False")
     if self.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState == qt.Qt.Checked:
       self._parameterNode.SetParameter("updateOnMandiblePlanesMovement","True")
     else:
@@ -2817,6 +2937,86 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     return mandibleBridgeCurve
   
+  def getLeftSideMandibleGuideBaseCurve(self, startPlacementMode = False):
+    parameterNode = self.getParameterNode()
+    leftSideMandibleGuideBaseCurve = parameterNode.GetNodeReference("leftSideMandibleGuideBaseCurve")
+    if leftSideMandibleGuideBaseCurve is None:
+      leftSideMandibleGuideBaseCurve = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsClosedCurveNode")
+      leftSideMandibleGuideBaseCurve.SetName("temp")
+      slicer.mrmlScene.AddNode(leftSideMandibleGuideBaseCurve)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(leftSideMandibleGuideBaseCurve)
+      leftSideMandibleGuideBaseCurve.SetAttribute("isLeftSideMandibleGuideBaseCurve","True")
+      moveNodeToFolder(leftSideMandibleGuideBaseCurve, getFolder("BoneReconstructionPlanner"))
+      leftSideMandibleGuideBaseCurve.SetName(slicer.mrmlScene.GetUniqueNameByString("leftSideMandibleGuideBaseCurve"))
+      parameterNode.SetNodeReferenceID("leftSideMandibleGuideBaseCurve",leftSideMandibleGuideBaseCurve.GetID())
+
+      displayNode = leftSideMandibleGuideBaseCurve.GetDisplayNode()
+      displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+      displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
+      displayNode.SetOccludedVisibility(True)
+
+      #conections
+      self.leftSideMandibleGuideBaseCurveControlPointDefinedObserver = leftSideMandibleGuideBaseCurve.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+        self.onLeftSideMandibleGuideBaseCurvePointUpdated
+      )
+      self.leftSideMandibleGuideBaseCurveControlPointEndInteractionObserver = leftSideMandibleGuideBaseCurve.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.onLeftSideMandibleGuideBaseCurvePointUpdated
+      )
+      self.leftSideMandibleGuideBaseCurveControlPointRemovedObserver = leftSideMandibleGuideBaseCurve.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.onLeftSideMandibleGuideBaseCurvePointUpdated
+      )
+
+    if startPlacementMode:
+      #setup placement
+      slicer.modules.markups.logic().SetActiveListID(leftSideMandibleGuideBaseCurve)
+      interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+      interactionNode.SwitchToSinglePlaceMode()
+    
+    return leftSideMandibleGuideBaseCurve
+
+  def getRightSideMandibleGuideBaseCurve(self, startPlacementMode = False):
+    parameterNode = self.getParameterNode()
+    rightSideMandibleGuideBaseCurve = parameterNode.GetNodeReference("rightSideMandibleGuideBaseCurve")
+    if rightSideMandibleGuideBaseCurve is None:
+      rightSideMandibleGuideBaseCurve = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsClosedCurveNode")
+      rightSideMandibleGuideBaseCurve.SetName("temp")
+      slicer.mrmlScene.AddNode(rightSideMandibleGuideBaseCurve)
+      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(rightSideMandibleGuideBaseCurve)
+      rightSideMandibleGuideBaseCurve.SetAttribute("isRightSideMandibleGuideBaseCurve","True")
+      moveNodeToFolder(rightSideMandibleGuideBaseCurve, getFolder("BoneReconstructionPlanner"))
+      rightSideMandibleGuideBaseCurve.SetName(slicer.mrmlScene.GetUniqueNameByString("rightSideMandibleGuideBaseCurve"))
+      parameterNode.SetNodeReferenceID("rightSideMandibleGuideBaseCurve",rightSideMandibleGuideBaseCurve.GetID())
+
+      displayNode = rightSideMandibleGuideBaseCurve.GetDisplayNode()
+      displayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+      displayNode.AddViewNodeID(slicer.RED_VIEW_ID)
+      displayNode.SetOccludedVisibility(True)
+
+      #conections
+      self.rightSideMandibleGuideBaseCurveControlPointDefinedObserver = rightSideMandibleGuideBaseCurve.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+        self.onRightSideMandibleGuideBaseCurvePointUpdated
+      )
+      self.rightSideMandibleGuideBaseCurveControlPointEndInteractionObserver = rightSideMandibleGuideBaseCurve.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
+        self.onRightSideMandibleGuideBaseCurvePointUpdated
+      )
+      self.rightSideMandibleGuideBaseCurveControlPointRemovedObserver = rightSideMandibleGuideBaseCurve.AddObserver(
+        slicer.vtkMRMLMarkupsNode.PointRemovedEvent,
+        self.onRightSideMandibleGuideBaseCurvePointUpdated
+      )
+
+    if startPlacementMode:
+      #setup placement
+      slicer.modules.markups.logic().SetActiveListID(rightSideMandibleGuideBaseCurve)
+      interactionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLInteractionNodeSingleton")
+      interactionNode.SwitchToSinglePlaceMode()
+    
+    return rightSideMandibleGuideBaseCurve
+
   def onMandibleBridgeCurvePointUpdated(self,sourceNode,event):
     parameterNode = self.getParameterNode()
     mandibleBridgeCurve = parameterNode.GetNodeReference("mandibleBridgeCurve")
@@ -2878,12 +3078,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     miterBoxDirectionLine = self.getMiterBoxDirectionLine()
     if miterBoxDirectionLine.GetNumberOfControlPoints() == 2:
       self.createMiterBoxesFromFibulaPlanes()
-
-  def onUpdateFibulaFiducialsCylindersTimerTimeout(self):
-    self.createCylindersFromFiducialListAndFibulaSurgicalGuideBase()
-
-  def onUpdateMandibleFiducialsCylindersTimerTimeout(self):
-    self.createCylindersFromFiducialListAndMandibleSurgicalGuideBase()
   
   def interCondylarBeamSizeChange(self, positive = True):
     parameterNode = self.getParameterNode()
@@ -3091,6 +3285,209 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaLine = self.getFibulaLine()
     if fibulaLine.GetNumberOfControlPoints() == 2:
       self.centerFibulaLine()
+  
+  def onLeftSideMandibleGuideBaseCurvePointUpdated(self,sourceNode=None,event=None):
+    parameterNode = self.getParameterNode()
+    leftSideMandibleGuideBaseCurve = self.getLeftSideMandibleGuideBaseCurve()
+    leftSideMandibleGuideBaseModel = parameterNode.GetNodeReference("leftSideMandibleGuideBaseModel")
+    if leftSideMandibleGuideBaseCurve.GetNumberOfControlPoints() < 3:
+      if leftSideMandibleGuideBaseModel is not None:
+        parameterNode.SetNodeReferenceID("leftSideMandibleGuideBaseModel", "")
+        slicer.mrmlScene.RemoveNode(leftSideMandibleGuideBaseModel)
+        self.updateBothMandibleGuideBaseModels()
+    else:
+      self.updateLeftSideMandibleGuideBaseModel()
+
+  def onRightSideMandibleGuideBaseCurvePointUpdated(self,sourceNode=None,event=None):
+    parameterNode = self.getParameterNode()
+    rightSideMandibleGuideBaseCurve = self.getRightSideMandibleGuideBaseCurve()
+    rightSideMandibleGuideBaseModel = parameterNode.GetNodeReference("rightSideMandibleGuideBaseModel")
+    if rightSideMandibleGuideBaseCurve.GetNumberOfControlPoints() < 3:
+      if rightSideMandibleGuideBaseModel is not None:
+        parameterNode.SetNodeReferenceID("rightSideMandibleGuideBaseModel", "")
+        slicer.mrmlScene.RemoveNode(rightSideMandibleGuideBaseModel)
+        self.updateBothMandibleGuideBaseModels()
+    else:
+      self.updateRightSideMandibleGuideBaseModel()
+
+  def updateLeftSideMandibleGuideBaseModel(self):
+    parameterNode = self.getParameterNode()
+    leftSideMandibleGuideBaseCurve = self.getLeftSideMandibleGuideBaseCurve()
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    mandibleGuidebaseThickness = float(parameterNode.GetParameter("mandibleGuidebaseThickness_mm"))
+
+    leftSideMandibleGuideBaseModel = parameterNode.GetNodeReference("leftSideMandibleGuideBaseModel")
+    if leftSideMandibleGuideBaseModel is None:
+      leftSideMandibleGuideBaseModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
+      leftSideMandibleGuideBaseModel.SetName(slicer.mrmlScene.GetUniqueNameByString("leftSideMandibleGuideBaseModel"))
+      leftSideMandibleGuideBaseModel.CreateDefaultDisplayNodes()
+      parameterNode.SetNodeReferenceID("leftSideMandibleGuideBaseModel", leftSideMandibleGuideBaseModel.GetID())
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      leftSideMandibleGuideBaseModel.GetDisplayNode().AddViewNodeID(mandibleViewNode.GetID())
+      leftSideMandibleGuideBaseModel.GetDisplayNode().SetVisibility2D(True)
+      moveNodeToFolder(leftSideMandibleGuideBaseModel, getFolder("BoneReconstructionPlanner"))
+      parameterNode.SetNodeReferenceID("leftSideMandibleGuideBaseModel", leftSideMandibleGuideBaseModel.GetID())
+
+    # Extract the patch of the mandible surface enclosed by the closed curve using a dynamic modeler Curve cut
+    curveCutModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "temporalLeftSideMandibleGuideBaseCurveCutModel")
+    curveCutModel.CreateDefaultDisplayNodes()
+    curveCutModel.GetDisplayNode().SetVisibility(False)
+
+    dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
+    dynamicModelerNode.SetToolName("Curve cut")
+    dynamicModelerNode.SetNodeReferenceID("CurveCut.InputModel", mandibleModelNode.GetID())
+    dynamicModelerNode.SetNodeReferenceID("CurveCut.InputCurve", leftSideMandibleGuideBaseCurve.GetID())
+    dynamicModelerNode.SetNodeReferenceID("CurveCut.OutputInside", curveCutModel.GetID())
+    dynamicModelerNode.SetAttribute("CurveCut.StraightCut", "1")
+    slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
+
+    curveCutPolyData = curveCutModel.GetPolyData()
+    if curveCutPolyData is None or curveCutPolyData.GetNumberOfPoints() == 0:
+      slicer.mrmlScene.RemoveNode(dynamicModelerNode)
+      slicer.mrmlScene.RemoveNode(curveCutModel)
+      return
+
+    # Compute the average normal of the curve-cut patch
+    curveCutModel.SetAndObservePolyData(calculateNormals(curveCutModel.GetPolyData()))
+    normalsArray = slicer.util.arrayFromModelPointData(curveCutModel, 'Normals')
+    averageNormal = np.mean(normalsArray, axis=0)
+    averageNormal = averageNormal/np.linalg.norm(averageNormal)
+
+    # Force the extrusion to point outward (away from the mandible), not into the bone.
+    # AutoOrientNormals is unreliable on open patches, so the sign of the averaged normal
+    # cannot be trusted; determine the outward direction geometrically instead.
+    outwardDirection = getCentroid(curveCutModel) - getCentroid(mandibleModelNode)
+    if np.dot(averageNormal, outwardDirection) < 0:
+      averageNormal = -averageNormal
+
+    # Extrude the patch along the average normal to give it the requested thickness
+    extrudeFilter = vtk.vtkLinearExtrusionFilter()
+    extrudeFilter.SetInputData(curveCutModel.GetPolyData())
+    extrudeFilter.SetExtrusionTypeToVectorExtrusion()
+    extrudeFilter.SetVector(averageNormal * mandibleGuidebaseThickness)
+    extrudeFilter.CappingOn()
+    extrudeFilter.Update()
+
+    leftSideMandibleGuideBaseModel.SetAndObservePolyData(calculateNormals(extrudeFilter.GetOutput()))
+
+    slicer.mrmlScene.RemoveNode(dynamicModelerNode)
+    slicer.mrmlScene.RemoveNode(curveCutModel)
+
+    self.updateBothMandibleGuideBaseModels()
+
+  def updateRightSideMandibleGuideBaseModel(self):
+    parameterNode = self.getParameterNode()
+    rightSideMandibleGuideBaseCurve = self.getRightSideMandibleGuideBaseCurve()
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    mandibleGuidebaseThickness = float(parameterNode.GetParameter("mandibleGuidebaseThickness_mm"))
+
+    rightSideMandibleGuideBaseModel = parameterNode.GetNodeReference("rightSideMandibleGuideBaseModel")
+    if rightSideMandibleGuideBaseModel is None:
+      rightSideMandibleGuideBaseModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
+      rightSideMandibleGuideBaseModel.SetName(slicer.mrmlScene.GetUniqueNameByString("rightSideMandibleGuideBaseModel"))
+      rightSideMandibleGuideBaseModel.CreateDefaultDisplayNodes()
+      parameterNode.SetNodeReferenceID("rightSideMandibleGuideBaseModel", rightSideMandibleGuideBaseModel.GetID())
+      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+      rightSideMandibleGuideBaseModel.GetDisplayNode().AddViewNodeID(mandibleViewNode.GetID())
+      rightSideMandibleGuideBaseModel.GetDisplayNode().SetVisibility2D(True)
+      moveNodeToFolder(rightSideMandibleGuideBaseModel, getFolder("BoneReconstructionPlanner"))
+      parameterNode.SetNodeReferenceID("rightSideMandibleGuideBaseModel", rightSideMandibleGuideBaseModel.GetID())
+
+    # Extract the patch of the mandible surface enclosed by the closed curve using a dynamic modeler Curve cut
+    curveCutModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "temporalRightSideMandibleGuideBaseCurveCutModel")
+    curveCutModel.CreateDefaultDisplayNodes()
+    curveCutModel.GetDisplayNode().SetVisibility(False)
+
+    dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
+    dynamicModelerNode.SetToolName("Curve cut")
+    dynamicModelerNode.SetNodeReferenceID("CurveCut.InputModel", mandibleModelNode.GetID())
+    dynamicModelerNode.SetNodeReferenceID("CurveCut.InputCurve", rightSideMandibleGuideBaseCurve.GetID())
+    dynamicModelerNode.SetNodeReferenceID("CurveCut.OutputInside", curveCutModel.GetID())
+    dynamicModelerNode.SetAttribute("CurveCut.StraightCut", "1")
+    slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
+
+    curveCutPolyData = curveCutModel.GetPolyData()
+    if curveCutPolyData is None or curveCutPolyData.GetNumberOfPoints() == 0:
+      slicer.mrmlScene.RemoveNode(dynamicModelerNode)
+      slicer.mrmlScene.RemoveNode(curveCutModel)
+      return
+
+    # Compute the average normal of the curve-cut patch
+    curveCutModel.SetAndObservePolyData(calculateNormals(curveCutModel.GetPolyData()))
+    normalsArray = slicer.util.arrayFromModelPointData(curveCutModel, 'Normals')
+    averageNormal = np.mean(normalsArray, axis=0)
+    averageNormal = averageNormal/np.linalg.norm(averageNormal)
+
+    # Force the extrusion to point outward (away from the mandible), not into the bone.
+    # AutoOrientNormals is unreliable on open patches, so the sign of the averaged normal
+    # cannot be trusted; determine the outward direction geometrically instead.
+    outwardDirection = getCentroid(curveCutModel) - getCentroid(mandibleModelNode)
+    if np.dot(averageNormal, outwardDirection) < 0:
+      averageNormal = -averageNormal
+
+    # Extrude the patch along the average normal to give it the requested thickness
+    extrudeFilter = vtk.vtkLinearExtrusionFilter()
+    extrudeFilter.SetInputData(curveCutModel.GetPolyData())
+    extrudeFilter.SetExtrusionTypeToVectorExtrusion()
+    extrudeFilter.SetVector(averageNormal * mandibleGuidebaseThickness)
+    extrudeFilter.CappingOn()
+    extrudeFilter.Update()
+
+    rightSideMandibleGuideBaseModel.SetAndObservePolyData(calculateNormals(extrudeFilter.GetOutput()))
+
+    slicer.mrmlScene.RemoveNode(dynamicModelerNode)
+    slicer.mrmlScene.RemoveNode(curveCutModel)
+
+    self.updateBothMandibleGuideBaseModels()
+
+  def updateBothMandibleGuideBaseModels(self):
+    # append both left and right guide base models into a single model to be used for boolean operations when creating the surgical guide
+    parameterNode = self.getParameterNode()
+    leftSideMandibleGuideBaseModel = parameterNode.GetNodeReference("leftSideMandibleGuideBaseModel")
+    rightSideMandibleGuideBaseModel = parameterNode.GetNodeReference("rightSideMandibleGuideBaseModel")
+    
+    appendFilter = vtk.vtkAppendPolyData()
+    
+    if leftSideMandibleGuideBaseModel is not None:
+      appendFilter.AddInputData(leftSideMandibleGuideBaseModel.GetPolyData())
+      leftSideMandibleGuideBaseModel.GetDisplayNode().SetVisibility(False)
+    
+    if rightSideMandibleGuideBaseModel is not None:
+      appendFilter.AddInputData(rightSideMandibleGuideBaseModel.GetPolyData())
+      rightSideMandibleGuideBaseModel.GetDisplayNode().SetVisibility(False)
+    
+    appendFilter.Update()
+
+    combinedPolyData = appendFilter.GetOutput()
+
+    # clean the combined polydata to avoid issues in later boolean operations
+    cleanFilter = vtk.vtkCleanPolyData()
+    cleanFilter.SetInputData(combinedPolyData)
+    cleanFilter.Update()
+
+    combinedCleanedPolyData = cleanFilter.GetOutput()
+
+    finalPolyData = calculateNormals(combinedCleanedPolyData)
+
+    bothSidesMandibleGuideBaseModel = parameterNode.GetNodeReference("bothSidesMandibleGuideBaseModel")
+    if bothSidesMandibleGuideBaseModel is None:
+      # create the placeholder model
+      bothSidesMandibleGuideBaseModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+      bothSidesMandibleGuideBaseModel.SetName("temp")
+      slicer.mrmlScene.AddNode(bothSidesMandibleGuideBaseModel)
+      bothSidesMandibleGuideBaseModel.CreateDefaultDisplayNodes()
+      parentFolder = getFolder("Mandible reconstruction")
+      moveNodeToFolder(bothSidesMandibleGuideBaseModel, parentFolder)
+      bothSidesMandibleGuideBaseModel.SetName(slicer.mrmlScene.GetUniqueNameByString("bothSidesMandibleGuideBaseModel"))
+      parameterNode.SetNodeReferenceID("bothSidesMandibleGuideBaseModel", bothSidesMandibleGuideBaseModel.GetID())
+
+      bothSidesMandibleGuideBaseModelDisplayNode = bothSidesMandibleGuideBaseModel.GetDisplayNode()
+      bothSidesMandibleGuideBaseModelDisplayNode.SetVisibility2D(True)
+      bothSidesMandibleGuideBaseModelDisplayNode.SetVisibility(True) # now make it visible
+      bothSidesMandibleGuideBaseModelDisplayNode.AddViewNodeID(slicer.MANDIBLE_VIEW_ID)
+      self.setRedSliceForModelsDisplayNodes()
+    
+    bothSidesMandibleGuideBaseModel.SetAndObservePolyData(finalPolyData)
   
   def onPlanePointAdded(self,sourceNode,event):
     parameterNode = self.getParameterNode()
@@ -3762,7 +4159,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dynamicModelerNode.SetAttribute("OperationType", "Difference")
         #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
         
-        moveNodeToFolder(dynamicModelerNode, planeCutsFolder)
+        moveNodeToFolder(dynamicModelerNode, bonePlaneCutsFolder)
         moveNodeToFolder(modelNode, cutBonesFolder)
       
       if vesselsModelNode:
@@ -3877,7 +4274,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputPositiveModel", modelNode.GetID())
       dynamicModelerNode.SetAttribute("OperationType", "Difference")
 
-      moveNodeToFolder(dynamicModelerNode, planeCutsFolder)
+      moveNodeToFolder(dynamicModelerNode, bonePlaneCutsFolder)
       moveNodeToFolder(modelNode, cutBonesFolder)
 
       if fixCutGoesThroughTheMandibleTwiceCheckBoxChanged:
@@ -4148,6 +4545,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     fibulaSurgicalGuideBase = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
     mandibleSurgicalGuideBase = parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel")
+    bothSidesMandibleGuideBaseModel = parameterNode.GetNodeReference("bothSidesMandibleGuideBaseModel")
     cutBonesList = createListFromFolderName("Cut Bones")
     transformedFibulaPiecesList = createListFromFolderName("Transformed Fibula Pieces")
     transformedMandiblePiecesList = createListFromFolderName("Transformed Mandible Pieces")
@@ -4162,11 +4560,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
       #When fibulaScalarVolume:
       addIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase] + biggerMiterBoxesList
-      removeIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase] + biggerSawBoxesModelsList
+      removeIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase, bothSidesMandibleGuideBaseModel] + biggerSawBoxesModelsList
       
     else:
       #When mandibleScalarVolume:
-      addIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase] + biggerSawBoxesModelsList
+      addIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase, bothSidesMandibleGuideBaseModel] + biggerSawBoxesModelsList
       removeIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase] + biggerMiterBoxesList
     
     for i in range(len(removeIterationList)):
@@ -6072,6 +6470,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def makeBooleanOperationsToMandibleSurgicalGuideBase(self):
     parameterNode = self.getParameterNode()
     mandibleSurgicalGuideBaseModel = parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel")
+    bothSidesMandibleGuideBaseModel = parameterNode.GetNodeReference("bothSidesMandibleGuideBaseModel")
+    useMandibleGuideBasesFromCurves = parameterNode.GetParameter("useMandibleGuideBasesFromCurves") == "True"
+
+    if useMandibleGuideBasesFromCurves:
+      mandibleSurgicalGuideBaseModel = bothSidesMandibleGuideBaseModel
+
     mandibleBridgeModel = parameterNode.GetNodeReference("mandibleBridgeTube")
     
     kindOfMandibleResection = parameterNode.GetParameter("kindOfMandibleResection")
