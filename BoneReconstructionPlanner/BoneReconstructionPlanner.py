@@ -2223,7 +2223,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       mandibleSurgicalGuideBase.GetDisplayNode().AddViewNodeID(mandibleViewNode.GetID())
       mandibleSurgicalGuideBase.GetDisplayNode().SetVisibility2D(True)
       moveNodeToFolder(mandibleSurgicalGuideBase, getFolder("BoneReconstructionPlanner"))
-      self.setRedSliceForModelsDisplayNodes()
+      self.logic.setRedSliceForModelsDisplayNodes()
 
     bothSidesMandibleGuideBaseModel = self._parameterNode.GetNodeReference("bothSidesMandibleGuideBaseModel")
     if bothSidesMandibleGuideBaseModel is not None:
@@ -2232,7 +2232,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       bothSidesMandibleGuideBaseModel.GetDisplayNode().AddViewNodeID(mandibleViewNode.GetID())
       bothSidesMandibleGuideBaseModel.GetDisplayNode().SetVisibility2D(True)
       moveNodeToFolder(bothSidesMandibleGuideBaseModel, getFolder("BoneReconstructionPlanner"))
-      self.setRedSliceForModelsDisplayNodes()
+      self.logic.setRedSliceForModelsDisplayNodes()
 
     mandibleBridgeTube = self._parameterNode.GetNodeReference("mandibleBridgeTube")
 
