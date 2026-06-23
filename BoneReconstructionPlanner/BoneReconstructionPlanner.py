@@ -2404,6 +2404,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.mandibleFiducialListControlPointDefinedObserver = 0
     self.mandibleFiducialListControlPointEndInteractionObserver = 0
     self.mandibleFiducialListControlPointRemovedObserver = 0
+    self.leftSideMandibleGuideBaseCurveControlPointDefinedObserver = 0
+    self.leftSideMandibleGuideBaseCurveControlPointEndInteractionObserver = 0
+    self.leftSideMandibleGuideBaseCurveControlPointRemovedObserver = 0
+    self.rightSideMandibleGuideBaseCurveControlPointDefinedObserver = 0
+    self.rightSideMandibleGuideBaseCurveControlPointEndInteractionObserver = 0
+    self.rightSideMandibleGuideBaseCurveControlPointRemovedObserver = 0
     self.generateFibulaPlanesTimer = qt.QTimer()
     self.generateFibulaPlanesTimer.setInterval(300)
     self.generateFibulaPlanesTimer.setSingleShot(True)
