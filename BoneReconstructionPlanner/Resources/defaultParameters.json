@@ -15,6 +15,7 @@
     "makeAllDentalImplanCylindersParallel": false,
     "makeAllMandiblePlanesRotateTogether": true,
     "mandiblePlanesPositioningForMaximumBoneContact": true,
+    "mandibleSurgicalGuideElementsVisible": true,
     "miterBoxesNeedUpdate": true,
     "neomandibleVisible": false,
     "sawBoxesNeedUpdate": true,
