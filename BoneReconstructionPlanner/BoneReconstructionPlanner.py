@@ -837,6 +837,22 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         self.logic.mandibleBridgeCurveControlPointDefinedObserver = 0
         self.logic.mandibleBridgeCurveControlPointEndInteractionObserver = 0
         self.logic.mandibleBridgeCurveControlPointRemovedObserver = 0
+    
+    if callData.GetClassName() == 'vtkMRMLMarkupsClosedCurveNode':
+      if callData.GetAttribute("isLeftSideMandibleGuideBaseCurve") == 'True':
+        callData.RemoveObserver(self.logic.leftSideMandibleGuideBaseCurveControlPointDefinedObserver)
+        callData.RemoveObserver(self.logic.leftSideMandibleGuideBaseCurveControlPointEndInteractionObserver)
+        callData.RemoveObserver(self.logic.leftSideMandibleGuideBaseCurveControlPointRemovedObserver)
+        self.logic.leftSideMandibleGuideBaseCurveControlPointDefinedObserver = 0
+        self.logic.leftSideMandibleGuideBaseCurveControlPointEndInteractionObserver = 0
+        self.logic.leftSideMandibleGuideBaseCurveControlPointRemovedObserver = 0
+      if callData.GetAttribute("isRightSideMandibleGuideBaseCurve") == 'True':
+        callData.RemoveObserver(self.logic.rightSideMandibleGuideBaseCurveControlPointDefinedObserver)
+        callData.RemoveObserver(self.logic.rightSideMandibleGuideBaseCurveControlPointEndInteractionObserver)
+        callData.RemoveObserver(self.logic.rightSideMandibleGuideBaseCurveControlPointRemovedObserver)
+        self.logic.rightSideMandibleGuideBaseCurveControlPointDefinedObserver = 0
+        self.logic.rightSideMandibleGuideBaseCurveControlPointEndInteractionObserver = 0
+        self.logic.rightSideMandibleGuideBaseCurveControlPointRemovedObserver = 0
 
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeRemovedEvent(self, caller, event, callData):
@@ -874,12 +890,24 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       #print(callData.GetName())
       placeWidget = self.ui.mandibleBridgeCurvePlaceWidget
       placeWidget.setCurrentNode(self.logic.getMandibleBridgeCurve())
-    if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode' and callData.GetAttribute("isLeftSideMandibleGuideBaseCurve") == 'True':
+    if callData.GetClassName() == 'vtkMRMLMarkupsClosedCurveNode' and callData.GetAttribute("isLeftSideMandibleGuideBaseCurve") == 'True':
       #print(callData.GetName())
+      # The curve node was deleted as a whole, so drop its guide base model and refresh the combined model
+      leftSideMandibleGuideBaseModel = self._parameterNode.GetNodeReference("leftSideMandibleGuideBaseModel")
+      if leftSideMandibleGuideBaseModel is not None:
+        self._parameterNode.SetNodeReferenceID("leftSideMandibleGuideBaseModel", "")
+        slicer.mrmlScene.RemoveNode(leftSideMandibleGuideBaseModel)
+        self.logic.updateBothMandibleGuideBaseModels()
       placeWidget = self.ui.leftSideMandibleGuideBaseCurvePlaceWidget
       placeWidget.setCurrentNode(self.logic.getLeftSideMandibleGuideBaseCurve())
-    if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode' and callData.GetAttribute("isRightSideMandibleGuideBaseCurve") == 'True':
+    if callData.GetClassName() == 'vtkMRMLMarkupsClosedCurveNode' and callData.GetAttribute("isRightSideMandibleGuideBaseCurve") == 'True':
       #print(callData.GetName())
+      # The curve node was deleted as a whole, so drop its guide base model and refresh the combined model
+      rightSideMandibleGuideBaseModel = self._parameterNode.GetNodeReference("rightSideMandibleGuideBaseModel")
+      if rightSideMandibleGuideBaseModel is not None:
+        self._parameterNode.SetNodeReferenceID("rightSideMandibleGuideBaseModel", "")
+        slicer.mrmlScene.RemoveNode(rightSideMandibleGuideBaseModel)
+        self.logic.updateBothMandibleGuideBaseModels()
       placeWidget = self.ui.rightSideMandibleGuideBaseCurvePlaceWidget
       placeWidget.setCurrentNode(self.logic.getRightSideMandibleGuideBaseCurve())
 
@@ -3445,7 +3473,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     leftSideMandibleGuideBaseModel = parameterNode.GetNodeReference("leftSideMandibleGuideBaseModel")
     rightSideMandibleGuideBaseModel = parameterNode.GetNodeReference("rightSideMandibleGuideBaseModel")
-    
+
+    if leftSideMandibleGuideBaseModel is None and rightSideMandibleGuideBaseModel is None:
+      # No guide base sides remain, so remove the combined model entirely instead of
+      # leaving an empty node behind (an empty model would also break later boolean operations).
+      bothSidesMandibleGuideBaseModel = parameterNode.GetNodeReference("bothSidesMandibleGuideBaseModel")
+      if bothSidesMandibleGuideBaseModel is not None:
+        parameterNode.SetNodeReferenceID("bothSidesMandibleGuideBaseModel", "")
+        slicer.mrmlScene.RemoveNode(bothSidesMandibleGuideBaseModel)
+      return
+
     appendFilter = vtk.vtkAppendPolyData()
     
     if leftSideMandibleGuideBaseModel is not None:
