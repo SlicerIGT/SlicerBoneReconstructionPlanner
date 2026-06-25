@@ -689,7 +689,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.makeAllDentalImplanCylindersParallelCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.showFibulaSegmentsLengthsCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.showOriginalMandibleCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
-    self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.useMandibleGuideBasesFromCurvesCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.showMandiblePlanesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.showMandiblePlanesInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
@@ -932,8 +931,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.addMandiblePlaneObservers()
 
     # make it not visible to not clutter the mandible 3D view
-    #self.setBiggerSawBoxesInteractionHandlesVisibility(visibility=False)
-    self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","False")
     self.logic.setMarkupsListLocked(sawBoxesPlanesList,locked=False)
     self.logic.addSawBoxPlaneObservers()
 
@@ -1161,7 +1158,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     #  sawBoxesPlanesList,
     #  visibility=False
     #)
-    self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","False")
+
     self.updateGUIFromParameterNode() # needed because parameterNode observer was removed
     self.logic.setMarkupsListLocked(sawBoxesPlanesList,locked=True)
     self.logic.removeSawBoxPlaneObservers()
@@ -1673,10 +1670,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.showOriginalMandibleCheckBox.checked = showOriginalMandibleChecked
     self.setOriginalMandibleVisibility(showOriginalMandibleChecked)
 
-    showBiggerSawBoxesInteractionHandlesChecked = self._parameterNode.GetParameter("showBiggerSawBoxesInteractionHandles") == "True"
-    self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.checked = showBiggerSawBoxesInteractionHandlesChecked
-    self.setBiggerSawBoxesInteractionHandlesVisibility(showBiggerSawBoxesInteractionHandlesChecked)
-
     # we are going to change the instructions any time the parameterNode is modified
     self.logic.setPlanningInformativeText()
     self.ui.planningInformativeLabel.text = self._parameterNode.GetParameter("planningInformativeText")
@@ -1863,10 +1856,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("showOriginalMandible", "True")
     else:
       self._parameterNode.SetParameter("showOriginalMandible", "False")
-    if self.ui.showBiggerSawBoxesInteractionHandlesCheckBox.checked:
-      self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles", "True")
-    else:
-      self._parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles", "False")
     if self.ui.orientation3DCubeCheckBox.checked:
       self._parameterNode.SetParameter("displayOrientation3DCube", "True")
     else:
@@ -2244,7 +2233,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     folderNames = [
       "previewSawBoxes Models",
-      "Mandible Cylinders Models"
+      "biggerSawBoxes Models",
+      "Mandible Cylinders Models",
+      "sawBoxes Planes"
     ]
 
     for folderName in folderNames:
@@ -6498,14 +6489,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     removeFolder(intersectionsFolder)
     removeFolder(pointsIntersectionsFolder)
-    
+
+    mandibleSurgicalGuideElementsVisible = parameterNode.GetParameter("mandibleSurgicalGuideElementsVisible") == "True"
+    setFolderItemVisibility(getFolder("sawBoxes Planes"), mandibleSurgicalGuideElementsVisible)
+    setFolderItemVisibility(getFolder("previewSawBoxes Models"), mandibleSurgicalGuideElementsVisible)
+
     self.setRedSliceForModelsDisplayNodes()
     self.setRedSliceForMarkupsDisplayNodes()
 
     parameterNode.SetParameter("sawBoxesNeedUpdate", str(False))
 
-    parameterNode.SetParameter("showBiggerSawBoxesInteractionHandles","True")
-    
   def onSawBoxPlaneMoved(self,sourceNode,event):
     for i in range(len(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList)):
       if self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][1] == sourceNode.GetID():
