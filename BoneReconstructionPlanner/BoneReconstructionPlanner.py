@@ -6876,9 +6876,33 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode.SetNodeReferenceID("mandibleReconstructionModel", mandibleReconstructionModel.GetID())
     parameterNode.SetParameter("neomandibleVisible", "True")
 
-  def exportScaledFibulaPiecesForNeomandibleReconstructionToFolder(self, scaledFibulaPiecesFolder, scaleFactor=1.001):
+  def exportScaledFibulaPiecesForNeomandibleReconstructionToFolder(self, scaledFibulaPiecesFolder, scaleFactor=1.001, overlap=0.05):
     planeList = createListFromFolderName("Mandibular planes")
     transformedFibulaPiecesList = createListFromFolderName("Transformed Fibula Pieces")
+
+    def rotationMatrixDirToZ(d):
+      # Rotation (3x3) that maps the unit vector d onto the +Z axis (Rodrigues' formula)
+      z = np.array([0.0, 0.0, 1.0])
+      v = np.cross(d, z)
+      c = np.dot(d, z)
+      if c > 1.0 - 1e-8:
+        return np.eye(3)
+      if c < -1.0 + 1e-8:
+        return np.diag([1.0, -1.0, -1.0])
+      skew = np.array([
+        [0.0, -v[2], v[1]],
+        [v[2], 0.0, -v[0]],
+        [-v[1], v[0], 0.0],
+      ])
+      return np.eye(3) + skew + skew @ skew * (1.0 / (1.0 + c))
+
+    def vtkMatrixFrom3x3(R):
+      m = vtk.vtkMatrix4x4()
+      m.Identity()
+      for r in range(3):
+        for col in range(3):
+          m.SetElement(r, col, R[r][col])
+      return m
 
     for i in range(len(transformedFibulaPiecesList)):
       or0 = np.zeros(3)
@@ -6887,11 +6911,29 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       planeList[i+1].GetOrigin(or1)
       origin = (or0+or1)/2
 
+      # Extend the piece by a fixed amount (overlap) past each cut plane along the
+      # inter-plane axis. This guarantees adjacent pieces overlap enough for the
+      # boolean union to succeed, independently of the piece length (a proportional
+      # scale alone leaves short pieces with minimal contact).
+      axis = or1 - or0
+      length = np.linalg.norm(axis)
+      if length > 0:
+        direction = axis / length
+        axialScale = (length + 2*overlap) / length
+        R = rotationMatrixDirToZ(direction)
+      else:
+        axialScale = 1.0
+        R = np.eye(3)
+
       scaleTransform = vtk.vtkTransform()
       scaleTransform.PostMultiply()
       scaleTransform.Translate(-origin)
       #Just scale them enough so that boolean union is successful
       scaleTransform.Scale(scaleFactor, scaleFactor, scaleFactor)
+      # Align the inter-plane axis with Z, stretch along it, then rotate back
+      scaleTransform.Concatenate(vtkMatrixFrom3x3(R))
+      scaleTransform.Scale(1.0, 1.0, axialScale)
+      scaleTransform.Concatenate(vtkMatrixFrom3x3(R.T))
       scaleTransform.Translate(origin)
 
       scaleTransformer = vtk.vtkTransformPolyDataFilter()
