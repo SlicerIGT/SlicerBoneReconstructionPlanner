@@ -287,6 +287,8 @@ slicer.PLANE_SIDE_SIZE = 50.
 slicer.PLANE_GLYPH_SCALE = 2.5
 slicer.THREE_D_PRINTABLE_OBJECT_COLOR = [243/255, 149/255, 42/255] # orange
 
+slicer.FIBULA_SEGMENTS_MEASUREMENT_MODES = ["center2center", "proximal2proximal", "distal2distal"]
+
 USING_GUI = not(slicer.app.commandOptions().noMainWindow)
 
 def addBRPLayout():
@@ -2292,16 +2294,19 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
   
   def setFibulaSegmentsLengthsVisibility(self, visibility):
     """
-    Set fibula segment measurement lines visibility
+    Set fibula segment measurement lines visibility.
+    Only the lines of the currently selected measurement mode are shown.
     """
     if not USING_GUI:
       return
-    
-    fibulaSegmentsLengthsList = createListFromFolderName("Fibula Segments Lengths")
 
-    for i in range(len(fibulaSegmentsLengthsList)):
-      lineDisplayNode = fibulaSegmentsLengthsList[i].GetDisplayNode()
-      lineDisplayNode.SetVisibility(visibility)
+    fibulaSegmentsMeasurementMode = self._parameterNode.GetParameter("fibulaSegmentsMeasurementMode")
+
+    for mode in slicer.FIBULA_SEGMENTS_MEASUREMENT_MODES:
+      modeVisibility = visibility and (mode == fibulaSegmentsMeasurementMode)
+      fibulaSegmentsLengthsList = createListFromFolderName("Fibula Segments Lengths %s" % mode)
+      for lineNode in fibulaSegmentsLengthsList:
+        lineNode.GetDisplayNode().SetVisibility(modeVisibility)
 
   def onCreate3DModelOfTheReconstructionButton(self):
     """
@@ -4010,45 +4015,51 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def createFibulaSegmentsLengthsLines(self):
     parameterNode = self.getParameterNode()
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
-    fibulaSegmentsMeasurementMode = parameterNode.GetParameter("fibulaSegmentsMeasurementMode")
-    
-    fibulaSegmentsLengthsFolder = getFolder("Fibula Segments Lengths", reset = True)
+
+    # Create the lines for every measurement mode at once, each mode in its own folder.
+    # When the mode changes only the corresponding folder is made visible (see
+    # setFibulaSegmentsLengthsVisibility), so the lines don't need to be recomputed.
+    fibulaSegmentsLengthsFolders = {
+      mode: getFolder("Fibula Segments Lengths %s" % mode, reset = True)
+      for mode in slicer.FIBULA_SEGMENTS_MEASUREMENT_MODES
+    }
     intersectionsFolder = getFolder("Intersections For Lines Calculation", reset = True)
 
     fibulaPlanesList = createListFromFolderName("Fibula planes")
-    
+    fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
+
     for i in range(len(fibulaPlanesList)//2):
       intersectionA = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection A %d' % i)
       intersectionB = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection B %d' % i)
       intersectionA.CreateDefaultDisplayNodes()
       intersectionB.CreateDefaultDisplayNodes()
-      
+
       moveNodeToFolder(intersectionA, intersectionsFolder)
       moveNodeToFolder(intersectionB, intersectionsFolder)
 
       getIntersectionBetweenModelAnd1Plane(fibulaModelNode,fibulaPlanesList[2*i],intersectionA)
       getIntersectionBetweenModelAnd1Plane(fibulaModelNode,fibulaPlanesList[2*i+1],intersectionB)
 
-      positionA, positionB = (
-        getIntersectionPointsOfEachModelByMode(intersectionA,intersectionB,fibulaSegmentsMeasurementMode)
-      )
+      for mode in slicer.FIBULA_SEGMENTS_MEASUREMENT_MODES:
+        positionA, positionB = (
+          getIntersectionPointsOfEachModelByMode(intersectionA,intersectionB,mode)
+        )
 
-      lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
-      lineNode.SetName("S%d" %i)
-      slicer.mrmlScene.AddNode(lineNode)
-      slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(lineNode)
-      moveNodeToFolder(lineNode, fibulaSegmentsLengthsFolder)
+        lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+        lineNode.SetName("S%d" %i)
+        slicer.mrmlScene.AddNode(lineNode)
+        slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(lineNode)
+        moveNodeToFolder(lineNode, fibulaSegmentsLengthsFolders[mode])
 
-      displayNode = lineNode.GetDisplayNode()
-      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-      displayNode.AddViewNodeID(fibulaViewNode.GetID())
-      displayNode.SetOccludedVisibility(True)
-      
-      lineNode.AddControlPoint(vtk.vtkVector3d(positionA))
-      lineNode.AddControlPoint(vtk.vtkVector3d(positionB))
+        displayNode = lineNode.GetDisplayNode()
+        displayNode.AddViewNodeID(fibulaViewNode.GetID())
+        displayNode.SetOccludedVisibility(True)
 
-      lineNode.SetLocked(True)
-      
+        lineNode.AddControlPoint(vtk.vtkVector3d(positionA))
+        lineNode.AddControlPoint(vtk.vtkVector3d(positionB))
+
+        lineNode.SetLocked(True)
+
     removeFolder(intersectionsFolder)
   
   def createFibulaPlanesFromMandiblePlanesAndFibulaAxis(self,mandiblePlanesList,fibulaPlanesList):
@@ -6745,7 +6756,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     folderNames = [
       "Fibula planes",
-      "Fibula Segments Lengths",
       "Transformed Mandible Pieces",
       "Transformed Full Mandible",
       "miterBoxes Models",
@@ -6759,6 +6769,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       "Bigger Fibula Dental Implants Cylinders Models",
       "Cut Vessels",
     ]
+    for mode in slicer.FIBULA_SEGMENTS_MEASUREMENT_MODES:
+      folderNames.append("Fibula Segments Lengths %s" % mode)
     for folderName in folderNames:
       nodesList = createListFromFolderName(folderName)
       nodes.extend(nodesList)
