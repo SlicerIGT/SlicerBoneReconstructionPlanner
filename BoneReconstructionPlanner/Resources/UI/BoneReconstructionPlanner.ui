@@ -1955,14 +1955,6 @@ because plan has changed</string>
           </widget>
          </item>
          <item>
-          <widget class="QCheckBox" name="showBiggerSawBoxesInteractionHandlesCheckBox">
-           <property name="text">
-            <string>Show biggerSawBoxes
-interaction handles</string>
-           </property>
-          </widget>
-         </item>
-         <item>
           <layout class="QFormLayout" name="formLayout_5">
            <property name="topMargin">
             <number>0</number>
