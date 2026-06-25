@@ -285,7 +285,7 @@ slicer.FIBULA_VIEW_ID = "vtkMRMLViewNode2"
 slicer.BRPLayoutId=101
 slicer.PLANE_SIDE_SIZE = 50.
 slicer.PLANE_GLYPH_SCALE = 2.5
-slicer.SURGICAL_GUIDE_COLOR = [243/255, 149/255, 42/255] # orange
+slicer.THREE_D_PRINTABLE_OBJECT_COLOR = [243/255, 149/255, 42/255] # orange
 
 USING_GUI = not(slicer.app.commandOptions().noMainWindow)
 
@@ -6231,7 +6231,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode = surgicalGuideModel.GetDisplayNode()
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(fibulaViewNode.GetID())
-    displayNode.SetColor(slicer.SURGICAL_GUIDE_COLOR)
+    displayNode.SetColor(slicer.THREE_D_PRINTABLE_OBJECT_COLOR)
 
     for i in range(len(biggerMiterBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, biggerMiterBoxesModelsList[i], surgicalGuideModel, 'union')
@@ -6629,6 +6629,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode = surgicalGuideModel.GetDisplayNode()
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
+    displayNode.SetColor(slicer.THREE_D_PRINTABLE_OBJECT_COLOR)
 
     self.filterOutUnconnectedModelPiecesAccordingToKindOfMandibleResection(surgicalGuideModel)
 
@@ -6847,6 +6848,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode = mandibleReconstructionModel.GetDisplayNode()
     mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     displayNode.AddViewNodeID(mandibleViewNode.GetID())
+    displayNode.SetColor(slicer.THREE_D_PRINTABLE_OBJECT_COLOR)
 
     parentFolder = getFolder("Mandible reconstruction")
     moveNodeToFolder(mandibleReconstructionModel, parentFolder)
