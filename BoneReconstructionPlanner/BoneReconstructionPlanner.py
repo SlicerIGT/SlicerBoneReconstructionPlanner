@@ -5763,7 +5763,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaSegmentation,
       laterality + organ,
       fibulaGuidebaseMargin,
-      fibulaGuidebaseThickness
+      fibulaGuidebaseThickness,
+      planeCollection
     )
 
     hollowWithMarginModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "fibulaHollowWithMarginModel")
@@ -5781,11 +5782,21 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     hollowWithMarginModel.GetDisplayNode().SetVisibility(False)
 
 
+    # delete the hollowWithMargin segment from the segmentation node, since we don't need it anymore
+    seg.GetSegmentation().RemoveSegment(hollowWithMarginSegmentID)
+
+
     clipper = vtk.vtkClipClosedSurface()
     clipper.SetInputData(hollowWithMarginModel.GetPolyData())
     clipper.SetClippingPlanes(planeCollection)
     clipper.InsideOutOff()
     clipper.Update()
+
+    # drop the guide base model from a previous run so repeated executions
+    # don't accumulate duplicate fibulaSurgicalGuideBaseModel nodes
+    previousFibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
+    if previousFibulaSurgicalGuideBaseModel:
+      slicer.mrmlScene.RemoveNode(previousFibulaSurgicalGuideBaseModel)
 
     modelsLogic = slicer.modules.models.logic()
     fibulaSurgicalGuideBaseModel = modelsLogic.AddModel(calculateNormals(clipper.GetOutput()))
