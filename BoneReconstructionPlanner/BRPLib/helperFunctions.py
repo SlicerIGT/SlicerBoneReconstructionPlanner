@@ -930,7 +930,8 @@ def createHollowWithMargin(
     segmentationNode,
     fibulaSegmentName,
     marginSizeMm,
-    vesselThicknessMm
+    vesselThicknessMm,
+    clippingPlanes=None
 ):
   seg = segmentationNode
   seg.GetSegmentation().CreateRepresentation(slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
@@ -938,57 +939,204 @@ def createHollowWithMargin(
   if fibulaSegmentID is None:
     fibulaSegmentID = seg.GetSegmentation().GetNthSegmentID(0)
   
-  segDisplayNode = seg.GetDisplayNode()
-  segmentationVisibilityState = segDisplayNode.GetVisibility()
-  segDisplayNode.SetVisibility(True)
+  hollowSegmentName = fibulaSegmentName + "_Hollow"
+  hollowSegmentID = hollowSegmentName
 
+  # --- Fill the hollow segment with the fibula, resampled onto a fine grid ---
+  # The Margin/Hollow effects measure distances in mm but snap them to whole
+  # voxels of the labelmap they operate on. The fibula segmentation can be
+  # coarse (e.g. a few mm in slice direction), so a 0.5mm margin would round up
+  # to a full voxel (~the observed ~4mm error). We therefore rebuild the hollow
+  # segment's labelmap on a fine isotropic grid that the effects then edit.
+  #
+  # OOM is bounded two ways: the grid covers only the fibula bounding box
+  # (plus a pad), and a hard voxel budget caps the total size; if honoring the
+  # margin would exceed the budget we coarsen the spacing and warn instead.
+  MAX_LABELMAP_VOXELS = 200_000_000   # ~200 MB uint8 budget; tune as needed
 
-  # set up segment editor and configure it
-  segmentEditorWidget = slicer.modules.segmenteditor.widgetRepresentation().self().editor
+  fibulaLabelmap = slicer.vtkOrientedImageData()
+  slicer.vtkSlicerSegmentationsModuleLogic.GetSegmentBinaryLabelmapRepresentation(
+      segmentationNode, fibulaSegmentID, fibulaLabelmap)
+  originalSpacing = min(fibulaLabelmap.GetSpacing())
+
+  # fibula bounding box in RAS (closed surface representation created above)
+  fibulaPoly = vtk.vtkPolyData()
+  slicer.vtkSlicerSegmentationsModuleLogic.GetSegmentClosedSurfaceRepresentation(
+      segmentationNode, fibulaSegmentID, fibulaPoly)
+  # restrict the grid to the region the guide base actually uses (between the
+  # bounding planes) so the whole-bone extent never has to be allocated
+  boundsPoly = fibulaPoly
+  if clippingPlanes is not None:
+    clipper = vtk.vtkClipClosedSurface()
+    clipper.SetInputData(fibulaPoly)
+    clipper.SetClippingPlanes(clippingPlanes)
+    clipper.InsideOutOff()
+    clipper.Update()
+    if clipper.GetOutput().GetNumberOfPoints() > 0:
+      boundsPoly = clipper.GetOutput()
+  bounds = [0.0] * 6
+  boundsPoly.GetBounds(bounds)
+
+  pad = marginSizeMm + vesselThicknessMm + 2.0 * marginSizeMm
+  extentMm = [(bounds[2 * i + 1] - bounds[2 * i]) + 2.0 * pad for i in range(3)]
+
+  # finest isotropic spacing we can afford within the voxel budget,
+  # but no finer than needed to resolve the smallest feature the effects must
+  # render (margin and/or shell thickness both snap to voxels)
+  affordableSpacing = (
+      extentMm[0] * extentMm[1] * extentMm[2] / MAX_LABELMAP_VOXELS
+  ) ** (1.0 / 3.0)
+  features = [f for f in (marginSizeMm, vesselThicknessMm) if f > 0]
+  desiredSpacing = (min(features) / 2.0) if features else originalSpacing
+  # never coarsen below the native spacing (no benefit, only lost detail)
+  desiredSpacing = min(desiredSpacing, originalSpacing)
+  fineSpacing = max(desiredSpacing, affordableSpacing)
+
+  if marginSizeMm > 0 and fineSpacing > marginSizeMm:
+    logging.warning(
+        f"createHollowWithMargin: margin {marginSizeMm}mm cannot be represented "
+        f"within the {MAX_LABELMAP_VOXELS} voxel budget for this geometry; "
+        f"using {fineSpacing:.3f}mm spacing (margin will be coarse).")
+
+  dims = [max(1, int(np.ceil(extentMm[i] / fineSpacing))) for i in range(3)]
+
+  # axis-aligned (identity-direction) fine geometry in RAS, as an
+  # image-to-world matrix (spacing on the diagonal, grid origin in translation)
+  imageToWorld = vtk.vtkMatrix4x4()
+  imageToWorld.SetElement(0, 0, fineSpacing)
+  imageToWorld.SetElement(1, 1, fineSpacing)
+  imageToWorld.SetElement(2, 2, fineSpacing)
+  imageToWorld.SetElement(0, 3, bounds[0] - pad)
+  imageToWorld.SetElement(1, 3, bounds[2] - pad)
+  imageToWorld.SetElement(2, 3, bounds[4] - pad)
+
+  # Rasterize the SMOOTH fibula closed surface directly onto the fine grid,
+  # instead of nearest-neighbor upsampling the coarse binary labelmap. NN
+  # upsampling cannot add detail: it bakes the original ~1mm voxel steps into
+  # the fine grid as sharp flat faces, so the margined surface comes out
+  # visibly staircased. Rasterizing the surface yields steps at the fine
+  # spacing (sub-visible) and matches the fibula surface used elsewhere.
+  # the fine grid has identity directions (axis-aligned in RAS), so the
+  # surface can be voxelized with a plain image stencil in RAS coordinates.
+  origin = (bounds[0] - pad, bounds[2] - pad, bounds[4] - pad)
+  whiteImage = vtk.vtkImageData()
+  whiteImage.SetExtent(0, dims[0] - 1, 0, dims[1] - 1, 0, dims[2] - 1)
+  whiteImage.SetSpacing(fineSpacing, fineSpacing, fineSpacing)
+  whiteImage.SetOrigin(*origin)
+  whiteImage.AllocateScalars(vtk.VTK_UNSIGNED_CHAR, 1)
+  whiteImage.GetPointData().GetScalars().Fill(1)
+
+  pol2stenc = vtk.vtkPolyDataToImageStencil()
+  pol2stenc.SetInputData(fibulaPoly)
+  pol2stenc.SetOutputOrigin(origin)
+  pol2stenc.SetOutputSpacing(fineSpacing, fineSpacing, fineSpacing)
+  pol2stenc.SetOutputWholeExtent(whiteImage.GetExtent())
+  pol2stenc.Update()
+
+  imgstenc = vtk.vtkImageStencil()
+  imgstenc.SetInputData(whiteImage)
+  imgstenc.SetStencilConnection(pol2stenc.GetOutputPort())
+  imgstenc.ReverseStencilOff()
+  imgstenc.SetBackgroundValue(0)
+  imgstenc.Update()
+
+  resampledFibula = slicer.vtkOrientedImageData()
+  resampledFibula.DeepCopy(imgstenc.GetOutput())
+  resampledFibula.SetGeometryFromImageToWorldMatrix(imageToWorld)
+
+  # --- Run the Margin/Hollow effects on a temporary segmentation node whose
+  # own geometry IS the fine grid. The segment editor applies its effects on a
+  # single reference geometry; with no source volume that geometry is taken
+  # from the segmentation node. If we edited the caller's node directly, the
+  # reference geometry would be its coarse spacing (e.g. 1mm), so a sub-voxel
+  # margin like 0.2mm would round to 0 voxels and silently do nothing. Editing
+  # a node that holds only the fine labelmap forces the effects to resolve
+  # sub-voxel features. ---
+  tempSegmentationNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
+  tempSegmentationNode.CreateDefaultDisplayNodes()
+  tempSegmentationNode.GetSegmentation().AddEmptySegment(hollowSegmentID, hollowSegmentID)
+  slicer.vtkSlicerSegmentationsModuleLogic.SetBinaryLabelmapToSegment(
+      resampledFibula, tempSegmentationNode, hollowSegmentID,
+      slicer.vtkSlicerSegmentationsModuleLogic.MODE_REPLACE)
+
+  # Pin the geometry the Margin/Hollow effects operate on to our fine ISOTROPIC
+  # grid. The effects resolve their working geometry via
+  # GetReferenceImageGeometryStringFromSegmentation(): if the "reference image
+  # geometry" conversion parameter is set it is used, otherwise the geometry is
+  # derived from DetermineCommonLabelmapGeometry(), which is not guaranteed to
+  # stay isotropic. Both effects threshold an ITK SignedMaurer distance map that
+  # honors the grid spacing, so an anisotropic working grid yields a shell whose
+  # wall thickness varies with direction (the observed non-uniform thickness).
+  # Setting the parameter to the isotropic grid forces a uniform wall.
+  tempSegmentationNode.GetSegmentation().SetConversionParameter(
+      slicer.vtkSegmentationConverter.GetReferenceImageGeometryParameterName(),
+      slicer.vtkSegmentationConverter.SerializeImageGeometry(resampledFibula))
+
+  # set up a standalone segment editor on the fine temporary node. We use our
+  # own qMRMLSegmentEditorWidget (not the module's shared GUI editor) so that
+  # deleting the temporary nodes below cannot crash Slicer by pulling them out
+  # from under the live GUI editor, and so the user's editor state is left
+  # untouched.
+  segmentEditorWidget = slicer.qMRMLSegmentEditorWidget()
+  segmentEditorWidget.setMRMLScene(slicer.mrmlScene)
   segmentEditorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
   segmentEditorWidget.setMRMLSegmentEditorNode(segmentEditorNode)
-  segmentEditorWidget.setSegmentationNode(segmentationNode)
-  #segmentEditorWidget.setSourceVolumeNode(volumeNode)
-
+  segmentEditorWidget.setSegmentationNode(tempSegmentationNode)
   segmentEditorNode.SetOverwriteMode(slicer.vtkMRMLSegmentEditorNode.OverwriteNone)
   segmentEditorNode.SetMaskMode(slicer.vtkMRMLSegmentationNode.EditAllowedEverywhere)
   segmentEditorNode.SetSourceVolumeIntensityMask(False)
-
-
-
-
-
-  # Do the margin here, needs to crop and resample the volume
-
-
-
-
-
-
-  hollowSegmentName = fibulaSegmentName + "_Hollow"
-  hollowSegmentID = getSegmentIDWithName(hollowSegmentName, segmentationNode)
-  if not hollowSegmentID:
-    hollowSegmentID = hollowSegmentName
-    seg.GetSegmentation().AddEmptySegment(
-      hollowSegmentID,
-      hollowSegmentID
-    )
-
   segmentEditorNode.SetSelectedSegmentID(hollowSegmentID)
-  segmentEditorWidget.setActiveEffectByName("Logical operators")
-  effect = segmentEditorWidget.activeEffect()
-  effect.setParameter("Operation","COPY") # change the operation here
-  effect.setParameter("ModifierSegmentID",fibulaSegmentID)
-  effect.self().onApply()
+
+  if marginSizeMm > 0:
+    segmentEditorWidget.setCurrentSegmentID(hollowSegmentID)
+    segmentEditorWidget.setActiveEffectByName("Margin")
+    effect = segmentEditorWidget.activeEffect()
+    effect.setParameter("MarginSizeMm", str(marginSizeMm)) # positive = grow
+    effect.self().onApply()
 
   segmentEditorWidget.setCurrentSegmentID(hollowSegmentID)
   segmentEditorWidget.setActiveEffectByName("Hollow")
   effect = segmentEditorWidget.activeEffect()
+  effect.setParameter("ShellMode", "INSIDE_SURFACE") # grown surface stays the inner wall
   effect.setParameter("ShellThicknessMm", str(vesselThicknessMm))
   effect.self().onApply()
+  segmentEditorWidget.setActiveEffectByName("None")
 
-  segDisplayNode.SetVisibility(segmentationVisibilityState)
-  
+  # Build the fine closed surface in the temporary node before copying the
+  # segment back. The caller's segmentation is coarse, so the copied binary
+  # labelmap of this segment may be resampled to that coarse spacing, but the
+  # closed surface representation is not re-voxelized and so keeps the
+  # sub-voxel margin. The caller consumes the closed surface.
+  tempSegmentationNode.GetSegmentation().CreateRepresentation(
+      slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
+
+  # move the finished segment into the caller's segmentation node, replacing
+  # any segment left over from a previous run
+  existingHollowSegmentID = getSegmentIDWithName(hollowSegmentName, segmentationNode)
+  if existingHollowSegmentID:
+    seg.GetSegmentation().RemoveSegment(existingHollowSegmentID)
+  seg.GetSegmentation().CopySegmentFromSegmentation(
+      tempSegmentationNode.GetSegmentation(), hollowSegmentID, False)
+
+  # cleanup: detach and destroy the standalone editor widget before removing the
+  # nodes it referenced, then remove the temporary nodes.
+  #
+  # Drop the Python reference instead of calling deleteLater(): the widget is
+  # unparented, so PythonQt destroys the C++ object synchronously here, which
+  # runs each effect's cleanup() (disconnecting the AutoComplete effects' preview
+  # QTimer) and finalizes the Python effect wrappers while their backing
+  # qSlicerSegmentEditorScriptedEffect objects are still alive. deleteLater()
+  # defers C++ destruction to the next event-loop turn, leaving the timer-held
+  # wrappers to be garbage collected later, after their scriptedEffect is gone;
+  # their __del__ then calls parameterSetNode() on a destroyed object and raises
+  # the "Exception ignored in __del__ ... destroyed qSlicerSegmentEditorScriptedEffect"
+  # ValueError. See https://github.com/Slicer/Slicer/issues/7392
+  segmentEditorWidget.setSegmentationNode(None)
+  segmentEditorWidget.setMRMLSegmentEditorNode(None)
+  segmentEditorWidget = None
+  slicer.mrmlScene.RemoveNode(segmentEditorNode)
+  slicer.mrmlScene.RemoveNode(tempSegmentationNode)
+
   return hollowSegmentID
 
 def createAdaptedBox(X, Y, Z, name, boxX, boxZ, referenceZ, highResolution = True):
