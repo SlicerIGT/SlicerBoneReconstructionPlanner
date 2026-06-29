@@ -926,6 +926,28 @@ def getSegmentIDWithName(segmentName, segmentationNode):
     
     return None
 
+# A single isolated segment editor widget, created on first use and kept alive
+# for the rest of the Slicer session. createHollowWithMargin needs its own
+# editor (so it never disturbs the module's shared GUI editor or its node), but
+# it must NOT create-and-destroy one per call: destroying a
+# qMRMLSegmentEditorWidget garbage-collects every effect it instantiated,
+# including the AutoComplete effects (Grow from seeds / Fill between slices).
+# Their __del__ calls observeSegmentation(False), which unconditionally calls
+# scriptedEffect.parameterSetNode() before any guard, and by then the backing
+# C++ qSlicerSegmentEditorScriptedEffect is already destroyed, raising
+# "Exception ignored in __del__ ... destroyed qSlicerSegmentEditorScriptedEffect".
+# Reusing one persistent widget means those effects are never destroyed, so the
+# faulty __del__ never runs. See https://github.com/Slicer/Slicer/issues/7392
+_reusableSegmentEditorWidget = None
+
+def _getReusableSegmentEditorWidget():
+  global _reusableSegmentEditorWidget
+  if _reusableSegmentEditorWidget is None:
+    widget = slicer.qMRMLSegmentEditorWidget()
+    widget.setMRMLScene(slicer.mrmlScene)
+    _reusableSegmentEditorWidget = widget
+  return _reusableSegmentEditorWidget
+
 def createHollowWithMargin(
     segmentationNode,
     fibulaSegmentName,
@@ -1121,9 +1143,10 @@ def createHollowWithMargin(
   # own qMRMLSegmentEditorWidget (not the module's shared GUI editor) so that
   # deleting the temporary nodes below cannot crash Slicer by pulling them out
   # from under the live GUI editor, and so the user's editor state is left
-  # untouched.
-  segmentEditorWidget = slicer.qMRMLSegmentEditorWidget()
-  segmentEditorWidget.setMRMLScene(slicer.mrmlScene)
+  # untouched. The widget is created once and cached for the session (never
+  # destroyed) to avoid the AutoComplete-effect __del__ crash described in
+  # _getReusableSegmentEditorWidget.
+  segmentEditorWidget = _getReusableSegmentEditorWidget()
   segmentEditorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
   segmentEditorWidget.setMRMLSegmentEditorNode(segmentEditorNode)
   segmentEditorWidget.setSegmentationNode(tempSegmentationNode)
@@ -1162,22 +1185,16 @@ def createHollowWithMargin(
   seg.GetSegmentation().CopySegmentFromSegmentation(
       tempSegmentationNode.GetSegmentation(), hollowSegmentID, False)
 
-  # cleanup: detach and destroy the standalone editor widget before removing the
-  # nodes it referenced, then remove the temporary nodes.
-  #
-  # Drop the Python reference instead of calling deleteLater(): the widget is
-  # unparented, so PythonQt destroys the C++ object synchronously here, which
-  # runs each effect's cleanup() (disconnecting the AutoComplete effects' preview
-  # QTimer) and finalizes the Python effect wrappers while their backing
-  # qSlicerSegmentEditorScriptedEffect objects are still alive. deleteLater()
-  # defers C++ destruction to the next event-loop turn, leaving the timer-held
-  # wrappers to be garbage collected later, after their scriptedEffect is gone;
-  # their __del__ then calls parameterSetNode() on a destroyed object and raises
-  # the "Exception ignored in __del__ ... destroyed qSlicerSegmentEditorScriptedEffect"
-  # ValueError. See https://github.com/Slicer/Slicer/issues/7392
+  # cleanup: detach the reusable editor widget from the nodes it referenced
+  # BEFORE removing them, so removing the temporary nodes cannot pull them out
+  # from under the widget. The widget itself is intentionally kept alive (see
+  # _getReusableSegmentEditorWidget): destroying it would garbage-collect its
+  # AutoComplete effects, whose __del__ then dereferences an already-destroyed
+  # qSlicerSegmentEditorScriptedEffect. See
+  # https://github.com/Slicer/Slicer/issues/7392
+  segmentEditorWidget.setActiveEffectByName("None")
   segmentEditorWidget.setSegmentationNode(None)
   segmentEditorWidget.setMRMLSegmentEditorNode(None)
-  segmentEditorWidget = None
   slicer.mrmlScene.RemoveNode(segmentEditorNode)
   slicer.mrmlScene.RemoveNode(tempSegmentationNode)
 
