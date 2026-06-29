@@ -1432,3 +1432,39 @@ def extractEachRegionAsAModel(polydata, baseName):
     regionModels.append(regionModel)
 
   return regionModels
+
+
+
+import vtk
+from matplotlib.textpath import TextPath
+from matplotlib.font_manager import FontProperties
+
+def text_to_polydata(text, ttf_path, size=10.0):
+    fp = FontProperties(fname=ttf_path)
+    # to_polygons() flattens the curves into line segments per closed contour
+    tp = TextPath((0, 0), text, size=size, prop=fp)
+
+    points = vtk.vtkPoints()
+    lines  = vtk.vtkCellArray()
+
+    for contour in tp.to_polygons(closed_only=True):
+        n = len(contour)
+        if n < 3:
+            continue
+        start = points.GetNumberOfPoints()
+        for x, y in contour:
+            points.InsertNextPoint(x, y, 0.0)
+        # closed polyline loop
+        lines.InsertNextCell(n + 1)
+        for i in range(n):
+            lines.InsertCellPoint(start + i)
+        lines.InsertCellPoint(start)  # close it
+
+    loops = vtk.vtkPolyData()
+    loops.SetPoints(points)
+    loops.SetLines(lines)
+
+    tri = vtk.vtkContourTriangulator()
+    tri.SetInputData(loops)
+    tri.Update()
+    return tri.GetOutput()   # filled vtkPolyData, holes respected
