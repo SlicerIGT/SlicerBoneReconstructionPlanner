@@ -942,6 +942,51 @@ def createHollowWithMargin(
   hollowSegmentName = fibulaSegmentName + "_Hollow"
   hollowSegmentID = hollowSegmentName
 
+  if marginSizeMm == 0.0:
+    # No margin requested: keep the original behavior, which copies the fibula
+    # straight onto the caller's segmentation node and hollows it in place. The
+    # fine-grid machinery below only exists to resolve a sub-voxel margin, so it
+    # is pointless (and slower) when there is no margin to render.
+    segDisplayNode = seg.GetDisplayNode()
+    segmentationVisibilityState = segDisplayNode.GetVisibility()
+    segDisplayNode.SetVisibility(True)
+
+    # set up segment editor and configure it
+    segmentEditorWidget = slicer.modules.segmenteditor.widgetRepresentation().self().editor
+    segmentEditorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+    segmentEditorWidget.setMRMLSegmentEditorNode(segmentEditorNode)
+    segmentEditorWidget.setSegmentationNode(segmentationNode)
+    #segmentEditorWidget.setSourceVolumeNode(volumeNode)
+
+    segmentEditorNode.SetOverwriteMode(slicer.vtkMRMLSegmentEditorNode.OverwriteNone)
+    segmentEditorNode.SetMaskMode(slicer.vtkMRMLSegmentationNode.EditAllowedEverywhere)
+    segmentEditorNode.SetSourceVolumeIntensityMask(False)
+
+    hollowSegmentID = getSegmentIDWithName(hollowSegmentName, segmentationNode)
+    if not hollowSegmentID:
+      hollowSegmentID = hollowSegmentName
+      seg.GetSegmentation().AddEmptySegment(
+        hollowSegmentID,
+        hollowSegmentID
+      )
+
+    segmentEditorNode.SetSelectedSegmentID(hollowSegmentID)
+    segmentEditorWidget.setActiveEffectByName("Logical operators")
+    effect = segmentEditorWidget.activeEffect()
+    effect.setParameter("Operation","COPY") # change the operation here
+    effect.setParameter("ModifierSegmentID",fibulaSegmentID)
+    effect.self().onApply()
+
+    segmentEditorWidget.setCurrentSegmentID(hollowSegmentID)
+    segmentEditorWidget.setActiveEffectByName("Hollow")
+    effect = segmentEditorWidget.activeEffect()
+    effect.setParameter("ShellThicknessMm", str(vesselThicknessMm))
+    effect.self().onApply()
+
+    segDisplayNode.SetVisibility(segmentationVisibilityState)
+
+    return hollowSegmentID
+
   # --- Fill the hollow segment with the fibula, resampled onto a fine grid ---
   # The Margin/Hollow effects measure distances in mm but snap them to whole
   # voxels of the labelmap they operate on. The fibula segmentation can be
@@ -1087,12 +1132,11 @@ def createHollowWithMargin(
   segmentEditorNode.SetSourceVolumeIntensityMask(False)
   segmentEditorNode.SetSelectedSegmentID(hollowSegmentID)
 
-  if marginSizeMm > 0:
-    segmentEditorWidget.setCurrentSegmentID(hollowSegmentID)
-    segmentEditorWidget.setActiveEffectByName("Margin")
-    effect = segmentEditorWidget.activeEffect()
-    effect.setParameter("MarginSizeMm", str(marginSizeMm)) # positive = grow
-    effect.self().onApply()
+  segmentEditorWidget.setCurrentSegmentID(hollowSegmentID)
+  segmentEditorWidget.setActiveEffectByName("Margin")
+  effect = segmentEditorWidget.activeEffect()
+  effect.setParameter("MarginSizeMm", str(marginSizeMm)) # positive = grow
+  effect.self().onApply()
 
   segmentEditorWidget.setCurrentSegmentID(hollowSegmentID)
   segmentEditorWidget.setActiveEffectByName("Hollow")
