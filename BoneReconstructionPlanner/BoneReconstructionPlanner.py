@@ -6970,6 +6970,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     return
 
+  def t2pd(self, text):
+    """Convert a string to a vtkPolyData object."""
+    fontPath = os.path.join(os.path.dirname(__file__), 'Resources/Fonts/OpenSans-Bold.ttf')
+    return text_to_polydata(text, fontPath)
+
   def createPlateCurve(self):
     curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
     curveNode.SetName("temp")
