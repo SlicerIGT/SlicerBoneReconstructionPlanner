@@ -6634,8 +6634,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           sawBoxZCenterOffset = 0
         faceCenter = np.array([0.0, 0.0, sawBoxZCenterOffset + faceSign*biggerSawBoxWidth/2])
         faceNormal = np.array([0.0, 0.0, faceSign])
-        # sawBoxAxisX points inferior so the text up direction is -X to make the letter upright
-        textUp = np.array([-1.0, 0.0, 0.0])
+        # make the letter upright: world superior direction expressed in the
+        # sawBox local frame, projected onto the label face (perpendicular to
+        # the local Z faceNormal)
+        worldSuperior = np.array([0.0, 0.0, 1.0])
+        textUp = np.array([
+          np.dot(worldSuperior, sawBoxAxisX),
+          np.dot(worldSuperior, sawBoxAxisY),
+          0.0,
+        ])
+        textUp = textUp/np.linalg.norm(textUp)
         textLabelModel = self.createTextLabelModel(textLabel, mandibleTextLabelsMode, mandibleTextLabelsDepth,
           faceCenter, faceNormal, textUp, "sawBoxTextLabel_" + textLabel)
         textLabelModel.SetAndObserveTransformNodeID(transformNode.GetID())
