@@ -720,6 +720,8 @@ parentChildrenDict = {
     "sawBoxes Transforms",
     "Points Intersections",
     "Scaled Fibula Pieces",
+    "fibulaTextLabels Models",
+    "sawBoxTextLabels Models",
   ],
   "Inverse mandible reconstruction": [
     "Inverse Plane Cuts",
@@ -1448,6 +1450,12 @@ def text_to_polydata(text, ttf_path, size=10.0):
     lines  = vtk.vtkCellArray()
 
     for contour in tp.to_polygons(closed_only=True):
+        # to_polygons() repeats the first point at the end of each contour; skip
+        # it so closing the loop below does not create a zero-length segment
+        # (zero-length segments extrude into zero-area triangles that break the
+        # boolean operations of the surgical guides)
+        if np.allclose(contour[0], contour[-1]):
+            contour = contour[:-1]
         n = len(contour)
         if n < 3:
             continue

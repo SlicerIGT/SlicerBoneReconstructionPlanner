@@ -1668,6 +1668,59 @@ distance to fibula (mm)</string>
              </item>
             </widget>
            </item>
+           <item row="10" column="0">
+            <widget class="QLabel" name="fibulaTextLabelsModeLabel">
+             <property name="toolTip">
+              <string>Identification letters are embossed (raised) or engraved (recessed) on the fibula surgical guide</string>
+             </property>
+             <property name="text">
+              <string>Text labels relief</string>
+             </property>
+            </widget>
+           </item>
+           <item row="10" column="1">
+            <widget class="QComboBox" name="fibulaTextLabelsModeComboBox">
+             <item>
+              <property name="text">
+               <string>Emboss</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Engrave</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="11" column="0">
+            <widget class="QLabel" name="fibulaTextLabelsDepthLabel">
+             <property name="text">
+              <string>Text labels depth (mm)</string>
+             </property>
+            </widget>
+           </item>
+           <item row="11" column="1">
+            <widget class="ctkDoubleSpinBox" name="fibulaTextLabelsDepthSpinBox">
+             <property name="toolTip">
+              <string>Height of embossed or depth of engraved letters. Values near 3mm may thin the slot wall when engraving.</string>
+             </property>
+             <property name="decimals">
+              <number>1</number>
+             </property>
+             <property name="minimum">
+              <double>0.100000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>3.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.100000000000000</double>
+             </property>
+             <property name="value">
+              <double>1.000000000000000</double>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
          <item>
@@ -2087,6 +2140,59 @@ distance to mandible (mm)</string>
              </property>
              <property name="value">
               <double>3.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <widget class="QLabel" name="mandibleTextLabelsModeLabel">
+             <property name="toolTip">
+              <string>Identification letters are embossed (raised) or engraved (recessed) on the mandible surgical guide</string>
+             </property>
+             <property name="text">
+              <string>Text labels relief</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="1">
+            <widget class="QComboBox" name="mandibleTextLabelsModeComboBox">
+             <item>
+              <property name="text">
+               <string>Emboss</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Engrave</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="8" column="0">
+            <widget class="QLabel" name="mandibleTextLabelsDepthLabel">
+             <property name="text">
+              <string>Text labels depth (mm)</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="1">
+            <widget class="ctkDoubleSpinBox" name="mandibleTextLabelsDepthSpinBox">
+             <property name="toolTip">
+              <string>Height of embossed or depth of engraved letters. Values near 3mm may thin the slot wall when engraving.</string>
+             </property>
+             <property name="decimals">
+              <number>1</number>
+             </property>
+             <property name="minimum">
+              <double>0.100000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>3.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.100000000000000</double>
+             </property>
+             <property name="value">
+              <double>1.000000000000000</double>
              </property>
             </widget>
            </item>

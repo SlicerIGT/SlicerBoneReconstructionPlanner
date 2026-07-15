@@ -289,6 +289,8 @@ slicer.THREE_D_PRINTABLE_OBJECT_COLOR = [243/255, 149/255, 42/255] # orange
 
 slicer.FIBULA_SEGMENTS_MEASUREMENT_MODES = ["center2center", "proximal2proximal", "distal2distal"]
 
+TEXT_LABEL_OVERLAP_EPSILON = 0.3 # mm, overlap of text labels into the guide boxes so boolean operations are robust
+
 USING_GUI = not(slicer.app.commandOptions().noMainWindow)
 
 def addBRPLayout():
@@ -616,6 +618,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.clearanceFitPrintingToleranceSpinBox.valueChanged.connect(self.updateMiterBoxes)
     self.ui.biggerMiterBoxDistanceToFibulaSpinBox.valueChanged.connect(self.updateMiterBoxes)
+    self.ui.fibulaTextLabelsDepthSpinBox.valueChanged.connect(self.updateMiterBoxes)
     self.ui.fibulaGuidebaseThicknessSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.fibulaGuidebaseMarginSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.fibulaGuidebaseAngleSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -624,6 +627,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.sawBoxSlotHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.sawBoxSlotWallSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.biggerSawBoxDistanceToMandibleSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.mandibleTextLabelsDepthSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleBridgeRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleGuidebaseThicknessSpinBox.valueChanged.connect(self.updateMandibleGuideBases)
@@ -642,7 +646,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibleSideToRemoveComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.miterBoxesGuideTypeComboBox.currentTextChanged.connect(self.updateMiterBoxes)
     self.ui.miterBoxesBoxTypeComboBox.currentTextChanged.connect(self.updateMiterBoxes)
+    self.ui.fibulaTextLabelsModeComboBox.currentTextChanged.connect(self.updateMiterBoxes)
     self.ui.sawBoxesGuideTypeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.mandibleTextLabelsModeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
     self.ui.emailBugReportButton.connect('clicked(bool)',self.onEmailBugReportButton)
@@ -1417,11 +1423,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaGuidebaseMarginSpinBox.setValue(float(self._parameterNode.GetParameter("fibulaGuidebaseMargin_mm")))
     self.ui.fibulaGuidebaseAngleSpinBox.setValue(float(self._parameterNode.GetParameter("fibulaGuidebaseAngle_mm")))
     self.ui.biggerMiterBoxDistanceToFibulaSpinBox.setValue(float(self._parameterNode.GetParameter("biggerMiterBoxDistanceToFibula_mm")))
+    self.ui.fibulaTextLabelsDepthSpinBox.setValue(float(self._parameterNode.GetParameter("fibulaTextLabelsDepth_mm")))
     self.ui.sawBoxSlotWidthSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotWidth_mm")))
     self.ui.sawBoxSlotLengthSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotLength_mm")))
     self.ui.sawBoxSlotHeightSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotHeight_mm")))
     self.ui.sawBoxSlotWallSpinBox.setValue(float(self._parameterNode.GetParameter("sawBoxSlotWall_mm")))
     self.ui.biggerSawBoxDistanceToMandibleSpinBox.setValue(float(self._parameterNode.GetParameter("biggerSawBoxDistanceToMandible_mm")))
+    self.ui.mandibleTextLabelsDepthSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleTextLabelsDepth_mm")))
     self.ui.mandibleScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius_mm")))
     self.ui.mandibleBridgeRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleBridgeRadius_mm")))
     self.ui.mandibleGuidebaseThicknessSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleGuidebaseThickness_mm")))
@@ -1534,6 +1542,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.sawBoxesGuideTypeLabel.hide()
     self.ui.sawBoxesGuideTypeComboBox.hide()
     self.ui.sawBoxesGuideTypeComboBox.currentText = self._parameterNode.GetParameter("sawBoxesGuideType")
+
+    self.ui.fibulaTextLabelsModeComboBox.currentText = self._parameterNode.GetParameter("fibulaTextLabelsMode")
+    self.ui.mandibleTextLabelsModeComboBox.currentText = self._parameterNode.GetParameter("mandibleTextLabelsMode")
 
 
     #if self._parameterNode.GetParameter("miterBoxesGuideType") == "Slot":
@@ -1735,6 +1746,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("fibulaScrewHoleCylinderRadius_mm", str(self.ui.fibulaScrewHoleCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("clearanceFitPrintingTolerance_mm", str(self.ui.clearanceFitPrintingToleranceSpinBox.value))
     self._parameterNode.SetParameter("biggerMiterBoxDistanceToFibula_mm", str(self.ui.biggerMiterBoxDistanceToFibulaSpinBox.value))
+    self._parameterNode.SetParameter("fibulaTextLabelsDepth_mm", str(self.ui.fibulaTextLabelsDepthSpinBox.value))
     self._parameterNode.SetParameter("fibulaGuidebaseThickness_mm", str(self.ui.fibulaGuidebaseThicknessSpinBox.value))
     self._parameterNode.SetParameter("fibulaGuidebaseMargin_mm", str(self.ui.fibulaGuidebaseMarginSpinBox.value))
     self._parameterNode.SetParameter("fibulaGuidebaseAngle_mm", str(self.ui.fibulaGuidebaseAngleSpinBox.value))
@@ -1743,6 +1755,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("sawBoxSlotHeight_mm", str(self.ui.sawBoxSlotHeightSpinBox.value))
     self._parameterNode.SetParameter("sawBoxSlotWall_mm", str(self.ui.sawBoxSlotWallSpinBox.value))
     self._parameterNode.SetParameter("biggerSawBoxDistanceToMandible_mm", str(self.ui.biggerSawBoxDistanceToMandibleSpinBox.value))
+    self._parameterNode.SetParameter("mandibleTextLabelsDepth_mm", str(self.ui.mandibleTextLabelsDepthSpinBox.value))
     self._parameterNode.SetParameter("mandibleScrewHoleCylinderRadius_mm", str(self.ui.mandibleScrewHoleCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("mandibleBridgeRadius_mm", str(self.ui.mandibleBridgeRadiusSpinBox.value))
     self._parameterNode.SetParameter("mandibleGuidebaseThickness_mm", str(self.ui.mandibleGuidebaseThicknessSpinBox.value))
@@ -1757,7 +1770,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("fibulaSegmentsMeasurementMode", self.ui.fibulaSegmentsMeasurementModeComboBox.currentText)
     self._parameterNode.SetParameter("miterBoxesGuideType", self.ui.miterBoxesGuideTypeComboBox.currentText)
     self._parameterNode.SetParameter("miterBoxesBoxType", self.ui.miterBoxesBoxTypeComboBox.currentText)
+    self._parameterNode.SetParameter("fibulaTextLabelsMode", self.ui.fibulaTextLabelsModeComboBox.currentText)
     self._parameterNode.SetParameter("sawBoxesGuideType", self.ui.sawBoxesGuideTypeComboBox.currentText)
+    self._parameterNode.SetParameter("mandibleTextLabelsMode", self.ui.mandibleTextLabelsModeComboBox.currentText)
     self._parameterNode.SetParameter("kindOfMandibleResection", self.ui.kindOfMandibleResectionComboBox.currentText)
     if self.ui.mandibleSideToRemoveComboBox.currentText != "":
       self._parameterNode.SetParameter("mandibleSideToRemove", self.ui.mandibleSideToRemoveComboBox.currentText)
@@ -2160,7 +2175,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     folderNames = [
       "previewMiterBoxes Models",
-      "Fibula Cylinders Models"
+      "Fibula Cylinders Models",
+      "fibulaTextLabels Models"
     ]
 
     for folderName in folderNames:
@@ -2237,7 +2253,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       "previewSawBoxes Models",
       "biggerSawBoxes Models",
       "Mandible Cylinders Models",
-      "sawBoxes Planes"
+      "sawBoxes Planes",
+      "sawBoxTextLabels Models"
     ]
 
     for folderName in folderNames:
@@ -5276,6 +5293,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     useMoreExactVersionOfPositioningAlgorithmChecked = parameterNode.GetParameter("useMoreExactVersionOfPositioningAlgorithm") == "True"
     miterBoxesGuideType = parameterNode.GetParameter("miterBoxesGuideType")
     miterBoxesBoxType = parameterNode.GetParameter("miterBoxesBoxType")
+    fibulaTextLabelsMode = parameterNode.GetParameter("fibulaTextLabelsMode")
+    fibulaTextLabelsDepth = float(parameterNode.GetParameter("fibulaTextLabelsDepth_mm"))
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
 
     scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
@@ -5363,6 +5382,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerMiterBoxesModelsFolder = getFolder("biggerMiterBoxes Models", reset = True)
     rectangletModelsFolder = getFolder("rectanglet Models", reset = True)
     lowResolutionBiggerMiterBoxesModelsFolder = getFolder("lowResolutionBiggerMiterBoxes Models", reset = True)
+    fibulaTextLabelsModelsFolder = getFolder("fibulaTextLabels Models", reset = True)
     if miterBoxesGuideType == "Slot":
       miterBoxesModelsFolder = getFolder("miterBoxes Models", reset = True)
       previewMiterBoxesModelsFolder = getFolder("previewMiterBoxes Models", reset = True)
@@ -5382,6 +5402,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     enc.CheckSurfaceOff()   # skip surface-integrity check for speed
 
     combineModelsLogic = combineModelsRobustLogic
+    biggerMiterBoxInfoList = []
     for i in range(len(fibulaPlanesList)):
       if useMoreExactVersionOfPositioningAlgorithmChecked:
         lineStartPos = np.zeros(3)
@@ -5548,6 +5569,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         if not (lowResolutionBiggerMiterBoxTransformationSuccess):
           Exception('Hardening transforms was not successful')
 
+      if miterBoxesGuideType == "Border":
+        # the box polydata was shifted along its local Z axis and hardened above
+        if i%2 == 0:
+          biggerMiterBoxZCenterOffset = miterBoxSlotWidth
+        else:
+          biggerMiterBoxZCenterOffset = -miterBoxSlotWidth
+      else:
+        biggerMiterBoxZCenterOffset = 0
+
       if i%2 == 0:
         miterBoxAxisXTranslation = 0
         miterBoxAxisYTranslation = biggerMiterBoxHeight/2
@@ -5626,7 +5656,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       miterBoxOrigin = pointOfIntersection + miterBoxAxisX*miterBoxAxisXTranslation + miterBoxAxisY*miterBoxAxisYTranslation + miterBoxAxisZ*miterBoxAxisZTranslation
       miterBoxToWorldChangeOfFrameMatrix = self.getAxes1ToWorldChangeOfFrameMatrix(miterBoxAxisX, miterBoxAxisY, miterBoxAxisZ, miterBoxOrigin)
 
-
+      biggerMiterBoxInfoList.append({
+        "miterBoxToWorldChangeOfFrameMatrix": miterBoxToWorldChangeOfFrameMatrix,
+        "miterBoxOrigin": np.array(miterBoxOrigin),
+        "biggerMiterBoxWidth": biggerMiterBoxWidth,
+        "miterBoxAxisX": np.array(miterBoxAxisX),
+        "miterBoxAxisZ": np.array(miterBoxAxisZ),
+        "fibulaZ": np.array(fibulaZ),
+        "zCenterOffset": biggerMiterBoxZCenterOffset,
+      })
 
       miterBoxToWorldChangeOfFrameTransformNode.SetMatrixTransformToParent(miterBoxToWorldChangeOfFrameMatrix)
       miterBoxToWorldChangeOfFrameTransformNode.UpdateScene(slicer.mrmlScene)
@@ -5660,7 +5698,52 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           Exception('Hardening transforms was not successful')
 
       moveNodeToFolder(miterBoxToWorldChangeOfFrameTransformNode, miterBoxesTransformsFolder)
-    
+
+    if len(biggerMiterBoxInfoList) > 0:
+      lineStartPos = np.zeros(3)
+      lineEndPos = np.zeros(3)
+      fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
+      fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+      # the fibula line is drawn from distal to proximal
+      proximalDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
+      boxProjectionsList = [info["miterBoxOrigin"] @ proximalDirection for info in biggerMiterBoxInfoList]
+      distalBoxIndex = int(np.argmin(boxProjectionsList))
+      proximalBoxIndex = int(np.argmax(boxProjectionsList))
+      donorLegLetter = "R" if rightSideLegIsDonor else "L"
+
+      for textLabel, boxIndex, faceSign in [("D", distalBoxIndex, -1.0), (donorLegLetter, proximalBoxIndex, 1.0)]:
+        info = biggerMiterBoxInfoList[boxIndex]
+        yFaceCenterOffset = 0.0
+        if miterBoxesBoxType == "Adapted":
+          # the adapted box has one of its local Z faces shifted by -delta along its local Y axis (see createAdaptedBox)
+          comparisonVector = np.cross(info["miterBoxAxisZ"], info["fibulaZ"])
+          comparisonNorm = np.linalg.norm(comparisonVector)
+          if comparisonNorm > 1e-6:
+            alpha = np.arccos(np.clip(info["miterBoxAxisZ"] @ info["fibulaZ"], -1.0, 1.0))
+            delta = info["biggerMiterBoxWidth"]*np.tan(alpha)
+            shiftedFaceSign = 1.0 if (comparisonVector/comparisonNorm) @ info["miterBoxAxisX"] > 0 else -1.0
+            if faceSign == shiftedFaceSign:
+              yFaceCenterOffset = -delta
+        faceCenter = np.array([0.0, yFaceCenterOffset, info["zCenterOffset"] + faceSign*info["biggerMiterBoxWidth"]/2])
+        faceNormal = np.array([0.0, 0.0, faceSign])
+        textUp = np.array([0.0, 1.0, 0.0])
+        textLabelModel = self.createTextLabelModel(textLabel, fibulaTextLabelsMode, fibulaTextLabelsDepth,
+          faceCenter, faceNormal, textUp, "fibulaTextLabel_" + textLabel)
+
+        textLabelTransformNode = slicer.vtkMRMLLinearTransformNode()
+        textLabelTransformNode.SetName("textLabelTemp_" + textLabel)
+        slicer.mrmlScene.AddNode(textLabelTransformNode)
+        textLabelTransformNode.SetMatrixTransformToParent(info["miterBoxToWorldChangeOfFrameMatrix"])
+        textLabelModel.SetAndObserveTransformNodeID(textLabelTransformNode.GetID())
+        textLabelTransformationSuccess = textLabelModel.HardenTransform()
+        if not (textLabelTransformationSuccess):
+          Exception('Hardening transforms was not successful')
+        moveNodeToFolder(textLabelTransformNode, miterBoxesTransformsFolder)
+
+        textLabelDisplayNode = textLabelModel.GetDisplayNode()
+        textLabelDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
+        moveNodeToFolder(textLabelModel, fibulaTextLabelsModelsFolder)
+
     removeFolder(miterBoxesTransformsFolder)
     removeFolder(intersectionsFolder)
     removeFolder(pointsIntersectionsFolder)
@@ -6233,6 +6316,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerMiterBoxesModelsList = createListFromFolderName("biggerMiterBoxes Models")
     fibulaDentalImplantsCylindersModelsList = createListFromFolderName("Fibula Dental Implants Cylinders Models")
     biggerFibulaDentalImplantsCylindersModelsList = createListFromFolderName("Bigger Fibula Dental Implants Cylinders Models")
+    fibulaTextLabelsModelsList = createListFromFolderName("fibulaTextLabels Models")
+    fibulaTextLabelsMode = parameterNode.GetParameter("fibulaTextLabelsMode")
 
     combineModelsLogic = combineModelsRobustLogic
 
@@ -6249,6 +6334,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     for i in range(len(biggerMiterBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, biggerMiterBoxesModelsList[i], surgicalGuideModel, 'union')
 
+    if fibulaTextLabelsMode == "Emboss":
+      for i in range(len(fibulaTextLabelsModelsList)):
+        combineModelsLogic.process(surgicalGuideModel, fibulaTextLabelsModelsList[i], surgicalGuideModel, 'union')
+
     if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
       for i in range(len(biggerFibulaDentalImplantsCylindersModelsList)):
         combineModelsLogic.process(surgicalGuideModel, biggerFibulaDentalImplantsCylindersModelsList[i], surgicalGuideModel, 'union')
@@ -6262,6 +6351,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
       for i in range(len(fibulaDentalImplantsCylindersModelsList)):
         combineModelsLogic.process(surgicalGuideModel, fibulaDentalImplantsCylindersModelsList[i], surgicalGuideModel, 'difference')
+
+    if fibulaTextLabelsMode == "Engrave":
+      for i in range(len(fibulaTextLabelsModelsList)):
+        combineModelsLogic.process(surgicalGuideModel, fibulaTextLabelsModelsList[i], surgicalGuideModel, 'difference')
 
     if (
       surgicalGuideModel.GetPolyData().GetNumberOfPoints() <
@@ -6289,23 +6382,34 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     kindOfMandibleResection = parameterNode.GetParameter("kindOfMandibleResection")
     sawBoxesGuideType = parameterNode.GetParameter("sawBoxesGuideType")
-    
+    mandibleTextLabelsMode = parameterNode.GetParameter("mandibleTextLabelsMode")
+    mandibleTextLabelsDepth = float(parameterNode.GetParameter("mandibleTextLabelsDepth_mm"))
+    # side of the sawBox that gets the laterality letter when both resection planes exist
+    mandibleTextLabelSideForSegmentalResection = "Right"
+
     mandibularPlanesList = createListFromFolderName("Mandibular planes")
 
     if len(mandibularPlanesList) < 2:
       return
-    
+
     if kindOfMandibleResection == "Segmental Mandibulectomy":
       resectionPlanesList = [mandibularPlanesList[0],mandibularPlanesList[-1]]
+      rightMandiblePlane, leftMandiblePlane = self.getRightAndLeftMandibleResectionPlanes()
+      sawBoxSidesList = ["Right" if plane.GetID() == rightMandiblePlane.GetID() else "Left" for plane in resectionPlanesList]
+      sawBoxGetsTextLabelList = [side == mandibleTextLabelSideForSegmentalResection for side in sawBoxSidesList]
     elif kindOfMandibleResection == "Hemimandibulectomy":
       rightMandiblePlane, leftMandiblePlane = self.getRightAndLeftMandibleResectionPlanes()
       mandibleSideToRemove = parameterNode.GetParameter("mandibleSideToRemove")
       if mandibleSideToRemove == "Removing right side":
         resectionPlanesList = [leftMandiblePlane]
+        sawBoxSidesList = ["Left"]
       elif mandibleSideToRemove == "Removing left side":
         resectionPlanesList = [rightMandiblePlane]
-    
+        sawBoxSidesList = ["Right"]
+      sawBoxGetsTextLabelList = [True]
+
     biggerSawBoxesModelsFolder = getFolder("biggerSawBoxes Models", reset = True)
+    sawBoxTextLabelsModelsFolder = getFolder("sawBoxTextLabels Models", reset = True)
     if sawBoxesGuideType == "Slot":  
       sawBoxesModelsFolder = getFolder("sawBoxes Models", reset = True)
       previewSawBoxesModelsFolder = getFolder("previewSawBoxes Models", reset = True)
@@ -6509,12 +6613,43 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       observer = sawBoxPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onSawBoxPlaneMoved)
       self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList.append([observer,sawBoxPlane.GetID(),transformNode.GetID()])
 
+      if sawBoxGetsTextLabelList[i]:
+        sawBoxSide = sawBoxSidesList[i]
+        textLabel = "R" if sawBoxSide == "Right" else "L"
+        if sawBoxSide == "Right":
+          sideDirection = np.array([1.0,0.0,0.0])
+        else:
+          sideDirection = np.array([-1.0,0.0,0.0])
+        if np.dot(sawBoxAxisZ, sideDirection) > 0:
+          faceSign = 1.0
+        else:
+          faceSign = -1.0
+        if sawBoxesGuideType == "Border":
+          # the box polydata was shifted along its local Z axis and hardened above
+          if i == 0:
+            sawBoxZCenterOffset = -sawBoxSlotWidth
+          else:
+            sawBoxZCenterOffset = sawBoxSlotWidth
+        else:
+          sawBoxZCenterOffset = 0
+        faceCenter = np.array([0.0, 0.0, sawBoxZCenterOffset + faceSign*biggerSawBoxWidth/2])
+        faceNormal = np.array([0.0, 0.0, faceSign])
+        # sawBoxAxisX points inferior so the text up direction is -X to make the letter upright
+        textUp = np.array([-1.0, 0.0, 0.0])
+        textLabelModel = self.createTextLabelModel(textLabel, mandibleTextLabelsMode, mandibleTextLabelsDepth,
+          faceCenter, faceNormal, textUp, "sawBoxTextLabel_" + textLabel)
+        textLabelModel.SetAndObserveTransformNodeID(transformNode.GetID())
+        textLabelDisplayNode = textLabelModel.GetDisplayNode()
+        textLabelDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+        moveNodeToFolder(textLabelModel, sawBoxTextLabelsModelsFolder)
+
     removeFolder(intersectionsFolder)
     removeFolder(pointsIntersectionsFolder)
 
     mandibleSurgicalGuideElementsVisible = parameterNode.GetParameter("mandibleSurgicalGuideElementsVisible") == "True"
     setFolderItemVisibility(getFolder("sawBoxes Planes"), mandibleSurgicalGuideElementsVisible)
     setFolderItemVisibility(getFolder("previewSawBoxes Models"), mandibleSurgicalGuideElementsVisible)
+    setFolderItemVisibility(getFolder("sawBoxTextLabels Models"), mandibleSurgicalGuideElementsVisible)
 
     self.setRedSliceForModelsDisplayNodes()
     self.setRedSliceForMarkupsDisplayNodes()
@@ -6633,6 +6768,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     cylindersModelsList = createListFromFolderName("Mandible Cylinders Models")
     sawBoxesModelsList = createListFromFolderName("sawBoxes Models")
     biggerSawBoxesModelsList = createListFromFolderName("biggerSawBoxes Models")
+    sawBoxTextLabelsModelsList = createListFromFolderName("sawBoxTextLabels Models")
+    mandibleTextLabelsMode = parameterNode.GetParameter("mandibleTextLabelsMode")
 
     combineModelsLogic = combineModelsRobustLogic
 
@@ -6650,18 +6787,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for i in range(len(biggerSawBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, biggerSawBoxesModelsList[i], surgicalGuideModel, 'union')
-    
+
+    if mandibleTextLabelsMode == "Emboss":
+      for i in range(len(sawBoxTextLabelsModelsList)):
+        combineModelsLogic.process(surgicalGuideModel, sawBoxTextLabelsModelsList[i], surgicalGuideModel, 'union')
+
     if (
-      mandibleBridgeModel and 
+      mandibleBridgeModel and
       (kindOfMandibleResection == "Segmental Mandibulectomy")
     ):
       combineModelsLogic.process(surgicalGuideModel, mandibleBridgeModel, surgicalGuideModel, 'union')
-    
+
     for i in range(len(cylindersModelsList)):
       combineModelsLogic.process(surgicalGuideModel, cylindersModelsList[i], surgicalGuideModel, 'difference')
-    
+
     for i in range(len(sawBoxesModelsList)):
       combineModelsLogic.process(surgicalGuideModel, sawBoxesModelsList[i], surgicalGuideModel, 'difference')
+
+    if mandibleTextLabelsMode == "Engrave":
+      for i in range(len(sawBoxTextLabelsModelsList)):
+        combineModelsLogic.process(surgicalGuideModel, sawBoxTextLabelsModelsList[i], surgicalGuideModel, 'difference')
 
     if surgicalGuideModel.GetPolyData().GetNumberOfPoints() == 0:
       slicer.mrmlScene.RemoveNode(surgicalGuideModel)
@@ -6774,6 +6919,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       "lowResolutionBiggerMiterBoxes Models",
       "rectanglet Models",
       "previewMiterBoxes Models",
+      "fibulaTextLabels Models",
       "Fibula Cylinders Models",
       "Dental Implants Cylinders Models",
       "Fibula Dental Implants Cylinders Models",
@@ -6974,6 +7120,68 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     """Convert a string to a vtkPolyData object."""
     fontPath = os.path.join(os.path.dirname(__file__), 'Resources/Fonts/OpenSans-Bold.ttf')
     return text_to_polydata(text, fontPath)
+
+  def createTextLabelModel(self, text, textLabelsMode, textLabelsDepth,
+      faceCenter, faceNormal, textUp, modelName):
+    """Create a model node with extruded 3D text positioned over a box face.
+    faceCenter, faceNormal (pointing outward) and textUp are given in the
+    box-local frame and the output polydata is in that same frame, so the
+    model can observe the same transform node as the box it belongs to.
+    If textLabelsMode is "Emboss" the text protrudes from the face by
+    textLabelsDepth, if it is "Engrave" the text sinks into the box by
+    textLabelsDepth. Either way the text overlaps the box face by
+    TEXT_LABEL_OVERLAP_EPSILON so boolean operations are robust."""
+    # do not merge duplicate points of the flat text with vtkCleanPolyData before
+    # extruding: glyph contours touch themselves at pinch points (e.g. where the
+    # leg of the "R" meets its bowl) and merging those points makes the extruded
+    # solid non-manifold
+    flatTextPolydata = self.t2pd(text)
+
+    bounds = flatTextPolydata.GetBounds()
+    centerTransform = vtk.vtkTransform()
+    centerTransform.Translate(-(bounds[0]+bounds[1])/2, -(bounds[2]+bounds[3])/2, 0)
+    centerTransformFilter = vtk.vtkTransformPolyDataFilter()
+    centerTransformFilter.SetInputData(flatTextPolydata)
+    centerTransformFilter.SetTransform(centerTransform)
+
+    extrusionFilter = vtk.vtkLinearExtrusionFilter()
+    extrusionFilter.SetInputConnection(centerTransformFilter.GetOutputPort())
+    extrusionFilter.SetExtrusionTypeToVectorExtrusion()
+    extrusionFilter.SetVector(0, 0, 1)
+    extrusionFilter.SetScaleFactor(textLabelsDepth + TEXT_LABEL_OVERLAP_EPSILON)
+    extrusionFilter.CappingOn()
+
+    triangleFilter = vtk.vtkTriangleFilter()
+    triangleFilter.SetInputConnection(extrusionFilter.GetOutputPort())
+
+    normalsFilter = vtk.vtkPolyDataNormals()
+    normalsFilter.SetInputConnection(triangleFilter.GetOutputPort())
+    normalsFilter.ConsistencyOn()
+    normalsFilter.AutoOrientNormalsOn()
+    # splitting would duplicate points along sharp edges and open the solid
+    normalsFilter.SplittingOff()
+
+    if textLabelsMode == "Engrave":
+      originShift = -textLabelsDepth
+    else:
+      originShift = -TEXT_LABEL_OVERLAP_EPSILON
+    textOrigin = np.array(faceCenter) + originShift*np.array(faceNormal)
+    textX = np.cross(textUp, faceNormal)
+    textX = textX/np.linalg.norm(textX)
+    textToBoxChangeOfFrameMatrix = self.getAxes1ToWorldChangeOfFrameMatrix(textX, textUp, faceNormal, textOrigin)
+    textToBoxTransform = vtk.vtkTransform()
+    textToBoxTransform.SetMatrix(textToBoxChangeOfFrameMatrix)
+    textToBoxTransformFilter = vtk.vtkTransformPolyDataFilter()
+    textToBoxTransformFilter.SetInputConnection(normalsFilter.GetOutputPort())
+    textToBoxTransformFilter.SetTransform(textToBoxTransform)
+    textToBoxTransformFilter.Update()
+
+    textLabelModel = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+    textLabelModel.SetName(slicer.mrmlScene.GetUniqueNameByString(modelName))
+    slicer.mrmlScene.AddNode(textLabelModel)
+    textLabelModel.CreateDefaultDisplayNodes()
+    textLabelModel.SetAndObservePolyData(textToBoxTransformFilter.GetOutput())
+    return textLabelModel
 
   def createPlateCurve(self):
     curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")

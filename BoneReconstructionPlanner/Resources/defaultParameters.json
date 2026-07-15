@@ -66,6 +66,8 @@
     "sawBoxSlotWall_mm": 3.0,
     "sawBoxSlotWidth_mm": 1.0,
     "securityMarginOfFibulaPieces_mm": 1.0,
+    "fibulaTextLabelsDepth_mm": 1.0,
+    "mandibleTextLabelsDepth_mm": 1.0,
     "fibulaSegment": "",
     "fibulaSegmentsMeasurementMode": "center2center",
     "kindOfMandibleResection": "Segmental Mandibulectomy",
@@ -78,5 +80,7 @@
     "miterBoxesGuideType": "Slot",
     "planningInformativeText": "- Please click 'Load test case' if using BRP for the first time.\n- Please select the fibula segmentation.\n- Please select the mandibular segmentation.\n",
     "sawBoxesBoxType": "Regular",
-    "sawBoxesGuideType": "Slot"
+    "sawBoxesGuideType": "Slot",
+    "fibulaTextLabelsMode": "Emboss",
+    "mandibleTextLabelsMode": "Emboss"
 }
