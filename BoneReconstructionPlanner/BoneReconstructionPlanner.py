@@ -6365,8 +6365,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       return
     
     parameterNode.SetParameter("fibulaSurgicalGuideElementsVisible", str(False))
-    parameterNode.SetParameter("fibulaSurgicalGuideVisible", str(True))
+    parameterNode.SetParameter("fibulaSurgicalGuideVisible", str(False)) # hide earlier one
     parameterNode.SetNodeReferenceID("fibulaSurgicalGuidePrototypeModel", surgicalGuideModel.GetID())
+    parameterNode.SetParameter("fibulaSurgicalGuideVisible", str(True))
 
     self.updateNormalizationFibulaLineTransform(None)
 
@@ -6822,8 +6823,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       return
 
     parameterNode.SetParameter("mandibleSurgicalGuideElementsVisible", str(False))
-    parameterNode.SetParameter("mandibleSurgicalGuideVisible", str(True))
+    parameterNode.SetParameter("mandibleSurgicalGuideVisible", str(False)) # hide earlier one
     parameterNode.SetNodeReferenceID("mandibleSurgicalGuidePrototypeModel", surgicalGuideModel.GetID())
+    parameterNode.SetParameter("mandibleSurgicalGuideVisible", str(True))
 
   def getRightAndLeftMandibleResectionPlanes(self):
     parameterNode = self.getParameterNode()
