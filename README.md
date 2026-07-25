@@ -4,8 +4,8 @@
 -->
 <table style="border:hidden">
 <tr>
-<td><img src="https://raw.githubusercontent.com/Slicer/Slicer/master/Applications/SlicerApp/Resources/Images/Slicer-Logo.png" width="500"/></td>
-<td><img src="BoneReconstructionPlanner.jpg" width="500"/></td>
+<td><img src="https://raw.githubusercontent.com/Slicer/Slicer/master/Applications/SlicerApp/Resources/Images/Slicer-Logo.png" height="300"/></td>
+<td><img src="BoneReconstructionPlanner.jpg" height="300"/></td>
 </tr>
 </table>
 
