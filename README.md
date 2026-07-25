@@ -4,7 +4,7 @@
 -->
 <table style="border:hidden">
 <tr>
-<td><img src="https://user-images.githubusercontent.com/19158307/224816407-62cc7791-743c-4c4c-a1fe-32f753553ab1.svg" width="500"/></td>
+<td><img src="https://raw.githubusercontent.com/Slicer/Slicer/master/Applications/SlicerApp/Resources/Images/Slicer-Logo.png" width="500"/></td>
 <td><img src="BoneReconstructionPlanner.jpg" width="500"/></td>
 </tr>
 </table>
