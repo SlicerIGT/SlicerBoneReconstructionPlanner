@@ -1438,10 +1438,25 @@ def extractEachRegionAsAModel(polydata, baseName):
 
 
 import vtk
-from matplotlib.textpath import TextPath
-from matplotlib.font_manager import FontProperties
+
+def _importMatplotlibTextPath():
+    # matplotlib is not bundled with Slicer and is only needed for the text
+    # labels of the surgical guides, so it is imported (and installed) on first
+    # use: importing it at module load time would prevent the whole extension
+    # from loading on installs that do not have it
+    try:
+      from matplotlib.textpath import TextPath
+      from matplotlib.font_manager import FontProperties
+    except ImportError:
+      logging.info("matplotlib is needed to create the text labels, installing it")
+      slicer.util.pip_install("matplotlib")
+      from matplotlib.textpath import TextPath
+      from matplotlib.font_manager import FontProperties
+    return TextPath, FontProperties
 
 def text_to_polydata(text, ttf_path, size=10.0):
+    TextPath, FontProperties = _importMatplotlibTextPath()
+
     fp = FontProperties(fname=ttf_path)
     # to_polygons() flattens the curves into line segments per closed contour
     tp = TextPath((0, 0), text, size=size, prop=fp)
