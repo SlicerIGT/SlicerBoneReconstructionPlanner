@@ -160,6 +160,51 @@ def readDefaultParameters():
     defaultParametersDict = json.load(file)
   return defaultParametersDict
 
+def setRemoteCacheLimit(cacheLimit_MB):
+  """
+  Set the size limit of the folder where the downloaded files are cached
+  (Edit->Application Settings->Cache) and save it for the next sessions
+  """
+  # this panel updates the cache manager and saves the setting at once
+  cachePanel = slicer.app.settingsDialog().findChild("qSlicerSettingsCachePanel")
+  if cachePanel is not None:
+    cachePanel.setCacheSize(cacheLimit_MB)
+  else:
+    slicer.mrmlScene.GetCacheManager().SetRemoteCacheLimit(cacheLimit_MB)
+    slicer.app.userSettings().setValue("Cache/Size", cacheLimit_MB)
+
+def confirm_cache_size_is_enough_for_test_data():
+  """
+  The test data does not fit in the default cache so it gets deleted after each download
+  (the cache is pruned) and it has to be downloaded again on each load.
+  Show dialog to increase the cache size limit if it is too small.
+  """
+  cacheManager = slicer.mrmlScene.GetCacheManager()
+  if cacheManager is None:
+    return
+  cacheLimit_MB = cacheManager.GetRemoteCacheLimit()
+  if cacheLimit_MB >= TEST_DATA_SIZE_MB:
+    return
+
+  increase_cache_msg_box = ctk.ctkMessageBox()
+  increase_cache_msg_box.setAttribute(qt.Qt.WA_DeleteOnClose)
+  increase_cache_msg_box.setWindowTitle("Increase the cache size?")
+  increase_cache_msg_box.setText(
+    f"The test data takes around {TEST_DATA_SIZE_MB}MB but the cache size limit is only "
+    f"{cacheLimit_MB}MB, so the downloaded files get deleted and they have to be downloaded "
+    "again each time the test data is loaded.\n\n"
+    f"Do you want to increase the cache size limit to {RECOMMENDED_CACHE_SIZE_MB}MB "
+    "(Edit->Application Settings->Cache) so the test data is downloaded only once?"
+  )
+  increase_cache_msg_box.setIcon(qt.QMessageBox.Question)
+  increase_cache_msg_box.setStandardButtons(qt.QMessageBox.Yes | qt.QMessageBox.No)
+  increase_cache_msg_box.setDefaultButton(qt.QMessageBox.Yes)
+  increase_cache_msg_box.dontShowAgainVisible = True
+  increase_cache_msg_box.dontShowAgainSettingsKey = "BRP/IncreaseCacheSizeForTestData"
+
+  if increase_cache_msg_box.exec() == qt.QMessageBox.Yes:
+    setRemoteCacheLimit(RECOMMENDED_CACHE_SIZE_MB)
+
 def confirm_clean_and_load_test_data():
   """
   Show dialog to load test data
@@ -178,6 +223,7 @@ def confirm_clean_and_load_test_data():
   if result_code == qt.QMessageBox.Cancel:
     return False
   if result_code == qt.QMessageBox.AcceptRole:
+    confirm_cache_size_is_enough_for_test_data()
     import SampleData
     sampleDataLogic = SampleData.SampleDataLogic()
     sampleDataLogic.downloadSample('CTMandible')
@@ -290,6 +336,9 @@ slicer.THREE_D_PRINTABLE_OBJECT_COLOR = [243/255, 149/255, 42/255] # orange
 slicer.FIBULA_SEGMENTS_MEASUREMENT_MODES = ["center2center", "proximal2proximal", "distal2distal"]
 
 TEXT_LABEL_OVERLAP_EPSILON = 0.3 # mm, overlap of text labels into the guide boxes so boolean operations are robust
+
+TEST_DATA_SIZE_MB = 500 # approximate size of CTMandible, CTFibula and their segmentations
+RECOMMENDED_CACHE_SIZE_MB = 1024
 
 USING_GUI = not(slicer.app.commandOptions().noMainWindow)
 
