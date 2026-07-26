@@ -2008,6 +2008,9 @@ cylinders</string>
              </item>
              <item row="0" column="1">
               <widget class="ctkDoubleSpinBox" name="fibulaScrewHoleCylinderRadiusSpinBox">
+               <property name="toolTip">
+                <string>Set the radius of the cylinders</string>
+               </property>
                <property name="decimals">
                 <number>1</number>
                </property>
@@ -2392,6 +2395,9 @@ resection boxes</string>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
+             <property name="toolTip">
+              <string>The mandible bridge function is to join the left and right parts of the surgical guide</string>
+             </property>
              <property name="text">
               <string>Mandible
 bridge</string>
@@ -2415,6 +2421,9 @@ bridge</string>
              </item>
              <item row="0" column="1">
               <widget class="ctkDoubleSpinBox" name="mandibleBridgeRadiusSpinBox">
+               <property name="toolTip">
+                <string>Set the radius of the bridge</string>
+               </property>
                <property name="decimals">
                 <number>1</number>
                </property>
@@ -2431,7 +2440,11 @@ bridge</string>
               </widget>
              </item>
              <item row="2" column="1">
-              <widget class="qSlicerMarkupsPlaceWidget" name="mandibleBridgeCurvePlaceWidget"/>
+              <widget class="qSlicerMarkupsPlaceWidget" name="mandibleBridgeCurvePlaceWidget">
+               <property name="toolTip">
+                <string>The mandible bridge function is to join the left and right parts of the surgical guide</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
@@ -2495,6 +2508,9 @@ bridge</string>
              </property>
              <item row="0" column="0">
               <widget class="QLabel" name="label_46">
+               <property name="toolTip">
+                <string>Curve that marks the outline of the left guide base</string>
+               </property>
                <property name="text">
                 <string>Left side base</string>
                </property>
@@ -2504,7 +2520,11 @@ bridge</string>
               <widget class="qSlicerMarkupsPlaceWidget" name="leftSideMandibleGuideBaseCurvePlaceWidget"/>
              </item>
              <item row="1" column="1">
-              <widget class="qSlicerMarkupsPlaceWidget" name="rightSideMandibleGuideBaseCurvePlaceWidget"/>
+              <widget class="qSlicerMarkupsPlaceWidget" name="rightSideMandibleGuideBaseCurvePlaceWidget">
+               <property name="toolTip">
+                <string>Curve that marks the outline of the right guide base</string>
+               </property>
+              </widget>
              </item>
              <item row="1" column="0">
               <widget class="QLabel" name="label_62">
@@ -2519,6 +2539,9 @@ bridge</string>
          </item>
          <item>
           <widget class="QCheckBox" name="useMandibleGuideBasesFromCurvesCheckBox">
+           <property name="toolTip">
+            <string>If checked, the guide bases from the curves will be used otherwise the guide base will be the one selelcted on the widget below</string>
+           </property>
            <property name="text">
             <string>Use guide bases from curves</string>
            </property>
@@ -2542,6 +2565,9 @@ guide bases</string>
            </item>
            <item row="0" column="1">
             <widget class="qMRMLNodeComboBox" name="mandibleSurgicalGuideBaseSelector">
+             <property name="toolTip">
+              <string>The selected 3D model will be used as surgical guide base if the widget above is turned off</string>
+             </property>
              <property name="nodeTypes">
               <stringlist>
                <string>vtkMRMLModelNode</string>
@@ -2614,7 +2640,7 @@ cylinders</string>
              <item row="0" column="1">
               <widget class="ctkDoubleSpinBox" name="mandibleScrewHoleCylinderRadiusSpinBox">
                <property name="toolTip">
-                <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
+                <string>Set the radius of the cylinders</string>
                </property>
                <property name="decimals">
                 <number>1</number>
@@ -2638,7 +2664,11 @@ cylinders</string>
               </widget>
              </item>
              <item row="1" column="1">
-              <widget class="qSlicerMarkupsPlaceWidget" name="mandibleFiducialsPlaceWidget"/>
+              <widget class="qSlicerMarkupsPlaceWidget" name="mandibleFiducialsPlaceWidget">
+               <property name="toolTip">
+                <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
