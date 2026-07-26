@@ -6,10 +6,13 @@
     "configurations": [
         {
             "name": "Python: Attach to Slicer",
-            "type": "python",
+            "type": "debugpy",
             "request": "attach",
-            "port": 5678,
-            "host": "localhost"
+            "connect": {
+                "host": "localhost",
+                "port": 56789
+            },
+            "justMyCode": false
         },
     ]
 }
