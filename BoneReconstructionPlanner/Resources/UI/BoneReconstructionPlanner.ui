@@ -1664,7 +1664,7 @@ on miter box creation</string>
            <item row="3" column="1">
             <widget class="ctkDoubleSpinBox" name="miterBoxSlotWidthSpinBox">
              <property name="toolTip">
-              <string/>
+              <string>Width of the slot where the saw will go through. Should be at least as thick as the saw</string>
              </property>
              <property name="decimals">
               <number>1</number>
@@ -1689,6 +1689,9 @@ on miter box creation</string>
            </item>
            <item row="4" column="1">
             <widget class="ctkDoubleSpinBox" name="miterBoxSlotLengthSpinBox">
+             <property name="toolTip">
+              <string>This parameter controls how easy it is to maneuver the saw inside the slot</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1709,6 +1712,9 @@ on miter box creation</string>
            </item>
            <item row="5" column="1">
             <widget class="ctkDoubleSpinBox" name="miterBoxSlotHeightSpinBox">
+             <property name="toolTip">
+              <string>Depth of the slot. It's how much you'll need to push the saw until you contact bone</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
