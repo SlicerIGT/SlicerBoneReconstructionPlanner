@@ -796,6 +796,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Update miterBoxes parameters and start update timer countdown
     """
+    # do not react to widget changes that come from updateGUIFromParameterNode
+    if self._updatingGUIFromParameterNode:
+      return
     self.updateParameterNodeFromGUI(caller=None, event=None)
     self.logic.createMiterBoxesFromFibulaPlanes()
 
@@ -803,6 +806,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Update mandible guide bases parameters and start update timer countdown
     """
+    # do not react to widget changes that come from updateGUIFromParameterNode
+    if self._updatingGUIFromParameterNode:
+      return
     self.updateParameterNodeFromGUI(caller=None, event=None)
     self.logic.onLeftSideMandibleGuideBaseCurvePointUpdated()
     self.logic.onRightSideMandibleGuideBaseCurvePointUpdated()
