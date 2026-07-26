@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>589</width>
-    <height>3665</height>
+    <height>3813</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -284,6 +284,9 @@ legs segmentation</string>
               </item>
               <item row="0" column="1">
                <widget class="qMRMLSegmentSelectorWidget" name="mandibularSegmentSelector">
+                <property name="toolTip">
+                 <string>Select the mandibular segmentation and the mandible segment</string>
+                </property>
                 <property name="noneEnabled">
                  <bool>true</bool>
                 </property>
@@ -298,6 +301,9 @@ legs segmentation</string>
               </item>
               <item row="2" column="1">
                <widget class="qMRMLSegmentSelectorWidget" name="fibulaSegmentSelector">
+                <property name="toolTip">
+                 <string>Select the fibula segmentation and the fibula segment</string>
+                </property>
                 <property name="noneEnabled">
                  <bool>true</bool>
                 </property>
@@ -305,6 +311,9 @@ legs segmentation</string>
               </item>
               <item row="3" column="1">
                <widget class="qMRMLSegmentSelectorWidget" name="vesselsSegmentSelector">
+                <property name="toolTip">
+                 <string>Optionally, select the fibula vessels segmentation (could be the same as fibula) and the fibula vessels segment</string>
+                </property>
                 <property name="noneEnabled">
                  <bool>true</bool>
                 </property>
@@ -369,10 +378,10 @@ legs segmentation</string>
             <item>
              <widget class="QPushButton" name="makeModelsButton">
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create bone&lt;br/&gt;models from&lt;br/&gt;segmentations&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create 3D&lt;br/&gt;models from&lt;br/&gt;segmentations&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Create bone models</string>
+               <string>Create 3D models</string>
               </property>
              </widget>
             </item>
@@ -385,7 +394,11 @@ legs segmentation</string>
                <number>0</number>
               </property>
               <item row="0" column="1">
-               <widget class="qSlicerMarkupsPlaceWidget" name="mandibleCurvePlaceWidget"/>
+               <widget class="qSlicerMarkupsPlaceWidget" name="mandibleCurvePlaceWidget">
+                <property name="toolTip">
+                 <string>Add or remove mandibular curve points</string>
+                </property>
+               </widget>
               </item>
               <item row="0" column="0">
                <widget class="QLabel" name="label_6">
@@ -408,7 +421,11 @@ legs segmentation</string>
                </widget>
               </item>
               <item row="1" column="1">
-               <widget class="qSlicerMarkupsPlaceWidget" name="fibulaLinePlaceWidget"/>
+               <widget class="qSlicerMarkupsPlaceWidget" name="fibulaLinePlaceWidget">
+                <property name="toolTip">
+                 <string>Add or remove fibula line points</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
@@ -436,6 +453,9 @@ legs segmentation</string>
               </item>
               <item row="1" column="1">
                <widget class="ctkDoubleSpinBox" name="initialSpinBox">
+                <property name="toolTip">
+                 <string>Starts the fibula cuts X mm away from the fibula line starting point</string>
+                </property>
                 <property name="prefix">
                  <string/>
                 </property>
@@ -456,6 +476,9 @@ legs segmentation</string>
               </item>
               <item row="2" column="1">
                <widget class="ctkDoubleSpinBox" name="betweenSpinBox">
+                <property name="toolTip">
+                 <string>Neighboring fibula cuts will at least have this distance between them</string>
+                </property>
                 <property name="prefix">
                  <string/>
                 </property>
@@ -480,6 +503,9 @@ legs segmentation</string>
                 </property>
                 <item>
                  <widget class="QPushButton" name="addCutPlaneButton">
+                  <property name="toolTip">
+                   <string>Add a new mandibular plane</string>
+                  </property>
                   <property name="text">
                    <string/>
                   </property>
@@ -487,6 +513,9 @@ legs segmentation</string>
                 </item>
                 <item>
                  <widget class="QPushButton" name="removeCutPlaneButton">
+                  <property name="toolTip">
+                   <string>Removes the mandibular plane most distant to the first one</string>
+                  </property>
                   <property name="text">
                    <string/>
                   </property>
@@ -536,6 +565,9 @@ legs segmentation</string>
                     </property>
                     <item row="0" column="0">
                      <widget class="QComboBox" name="kindOfMandibleResectionComboBox">
+                      <property name="toolTip">
+                       <string>Select accordingly</string>
+                      </property>
                       <item>
                        <property name="text">
                         <string>Segmental Mandibulectomy</string>
@@ -571,6 +603,9 @@ legs segmentation</string>
                   </item>
                   <item>
                    <widget class="QCheckBox" name="mandiblePlanesPositioningForMaximumBoneContactCheckBox">
+                    <property name="toolTip">
+                     <string>Overwrites the orientation of in-between planes to get maximum bone contact of neighboring fibula pieces used on the reconstruction</string>
+                    </property>
                     <property name="text">
                      <string>Automatic mandibular planes positioning
 for maximum bones contact area</string>
@@ -579,6 +614,9 @@ for maximum bones contact area</string>
                   </item>
                   <item>
                    <widget class="QCheckBox" name="makeAllMandiblePlanesRotateTogetherCheckBox">
+                    <property name="toolTip">
+                     <string>Makes all the reduced fibula pieces have no relative rotation between them according to their anatomical axis</string>
+                    </property>
                     <property name="text">
                      <string>Make all mandible planes rotate together</string>
                     </property>
@@ -587,7 +625,7 @@ for maximum bones contact area</string>
                   <item>
                    <widget class="QCheckBox" name="useMoreExactVersionOfPositioningAlgorithmCheckBox">
                     <property name="toolTip">
-                     <string>Use when you have finished editing</string>
+                     <string>All the fibula pieces are created from a different line that approximates its anatomical axis</string>
                     </property>
                     <property name="text">
                      <string>Use more exact version of the positioning
@@ -597,6 +635,9 @@ algorithm (takes more time)</string>
                   </item>
                   <item>
                    <widget class="QCheckBox" name="useNonDecimatedModelsForPreviewCheckBox">
+                    <property name="toolTip">
+                     <string>Improves the quality of the visualized 3D models at the expense of slower updates of the plan</string>
+                    </property>
                     <property name="text">
                      <string>Use non-decimated models for
 preview (takes more time)</string>
@@ -605,6 +646,9 @@ preview (takes more time)</string>
                   </item>
                   <item>
                    <widget class="QCheckBox" name="fixCutGoesThroughTheMandibleTwiceCheckBox">
+                    <property name="toolTip">
+                     <string>Option added to fix double resection error when doing a one fibula piece mandible reconstruction. Do not use it unless needed</string>
+                    </property>
                     <property name="text">
                      <string>Fix cut goes through the mandible twice</string>
                     </property>
@@ -685,7 +729,7 @@ preview (takes more time)</string>
                  </sizepolicy>
                 </property>
                 <property name="toolTip">
-                 <string>Lock updates to VSP</string>
+                 <string>Lock updates to Virtual Surgical Plan</string>
                 </property>
                 <property name="text">
                  <string/>
@@ -713,8 +757,10 @@ preview (takes more time)</string>
              <widget class="QPushButton" name="create3DModelOfTheReconstructionButton">
               <property name="toolTip">
                <string>Create 3D model
-of the reconstruction for
-3D printing</string>
+of the neomandible for
+3D printing.
+The intercondylar beam
+will be used if exists</string>
               </property>
               <property name="text">
                <string>Create
@@ -741,7 +787,11 @@ neomandible</string>
                <number>0</number>
               </property>
               <item>
-               <widget class="qSlicerMarkupsPlaceWidget" name="interCondylarBeamLinePlaceWidget"/>
+               <widget class="qSlicerMarkupsPlaceWidget" name="interCondylarBeamLinePlaceWidget">
+                <property name="toolTip">
+                 <string>Control the two points the beam will join</string>
+                </property>
+               </widget>
               </item>
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_8">
@@ -753,6 +803,9 @@ neomandible</string>
                 </property>
                 <item>
                  <widget class="QToolButton" name="interCondylarBeamVisibilityToolButton">
+                  <property name="toolTip">
+                   <string>Show or hide the intercondylar beam</string>
+                  </property>
                   <property name="text">
                    <string/>
                   </property>
@@ -763,6 +816,9 @@ neomandible</string>
                 </item>
                 <item>
                  <widget class="QToolButton" name="interCondylarBeamIncreaseSizeButton">
+                  <property name="toolTip">
+                   <string>Make the intercondylar beam thicker</string>
+                  </property>
                   <property name="text">
                    <string/>
                   </property>
@@ -770,6 +826,9 @@ neomandible</string>
                 </item>
                 <item>
                  <widget class="QToolButton" name="interCondylarBeamDecreaseSizeButton">
+                  <property name="toolTip">
+                   <string>Make the intercondylar beam thinner</string>
+                  </property>
                   <property name="text">
                    <string/>
                   </property>
@@ -781,6 +840,9 @@ neomandible</string>
             </item>
             <item row="0" column="0">
              <widget class="QToolButton" name="neomandibleVisibilityButton">
+              <property name="toolTip">
+               <string>Show or hide neomandible 3D model</string>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -840,7 +902,7 @@ neomandible</string>
                     <bool>true</bool>
                    </property>
                    <property name="toolTip">
-                    <string>Select Current Scalar Volume</string>
+                    <string>Selects the visible volume on the red slice view on the top right of the screen</string>
                    </property>
                    <property name="nodeTypes">
                     <stringlist>
@@ -893,6 +955,9 @@ neomandible</string>
                  </item>
                  <item>
                   <widget class="QToolButton" name="showMandiblePlanesToolButton">
+                   <property name="toolTip">
+                    <string>Show or hide mandible planes</string>
+                   </property>
                    <property name="text">
                     <string/>
                    </property>
@@ -903,6 +968,9 @@ neomandible</string>
                  </item>
                  <item>
                   <widget class="QToolButton" name="showMandiblePlanesInteractionHandlesToolButton">
+                   <property name="toolTip">
+                    <string>Show interactive controllers of the mandible planes position or orientation</string>
+                   </property>
                    <property name="text">
                     <string/>
                    </property>
@@ -913,6 +981,9 @@ neomandible</string>
                  </item>
                  <item>
                   <widget class="QToolButton" name="inCameraPlaneInteractionHandlesToolButton">
+                   <property name="toolTip">
+                    <string>Controls showing the orientation controller of the mandible planes that is always parallel to the camera direction</string>
+                   </property>
                    <property name="text">
                     <string/>
                    </property>
@@ -925,6 +996,9 @@ neomandible</string>
                </item>
                <item>
                 <widget class="QCheckBox" name="showOriginalMandibleCheckBox">
+                 <property name="toolTip">
+                  <string>Controls if the original mandible 3D model is visible</string>
+                 </property>
                  <property name="text">
                   <string>Show original mandible model</string>
                  </property>
@@ -940,6 +1014,9 @@ neomandible</string>
                  </property>
                  <item row="0" column="0">
                   <widget class="QCheckBox" name="showFibulaSegmentsLengthsCheckBox">
+                   <property name="toolTip">
+                    <string>Show or hide the fibula segment lengths</string>
+                   </property>
                    <property name="text">
                     <string>Show fibula
 segments lengths</string>
@@ -955,7 +1032,7 @@ segments lengths</string>
                     </sizepolicy>
                    </property>
                    <property name="toolTip">
-                    <string>Fibula segment measurement mode. Needs update</string>
+                    <string>Fibula segment measurement mode. Needs update of the virtual plan to change</string>
                    </property>
                    <property name="sizeAdjustPolicy">
                     <enum>QComboBox::AdjustToMinimumContentsLength</enum>
@@ -993,6 +1070,9 @@ segments lengths</string>
                  </item>
                  <item row="0" column="1">
                   <widget class="QComboBox" name="lightingModeComboBox">
+                   <property name="toolTip">
+                    <string>Explore other rendering light sources and shadows</string>
+                   </property>
                    <item>
                     <property name="text">
                      <string>Lamp</string>
@@ -1024,6 +1104,9 @@ segments lengths</string>
                  </item>
                  <item row="1" column="1">
                   <widget class="QComboBox" name="lightingInterpolationMethodComboBox">
+                   <property name="toolTip">
+                    <string>Explore rendering algorithms</string>
+                   </property>
                    <item>
                     <property name="text">
                      <string>Gouraud</string>

@@ -195,9 +195,9 @@ See more than 40 plans of other users:
 
 ## Installing BoneReconstructionPlanner
 
-1. You need Slicer 5.8.1 Stable. You have 2 options to download it:
-   - Use a download link provided by Kitware: [Windows](https://slicer-packages.kitware.com/api/v1/item/67c53d1129825655577d0b13/download), [Mac](https://slicer-packages.kitware.com/api/v1/item/67c52e9629825655577d0353/download), [Linux](https://slicer-packages.kitware.com/api/v1/item/67c51fc129825655577cfee9/download)
-   - As time of the writing of this guide you are also able to go to: https://download.slicer.org/ and download the Stable release (i.e. 5.8.1) for your Operating System.
+1. You need Slicer 5.12.3 Stable. You have 2 options to download it:
+   - Use a download link provided by Kitware: [Windows](https://slicer-packages.kitware.com/api/v1/item/6a61770a2eb3d967f03268b4/download), [Mac](https://slicer-packages.kitware.com/api/v1/item/6a61a0b02eb3d967f032af6c/download), [Linux](https://slicer-packages.kitware.com/api/v1/item/6a6159372eb3d967f032505f/download)
+   - As time of the writing of this guide you are also able to go to: https://download.slicer.org/ and download the Stable release (i.e. 5.12.3) for your Operating System.
 2. Install Slicer (if you need help, follow [this document section](https://slicer.readthedocs.io/en/latest/user_guide/getting_started.html#installing-3d-slicer)).
 3. Open Slicer.
 4. Press Ctrl+4 to open the [Extensions Manager](https://slicer.readthedocs.io/en/latest/user_guide/extensions_manager.html#extensions-manager). Or click the upper-right icon with the letter 'E'.
@@ -209,7 +209,7 @@ To have in mind: every once in a while, you can enter the Extensions Manager and
 
 
 ## Saving the scene
-- [Save](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#save-data) frequently as the surgical plan can be reopened from where you left it if there is a crash (i.e. software malfunction). We suggest using the "Save scene as single file (.mrb file format)", then you can save your progress with different names "example_plan_v01.mrb", "example_plan_v02.mrb", etc
+- [Save](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#save-data) the surgical plan when you make relevant progress such as finishing the virtual surgical planning or creating the fibula or mandible guide. We suggest using the "Save scene as single file (.mrb file format)", then you can save your progress with different names "example_plan_v01.mrb", "example_plan_v02.mrb", etc
 
 
 ## Segmentation (Preparation for Virtual Surgical Planning)
@@ -235,22 +235,20 @@ You'll have to do the same for the mandible in another segmentation node.
 ## Virtual Surgical Planning
 
 1. Click the search icon on the left of the module selector and write 'BoneReconstructionPlanner'. Click "Switch to module".
-2. If fibula is the one from the right leg tick "Right side leg" checkbox. This makes fibula coordinate system X axis be always medial independently of the which leg is used to harvest the fibula.
-3. Select the mandibular segmentation and the fibula segmentation.
-4. Click "Create bone models from segmentations".
-5. If needed, double left-click inside the mandibular 3D view to maximize it. And to return to the multi-view layout, also do double left-click inside the view.
-6. Click "Add mandibular curve" and create a curve along the mandible. This will help giving the cut planes their initial position. It's a bit important to make it quite similar to the ideal mandible curve the patient would have if he was healthy because the algorithm that does initial planes positioning depend on it.
-7. Click "Add cut plane" and click where you want plane. Add as many planes as needed. There will be a bone piece between every two adjacent planes. So the number of mandible planes should be the desired number of bone pieces for the reconstruction plus one. The first and the last mandible planes will be the mandible resection cuts.
-8. Click "Add fibula line". Draw a line over the fibula on the 3D view. First point distal, last point proximal. Try to draw the line over the diaphysis.
-9. Click "Center fibula line using fibula model" to make the line be similar to the anatomical axis of the fibula.
-10. Tick these options: "Automatic mandibular planes positioning for maximum bones contact area", "Make all mandible planes rotate together"
-11. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" to make the reconstruction and create the fibula cut planes. If VSP visualization is not working correctly you can try a hard-update using the button with recycle arrows, this will not change the objects used to create the VSP only the outputs.
-12. Move the mandible planes as desired to change the position/orientation of the cuts.
-13. Click "Update fibula planes over fibula line; update fibula bone pieces and transform them to mandible" again. And repeat as many times as needed.
+2. Select the mandibular segmentation and the mandible segment; and the fibula segmentation and the fibula segment. 
+3. If you have a segmentation of the fibula's vessels also select the corresponding segmentation and segment. The virtual plan can show the ending posion of the fibula vessels on the neck and their visibility is controlled by the available checkbox.
+4. Select the donor leg: Left or Right
+5. If you did the earlier steps, you should be able to click "Create 3D models". 
+The fibula line will be created automatically from the fibula 3D model but you may change it if needed erasing its points and creating new ones. Try to draw the points over the fibula diaphysis.
+6. If needed, double left-click inside the mandibular 3D view to maximize it. And to return to the multi-view layout, also do double left-click inside the view.
+7. Click the mandibular curve point placement button and create a curve along the mandible. This will help giving the cut planes their initial position.
+8. Click on the plane icon next to "Mandibular planes" and click where you want a plane. Add as many planes as needed. There will be a bone piece between every two neighboring planes. So the number of mandible planes should be the desired number of bone pieces for the reconstruction plus one. The first and the last mandible planes will be the mandible resection cuts.
+9. Explore changing parameters if desired, hover the mouse over them for a descriptive tooltip to appear. After modifying them you'll need to click the "Update virtual plan" button to see changes. 
+10. Click "Update virtual plan" to make the reconstruction and create the fibula cut planes. If VSP visualization is not working correctly you can try a hard-update using the button with recycle arrows next to it.
+11. Move the mandible planes as desired to change the position/orientation of the cuts.
+12. Click "Update virtual plan" again. And repeat as many times as needed.
 If you tick the button it will react on plane movements and update automatically.
-14. You may change "Segmental Mandibulectomy" to "Hemimandibulectomy" if desired, then click update again to calculate the new plan.
-15. "Show/Hide original mandible model" button may be useful.
-16. Explore other parameters. For example: "Between space" will guarantee some space between each fibula plane that creates a closing-wedge.
+13. Check the available "Visualization Options" as sometimes you need to modify the which or how much data is visible at a given moment to ease the work. You'll get explicative tooltips by hovering the mouse over each widget.
 
 ## Personalized Fibula Guide Generation
 
