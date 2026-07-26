@@ -56,6 +56,9 @@
    </item>
    <item>
     <widget class="QPushButton" name="openDocumentationButton">
+     <property name="toolTip">
+      <string>Click to open the how to use instructions on the web browser</string>
+     </property>
      <property name="text">
       <string>Open documentation</string>
      </property>
@@ -63,6 +66,9 @@
    </item>
    <item>
     <widget class="QPushButton" name="loadTestCaseButton">
+     <property name="toolTip">
+      <string>Download and load test data (i.e. CTs and segmentations)</string>
+     </property>
      <property name="text">
       <string>Load test case</string>
      </property>
@@ -70,6 +76,9 @@
    </item>
    <item>
     <widget class="ctkCollapsibleButton" name="AISegmentationCollapsibleButton">
+     <property name="toolTip">
+      <string/>
+     </property>
      <property name="text">
       <string>CTs and AI</string>
      </property>
@@ -101,6 +110,9 @@
         </item>
         <item row="0" column="1">
          <widget class="qMRMLNodeComboBox" name="headCTSelector">
+          <property name="toolTip">
+           <string>Select the head CT</string>
+          </property>
           <property name="nodeTypes">
            <stringlist notr="true">
             <string>vtkMRMLScalarVolumeNode</string>
@@ -122,6 +134,9 @@
         </item>
         <item row="1" column="1">
          <widget class="qMRMLNodeComboBox" name="legsCTSelector">
+          <property name="toolTip">
+           <string>Select the leg CT</string>
+          </property>
           <property name="nodeTypes">
            <stringlist notr="true">
             <string>vtkMRMLScalarVolumeNode</string>
@@ -145,6 +160,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="installAISegmentationsButton">
+        <property name="toolTip">
+         <string>Install AI dependencies</string>
+        </property>
         <property name="text">
          <string>Install AI segmentations</string>
         </property>
@@ -161,6 +179,9 @@
         <layout class="QVBoxLayout" name="verticalLayout_22">
          <item>
           <widget class="QPushButton" name="runHeadSegmentationButton">
+           <property name="toolTip">
+            <string>Run DentalSegmentator and post-processing script</string>
+           </property>
            <property name="text">
             <string>Run head segmentation</string>
            </property>
@@ -168,6 +189,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="runLegsSegmentationButton">
+           <property name="toolTip">
+            <string>Run MOOSE segmentation AI and post-processing script</string>
+           </property>
            <property name="text">
             <string>Run legs segmentation</string>
            </property>
@@ -175,6 +199,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="runHeadAndLegsSegmentationButton">
+           <property name="toolTip">
+            <string>Run both head and leg segmentation</string>
+           </property>
            <property name="text">
             <string>Run head and
 legs segmentation</string>
@@ -203,6 +230,9 @@ legs segmentation</string>
             </item>
             <item row="0" column="1">
              <widget class="ctkSliderWidget" name="headCTCorticalBoneThresholdSlider">
+              <property name="toolTip">
+               <string>Cortical bone value used by the post-processing script</string>
+              </property>
               <property name="decimals">
                <number>0</number>
               </property>
@@ -213,6 +243,9 @@ legs segmentation</string>
             </item>
             <item row="1" column="1">
              <widget class="ctkSliderWidget" name="legsCTCorticalBoneThresholdSlider">
+              <property name="toolTip">
+               <string>Cortical bone value used by the post-processing script</string>
+              </property>
               <property name="decimals">
                <number>0</number>
               </property>
@@ -232,6 +265,9 @@ legs segmentation</string>
    </item>
    <item>
     <widget class="ctkCollapsibleButton" name="CollapsibleButton">
+     <property name="toolTip">
+      <string/>
+     </property>
      <property name="text">
       <string>Mandible Reconstruction Planning</string>
      </property>
@@ -378,7 +414,7 @@ legs segmentation</string>
             <item>
              <widget class="QPushButton" name="makeModelsButton">
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create 3D&lt;br/&gt;models from&lt;br/&gt;segmentations&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>Create 3D models from segmentations</string>
               </property>
               <property name="text">
                <string>Create 3D models</string>
@@ -533,6 +569,9 @@ legs segmentation</string>
             </item>
             <item>
              <widget class="ctkCollapsibleButton" name="CollapsibleButton_5">
+              <property name="toolTip">
+               <string/>
+              </property>
               <property name="text">
                <string>Advanced planning options</string>
               </property>
@@ -572,7 +611,7 @@ legs segmentation</string>
                     <item row="0" column="0">
                      <widget class="QComboBox" name="kindOfMandibleResectionComboBox">
                       <property name="toolTip">
-                       <string>Select accordingly</string>
+                       <string>Select kind of mandible resection accordingly</string>
                       </property>
                       <item>
                        <property name="text">
@@ -588,6 +627,9 @@ legs segmentation</string>
                     </item>
                     <item row="0" column="1">
                      <widget class="QComboBox" name="mandibleSideToRemoveComboBox">
+                      <property name="toolTip">
+                       <string>Select side that will be removed</string>
+                      </property>
                       <item>
                        <property name="text">
                         <string>Removing right side</string>
@@ -631,7 +673,7 @@ for maximum bones contact area</string>
                   <item>
                    <widget class="QCheckBox" name="useMoreExactVersionOfPositioningAlgorithmCheckBox">
                     <property name="toolTip">
-                     <string>All the fibula pieces are created from a different line that approximates its anatomical axis</string>
+                     <string>All the fibula pieces are created from a different line that approximates its particular anatomical axis</string>
                     </property>
                     <property name="text">
                      <string>Use more exact version of the positioning
@@ -735,7 +777,7 @@ preview (takes more time)</string>
                  </sizepolicy>
                 </property>
                 <property name="toolTip">
-                 <string>Lock updates to Virtual Surgical Plan</string>
+                 <string>Lock updates or changes to Virtual Surgical Plan</string>
                 </property>
                 <property name="text">
                  <string/>
@@ -761,12 +803,11 @@ preview (takes more time)</string>
            <layout class="QGridLayout" name="gridLayout">
             <item row="0" column="1">
              <widget class="QPushButton" name="create3DModelOfTheReconstructionButton">
+              <property name="acceptDrops">
+               <bool>false</bool>
+              </property>
               <property name="toolTip">
-               <string>Create 3D model
-of the neomandible for
-3D printing.
-The intercondylar beam
-will be used if exists</string>
+               <string>Create 3D model of the neomandible for 3D printing. The intercondylar beam will be fused to it if exists</string>
               </property>
               <property name="text">
                <string>Create
@@ -777,7 +818,7 @@ neomandible</string>
             <item row="0" column="2">
              <widget class="QLabel" name="label_2">
               <property name="toolTip">
-               <string>Control the two points the beam will join</string>
+               <string>Control the two points the beam will join. The beam will be created after placing its two points</string>
               </property>
               <property name="text">
                <string>Create beam </string>
@@ -865,6 +906,9 @@ neomandible</string>
          </item>
          <item>
           <widget class="ctkCollapsibleButton" name="CollapsibleButton_6">
+           <property name="toolTip">
+            <string/>
+           </property>
            <property name="text">
             <string>Visualization Options</string>
            </property>
@@ -928,6 +972,9 @@ neomandible</string>
                  </item>
                  <item>
                   <widget class="QToolButton" name="fibulaNormalizationTransformButton">
+                   <property name="toolTip">
+                    <string>Makes the fibula line (and all objects related to it) point in superior direction</string>
+                   </property>
                    <property name="text">
                     <string/>
                    </property>
