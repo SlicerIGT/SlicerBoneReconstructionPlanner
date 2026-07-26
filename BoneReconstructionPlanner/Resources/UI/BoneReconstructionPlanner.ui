@@ -402,6 +402,9 @@ legs segmentation</string>
               </item>
               <item row="0" column="0">
                <widget class="QLabel" name="label_6">
+                <property name="toolTip">
+                 <string>Add or remove mandibular curve points</string>
+                </property>
                 <property name="text">
                  <string>Mandibular curve</string>
                 </property>
@@ -412,6 +415,9 @@ legs segmentation</string>
               </item>
               <item row="1" column="0">
                <widget class="QLabel" name="label_7">
+                <property name="toolTip">
+                 <string>Add or remove fibula line points</string>
+                </property>
                 <property name="text">
                  <string>Fibula line</string>
                 </property>
@@ -770,6 +776,9 @@ neomandible</string>
             </item>
             <item row="0" column="2">
              <widget class="QLabel" name="label_2">
+              <property name="toolTip">
+               <string>Control the two points the beam will join</string>
+              </property>
               <property name="text">
                <string>Create beam </string>
               </property>
@@ -1719,6 +1728,9 @@ distance to fibula (mm)</string>
            </item>
            <item row="9" column="0">
             <widget class="QLabel" name="label_22">
+             <property name="toolTip">
+              <string>This line controls the position and orientation of boxes according to the leg anatomical axis. Should be drawn orthogonal to the fibula line</string>
+             </property>
              <property name="text">
               <string>Miter box direction line</string>
              </property>
@@ -1816,7 +1828,7 @@ distance to fibula (mm)</string>
            <item row="11" column="1">
             <widget class="ctkDoubleSpinBox" name="fibulaTextLabelsDepthSpinBox">
              <property name="toolTip">
-              <string>Height of embossed or depth of engraved letters. Values near 3mm may thin the slot wall when engraving.</string>
+              <string>Height of embossed or depth of engraved letters. Values near to slot wall size may thin it too much when engraving.</string>
              </property>
              <property name="decimals">
               <number>1</number>
@@ -1969,6 +1981,9 @@ guide base</string>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
+             <property name="toolTip">
+              <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
+             </property>
              <property name="text">
               <string>Screw
 holes
@@ -2015,7 +2030,11 @@ cylinders</string>
               </widget>
              </item>
              <item row="1" column="1">
-              <widget class="qSlicerMarkupsPlaceWidget" name="fibulaFiducialsPlaceWidget"/>
+              <widget class="qSlicerMarkupsPlaceWidget" name="fibulaFiducialsPlaceWidget">
+               <property name="toolTip">
+                <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
+               </property>
+              </widget>
              </item>
              <item row="2" column="0">
               <widget class="QLabel" name="label_48">
@@ -2051,6 +2070,9 @@ cylinders</string>
            </property>
            <item>
             <widget class="QCheckBox" name="fibulaSurgicalGuideElementsVisibleCheckBox">
+             <property name="toolTip">
+              <string>Controls visibility of fibula guide elements</string>
+             </property>
              <property name="text">
               <string>Guide elements
 visible</string>
@@ -2059,6 +2081,9 @@ visible</string>
            </item>
            <item>
             <widget class="QCheckBox" name="fibulaSurgicalGuideVisibleCheckBox">
+             <property name="toolTip">
+              <string>Controls visibility of fibula surgical guide</string>
+             </property>
              <property name="text">
               <string>Guide
 visible</string>
@@ -2144,6 +2169,9 @@ because plan has changed</string>
            </item>
            <item row="1" column="1">
             <widget class="QComboBox" name="sawBoxesGuideTypeComboBox">
+             <property name="toolTip">
+              <string>Kind of saw guide</string>
+             </property>
              <item>
               <property name="text">
                <string>Slot</string>
@@ -2278,6 +2306,9 @@ distance to mandible (mm)</string>
            </item>
            <item row="7" column="1">
             <widget class="QComboBox" name="mandibleTextLabelsModeComboBox">
+             <property name="toolTip">
+              <string>Controls if the side label on the surgical guide is carved or extruded out</string>
+             </property>
              <item>
               <property name="text">
                <string>Emboss</string>
@@ -2300,7 +2331,7 @@ distance to mandible (mm)</string>
            <item row="8" column="1">
             <widget class="ctkDoubleSpinBox" name="mandibleTextLabelsDepthSpinBox">
              <property name="toolTip">
-              <string>Height of embossed or depth of engraved letters. Values near 3mm may thin the slot wall when engraving.</string>
+              <string>Height of embossed or depth of engraved letters. Values near to slot wall size may thin it too much when engraving.</string>
              </property>
              <property name="decimals">
               <number>1</number>
@@ -2444,6 +2475,9 @@ bridge</string>
              </item>
              <item row="0" column="1">
               <widget class="ctkDoubleSpinBox" name="mandibleGuidebaseThicknessSpinBox">
+               <property name="toolTip">
+                <string>Size of the extruded out walls from the mandible</string>
+               </property>
                <property name="decimals">
                 <number>1</number>
                </property>
@@ -2552,6 +2586,9 @@ guide bases</string>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
+             <property name="toolTip">
+              <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
+             </property>
              <property name="text">
               <string>Screw
 holes
@@ -2576,6 +2613,9 @@ cylinders</string>
              </item>
              <item row="0" column="1">
               <widget class="ctkDoubleSpinBox" name="mandibleScrewHoleCylinderRadiusSpinBox">
+               <property name="toolTip">
+                <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
+               </property>
                <property name="decimals">
                 <number>1</number>
                </property>
@@ -2630,6 +2670,9 @@ cylinders</string>
            </property>
            <item>
             <widget class="QCheckBox" name="mandibleSurgicalGuideElementsVisibleCheckBox">
+             <property name="toolTip">
+              <string>Controls visibility of mandible guide elements</string>
+             </property>
              <property name="text">
               <string>Guide elements
 visible</string>
@@ -2638,6 +2681,9 @@ visible</string>
            </item>
            <item>
             <widget class="QCheckBox" name="mandibleSurgicalGuideVisibleCheckBox">
+             <property name="toolTip">
+              <string>Controls visibility of mandible surgical guide</string>
+             </property>
              <property name="text">
               <string>Guide
 visible</string>
