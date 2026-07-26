@@ -1138,6 +1138,9 @@ segments lengths</string>
           <height>400</height>
          </size>
         </property>
+        <property name="toolTip">
+         <string>Control visibility of planning objects and rename or delete nodes</string>
+        </property>
         <property name="animated">
          <bool>true</bool>
         </property>
@@ -1525,6 +1528,9 @@ because plan has changed</string>
          </item>
          <item>
           <widget class="QCheckBox" name="checkSecurityMarginOnMiterBoxCreationCheckBox">
+           <property name="toolTip">
+            <string>If enabled, it verifies that the fibula pieces are actually separated by the set amount</string>
+           </property>
            <property name="text">
             <string>Check security margin
 on miter box creation</string>
@@ -1567,6 +1573,9 @@ on miter box creation</string>
             </item>
             <item>
              <widget class="ctkDoubleSpinBox" name="securityMarginOfFibulaPiecesSpinBox">
+              <property name="toolTip">
+               <string>Value of the security margin</string>
+              </property>
               <property name="decimals">
                <number>1</number>
               </property>
@@ -1598,6 +1607,9 @@ on miter box creation</string>
            </item>
            <item row="3" column="1">
             <widget class="ctkDoubleSpinBox" name="miterBoxSlotWidthSpinBox">
+             <property name="toolTip">
+              <string/>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1661,6 +1673,9 @@ on miter box creation</string>
            </item>
            <item row="6" column="1">
             <widget class="ctkDoubleSpinBox" name="miterBoxSlotWallSpinBox">
+             <property name="toolTip">
+              <string>If guide type is slot, it defines the wall thickness of the holed box where the saw will pass through</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1685,6 +1700,9 @@ distance to fibula (mm)</string>
            </item>
            <item row="7" column="1">
             <widget class="ctkDoubleSpinBox" name="biggerMiterBoxDistanceToFibulaSpinBox">
+             <property name="toolTip">
+              <string>Extra distance to the fibula bone of the miter boxes</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1707,10 +1725,17 @@ distance to fibula (mm)</string>
             </widget>
            </item>
            <item row="9" column="1">
-            <widget class="qSlicerMarkupsPlaceWidget" name="miterBoxDirectionLinePlaceWidget"/>
+            <widget class="qSlicerMarkupsPlaceWidget" name="miterBoxDirectionLinePlaceWidget">
+             <property name="toolTip">
+              <string>This line controls the position and orientation of boxes according to the leg anatomical axis. Should be drawn orthogonal to the fibula line</string>
+             </property>
+            </widget>
            </item>
            <item row="1" column="1">
             <widget class="QComboBox" name="miterBoxesGuideTypeComboBox">
+             <property name="toolTip">
+              <string>Kind of saw guide</string>
+             </property>
              <item>
               <property name="text">
                <string>Slot</string>
@@ -1739,6 +1764,9 @@ distance to fibula (mm)</string>
            </item>
            <item row="2" column="1">
             <widget class="QComboBox" name="miterBoxesBoxTypeComboBox">
+             <property name="toolTip">
+              <string>Adapted option makes the distal face of the miter boxes parallel to the guide base; regular just creates a normal box</string>
+             </property>
              <item>
               <property name="text">
                <string>Adapted</string>
@@ -1763,6 +1791,9 @@ distance to fibula (mm)</string>
            </item>
            <item row="10" column="1">
             <widget class="QComboBox" name="fibulaTextLabelsModeComboBox">
+             <property name="toolTip">
+              <string>Controls if the distal and side labels on the surgical guide are carved or extruded out</string>
+             </property>
              <item>
               <property name="text">
                <string>Emboss</string>
@@ -1846,6 +1877,9 @@ guide base</string>
            </item>
            <item row="0" column="1">
             <widget class="ctkDoubleSpinBox" name="fibulaGuidebaseThicknessSpinBox">
+             <property name="toolTip">
+              <string>Size of the extruded out wall from the fibula</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1863,6 +1897,9 @@ guide base</string>
            </item>
            <item row="2" column="1">
             <widget class="ctkDoubleSpinBox" name="fibulaGuidebaseAngleSpinBox">
+             <property name="toolTip">
+              <string>Angle measured from the middle point of the fibula line. The two arms of the angle are symmetric to the miter box direction line</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1880,6 +1917,9 @@ guide base</string>
            </item>
            <item row="1" column="1">
             <widget class="ctkDoubleSpinBox" name="fibulaGuidebaseMarginSpinBox">
+             <property name="toolTip">
+              <string>Approximate separation of the bone touching face of the guide base from the bone. Useful to account for rests of periosteum during surgical guide use</string>
+             </property>
              <property name="decimals">
               <number>2</number>
              </property>

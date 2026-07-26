@@ -235,7 +235,7 @@ You'll have to do the same for the mandible in another segmentation node.
 ## Virtual Surgical Planning
 
 1. Click the search icon on the left of the module selector and write 'BoneReconstructionPlanner'. Click "Switch to module".
-2. Select the mandibular segmentation and the mandible segment; and the fibula segmentation and the fibula segment. 
+2. Select the mandibular segmentation and the mandible segment; and the fibula segmentation and the fibula segment. If you are doing your first plan you can use the test data by clicking "Load test case".
 3. If you have a segmentation of the fibula's vessels also select the corresponding segmentation and segment. The virtual plan can show the ending posion of the fibula vessels on the neck and their visibility is controlled by the available checkbox.
 4. Select the donor leg: Left or Right
 5. If you did the earlier steps, you should be able to click "Create 3D models". 
