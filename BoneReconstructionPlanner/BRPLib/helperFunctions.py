@@ -912,6 +912,20 @@ def areVolumesEqual(vol1, vol2):
     
     return np.array_equal(array1, array2)
 
+def ensureExplicitCellArraysStorage(polyData):
+  # VTK >= 9.6 may store cell arrays with implicit ("fixed-size") offsets, and
+  # vtkClipClosedSurface never finishes on such inputs (spins forever in
+  # vtkContourTriangulator); force explicit offsets before clipping.
+  # No-op on older VTK and on already-explicit arrays.
+  for cells in (polyData.GetVerts(), polyData.GetLines(),
+                polyData.GetPolys(), polyData.GetStrips()):
+    if (
+      cells is not None
+      and hasattr(cells, "IsStorageFixedSize")
+      and cells.IsStorageFixedSize()
+    ):
+      cells.ConvertToDefaultStorage()
+
 def getSegmentIDWithName(segmentName, segmentationNode):
     """Get a segment by name from a segmentation node"""
     if segmentationNode is None:
@@ -1036,6 +1050,7 @@ def createHollowWithMargin(
   # bounding planes) so the whole-bone extent never has to be allocated
   boundsPoly = fibulaPoly
   if clippingPlanes is not None:
+    ensureExplicitCellArraysStorage(fibulaPoly)
     clipper = vtk.vtkClipClosedSurface()
     clipper.SetInputData(fibulaPoly)
     clipper.SetClippingPlanes(clippingPlanes)

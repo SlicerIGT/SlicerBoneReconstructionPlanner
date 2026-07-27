@@ -5924,6 +5924,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     seg.GetSegmentation().RemoveSegment(hollowWithMarginSegmentID)
 
 
+    ensureExplicitCellArraysStorage(hollowWithMarginModel.GetPolyData())
     clipper = vtk.vtkClipClosedSurface()
     clipper.SetInputData(hollowWithMarginModel.GetPolyData())
     clipper.SetClippingPlanes(planeCollection)
