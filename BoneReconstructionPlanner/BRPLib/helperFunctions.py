@@ -559,17 +559,23 @@ def getIntersectionPointsOfEachModelByMode(intersectionA,intersectionB,measureme
   
 class combineModelsRobustLogic:
   def process(
-      inputModelA, 
-      inputModelB, 
-      outputModel, 
-      operation, 
-      numberOfRetries = 5, 
-      translateRandomly = 3, 
+      inputModelA,
+      inputModelB,
+      outputModel,
+      operation,
+      numberOfRetries = 5,
+      translateRandomly = 3,
       triangulateInputs = False
     ):
     """
     Run the processing algorithm.
     Can be used without GUI widget.
+    Primary implementation: "VESPA Boolean Operations (CGAL)" CLI of the
+    SlicerVESPA extension. It is an executable-only CLI so it runs in a
+    separate process and exchanges data through files, keeping GPL-licensed
+    CGAL/VESPA code out of the Slicer process (and out of this extension's
+    BSD-3 licensing). Falls back to the CombineModels module (vtkbool, from
+    SlicerSandbox) when SlicerVESPA is not installed or its CLI fails.
     :param inputModelA: first input model node
     :param inputModelB: second input model node
     :param outputModel: result model node, if empty then a new output node will be created
@@ -578,6 +584,17 @@ class combineModelsRobustLogic:
     :param translateRandomly: order of magnitude of the random translation
     :param triangulateInputs: triangulate input models before boolean operation
     """
+
+    if hasattr(slicer.modules, 'vespabooleanoperations'):
+      try:
+        combineModelsRobustLogic.processWithVESPA(
+          inputModelA, inputModelB, outputModel, operation,
+          numberOfRetries, translateRandomly)
+        return
+      except Exception as e:
+        logging.exception(
+          "VESPA (CGAL) boolean operation failed, falling back to CombineModels (vtkbool): "
+          + str(e))
 
     logic = slicer.modules.combinemodels.widgetRepresentation().self().logic
     logic.process(
@@ -589,6 +606,93 @@ class combineModelsRobustLogic:
       translateRandomly,
       triangulateInputs
     )
+
+  def processWithVESPA(
+      inputModelA,
+      inputModelB,
+      outputModel,
+      operation,
+      numberOfRetries = 5,
+      translateRandomly = 3
+    ):
+    """
+    Run one boolean operation with the SlicerVESPA CLI (separate process).
+    Raises RuntimeError if the CLI does not complete successfully.
+    """
+    # The CLI reads each node's stored mesh, ignoring parent transform nodes,
+    # so bake the transform of each input into the output model's frame first
+    # (same semantics as the CombineModels module)
+    temporaryInputModels = []
+    cliNode = None
+    try:
+      cliInputModels = []
+      for inputModel in [inputModelA, inputModelB]:
+        transformToOutput = vtk.vtkGeneralTransform()
+        slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(
+          inputModel.GetParentTransformNode(), outputModel.GetParentTransformNode(),
+          transformToOutput)
+        transformerToOutput = vtk.vtkTransformPolyDataFilter()
+        transformerToOutput.SetTransform(transformToOutput)
+        transformerToOutput.SetInputData(inputModel.GetPolyData())
+        transformerToOutput.Update()
+        temporaryInputModel = slicer.mrmlScene.AddNewNodeByClass(
+          'vtkMRMLModelNode', slicer.mrmlScene.GetUniqueNameByString('temp_' + inputModel.GetName()))
+        temporaryInputModel.SetHideFromEditors(True)
+        temporaryInputModel.SetAndObservePolyData(transformerToOutput.GetOutput())
+        temporaryInputModels.append(temporaryInputModel)
+        cliInputModels.append(temporaryInputModel)
+
+      # Empty inputs would make the CLI fail; resolve those cases directly
+      # (same rules as the CombineModels module)
+      polydataA = cliInputModels[0].GetPolyData()
+      polydataB = cliInputModels[1].GetPolyData()
+      modelAEmpty = polydataA.GetNumberOfPoints() == 0
+      modelBEmpty = polydataB.GetNumberOfPoints() == 0
+      if modelAEmpty or modelBEmpty:
+        if operation == "union":
+          result = vtk.vtkPolyData()
+          if not modelAEmpty:
+            result.DeepCopy(polydataA)
+          elif not modelBEmpty:
+            result.DeepCopy(polydataB)
+        elif operation == "intersection":
+          result = vtk.vtkPolyData()
+        elif operation == "difference":
+          result = vtk.vtkPolyData()
+          if not modelAEmpty and modelBEmpty:
+            result.DeepCopy(polydataA)
+        elif operation == "difference2":
+          result = vtk.vtkPolyData()
+          if not modelBEmpty and modelAEmpty:
+            result.DeepCopy(polydataB)
+        else:
+          raise ValueError("Invalid operation: " + operation)
+        outputModel.SetAndObservePolyData(result)
+        if outputModel.GetDisplayNode() is None:
+          outputModel.CreateDefaultDisplayNodes()
+        return
+
+      parameters = {
+        "inputModelA": cliInputModels[0],
+        "inputModelB": cliInputModels[1],
+        "outputModel": outputModel,
+        "operation": operation,
+        "numberOfRetries": numberOfRetries,
+        "translateRandomly": translateRandomly,
+      }
+      cliNode = slicer.cli.runSync(slicer.modules.vespabooleanoperations, None, parameters)
+      if cliNode.GetStatus() & cliNode.ErrorsMask:
+        errorText = cliNode.GetErrorText()
+        raise RuntimeError("VESPABooleanOperations CLI failed: " + errorText)
+    finally:
+      if cliNode is not None:
+        slicer.mrmlScene.RemoveNode(cliNode)
+      for temporaryInputModel in temporaryInputModels:
+        slicer.mrmlScene.RemoveNode(temporaryInputModel)
+    # Callers use the display node right after process(); the CombineModels
+    # module guaranteed one, so keep that behavior
+    if outputModel.GetDisplayNode() is None:
+      outputModel.CreateDefaultDisplayNodes()
 
 def saveExecutedMethodWithTelemetry(method):
     PREVIEW_RELEASE_OCTOBER_6TH_2024 = 33047

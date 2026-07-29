@@ -318,4 +318,5 @@ Fell free to open an [issue](https://github.com/SlicerIGT/SlicerBoneReconstructi
 _bone (dot) reconstruction (dot) planner (at) gmail (dot) com_
 
 # License
-- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/LICENSE" >Read license</a>
+- <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/" >BoneReconstructionPlanner</a> is licensed under the <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/blob/main/LICENSE" >BSD 3-Clause license</a> (commercial-use friendly).
+-  <a href="https://gitlab.kitware.com/vtk/meshing/SlicerVESPA/" >SlicerVESPA</a> extension binaries are derived from <a href="https://github.com/CGAL/cgal/blob/main/Installation/LICENSE.GPL" > CGAL code which is GPLv3-licensed</a> and not distributed by this extension itself. Use optionally.
