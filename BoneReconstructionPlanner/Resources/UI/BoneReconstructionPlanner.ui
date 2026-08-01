@@ -973,7 +973,7 @@ neomandible</string>
                  <item>
                   <widget class="QToolButton" name="fibulaNormalizationTransformButton">
                    <property name="toolTip">
-                    <string>Makes the fibula line (and all objects related to it) point in superior direction</string>
+                    <string>If enabled, makes the fibula line (and all objects related to it) point in superior direction</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -1038,7 +1038,7 @@ neomandible</string>
                  <item>
                   <widget class="QToolButton" name="inCameraPlaneInteractionHandlesToolButton">
                    <property name="toolTip">
-                    <string>Controls showing the orientation controller of the mandible planes that is always parallel to the camera direction</string>
+                    <string>Controls showing the orientation controller of the mandible planes as always parallel to the camera direction if enabled, perpendicular RAS axes otherwise</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -1782,7 +1782,7 @@ distance to fibula (mm)</string>
            <item row="9" column="0">
             <widget class="QLabel" name="label_22">
              <property name="toolTip">
-              <string>This line controls the position and orientation of boxes according to the leg anatomical axis. Should be drawn orthogonal to the fibula line</string>
+              <string>This line controls the position and orientation of boxes according to the leg anatomical axis. Should be drawn perpendicular to the fibula line</string>
              </property>
              <property name="text">
               <string>Miter box direction line</string>
@@ -1830,7 +1830,7 @@ distance to fibula (mm)</string>
            <item row="2" column="1">
             <widget class="QComboBox" name="miterBoxesBoxTypeComboBox">
              <property name="toolTip">
-              <string>Adapted option makes the distal face of the miter boxes parallel to the guide base; regular just creates a normal box</string>
+              <string>Adapted option makes the distal face of the miter boxes parallel to the guide base; regular option just creates a normal box</string>
              </property>
              <item>
               <property name="text">
@@ -1917,6 +1917,9 @@ guide base</string>
            </item>
            <item row="3" column="1">
             <widget class="qMRMLNodeComboBox" name="fibulaSurgicalGuideBaseSelector">
+             <property name="toolTip">
+              <string>Select the fibula guidebase</string>
+             </property>
              <property name="nodeTypes">
               <stringlist>
                <string>vtkMRMLModelNode</string>
@@ -2000,6 +2003,9 @@ guide base</string>
          </item>
          <item>
           <widget class="QPushButton" name="generateFibulaGuidebaseButton">
+           <property name="toolTip">
+            <string>Click to create the fibula guidebase according to the bone and the set parameters</string>
+           </property>
            <property name="text">
             <string>Generate fibula guidebase</string>
            </property>
@@ -2080,6 +2086,9 @@ cylinders</string>
              </item>
              <item row="1" column="0">
               <widget class="QLabel" name="label_49">
+               <property name="toolTip">
+                <string>Location of the screw holes. The holes will made as if drilling perpendicular to the guidebase</string>
+               </property>
                <property name="text">
                 <string>Points</string>
                </property>
@@ -2155,9 +2164,7 @@ visible</string>
               </sizepolicy>
              </property>
              <property name="toolTip">
-              <string>Make boolean operations to surgical
- guide base with screwHolesCylinders,
- fibulaDentalImplantCylinders and miterBoxes</string>
+              <string>Make boolean operations to surgical guide base with screw-holes cylinders and miter boxes. Outputs the fibula surgical guide</string>
              </property>
              <property name="text">
               <string>Create fibula
@@ -2711,6 +2718,9 @@ cylinders</string>
              </item>
              <item row="1" column="0">
               <widget class="QLabel" name="label_51">
+               <property name="toolTip">
+                <string>Location of the screw holes. The holes will made as if drilling perpendicular to the guidebase</string>
+               </property>
                <property name="text">
                 <string>Points</string>
                </property>

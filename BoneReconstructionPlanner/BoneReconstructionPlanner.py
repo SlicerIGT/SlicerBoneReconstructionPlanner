@@ -455,7 +455,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       qt.QIcon(updatePlanningIconPath)
     )
     generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.setToolTip(
-      "Update fibula planes over fibula line;\nupdate fibula bone pieces \nand transform them to mandible"
+      "Update fibula planes and update fibula bone pieces and preview them on the mandible"
     )
     
     updateVSPButtonsLayout = self.ui.updateVSPButtonsFrame.layout()
