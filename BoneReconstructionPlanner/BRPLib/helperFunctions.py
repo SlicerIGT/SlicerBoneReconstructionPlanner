@@ -570,7 +570,7 @@ class combineModelsRobustLogic:
     """
     Run the processing algorithm.
     Can be used without GUI widget.
-    Primary implementation: "VESPA Boolean Operations (CGAL)" CLI of the
+    Primary implementation: the "BooleanOperation" (CGAL) CLI of the
     SlicerVESPA extension. It is an executable-only CLI so it runs in a
     separate process and exchanges data through files, keeping GPL-licensed
     CGAL/VESPA code out of the Slicer process (and out of this extension's
@@ -580,16 +580,16 @@ class combineModelsRobustLogic:
     :param inputModelB: second input model node
     :param outputModel: result model node, if empty then a new output node will be created
     :param operation: union, intersection, difference, difference2
-    :param numberOfRetries: number of retries if operation fails
-    :param translateRandomly: order of magnitude of the random translation
+    :param numberOfRetries: number of retries if operation fails (vtkbool fallback only)
+    :param translateRandomly: order of magnitude of the random translation (vtkbool fallback only)
     :param triangulateInputs: triangulate input models before boolean operation
+      (vtkbool fallback only; the VESPA CLI repairs its inputs instead)
     """
 
-    if hasattr(slicer.modules, 'vespabooleanoperations'):
+    if hasattr(slicer.modules, 'vespabooleanoperation'):
       try:
         combineModelsRobustLogic.processWithVESPA(
-          inputModelA, inputModelB, outputModel, operation,
-          numberOfRetries, translateRandomly)
+          inputModelA, inputModelB, outputModel, operation)
         return
       except Exception as e:
         logging.exception(
@@ -607,18 +607,34 @@ class combineModelsRobustLogic:
       triangulateInputs
     )
 
+  # The VESPA CLI only implements difference, intersection and union, and its
+  # difference is firstPoly minus secondPoly (CGAL corefine_and_compute_difference),
+  # so difference2 is the same operation with the operands swapped
+  VESPA_OPERATIONS = {
+    "union": ("union", False),
+    "intersection": ("intersection", False),
+    "difference": ("difference", False),
+    "difference2": ("difference", True),
+  }
+
   def processWithVESPA(
       inputModelA,
       inputModelB,
       outputModel,
       operation,
-      numberOfRetries = 5,
-      translateRandomly = 3
+      repairInputs = True
     ):
     """
     Run one boolean operation with the SlicerVESPA CLI (separate process).
     Raises RuntimeError if the CLI does not complete successfully.
+    :param repairInputs: let the CLI rebuild both operands into closed,
+      non-self-intersecting 2-manifolds first. CGAL corefinement fails on
+      invalid inputs, so only disable this for meshes known to be valid.
     """
+    if operation not in combineModelsRobustLogic.VESPA_OPERATIONS:
+      raise ValueError("Invalid operation: " + operation)
+    cliOperation, swapOperands = combineModelsRobustLogic.VESPA_OPERATIONS[operation]
+
     # The CLI reads each node's stored mesh, ignoring parent transform nodes,
     # so bake the transform of each input into the output model's frame first
     # (same semantics as the CombineModels module)
@@ -665,25 +681,25 @@ class combineModelsRobustLogic:
           result = vtk.vtkPolyData()
           if not modelBEmpty and modelAEmpty:
             result.DeepCopy(polydataB)
-        else:
-          raise ValueError("Invalid operation: " + operation)
         outputModel.SetAndObservePolyData(result)
         if outputModel.GetDisplayNode() is None:
           outputModel.CreateDefaultDisplayNodes()
         return
 
+      if swapOperands:
+        cliInputModels.reverse()
+
       parameters = {
-        "inputModelA": cliInputModels[0],
-        "inputModelB": cliInputModels[1],
-        "outputModel": outputModel,
-        "operation": operation,
-        "numberOfRetries": numberOfRetries,
-        "translateRandomly": translateRandomly,
+        "firstPoly": cliInputModels[0],
+        "secondPoly": cliInputModels[1],
+        "output": outputModel,
+        "operation": cliOperation,
+        "repairInputs": repairInputs,
       }
-      cliNode = slicer.cli.runSync(slicer.modules.vespabooleanoperations, None, parameters)
+      cliNode = slicer.cli.runSync(slicer.modules.vespabooleanoperation, None, parameters)
       if cliNode.GetStatus() & cliNode.ErrorsMask:
         errorText = cliNode.GetErrorText()
-        raise RuntimeError("VESPABooleanOperations CLI failed: " + errorText)
+        raise RuntimeError("VESPA BooleanOperation CLI failed: " + errorText)
     finally:
       if cliNode is not None:
         slicer.mrmlScene.RemoveNode(cliNode)
