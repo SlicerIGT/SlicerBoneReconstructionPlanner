@@ -6486,7 +6486,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     startIndex = 0
     curveLength = mandibularCurve.GetCurveLengthWorld()
-    middleIndex = mandibularCurve.GetCurvePointIndexAlongCurveWorld(startIndex,curveLength)
+    middleIndex = mandibularCurve.GetCurvePointIndexAlongCurveWorld(startIndex,curveLength/2)
     endIndex = mandibularCurve.GetCurvePointIndexAlongCurveWorld(startIndex,curveLength)
     matrix = vtk.vtkMatrix4x4()
     mandibularCurve.GetCurvePointToWorldTransformAtPointIndex(startIndex,matrix)
