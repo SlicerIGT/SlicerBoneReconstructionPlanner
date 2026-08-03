@@ -322,10 +322,7 @@ def nearestPointOverLineWithTheVectorDirection(pointsModel, vector):
   maxDotIndex = np.unravel_index(np.argmax(dots), dots.shape)
   # return points[maxDotIndex[0]], points[maxDotIndex[1]]
 
-  if vtk.vtkMath.Dot(points[maxDotIndex[0]], unitVector) > 0:
-    return points[maxDotIndex[0]]
-  else:
-    return points[maxDotIndex[1]]
+  return points[maxDotIndex[0]]
 
 def projectBoxesOverFibulaLine(boxesModelsList, fibulaLineMarkup):
   #fibulaLine = vtk.vtkLine()
