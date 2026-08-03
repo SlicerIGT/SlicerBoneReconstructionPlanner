@@ -1782,7 +1782,7 @@ distance to fibula (mm)</string>
            <item row="9" column="0">
             <widget class="QLabel" name="label_22">
              <property name="toolTip">
-              <string>This line controls the position and orientation of boxes according to the leg anatomical axis. Should be drawn perpendicular to the fibula line</string>
+              <string>This line controls the position and orientation of boxes according to the leg anatomical axis. Should be drawn perpendicular to the fibula line. After it is defined miter boxes will be automatically created</string>
              </property>
              <property name="text">
               <string>Miter box direction line</string>
@@ -2256,6 +2256,9 @@ because plan has changed</string>
            </item>
            <item row="2" column="1">
             <widget class="ctkDoubleSpinBox" name="sawBoxSlotWidthSpinBox">
+             <property name="toolTip">
+              <string>Width of the slot where the saw will go through. Should be at least as thick as the saw</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -2279,6 +2282,9 @@ because plan has changed</string>
            </item>
            <item row="3" column="1">
             <widget class="ctkDoubleSpinBox" name="sawBoxSlotLengthSpinBox">
+             <property name="toolTip">
+              <string>This parameter controls how easy it is to maneuver the saw inside the slot</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -2299,6 +2305,9 @@ because plan has changed</string>
            </item>
            <item row="4" column="1">
             <widget class="ctkDoubleSpinBox" name="sawBoxSlotHeightSpinBox">
+             <property name="toolTip">
+              <string>Depth of the slot. It's how much you'll need to push the saw until you contact bone</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -2343,6 +2352,9 @@ distance to mandible (mm)</string>
            </item>
            <item row="6" column="1">
             <widget class="ctkDoubleSpinBox" name="biggerSawBoxDistanceToMandibleSpinBox">
+             <property name="toolTip">
+              <string>If guide type is slot, it defines the wall thickness of the holed box where the saw will pass through</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -2494,6 +2506,9 @@ bridge</string>
              </item>
              <item row="2" column="0">
               <widget class="QLabel" name="label_52">
+               <property name="toolTip">
+                <string>Pass-by points that will be used to create the bridge</string>
+               </property>
                <property name="text">
                 <string>Points</string>
                </property>
@@ -2588,6 +2603,9 @@ bridge</string>
              </item>
              <item row="1" column="0">
               <widget class="QLabel" name="label_62">
+               <property name="toolTip">
+                <string>Curve that marks the outline of the right guide base</string>
+               </property>
                <property name="text">
                 <string>Right side base</string>
                </property>
@@ -2600,7 +2618,7 @@ bridge</string>
          <item>
           <widget class="QCheckBox" name="useMandibleGuideBasesFromCurvesCheckBox">
            <property name="toolTip">
-            <string>If checked, the guide bases from the curves will be used otherwise the guide base will be the one selelcted on the widget below</string>
+            <string>If checked, the guide bases from the curves will be used otherwise the guide base will be the one selected on the widget below</string>
            </property>
            <property name="text">
             <string>Use guide bases from curves</string>
@@ -2792,8 +2810,7 @@ visible</string>
               </sizepolicy>
              </property>
              <property name="toolTip">
-              <string>Make boolean operations to surgical guide bases with
- mandibleBridgeModel and sawBoxes</string>
+              <string>Make boolean operations to mandible guide bases with mandible bridge, saw boxes and screw-holes cylinders. Outputs the mandible surgical guide</string>
              </property>
              <property name="text">
               <string>Create mandible
@@ -2841,6 +2858,9 @@ surgical guide</string>
            </item>
            <item row="0" column="1">
             <widget class="QCheckBox" name="orientation3DCubeCheckBox">
+             <property name="toolTip">
+              <UInt>0</UInt>
+             </property>
              <property name="text">
               <string/>
              </property>
