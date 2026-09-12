@@ -413,7 +413,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Called when the user opens the module the first time and the widget is initialized.
     """
-    self.version = "5.12.3.26.07" # Slicer stable release version + BRP code date (YY.MM)
+    self.version = "5.12.4.26.09" # Slicer stable release version + BRP code date (YY.MM)
     ScriptedLoadableModuleWidget.__init__(self, parent)
     VTKObservationMixin.__init__(self)  # needed for parameter node observation
     self.logic = None
