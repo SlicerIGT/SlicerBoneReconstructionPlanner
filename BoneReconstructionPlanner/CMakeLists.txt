@@ -6,6 +6,8 @@ set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
   BRPLib/guiWidgets.py
   BRPLib/helperFunctions.py
+  BRPLib/MOOSEHelper.py
+  BRPLib/DentalSegmentatorHelper.py
   )
 
 set(MODULE_PYTHON_RESOURCES

@@ -3,3 +3,5 @@
 
 from .helperFunctions import *
 from .guiWidgets import *
+from .MOOSEHelper import *
+from .DentalSegmentatorHelper import *
