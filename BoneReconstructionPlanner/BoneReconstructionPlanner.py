@@ -5006,11 +5006,45 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.getFibulaLine().RemoveAllControlPoints()
     self.getFibulaLine().AddControlPoint(fibulaFirstPoint)
     self.getFibulaLine().AddControlPoint(fibulaLastPoint)
-  
+
+  # WORKAROUND
+  def runPlaneCutDynamicModelerNode(self, dynamicModelerNode):
+    # Workaround for a bug of the Dynamic Modeler plane cut tool (up to at least Slicer 5.12.4):
+    # the end cap is generated from the input mesh of the previous run of the tool, so the first run
+    # after the tool instance is created (new node or scene load) or after its input model, mesh or
+    # parent transform changed produces an uncapped output. The tool is run again in that case.
+    # Upstream fix: https://github.com/Slicer/SlicerSurfaceToolbox (vtkSlicerDynamicModelerPlaneCutTool)
+    dynamicModelerLogic = slicer.modules.dynamicmodeler.logic()
+    dynamicModelerLogic.RunDynamicModelerTool(dynamicModelerNode)
+
+    # the tool caps by default when the attribute is not set (e.g. nodes from scenes saved with older BRP versions)
+    capSurface = dynamicModelerNode.GetAttribute("CapSurface")
+    if (capSurface is not None) and (capSurface != "1"):
+      return
+
+    tool = dynamicModelerLogic.GetDynamicModelerTool(dynamicModelerNode)
+    if tool is None:
+      return
+
+    inputModel = dynamicModelerNode.GetNodeReference("PlaneCut.InputModel")
+    capInputState = ""
+    if inputModel is not None:
+      capInputState = inputModel.GetID()
+      if inputModel.GetMesh() is not None:
+        capInputState += ":" + str(inputModel.GetMesh().GetMTime())
+      parentTransformNode = inputModel.GetParentTransformNode()
+      if parentTransformNode is not None:
+        capInputState += ":" + parentTransformNode.GetID() + ":" + str(parentTransformNode.GetMTime())
+
+    # the state is stored on the tool instance itself so it does not outlive the tool
+    if tool.GetObjectName() != capInputState:
+      tool.SetObjectName(capInputState)
+      dynamicModelerLogic.RunDynamicModelerTool(dynamicModelerNode)
+
   def updateFibulaPieces(self):
     planeCutsList = createListFromFolderName("Bone Plane Cuts")
     for i in range(len(planeCutsList)):
-      slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(planeCutsList[i])
+      self.runPlaneCutDynamicModelerNode(planeCutsList[i])
     
     # update resected mandible model according to the kindOfMandibleResection
     resectedMandibleModel = None
@@ -5062,12 +5096,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     vesselsPlaneCutsList = createListFromFolderName("Vessels Plane Cuts")
     for i in range(len(vesselsPlaneCutsList)):
-      slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(vesselsPlaneCutsList[i])
+      self.runPlaneCutDynamicModelerNode(vesselsPlaneCutsList[i])
 
   def updateInverseMandiblePieces(self):
     inversePlaneCutsList = createListFromFolderName("Inverse Plane Cuts")
     for i in range(len(inversePlaneCutsList)):
-      slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(inversePlaneCutsList[i])
+      self.runPlaneCutDynamicModelerNode(inversePlaneCutsList[i])
 
     inverseAppendList = createListFromFolderName("Inverse Append")
     for i in range(len(inverseAppendList)):
