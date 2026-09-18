@@ -4295,6 +4295,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
         dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
         dynamicModelerNode.SetAttribute("OperationType", "Difference")
+        dynamicModelerNode.SetAttribute("CapSurface", "1")
         #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
         
         moveNodeToFolder(dynamicModelerNode, bonePlaneCutsFolder)
@@ -4328,6 +4329,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", fibulaPlanesList[i].GetID()) 
           dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
           dynamicModelerNode.SetAttribute("OperationType", "Difference")
+          dynamicModelerNode.SetAttribute("CapSurface", "1")
           #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
           
           moveNodeToFolder(dynamicModelerNode, vesselsPlaneCutsFolder)
@@ -4363,6 +4365,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       dynamicModelerNode.SetNodeReferenceID("PlaneCut.InputModel", mandibleModelNode.GetID())
       dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[len(planeList)-1].GetID())
       dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[0].GetID()) 
+      dynamicModelerNode.SetAttribute("CapSurface", "1")
       
       if fixCutGoesThroughTheMandibleTwiceChecked:
         #if planeToFixCutGoesThroughTheMandibleTwice == None:
@@ -4488,6 +4491,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         dynamicModelerNode.AddNodeReferenceID("PlaneCut.InputPlane", planeList[i].GetID()) 
         dynamicModelerNode.SetNodeReferenceID("PlaneCut.OutputNegativeModel", modelNode.GetID())
         dynamicModelerNode.SetAttribute("OperationType", "Difference")
+        dynamicModelerNode.SetAttribute("CapSurface", "1")
         #slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
         
         dynamicModelerNode2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
@@ -5010,14 +5014,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     # update resected mandible model according to the kindOfMandibleResection
     resectedMandibleModel = None
-    planeCutsList = createListFromFolderName("Cut Bones")
-    for i in range(len(planeCutsList)):
-      if planeCutsList[i].GetAttribute("isResectedMandibleModel") == "True":
-        resectedMandibleModel = planeCutsList[i]
+    cutBonesList = createListFromFolderName("Cut Bones")
+    for i in range(len(cutBonesList)):
+      if cutBonesList[i].GetAttribute("isResectedMandibleModel") == "True":
+        resectedMandibleModel = cutBonesList[i]
         break
-    if not resectedMandibleModel:
-      return
     
+    if resectedMandibleModel is None:
+      return
     self.filterOutUnconnectedModelPiecesAccordingToKindOfMandibleResection(resectedMandibleModel)
 
   def filterOutUnconnectedModelPiecesAccordingToKindOfMandibleResection(self, modelPieces):
