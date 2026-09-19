@@ -9,6 +9,7 @@ from BRPLib.helperFunctions import *
 from BRPLib.guiWidgets import *
 from BRPLib.MOOSEHelper import *
 from BRPLib.DentalSegmentatorHelper import *
+from BRPLib.VSPAnimation import VirtualSurgicalPlanAnimation
 import json
 import traceback
 
@@ -420,6 +421,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode = None
     self._shNode = None
     self._updatingGUIFromParameterNode = False
+    self.vspAnimation = None
 
   def setup(self):
     """
@@ -501,6 +503,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     lockIconPath = os.path.join(os.path.dirname(__file__), 'Resources/Icons/lock_48.svg')
     self.ui.lockVSPButton.setIcon(qt.QIcon(lockIconPath))
 
+    self.ui.playVSPAnimationButton.setIcon(
+      self.ui.playVSPAnimationButton.style().standardIcon(qt.QStyle.SP_MediaPlay)
+    )
+
     self.ui.showMandiblePlanesToolButton.setIcon(qt.QIcon(visibilityIconPath))
     self.ui.showMandiblePlanesToolButton.setIconSize(qt.QSize(24,24))
     self.ui.showMandiblePlanesToolButton.setMinimumSize(24,24)
@@ -529,6 +535,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # Create logic class. Logic implements all computations that should be possible to run
     # in batch mode, without a graphical user interface.
     self.logic = BoneReconstructionPlannerLogic()
+    self.vspAnimation = VirtualSurgicalPlanAnimation(
+      self.logic,
+      self.onVSPAnimationStateChanged,
+    )
 
     # mandibularCurvePlaceWidget
     placeWidget = self.ui.mandibleCurvePlaceWidget
@@ -727,6 +737,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.interCondylarBeamDecreaseSizeButton.connect('clicked(bool)', self.onInterCondylarBeamDecreaseSizeButton)
     self.ui.interCondylarBeamVisibilityToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.lockVSPButton.connect('toggled(bool)', self.onLockVSPButton)
+    self.ui.playVSPAnimationButton.connect('toggled(bool)', self.onPlayVSPAnimationButton)
     self.ui.neomandibleVisibilityButton.connect('toggled(bool)', self.onNeomandibleVisibilityButton)
     self.ui.fibulaNormalizationTransformButton.connect('toggled(bool)', self.onFibulaNormalizationTransformButton)
     self.ui.includeVesselsOnPlanCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -817,6 +828,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Called when the application closes and the module widget is destroyed.
     """
+    if self.vspAnimation:
+      self.vspAnimation.stop(restore=True)
     self.removeObservers()
 
   @vtk.calldata_type(vtk.VTK_OBJECT)
@@ -1200,6 +1213,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Called each time the user opens a different module.
     """
+    if self.vspAnimation:
+      self.vspAnimation.stop(restore=True)
+
     # Do not react to parameter node changes (GUI wlil be updated when the user enters into the module)
     self.removeObserver(self._parameterNode, vtk.vtkCommand.ModifiedEvent, self.updateGUIFromParameterNode)
 
@@ -1330,6 +1346,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Called just before the scene is closed.
     """
+    if self.vspAnimation:
+      self.vspAnimation.stop(restore=True)
     # Parameter node will be reset, do not use it anymore
     self.setParameterNode(None)
 
@@ -1655,6 +1673,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.setInterCondylarBeamVisibility(showInterCondylarBeamBoxChecked)
 
     lockVSPChecked = self._parameterNode.GetParameter("lockVSP") == "True"
+    if self.vspAnimation and self.vspAnimation.playing and not lockVSPChecked:
+      self.vspAnimation.stop(restore=True)
+    self.ui.playVSPAnimationButton.enabled = lockVSPChecked
 
     showMandiblePlanesChecked = self._parameterNode.GetParameter("showMandiblePlanes") == "True"
     self.ui.showMandiblePlanesToolButton.checked = showMandiblePlanesChecked
@@ -2097,6 +2118,40 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     Callback function to avoid GUI modification of VSP parameters
     """
     self.logic.lockVSP(checked)
+
+  def onPlayVSPAnimationButton(self, checked):
+    """
+    Callback function to play or stop the Virtual Surgical Plan animation
+    """
+    if checked:
+      self.playVirtualSurgicalPlanAnimation()
+    else:
+      self.stopVirtualSurgicalPlanAnimation()
+
+  def playVirtualSurgicalPlanAnimation(self):
+    """
+    Play the Virtual Surgical Plan animation
+    """
+    if not self.vspAnimation.play():
+      self.onVSPAnimationStateChanged(False)
+
+  def stopVirtualSurgicalPlanAnimation(self):
+    """
+    Stop the Virtual Surgical Plan animation and restore its initial state
+    """
+    self.vspAnimation.stop(restore = True)
+
+  def onVSPAnimationStateChanged(self, playing):
+    """
+    Update the animation button according to the animation state
+    """
+    button = self.ui.playVSPAnimationButton
+    wasBlockingSignals = button.blockSignals(True)
+    button.checked = playing
+    standardPixmap = qt.QStyle.SP_MediaStop if playing else qt.QStyle.SP_MediaPlay
+    button.setIcon(button.style().standardIcon(standardPixmap))
+    button.toolTip = "Stop Virtual Surgical Plan animation" if playing else "Play Virtual Surgical Plan animation"
+    button.blockSignals(wasBlockingSignals)
 
   def onNeomandibleVisibilityButton(self,checked):
     """

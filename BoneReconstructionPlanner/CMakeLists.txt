@@ -8,6 +8,7 @@ set(MODULE_PYTHON_SCRIPTS
   BRPLib/helperFunctions.py
   BRPLib/MOOSEHelper.py
   BRPLib/DentalSegmentatorHelper.py
+  BRPLib/VSPAnimation.py
   )
 
 set(MODULE_PYTHON_RESOURCES
