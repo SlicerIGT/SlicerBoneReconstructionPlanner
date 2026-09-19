@@ -62,6 +62,8 @@ class VirtualSurgicalPlanAnimation:
     self.initiallyMaximizedViewNodesList = []
     self.currentMaximizedViewNode = None
     self.temporaryTransformsList = []
+    self.graftPieceTransformNodeIDsList = []
+    self.graftJointsList = []
     self.animationNodes = {}
 
   def play(self):
@@ -159,6 +161,8 @@ class VirtualSurgicalPlanAnimation:
       return "Cannot play the VSP animation. Missing: %s." % ", ".join(missingNodesList)
     if len(mandiblePlanesList) < 2 or len(fibulaPlanesList) == 0 or len(fibulaPiecesList) == 0:
       return "Cannot play the VSP animation because the plan results are incomplete."
+    if len(fibulaPlanesList) != 2 * len(fibulaPiecesList):
+      return "Cannot play the VSP animation because fibula cutting planes are incomplete."
     if len(self.animationNodes["transformedFibulaPieces"]) != len(fibulaPiecesList):
       return "Cannot play the VSP animation because transformed fibula pieces are incomplete."
 
@@ -306,7 +310,7 @@ class VirtualSurgicalPlanAnimation:
 
   def _createTemporaryGraftTransforms(self):
     """
-    Create temporary transforms to assemble the graft around the first fibula piece.
+    Create temporary transforms and collision-free waypoints to assemble the graft.
     """
     fibulaToMandibleMatricesList = self.animationNodes["graftTransformMatrices"]
     mandibleToFirstFibulaMatrix = vtk.vtkMatrix4x4()
@@ -319,12 +323,74 @@ class VirtualSurgicalPlanAnimation:
       relativeMatricesList.append(relativeMatrix)
 
     self.temporaryTransformsList = []
+    self.graftPieceTransformNodeIDsList = []
     for index, fibulaPiece in enumerate(self.animationNodes["fibulaPieces"]):
-      self._addTemporaryTransform(fibulaPiece, relativeMatricesList[index])
+      pieceTransformNodeIDsList = [self._addTemporaryTransform(fibulaPiece)]
       if index < len(self.animationNodes["cutVessels"]):
-        self._addTemporaryTransform(self.animationNodes["cutVessels"][index], relativeMatricesList[index])
+        pieceTransformNodeIDsList.append(
+          self._addTemporaryTransform(self.animationNodes["cutVessels"][index])
+        )
+      self.graftPieceTransformNodeIDsList.append(pieceTransformNodeIDsList)
 
-  def _addTemporaryTransform(self, modelNode, targetMatrix):
+    self.graftJointsList = []
+    fibulaPlanesList = self.animationNodes["fibulaPlanes"]
+    fibulaPiecesList = self.animationNodes["fibulaPieces"]
+    for pieceIndex in range(1, len(fibulaPiecesList)):
+      previousMatrixToFibula = vtk.vtkMatrix4x4()
+      vtk.vtkMatrix4x4.Invert(relativeMatricesList[pieceIndex - 1], previousMatrixToFibula)
+      targetRelativeMatrix = vtk.vtkMatrix4x4()
+      vtk.vtkMatrix4x4.Multiply4x4(
+        previousMatrixToFibula,
+        relativeMatricesList[pieceIndex],
+        targetRelativeMatrix
+      )
+
+      previousCapCenter = np.zeros(3)
+      currentCapCenter = np.zeros(3)
+      fibulaPlanesList[2 * pieceIndex - 1].GetOrigin(previousCapCenter)
+      fibulaPlanesList[2 * pieceIndex].GetOrigin(currentCapCenter)
+
+      sourceDirection = currentCapCenter - previousCapCenter
+      sourceDistance = np.linalg.norm(sourceDirection)
+      if sourceDistance > 0:
+        sourceDirection = sourceDirection / sourceDistance
+
+      targetDirection = np.zeros(3)
+      fibulaPlanesList[2 * pieceIndex - 1].GetNormal(targetDirection)
+      targetDirection = targetDirection / np.linalg.norm(targetDirection)
+      currentPieceTargetCentroid = self._transformPoint(
+        targetRelativeMatrix,
+        getCentroid(fibulaPiecesList[pieceIndex])
+      )
+      if np.dot(currentPieceTargetCentroid - previousCapCenter, targetDirection) < 0:
+        targetDirection = -targetDirection
+      if sourceDistance == 0:
+        sourceDirection = targetDirection.copy()
+
+      clearanceDistance = sourceDistance
+
+      targetRotationTransform = vtk.vtkTransform()
+      targetRotationTransform.SetMatrix(self._rotationOnlyMatrix(targetRelativeMatrix))
+      identityTransform = vtk.vtkTransform()
+      identityTransform.Identity()
+      rotationInterpolator = vtk.vtkTransformInterpolator()
+      rotationInterpolator.SetInterpolationTypeToLinear()
+      rotationInterpolator.AddTransform(0.0, identityTransform)
+      rotationInterpolator.AddTransform(1.0, targetRotationTransform)
+
+      self.graftJointsList.append({
+        "previousCapCenter": previousCapCenter,
+        "currentCapCenter": currentCapCenter,
+        "sourceDirection": sourceDirection,
+        "sourceDistance": sourceDistance,
+        "targetDirection": targetDirection,
+        "clearanceDistance": clearanceDistance,
+        "targetRelativeMatrix": targetRelativeMatrix,
+        "rotationInterpolator": rotationInterpolator,
+        "interpolatedRotationTransform": vtk.vtkTransform(),
+      })
+
+  def _addTemporaryTransform(self, modelNode):
     transformNode = slicer.mrmlScene.AddNewNodeByClass(
       "vtkMRMLLinearTransformNode",
       "VSP animation transform",
@@ -332,19 +398,13 @@ class VirtualSurgicalPlanAnimation:
     transformNode.SetAndObserveTransformNodeID(modelNode.GetTransformNodeID())
     identityTransform = vtk.vtkTransform()
     identityTransform.Identity()
-    targetTransform = vtk.vtkTransform()
-    targetTransform.SetMatrix(targetMatrix)
-    interpolator = vtk.vtkTransformInterpolator()
-    interpolator.SetInterpolationTypeToLinear()
-    interpolator.AddTransform(0.0, identityTransform)
-    interpolator.AddTransform(1.0, targetTransform)
-    outputTransform = vtk.vtkTransform()
     transformNode.SetMatrixTransformToParent(identityTransform.GetMatrix())
     modelNode.SetAndObserveTransformNodeID(transformNode.GetID())
-    self.temporaryTransformsList.append((modelNode.GetID(), transformNode.GetID(), interpolator, outputTransform))
+    self.temporaryTransformsList.append((modelNode.GetID(), transformNode.GetID()))
+    return transformNode.GetID()
 
   def _removeTemporaryTransforms(self):
-    for modelNodeID, transformNodeID, _interpolator, _outputTransform in self.temporaryTransformsList:
+    for modelNodeID, transformNodeID in self.temporaryTransformsList:
       modelNode = slicer.mrmlScene.GetNodeByID(modelNodeID)
       if modelNode is not None and modelNodeID in self.displayNodesState:
         modelNode.SetAndObserveTransformNodeID(self.displayNodesState[modelNodeID]["transformNodeID"])
@@ -352,6 +412,104 @@ class VirtualSurgicalPlanAnimation:
       if transformNode is not None:
         slicer.mrmlScene.RemoveNode(transformNode)
     self.temporaryTransformsList = []
+    self.graftPieceTransformNodeIDsList = []
+    self.graftJointsList = []
+
+  def _rotationOnlyMatrix(self, matrix):
+    rotationMatrix = vtk.vtkMatrix4x4()
+    rotationMatrix.Identity()
+    for row in range(3):
+      for column in range(3):
+        rotationMatrix.SetElement(row, column, matrix.GetElement(row, column))
+    return rotationMatrix
+
+  def _transformPoint(self, matrix, point):
+    transformedPoint = [0.0, 0.0, 0.0, 0.0]
+    matrix.MultiplyPoint([point[0], point[1], point[2], 1.0], transformedPoint)
+    return np.array(transformedPoint[:3])
+
+  def _matrixWithMappedPoint(self, rotationMatrix, sourcePoint, targetPoint):
+    matrix = vtk.vtkMatrix4x4()
+    matrix.DeepCopy(rotationMatrix)
+    rotatedSourcePoint = np.zeros(3)
+    for row in range(3):
+      rotatedSourcePoint[row] = sum(
+        rotationMatrix.GetElement(row, column) * sourcePoint[column]
+        for column in range(3)
+      )
+      matrix.SetElement(row, 3, targetPoint[row] - rotatedSourcePoint[row])
+    return matrix
+
+  def _interpolateDirections(self, startDirection, endDirection, progress):
+    dotProduct = np.clip(np.dot(startDirection, endDirection), -1.0, 1.0)
+    if dotProduct > 0.9995:
+      direction = startDirection + progress * (endDirection - startDirection)
+      return direction / np.linalg.norm(direction)
+    if dotProduct < -0.9995:
+      referenceDirection = np.array([1.0, 0.0, 0.0])
+      if abs(startDirection[0]) > 0.9:
+        referenceDirection = np.array([0.0, 1.0, 0.0])
+      orthogonalDirection = np.cross(startDirection, referenceDirection)
+      orthogonalDirection = orthogonalDirection / np.linalg.norm(orthogonalDirection)
+      return (
+        np.cos(np.pi * progress) * startDirection
+        + np.sin(np.pi * progress) * orthogonalDirection
+      )
+    angle = np.arccos(dotProduct)
+    return (
+      np.sin((1.0 - progress) * angle) * startDirection
+      + np.sin(progress * angle) * endDirection
+    ) / np.sin(angle)
+
+  def _graftJointMatrix(self, graftJoint, progress):
+    separateEnd = 0.2
+    rotateEnd = 0.65
+    previousCapCenter = graftJoint["previousCapCenter"]
+    currentCapCenter = graftJoint["currentCapCenter"]
+    clearanceDistance = graftJoint["clearanceDistance"]
+
+    if progress >= 1.0:
+      return graftJoint["targetRelativeMatrix"]
+
+    if progress < separateEnd:
+      separateProgress = progress / separateEnd
+      distance = (
+        graftJoint["sourceDistance"]
+        + separateProgress * (clearanceDistance - graftJoint["sourceDistance"])
+      )
+      targetCapCenter = previousCapCenter + graftJoint["sourceDirection"] * distance
+      identityMatrix = vtk.vtkMatrix4x4()
+      identityMatrix.Identity()
+      return self._matrixWithMappedPoint(identityMatrix, currentCapCenter, targetCapCenter)
+
+    if progress < rotateEnd:
+      rotateProgress = (progress - separateEnd) / (rotateEnd - separateEnd)
+      graftJoint["rotationInterpolator"].InterpolateTransform(
+        rotateProgress,
+        graftJoint["interpolatedRotationTransform"]
+      )
+      capDirection = self._interpolateDirections(
+        graftJoint["sourceDirection"],
+        graftJoint["targetDirection"],
+        rotateProgress
+      )
+      targetCapCenter = previousCapCenter + capDirection * clearanceDistance
+      return self._matrixWithMappedPoint(
+        graftJoint["interpolatedRotationTransform"].GetMatrix(),
+        currentCapCenter,
+        targetCapCenter
+      )
+
+    approachProgress = (progress - rotateEnd) / (1.0 - rotateEnd)
+    targetCapCenter = (
+      previousCapCenter
+      + graftJoint["targetDirection"] * clearanceDistance * (1.0 - approachProgress)
+    )
+    return self._matrixWithMappedPoint(
+      self._rotationOnlyMatrix(graftJoint["targetRelativeMatrix"]),
+      currentCapCenter,
+      targetCapCenter
+    )
 
   def _createSteps(self):
     """
@@ -537,9 +695,22 @@ class VirtualSurgicalPlanAnimation:
     self._fadeNodes([self.animationNodes["fibula"], self.animationNodes["vessels"]], progress, False)
 
   def _joinGraft(self, progress):
-    for _modelNodeID, transformNodeID, interpolator, outputTransform in self.temporaryTransformsList:
-      transformNode = slicer.mrmlScene.GetNodeByID(transformNodeID)
-      if transformNode is None:
-        continue
-      interpolator.InterpolateTransform(progress, outputTransform)
-      transformNode.SetMatrixTransformToParent(outputTransform.GetMatrix())
+    numberOfJoints = len(self.graftJointsList)
+    if numberOfJoints == 0:
+      return
+
+    currentPieceMatrix = vtk.vtkMatrix4x4()
+    currentPieceMatrix.Identity()
+    for pieceIndex in range(1, len(self.graftPieceTransformNodeIDsList)):
+      jointProgress = min(1.0, max(0.0, progress * numberOfJoints - (pieceIndex - 1)))
+      jointMatrix = self._graftJointMatrix(
+        self.graftJointsList[pieceIndex - 1],
+        jointProgress
+      )
+      nextPieceMatrix = vtk.vtkMatrix4x4()
+      vtk.vtkMatrix4x4.Multiply4x4(currentPieceMatrix, jointMatrix, nextPieceMatrix)
+      currentPieceMatrix = nextPieceMatrix
+      for transformNodeID in self.graftPieceTransformNodeIDsList[pieceIndex]:
+        transformNode = slicer.mrmlScene.GetNodeByID(transformNodeID)
+        if transformNode is not None:
+          transformNode.SetMatrixTransformToParent(currentPieceMatrix)
