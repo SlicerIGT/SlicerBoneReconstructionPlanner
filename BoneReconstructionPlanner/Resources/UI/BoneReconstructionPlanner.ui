@@ -787,6 +787,25 @@ preview (takes more time)</string>
                 </property>
                </widget>
               </item>
+                            <item>
+                             <widget class="QToolButton" name="playVSPAnimationButton">
+                                <property name="sizePolicy">
+                                 <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+                                    <horstretch>0</horstretch>
+                                    <verstretch>0</verstretch>
+                                 </sizepolicy>
+                                </property>
+                                <property name="toolTip">
+                                 <string>Play Virtual Surgical Plan animation</string>
+                                </property>
+                                <property name="text">
+                                 <string/>
+                                </property>
+                                <property name="checkable">
+                                 <bool>true</bool>
+                                </property>
+                             </widget>
+                            </item>
              </layout>
             </widget>
            </item>
