@@ -65,6 +65,7 @@ class VirtualSurgicalPlanAnimation:
     self.graftPieceTransformNodeIDsList = []
     self.graftJointsList = []
     self.animationNodes = {}
+    self.animationWarningsList = []
 
   def play(self):
     """
@@ -77,6 +78,8 @@ class VirtualSurgicalPlanAnimation:
     if validationError:
       slicer.util.errorDisplay(validationError)
       return False
+    if self.animationWarningsList:
+      slicer.util.warningDisplay("\n".join(self.animationWarningsList))
 
     try:
       self._saveState()
@@ -116,6 +119,7 @@ class VirtualSurgicalPlanAnimation:
     Collect and validate all nodes needed for the animation.
     """
     parameterNode = self.logic.getParameterNode()
+    self.animationWarningsList = []
     if parameterNode.GetParameter("lockVSP") != "True":
       return "Lock the Virtual Surgical Plan before playing its animation."
 
@@ -149,8 +153,6 @@ class VirtualSurgicalPlanAnimation:
     requiredNodesDict = {
       "mandible model": self.animationNodes["mandible"],
       "fibula model": self.animationNodes["fibula"],
-      "mandible surgical guide": self.animationNodes["mandibleGuide"],
-      "fibula surgical guide": self.animationNodes["fibulaGuide"],
       "resected mandible": self.animationNodes["resectedMandible"],
     }
     missingNodesList = []
@@ -159,6 +161,16 @@ class VirtualSurgicalPlanAnimation:
         missingNodesList.append(nodeName)
     if missingNodesList:
       return "Cannot play the VSP animation. Missing: %s." % ", ".join(missingNodesList)
+    missingGuidesList = []
+    if self.animationNodes["mandibleGuide"] is None:
+      missingGuidesList.append("mandible surgical guide")
+    if self.animationNodes["fibulaGuide"] is None:
+      missingGuidesList.append("fibula surgical guide")
+    if missingGuidesList:
+      self.animationWarningsList.append(
+        "The following models are missing and their animation scenes will be skipped: %s."
+        % ", ".join(missingGuidesList)
+      )
     if len(mandiblePlanesList) < 2 or len(fibulaPlanesList) == 0 or len(fibulaPiecesList) == 0:
       return "Cannot play the VSP animation because the plan results are incomplete."
     if len(fibulaPlanesList) != 2 * len(fibulaPiecesList):
@@ -521,22 +533,42 @@ class VirtualSurgicalPlanAnimation:
     mandibleColor = tuple(self.animationNodes["mandible"].GetDisplayNode().GetColor())
     resectedColor = self.displayNodesState[self.animationNodes["resectedMandible"].GetID()]["color"]
 
-    return [
+    animationStepsList = [
       (animationDurationsDict["resectionSaveState"], lambda progress: None),
       (animationDurationsDict["resectionSetView"], lambda progress: self._setView("mandible")),
       (animationDurationsDict["resectionMandibleOnly"], lambda progress: self._showOnly([self.animationNodes["mandible"]])),
-      (animationDurationsDict["resectionShowGuide"], lambda progress: self._fadeNodes([self.animationNodes["mandibleGuide"]], progress, True)),
-      (animationDurationsDict["resectionShowPlanes"], lambda progress: self._showSequentially(self.animationNodes["resectionPlanes"], progress)),
-      (animationDurationsDict["resectionHideGuide"], lambda progress: self._fadeNodes([self.animationNodes["mandibleGuide"]], progress, False)),
+    ]
+    if self.animationNodes["mandibleGuide"] is not None:
+      animationStepsList.append(
+        (animationDurationsDict["resectionShowGuide"], lambda progress: self._fadeNodes([self.animationNodes["mandibleGuide"]], progress, True))
+      )
+    animationStepsList.append(
+      (animationDurationsDict["resectionShowPlanes"], lambda progress: self._showSequentially(self.animationNodes["resectionPlanes"], progress))
+    )
+    if self.animationNodes["mandibleGuide"] is not None:
+      animationStepsList.append(
+        (animationDurationsDict["resectionHideGuide"], lambda progress: self._fadeNodes([self.animationNodes["mandibleGuide"]], progress, False))
+      )
+    animationStepsList.extend([
       (animationDurationsDict["resectionExchangeMandible"], lambda progress: self._exchangeMandible(progress, mandibleColor)),
       (animationDurationsDict["resectionRestoreColor"], lambda progress: self._interpolateColor(self.animationNodes["resectedMandible"], mandibleColor, resectedColor, progress)),
       (animationDurationsDict["resectionHidePlanes"], lambda progress: self._fadeNodes(self.animationNodes["resectionPlanes"], progress, False)),
       (animationDurationsDict["resectionPause"], lambda progress: None),
       (animationDurationsDict["graftingSetView"], lambda progress: self._setView("fibula")),
       (animationDurationsDict["graftingFibulaOnly"], lambda progress: self._showOnly([self.animationNodes["fibula"]])),
-      (animationDurationsDict["graftingShowGuide"], lambda progress: self._fadeNodes([self.animationNodes["fibulaGuide"]], progress, True)),
-      (fibulaPlaneDuration, lambda progress: self._showSequentially(self.animationNodes["fibulaPlanes"], progress)),
-      (animationDurationsDict["graftingHideGuide"], lambda progress: self._fadeNodes([self.animationNodes["fibulaGuide"]], progress, False)),
+    ])
+    if self.animationNodes["fibulaGuide"] is not None:
+      animationStepsList.append(
+        (animationDurationsDict["graftingShowGuide"], lambda progress: self._fadeNodes([self.animationNodes["fibulaGuide"]], progress, True))
+      )
+    animationStepsList.append(
+      (fibulaPlaneDuration, lambda progress: self._showSequentially(self.animationNodes["fibulaPlanes"], progress))
+    )
+    if self.animationNodes["fibulaGuide"] is not None:
+      animationStepsList.append(
+        (animationDurationsDict["graftingHideGuide"], lambda progress: self._fadeNodes([self.animationNodes["fibulaGuide"]], progress, False))
+      )
+    animationStepsList.extend([
       (piecePairDuration, self._exchangeFibulaForPieces),
       (animationDurationsDict["graftingHidePlanes"], lambda progress: self._fadeNodes(self.animationNodes["fibulaPlanes"], progress, False)),
       (animationDurationsDict["graftingJoinPieces"], self._joinGraft),
@@ -544,7 +576,8 @@ class VirtualSurgicalPlanAnimation:
       (animationDurationsDict["reconstructionSetView"], lambda progress: self._prepareReconstructionView()),
       (animationDurationsDict["reconstructionShowGraft"], lambda progress: self._fadeNodes(self.animationNodes["transformedFibulaPieces"] + self.animationNodes["transformedVessels"], progress, True)),
       (animationDurationsDict["reconstructionRestoreState"], lambda progress: self.stop(restore = True)),
-    ]
+    ])
+    return animationStepsList
 
   def _startNextStep(self):
     if not self.playing:
