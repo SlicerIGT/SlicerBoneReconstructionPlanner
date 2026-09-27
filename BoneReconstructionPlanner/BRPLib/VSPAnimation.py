@@ -22,7 +22,8 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
   "resectionPause": 3.0,
   # Grafting animation
   "graftingSetView": 0.0,
-  "graftingFibulaOnly": 3.0,
+  "graftingFibulaOnly": 0.5,
+  "graftingZoomFibula": 2.0,
   "graftingShowGuide": 3.0,
   "graftingShowEachPlane": 1.0,
   "graftingHideGuide": 3.0,
@@ -66,6 +67,8 @@ class VirtualSurgicalPlanAnimation:
     self.graftJointsList = []
     self.animationNodes = {}
     self.animationWarningsList = []
+    self.fibulaFullViewCamera = None
+    self.fibulaZoomedViewCamera = None
 
   def play(self):
     """
@@ -104,6 +107,8 @@ class VirtualSurgicalPlanAnimation:
     self.playing = False
     self.currentAnimationStep = None
     self.animationStepsList = []
+    self.fibulaFullViewCamera = None
+    self.fibulaZoomedViewCamera = None
     if restore and self.displayNodesState:
       self._restoreState()
     self._removeTemporaryTransforms()
@@ -556,6 +561,7 @@ class VirtualSurgicalPlanAnimation:
       (animationDurationsDict["resectionPause"], lambda progress: None),
       (animationDurationsDict["graftingSetView"], lambda progress: self._setView("fibula")),
       (animationDurationsDict["graftingFibulaOnly"], lambda progress: self._showOnly([self.animationNodes["fibula"]])),
+      (animationDurationsDict["graftingZoomFibula"], self._zoomIntoFibula),
     ])
     if self.animationNodes["fibulaGuide"] is not None:
       animationStepsList.append(
@@ -635,21 +641,120 @@ class VirtualSurgicalPlanAnimation:
       layoutManager.setMaximizedViewNode(viewNode)
     self.currentMaximizedViewNode = viewNode
 
+    cameraNode = slicer.modules.cameras.logic().GetViewActiveCameraNode(viewNode)
     if viewName == "mandible":
       modelNode = self.animationNodes["mandible"]
       cameraDirection = np.array([0.0, -1.0, 0.0])
       viewUpDirection = np.array([0.0, 0.0, 1.0])
-    else:
-      modelNode = self.animationNodes["fibula"]
-      donorLeg = self.logic.getParameterNode().GetParameter("donorLeg")
-      cameraDirection = np.array([-1.0, 0.0, 0.0]) if donorLeg == "Right" else np.array([1.0, 0.0, 0.0])
-      viewUpDirection = np.array([0.0, 1.0, 0.0])
+      centroid = getCentroid(modelNode)
+      cameraNode.SetPosition(centroid - cameraDirection * 300.0)
+      cameraNode.SetFocalPoint(centroid)
+      cameraNode.SetViewUp(viewUpDirection)
+      cameraNode.ResetClippingRange()
+      return
 
-    centroid = getCentroid(modelNode)
-    cameraNode = slicer.modules.cameras.logic().GetViewActiveCameraNode(viewNode)
-    cameraNode.SetPosition(centroid - cameraDirection * 300.0)
-    cameraNode.SetFocalPoint(centroid)
+    donorLeg = self.logic.getParameterNode().GetParameter("donorLeg")
+    cameraDirection = np.array([-1.0, 0.0, 0.0]) if donorLeg == "Right" else np.array([1.0, 0.0, 0.0])
+    viewUpDirection = np.array([0.0, 1.0, 0.0])
+    fibulaBounds = [0.0] * 6
+    self.animationNodes["fibula"].GetRASBounds(fibulaBounds)
+    # Fit the whole fibula so both epiphyses are visible
+    position, focalPoint, parallelScale = self._cameraPoseFittingBounds(
+      cameraNode, fibulaBounds, cameraDirection, 1.05
+    )
+    self.fibulaFullViewCamera = {
+      "position": position,
+      "focalPoint": focalPoint,
+      "parallelScale": parallelScale,
+      "cameraDirection": cameraDirection,
+    }
+    self.fibulaZoomedViewCamera = None
+    cameraNode.SetPosition(position)
+    cameraNode.SetFocalPoint(focalPoint)
     cameraNode.SetViewUp(viewUpDirection)
+    cameraNode.SetParallelScale(parallelScale)
+    cameraNode.ResetClippingRange()
+
+  def _cameraPoseFittingBounds(self, cameraNode, bounds, cameraDirection, margin):
+    """
+    Return the camera position, focal point, and parallel scale that fit
+    the bounding sphere of bounds when looking along cameraDirection.
+    """
+    center = np.array([
+      (bounds[0] + bounds[1]) / 2.0,
+      (bounds[2] + bounds[3]) / 2.0,
+      (bounds[4] + bounds[5]) / 2.0,
+    ])
+    diagonal = np.array([
+      bounds[1] - bounds[0],
+      bounds[3] - bounds[2],
+      bounds[5] - bounds[4],
+    ])
+    radius = 0.5 * np.linalg.norm(diagonal) * margin
+    viewAngle = cameraNode.GetViewAngle()
+    if viewAngle <= 0.0:
+      viewAngle = 30.0
+    distance = radius / np.sin(np.radians(viewAngle) / 2.0)
+    position = center - cameraDirection * distance
+    return position, center, radius
+
+  def _unionBounds(self, nodesList):
+    unionBounds = None
+    for node in nodesList:
+      if node is None:
+        continue
+      bounds = [0.0] * 6
+      node.GetRASBounds(bounds)
+      if bounds[0] > bounds[1]:
+        continue
+      if unionBounds is None:
+        unionBounds = list(bounds)
+        continue
+      for index in range(3):
+        unionBounds[2 * index] = min(unionBounds[2 * index], bounds[2 * index])
+        unionBounds[2 * index + 1] = max(unionBounds[2 * index + 1], bounds[2 * index + 1])
+    return unionBounds
+
+  def _zoomIntoFibula(self, progress):
+    """
+    Zoom slightly from the whole fibula view into the region of the graft pieces.
+    """
+    if self.fibulaFullViewCamera is None:
+      return
+    cameraNode = slicer.modules.cameras.logic().GetViewActiveCameraNode(self._viewNode("fibula"))
+    startPosition = self.fibulaFullViewCamera["position"]
+    startFocalPoint = self.fibulaFullViewCamera["focalPoint"]
+    startParallelScale = self.fibulaFullViewCamera["parallelScale"]
+    cameraDirection = self.fibulaFullViewCamera["cameraDirection"]
+
+    if self.fibulaZoomedViewCamera is None:
+      maximumZoomFactor = 2
+      startDistance = np.linalg.norm(startFocalPoint - startPosition)
+      piecesBounds = self._unionBounds(self.animationNodes["fibulaPieces"])
+      if piecesBounds is None:
+        targetFocalPoint = startFocalPoint
+        targetDistance = startDistance / maximumZoomFactor
+        targetParallelScale = startParallelScale / maximumZoomFactor
+      else:
+        piecesPosition, targetFocalPoint, piecesParallelScale = self._cameraPoseFittingBounds(
+          cameraNode, piecesBounds, cameraDirection, 1.15
+        )
+        piecesDistance = np.linalg.norm(targetFocalPoint - piecesPosition)
+        targetDistance = min(startDistance, max(piecesDistance, startDistance / maximumZoomFactor))
+        targetParallelScale = min(startParallelScale, max(piecesParallelScale, startParallelScale / maximumZoomFactor))
+      self.fibulaZoomedViewCamera = {
+        "position": targetFocalPoint - cameraDirection * targetDistance,
+        "focalPoint": targetFocalPoint,
+        "parallelScale": targetParallelScale,
+      }
+
+    easedProgress = progress * progress * (3.0 - 2.0 * progress)
+    targetPosition = self.fibulaZoomedViewCamera["position"]
+    targetFocalPoint = self.fibulaZoomedViewCamera["focalPoint"]
+    targetParallelScale = self.fibulaZoomedViewCamera["parallelScale"]
+    cameraNode.SetPosition(startPosition + (targetPosition - startPosition) * easedProgress)
+    cameraNode.SetFocalPoint(startFocalPoint + (targetFocalPoint - startFocalPoint) * easedProgress)
+    cameraNode.SetParallelScale(startParallelScale + (targetParallelScale - startParallelScale) * easedProgress)
     cameraNode.ResetClippingRange()
 
   def _viewNode(self, viewName):
