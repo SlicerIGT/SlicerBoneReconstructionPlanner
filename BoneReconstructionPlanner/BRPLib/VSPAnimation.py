@@ -29,6 +29,7 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
   "graftingHideGuide": 3.0,
   "graftingShowEachPiecePair": 1.0,
   "graftingHidePlanes": 3.0,
+  "graftingRotateView": 3.0,
   "graftingJoinPieces": 5.0,
   "graftingHidePieces": 0.0,
   # Reconstruction animation
@@ -72,6 +73,7 @@ class VirtualSurgicalPlanAnimation:
     self.mandibleViewCamera = None
     self.fibulaFullViewCamera = None
     self.fibulaZoomedViewCamera = None
+    self.fibulaAssemblyViewCamera = None
 
   def play(self):
     """
@@ -113,6 +115,7 @@ class VirtualSurgicalPlanAnimation:
     self.mandibleViewCamera = None
     self.fibulaFullViewCamera = None
     self.fibulaZoomedViewCamera = None
+    self.fibulaAssemblyViewCamera = None
     if restore and self.displayNodesState:
       self._restoreState()
     self._removeTemporaryTransforms()
@@ -581,6 +584,12 @@ class VirtualSurgicalPlanAnimation:
     animationStepsList.extend([
       (piecePairDuration, self._exchangeFibulaForPieces),
       (animationDurationsDict["graftingHidePlanes"], lambda progress: self._fadeNodes(self.animationNodes["fibulaPlanes"], progress, False)),
+    ])
+    if len(self.graftJointsList) > 0:
+      animationStepsList.append(
+        (animationDurationsDict["graftingRotateView"], self._rotateIntoFibulaAssemblyView)
+      )
+    animationStepsList.extend([
       (animationDurationsDict["graftingJoinPieces"], self._joinGraft),
       (animationDurationsDict["graftingHidePieces"], lambda progress: self._hideNodes(self.animationNodes["fibulaPieces"] + self.animationNodes["cutVessels"])),
       (animationDurationsDict["reconstructionSetView"], lambda progress: self._prepareReconstructionView()),
@@ -687,6 +696,7 @@ class VirtualSurgicalPlanAnimation:
       "cameraDirection": cameraDirection,
     }
     self.fibulaZoomedViewCamera = None
+    self.fibulaAssemblyViewCamera = None
     cameraNode.SetPosition(position)
     cameraNode.SetFocalPoint(focalPoint)
     cameraNode.SetViewUp(viewUpDirection)
@@ -800,6 +810,133 @@ class VirtualSurgicalPlanAnimation:
     cameraNode.SetViewUp(rotationTransform.TransformVector(startViewUpDirection))
     cameraNode.ResetClippingRange()
 
+  def _graftMovementBounds(self, numberOfSamples):
+    """
+    Get the bounds that contain the fibula pieces during the whole joining movement.
+    """
+    fibulaPiecesList = self.animationNodes["fibulaPieces"]
+    cutVesselsList = self.animationNodes["cutVessels"]
+    pieceBoundsList = []
+    for pieceIndex in range(len(fibulaPiecesList)):
+      pieceNodesList = [fibulaPiecesList[pieceIndex]]
+      if pieceIndex < len(cutVesselsList):
+        pieceNodesList.append(cutVesselsList[pieceIndex])
+      pieceBoundsList.append(self._unionBounds(pieceNodesList))
+
+    movementBounds = None
+    for sampleIndex in range(numberOfSamples + 1):
+      pieceMatricesList = self._graftPieceMatricesList(sampleIndex / numberOfSamples)
+      for pieceIndex in range(len(pieceMatricesList)):
+        pieceBounds = pieceBoundsList[pieceIndex]
+        if pieceBounds is None:
+          continue
+        for xIndex in range(2):
+          for yIndex in range(2):
+            for zIndex in range(2):
+              corner = [pieceBounds[xIndex], pieceBounds[2 + yIndex], pieceBounds[4 + zIndex]]
+              transformedCorner = self._transformPoint(pieceMatricesList[pieceIndex], corner)
+              if movementBounds is None:
+                movementBounds = [
+                  transformedCorner[0], transformedCorner[0],
+                  transformedCorner[1], transformedCorner[1],
+                  transformedCorner[2], transformedCorner[2],
+                ]
+                continue
+              for index in range(3):
+                movementBounds[2 * index] = min(movementBounds[2 * index], transformedCorner[index])
+                movementBounds[2 * index + 1] = max(movementBounds[2 * index + 1], transformedCorner[index])
+    return movementBounds
+
+  def _fibulaAssemblyViewCamera(self, cameraNode):
+    """
+    Compute a camera that looks perpendicular to the plane where the graft bends
+    and fits the fibula pieces during the whole joining movement.
+    """
+    startPosition = np.array(cameraNode.GetPosition())
+    startFocalPoint = np.array(cameraNode.GetFocalPoint())
+    startViewUpDirection = np.array(cameraNode.GetViewUp())
+    startParallelScale = cameraNode.GetParallelScale()
+    startDistance = np.linalg.norm(startFocalPoint - startPosition)
+    startCameraDirection = (startFocalPoint - startPosition) / startDistance
+
+    # Cap centers of the assembled graft define the plane where it bends
+    fibulaPlanesList = self.animationNodes["fibulaPlanes"]
+    finalPieceMatricesList = self._graftPieceMatricesList(1.0)
+    capCentersList = []
+    for pieceIndex in range(len(finalPieceMatricesList)):
+      for planeIndex in (2 * pieceIndex, 2 * pieceIndex + 1):
+        capCenter = np.zeros(3)
+        fibulaPlanesList[planeIndex].GetOrigin(capCenter)
+        capCentersList.append(self._transformPoint(finalPieceMatricesList[pieceIndex], capCenter))
+    capCentersArray = np.array(capCentersList)
+    centeredCapCentersArray = capCentersArray - capCentersArray.mean(axis=0)
+    _, singularValues, rightSingularVectors = np.linalg.svd(centeredCapCentersArray)
+    targetCameraDirection = startCameraDirection
+    if singularValues[1] > 1e-3 * singularValues[0]:
+      targetCameraDirection = rightSingularVectors[2] / np.linalg.norm(rightSingularVectors[2])
+      if np.dot(targetCameraDirection, startCameraDirection) < 0:
+        targetCameraDirection = -targetCameraDirection
+
+    rotationAxis = np.cross(startCameraDirection, targetCameraDirection)
+    rotationAngleDegrees = np.degrees(np.arccos(np.clip(np.dot(startCameraDirection, targetCameraDirection), -1.0, 1.0)))
+    if np.linalg.norm(rotationAxis) < 1e-6:
+      rotationAxis = startViewUpDirection
+      rotationAngleDegrees = 0.0
+
+    targetFocalPoint = startFocalPoint
+    targetDistance = startDistance
+    targetParallelScale = startParallelScale
+    movementBounds = self._graftMovementBounds(20)
+    if movementBounds is not None:
+      targetPosition, targetFocalPoint, targetParallelScale = self._cameraPoseFittingBounds(
+        cameraNode, movementBounds, targetCameraDirection, 1.05
+      )
+      targetDistance = np.linalg.norm(targetFocalPoint - targetPosition)
+
+    return {
+      "startFocalPoint": startFocalPoint,
+      "startDistance": startDistance,
+      "startParallelScale": startParallelScale,
+      "startCameraDirection": startCameraDirection,
+      "startViewUpDirection": startViewUpDirection,
+      "targetCameraDirection": targetCameraDirection,
+      "targetFocalPoint": targetFocalPoint,
+      "targetDistance": targetDistance,
+      "targetParallelScale": targetParallelScale,
+      "rotationAxis": rotationAxis,
+      "rotationAngleDegrees": rotationAngleDegrees,
+    }
+
+  def _rotateIntoFibulaAssemblyView(self, progress):
+    """
+    Rotate the camera around the fibula pieces until it looks perpendicular to
+    the plane where the graft bends so the assembling of the pieces is visible.
+    """
+    cameraNode = slicer.modules.cameras.logic().GetViewActiveCameraNode(self._viewNode("fibula"))
+    if self.fibulaAssemblyViewCamera is None:
+      self.fibulaAssemblyViewCamera = self._fibulaAssemblyViewCamera(cameraNode)
+    startFocalPoint = self.fibulaAssemblyViewCamera["startFocalPoint"]
+    startDistance = self.fibulaAssemblyViewCamera["startDistance"]
+    startParallelScale = self.fibulaAssemblyViewCamera["startParallelScale"]
+    targetFocalPoint = self.fibulaAssemblyViewCamera["targetFocalPoint"]
+    targetDistance = self.fibulaAssemblyViewCamera["targetDistance"]
+    targetParallelScale = self.fibulaAssemblyViewCamera["targetParallelScale"]
+
+    easedProgress = progress * progress * (3.0 - 2.0 * progress)
+    rotationTransform = vtk.vtkTransform()
+    rotationTransform.RotateWXYZ(
+      self.fibulaAssemblyViewCamera["rotationAngleDegrees"] * easedProgress,
+      self.fibulaAssemblyViewCamera["rotationAxis"]
+    )
+    cameraDirection = np.array(rotationTransform.TransformVector(self.fibulaAssemblyViewCamera["startCameraDirection"]))
+    focalPoint = startFocalPoint + (targetFocalPoint - startFocalPoint) * easedProgress
+    distance = startDistance + (targetDistance - startDistance) * easedProgress
+    cameraNode.SetFocalPoint(focalPoint)
+    cameraNode.SetPosition(focalPoint - cameraDirection * distance)
+    cameraNode.SetViewUp(rotationTransform.TransformVector(self.fibulaAssemblyViewCamera["startViewUpDirection"]))
+    cameraNode.SetParallelScale(startParallelScale + (targetParallelScale - startParallelScale) * easedProgress)
+    cameraNode.ResetClippingRange()
+
   def _viewNode(self, viewName):
     singletonTag = (
       slicer.MANDIBLE_VIEW_SINGLETON_TAG
@@ -875,23 +1012,32 @@ class VirtualSurgicalPlanAnimation:
       self._fadeNodes(fibulaPieceAndVesselList, localProgress, True)
     self._fadeNodes([self.animationNodes["fibula"], self.animationNodes["vessels"]], progress, False)
 
-  def _joinGraft(self, progress):
+  def _graftPieceMatricesList(self, progress):
+    """
+    Get the matrix of each fibula piece at the given progress of the graft joining.
+    """
     numberOfJoints = len(self.graftJointsList)
-    if numberOfJoints == 0:
-      return
-
-    currentPieceMatrix = vtk.vtkMatrix4x4()
-    currentPieceMatrix.Identity()
+    firstPieceMatrix = vtk.vtkMatrix4x4()
+    firstPieceMatrix.Identity()
+    pieceMatricesList = [firstPieceMatrix]
     for pieceIndex in range(1, len(self.graftPieceTransformNodeIDsList)):
       jointProgress = min(1.0, max(0.0, progress * numberOfJoints - (pieceIndex - 1)))
       jointMatrix = self._graftJointMatrix(
         self.graftJointsList[pieceIndex - 1],
         jointProgress
       )
-      nextPieceMatrix = vtk.vtkMatrix4x4()
-      vtk.vtkMatrix4x4.Multiply4x4(currentPieceMatrix, jointMatrix, nextPieceMatrix)
-      currentPieceMatrix = nextPieceMatrix
+      pieceMatrix = vtk.vtkMatrix4x4()
+      vtk.vtkMatrix4x4.Multiply4x4(pieceMatricesList[pieceIndex - 1], jointMatrix, pieceMatrix)
+      pieceMatricesList.append(pieceMatrix)
+    return pieceMatricesList
+
+  def _joinGraft(self, progress):
+    if len(self.graftJointsList) == 0:
+      return
+
+    pieceMatricesList = self._graftPieceMatricesList(progress)
+    for pieceIndex in range(1, len(self.graftPieceTransformNodeIDsList)):
       for transformNodeID in self.graftPieceTransformNodeIDsList[pieceIndex]:
         transformNode = slicer.mrmlScene.GetNodeByID(transformNodeID)
         if transformNode is not None:
-          transformNode.SetMatrixTransformToParent(currentPieceMatrix)
+          transformNode.SetMatrixTransformToParent(pieceMatricesList[pieceIndex])
