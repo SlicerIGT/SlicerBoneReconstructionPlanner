@@ -1888,14 +1888,18 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("showMandiblePlanes","True")
     else:
       self._parameterNode.SetParameter("showMandiblePlanes","False")
-    if self.ui.showMandiblePlanesInteractionHandlesToolButton.checked:
-      self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles","True")
-    else:
-      self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles","False")
-    if self.ui.inCameraPlaneInteractionHandlesToolButton.checked:
-      self._parameterNode.SetParameter("inCameraPlaneInteractionHandles","True")
-    else:
-      self._parameterNode.SetParameter("inCameraPlaneInteractionHandles","False")
+    # disabled buttons are shown unchecked, don't save that so the previous
+    # interaction state is restored when the mandible planes are shown again
+    if self.ui.showMandiblePlanesInteractionHandlesToolButton.enabled:
+      if self.ui.showMandiblePlanesInteractionHandlesToolButton.checked:
+        self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles","True")
+      else:
+        self._parameterNode.SetParameter("showMandiblePlanesInteractionHandles","False")
+    if self.ui.inCameraPlaneInteractionHandlesToolButton.enabled:
+      if self.ui.inCameraPlaneInteractionHandlesToolButton.checked:
+        self._parameterNode.SetParameter("inCameraPlaneInteractionHandles","True")
+      else:
+        self._parameterNode.SetParameter("inCameraPlaneInteractionHandles","False")
     if self.ui.checkSecurityMarginOnMiterBoxCreationCheckBox.checked:
       self._parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","True")
     else:
