@@ -34,6 +34,8 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
   # Reconstruction animation
   "reconstructionSetView": 0.0,
   "reconstructionShowGraft": 5.0,
+  "reconstructionRotateView": 3.0,
+  "reconstructionPause": 3.0,
   "reconstructionRestoreState": 0.0,
 }
 
@@ -67,6 +69,7 @@ class VirtualSurgicalPlanAnimation:
     self.graftJointsList = []
     self.animationNodes = {}
     self.animationWarningsList = []
+    self.mandibleViewCamera = None
     self.fibulaFullViewCamera = None
     self.fibulaZoomedViewCamera = None
 
@@ -107,6 +110,7 @@ class VirtualSurgicalPlanAnimation:
     self.playing = False
     self.currentAnimationStep = None
     self.animationStepsList = []
+    self.mandibleViewCamera = None
     self.fibulaFullViewCamera = None
     self.fibulaZoomedViewCamera = None
     if restore and self.displayNodesState:
@@ -581,6 +585,13 @@ class VirtualSurgicalPlanAnimation:
       (animationDurationsDict["graftingHidePieces"], lambda progress: self._hideNodes(self.animationNodes["fibulaPieces"] + self.animationNodes["cutVessels"])),
       (animationDurationsDict["reconstructionSetView"], lambda progress: self._prepareReconstructionView()),
       (animationDurationsDict["reconstructionShowGraft"], lambda progress: self._fadeNodes(self.animationNodes["transformedFibulaPieces"] + self.animationNodes["transformedVessels"], progress, True)),
+    ])
+    if len(self.animationNodes["transformedVessels"]) > 0:
+      animationStepsList.append(
+        (animationDurationsDict["reconstructionRotateView"], self._rotateIntoAnteriorInferiorView)
+      )
+    animationStepsList.extend([
+      (animationDurationsDict["reconstructionPause"], lambda progress: None),
       (animationDurationsDict["reconstructionRestoreState"], lambda progress: self.stop(restore = True)),
     ])
     return animationStepsList
@@ -647,7 +658,14 @@ class VirtualSurgicalPlanAnimation:
       cameraDirection = np.array([0.0, -1.0, 0.0])
       viewUpDirection = np.array([0.0, 0.0, 1.0])
       centroid = getCentroid(modelNode)
-      cameraNode.SetPosition(centroid - cameraDirection * 300.0)
+      position = centroid - cameraDirection * 300.0
+      self.mandibleViewCamera = {
+        "position": position,
+        "focalPoint": centroid,
+        "cameraDirection": cameraDirection,
+        "viewUpDirection": viewUpDirection,
+      }
+      cameraNode.SetPosition(position)
       cameraNode.SetFocalPoint(centroid)
       cameraNode.SetViewUp(viewUpDirection)
       cameraNode.ResetClippingRange()
@@ -755,6 +773,31 @@ class VirtualSurgicalPlanAnimation:
     cameraNode.SetPosition(startPosition + (targetPosition - startPosition) * easedProgress)
     cameraNode.SetFocalPoint(startFocalPoint + (targetFocalPoint - startFocalPoint) * easedProgress)
     cameraNode.SetParallelScale(startParallelScale + (targetParallelScale - startParallelScale) * easedProgress)
+    cameraNode.ResetClippingRange()
+
+  def _rotateIntoAnteriorInferiorView(self, progress):
+    """
+    Rotate the camera around the reconstructed mandible from the anterior view
+    into an anterior-inferior view so the transformed vessels pieces are visible.
+    """
+    if self.mandibleViewCamera is None:
+      return
+    cameraNode = slicer.modules.cameras.logic().GetViewActiveCameraNode(self._viewNode("mandible"))
+    startPosition = self.mandibleViewCamera["position"]
+    focalPoint = self.mandibleViewCamera["focalPoint"]
+    cameraDirection = self.mandibleViewCamera["cameraDirection"]
+    startViewUpDirection = self.mandibleViewCamera["viewUpDirection"]
+    anteriorInferiorAngleDegrees = 45.0
+
+    easedProgress = progress * progress * (3.0 - 2.0 * progress)
+    # Rotating around the horizontal axis of the view moves the camera inferiorly
+    rotationAxis = np.cross(cameraDirection, startViewUpDirection)
+    rotationTransform = vtk.vtkTransform()
+    rotationTransform.RotateWXYZ(anteriorInferiorAngleDegrees * easedProgress, rotationAxis)
+    cameraOffset = np.array(rotationTransform.TransformVector(startPosition - focalPoint))
+    cameraNode.SetPosition(focalPoint + cameraOffset)
+    cameraNode.SetFocalPoint(focalPoint)
+    cameraNode.SetViewUp(rotationTransform.TransformVector(startViewUpDirection))
     cameraNode.ResetClippingRange()
 
   def _viewNode(self, viewName):
