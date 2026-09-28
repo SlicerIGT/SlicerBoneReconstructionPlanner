@@ -1,4 +1,7 @@
 import logging
+import os
+import shutil
+import tempfile
 import time
 import numpy as np
 import qt
@@ -39,6 +42,9 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
   "reconstructionPause": 3.0,
   "reconstructionRestoreState": 0.0,
 }
+
+VSP_ANIMATION_VIDEO_FRAME_RATE = 30
+VSP_ANIMATION_VIDEO_OPTIONS = "-codec libx264 -preset slower -pix_fmt yuv420p"
 
 
 class VirtualSurgicalPlanAnimation:
@@ -125,6 +131,135 @@ class VirtualSurgicalPlanAnimation:
     self._removeTemporaryTransforms()
     if wasPlaying:
       self._notifyStateChanged()
+
+  def exportVideo(self, videoFilePath):
+    """
+    Render the Virtual Surgical Plan animation frame by frame and save it as a video.
+    """
+    if self.playing:
+      return False
+
+    import ScreenCapture
+    screenCaptureLogic = ScreenCapture.ScreenCaptureLogic()
+    if not screenCaptureLogic.isFfmpegPathValid():
+      screenCaptureLogic.findFfmpeg()
+    if not screenCaptureLogic.isFfmpegPathValid() and os.name == "nt":
+      if slicer.util.confirmOkCancelDisplay(
+        "Video encoder not detected on your system. Download ffmpeg video encoder?",
+        windowTitle = "Download confirmation"
+      ):
+        if not screenCaptureLogic.ffmpegDownload():
+          slicer.util.errorDisplay("ffmpeg download failed")
+    if not screenCaptureLogic.isFfmpegPathValid():
+      slicer.util.errorDisplay(
+        "Cannot export the VSP animation because the ffmpeg video encoder was not found. "
+        "Install ffmpeg and set its path in the Screen Capture module (Advanced section)."
+      )
+      return False
+
+    validationError = self._collectAnimationNodes()
+    if validationError:
+      slicer.util.errorDisplay(validationError)
+      return False
+    if self.animationWarningsList:
+      slicer.util.warningDisplay("\n".join(self.animationWarningsList))
+
+    framesDirectory = tempfile.mkdtemp(prefix = "BRPVSPAnimation-", dir = slicer.app.temporaryPath)
+    # JPEG frames are written many times faster than PNG frames
+    frameFileNamePattern = "frame-%05d.jpg"
+    progressDialog = None
+    try:
+      self._saveState()
+      self._setMultiLampLighting()
+      self._createTemporaryGraftTransforms()
+      self.animationStepsList = self._createSteps()
+      progressDialog = slicer.util.createProgressDialog(
+        windowTitle = "Exporting VSP animation",
+        labelText = "Rendering animation frames...",
+        value = 0,
+        maximum = self._numberOfVideoFrames(),
+        windowModality = qt.Qt.WindowModal,
+        autoClose = False,
+        autoReset = False,
+      )
+      self.playing = True
+      self._notifyStateChanged()
+
+      numberOfCapturedFrames = 0
+      frameSize = None
+      while self.playing and self.animationStepsList:
+        self.currentAnimationStep = self.animationStepsList.pop(0)
+        duration, update = self.currentAnimationStep
+        if duration <= 0.0:
+          update(1.0)
+          continue
+        update(0.0)
+        numberOfStepFrames = self._numberOfStepVideoFrames(duration)
+        for stepFrameIndex in range(numberOfStepFrames):
+          if not self.playing:
+            break
+          update((stepFrameIndex + 1) / numberOfStepFrames)
+          frameFilePath = os.path.join(framesDirectory, frameFileNamePattern % numberOfCapturedFrames)
+          view = screenCaptureLogic.viewFromNode(self.currentMaximizedViewNode)
+          screenCaptureLogic.captureImageFromView(view, frameFilePath)
+          if frameSize is None:
+            frameSize = self._imageFileSize(frameFilePath)
+          numberOfCapturedFrames += 1
+          progressDialog.value = numberOfCapturedFrames
+          if progressDialog.wasCanceled:
+            self.stop(restore = True)
+
+      canceled = progressDialog.wasCanceled
+      self.stop(restore = True)
+      if canceled or numberOfCapturedFrames == 0:
+        logging.info("VSP animation export canceled")
+        return False
+
+      progressDialog.labelText = "Encoding video..."
+      slicer.app.processEvents()
+      ffmpegParametersList = [
+        screenCaptureLogic.getFfmpegPath(),
+        "-nostdin",
+        "-y",
+        "-r", str(VSP_ANIMATION_VIDEO_FRAME_RATE),
+        "-start_number", "0",
+        "-i", os.path.join(framesDirectory, frameFileNamePattern),
+      ]
+      ffmpegParametersList.extend(VSP_ANIMATION_VIDEO_OPTIONS.split(" "))
+      # Scale every frame to the size of the first one because the encoder needs a constant size
+      ffmpegParametersList.extend(["-vf", "scale=%d:%d" % (frameSize[0], frameSize[1])])
+      ffmpegParametersList.append(videoFilePath)
+      # Slicer library paths can break a system ffmpeg, so launch it with the startup environment
+      ffmpegProcess = slicer.util.launchConsoleProcess(ffmpegParametersList, useStartupEnvironment = True)
+      slicer.util.logProcessOutput(ffmpegProcess)
+      logging.info("VSP animation exported to %s" % videoFilePath)
+      return True
+    except Exception as exc:
+      logging.exception("Unable to export VSP animation")
+      self.stop(restore = True)
+      slicer.util.errorDisplay("Unable to export VSP animation: %s" % exc)
+      return False
+    finally:
+      if progressDialog is not None:
+        progressDialog.close()
+      shutil.rmtree(framesDirectory, ignore_errors = True)
+
+  def _numberOfStepVideoFrames(self, duration):
+    return max(1, int(round(duration * VSP_ANIMATION_VIDEO_FRAME_RATE)))
+
+  def _numberOfVideoFrames(self):
+    numberOfFrames = 0
+    for duration, update in self.animationStepsList:
+      if duration > 0.0:
+        numberOfFrames += self._numberOfStepVideoFrames(duration)
+    return numberOfFrames
+
+  def _imageFileSize(self, imageFilePath):
+    reader = vtk.vtkJPEGReader()
+    reader.SetFileName(imageFilePath)
+    reader.Update()
+    dimensions = reader.GetOutput().GetDimensions()
+    return dimensions[0], dimensions[1]
 
   def _notifyStateChanged(self):
     if self.stateChangedCallback:

@@ -506,6 +506,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.playVSPAnimationButton.setIcon(
       self.ui.playVSPAnimationButton.style().standardIcon(qt.QStyle.SP_MediaPlay)
     )
+    self.ui.exportVSPAnimationButton.setIcon(
+      self.ui.exportVSPAnimationButton.style().standardIcon(qt.QStyle.SP_DialogSaveButton)
+    )
 
     self.ui.showMandiblePlanesToolButton.setIcon(qt.QIcon(visibilityIconPath))
     self.ui.showMandiblePlanesToolButton.setIconSize(qt.QSize(24,24))
@@ -738,6 +741,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.interCondylarBeamVisibilityToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.lockVSPButton.connect('toggled(bool)', self.onLockVSPButton)
     self.ui.playVSPAnimationButton.connect('toggled(bool)', self.onPlayVSPAnimationButton)
+    self.ui.exportVSPAnimationButton.connect('clicked(bool)', self.onExportVSPAnimationButton)
     self.ui.neomandibleVisibilityButton.connect('toggled(bool)', self.onNeomandibleVisibilityButton)
     self.ui.fibulaNormalizationTransformButton.connect('toggled(bool)', self.onFibulaNormalizationTransformButton)
     self.ui.includeVesselsOnPlanCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
@@ -1676,6 +1680,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if self.vspAnimation and self.vspAnimation.playing and not lockVSPChecked:
       self.vspAnimation.stop(restore=True)
     self.ui.playVSPAnimationButton.enabled = lockVSPChecked
+    self.ui.exportVSPAnimationButton.enabled = lockVSPChecked
 
     showMandiblePlanesChecked = self._parameterNode.GetParameter("showMandiblePlanes") == "True"
     self.ui.showMandiblePlanesToolButton.checked = showMandiblePlanesChecked
@@ -2140,6 +2145,25 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     Stop the Virtual Surgical Plan animation and restore its initial state
     """
     self.vspAnimation.stop(restore = True)
+
+  def onExportVSPAnimationButton(self):
+    """
+    Callback function to export the Virtual Surgical Plan animation as a mp4 video
+    """
+    if self.vspAnimation.playing:
+      self.vspAnimation.stop(restore = True)
+    defaultVideoFilePath = os.path.join(slicer.app.defaultScenePath, "VirtualSurgicalPlanAnimation.mp4")
+    videoFilePath = qt.QFileDialog.getSaveFileName(
+      slicer.util.mainWindow(),
+      "Export Virtual Surgical Plan animation",
+      defaultVideoFilePath,
+      "MP4 video (*.mp4)"
+    )
+    if videoFilePath == "":
+      return
+    if not videoFilePath.lower().endswith(".mp4"):
+      videoFilePath = videoFilePath + ".mp4"
+    self.vspAnimation.exportVideo(videoFilePath)
 
   def onVSPAnimationStateChanged(self, playing):
     """

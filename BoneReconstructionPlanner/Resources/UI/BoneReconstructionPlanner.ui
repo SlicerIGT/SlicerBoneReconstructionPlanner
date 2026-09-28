@@ -806,6 +806,22 @@ preview (takes more time)</string>
                                 </property>
                              </widget>
                             </item>
+              <item>
+               <widget class="QToolButton" name="exportVSPAnimationButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Export Virtual Surgical Plan animation as a MP4 video</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>
