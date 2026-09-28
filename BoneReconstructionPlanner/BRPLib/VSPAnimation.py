@@ -63,6 +63,9 @@ class VirtualSurgicalPlanAnimation:
     self.currentAnimationStepStartedAt = 0.0
     self.displayNodesState = {}
     self.camerasState = {}
+    self.lightingState = {}
+    self.multiLampLightKit = vtk.vtkLightKit()
+    self.multiLampLightKit.MaintainLuminanceOn()
     self.initiallyMaximizedViewNodesList = []
     self.currentMaximizedViewNode = None
     self.temporaryTransformsList = []
@@ -91,6 +94,7 @@ class VirtualSurgicalPlanAnimation:
 
     try:
       self._saveState()
+      self._setMultiLampLighting()
       self._createTemporaryGraftTransforms()
       self.animationStepsList = self._createSteps()
       self.playing = True
@@ -231,7 +235,7 @@ class VirtualSurgicalPlanAnimation:
 
   def _saveState(self):
     """
-    Save model, markup, camera, transform, and maximized-view states.
+    Save model, markup, camera, transform, lighting, and maximized-view states.
     """
     self.displayNodesState = {}
     for index in range(slicer.mrmlScene.GetNumberOfNodes()):
@@ -265,6 +269,20 @@ class VirtualSurgicalPlanAnimation:
         "viewUp": tuple(cameraNode.GetViewUp()),
         "parallelScale": cameraNode.GetParallelScale(),
       }
+
+    self.lightingState = {}
+    layoutManager = slicer.app.layoutManager()
+    for index in range(layoutManager.threeDViewCount):
+      threeDView = layoutManager.threeDWidget(index).threeDView()
+      viewNode = threeDView.mrmlViewNode()
+      renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
+      lightsList = []
+      for lightIndex in range(renderer.GetLights().GetNumberOfItems()):
+        lightsList.append(renderer.GetLights().GetItemAsObject(lightIndex))
+      viewLightingState = {"lightsList": lightsList}
+      if hasattr(viewNode, "GetShadowsVisibility"):
+        viewLightingState["shadowsVisibility"] = viewNode.GetShadowsVisibility()
+      self.lightingState[viewNode.GetID()] = viewLightingState
 
     self.initiallyMaximizedViewNodesList = self._getMaximizedViewNodes()
 
@@ -301,12 +319,44 @@ class VirtualSurgicalPlanAnimation:
       cameraNode.SetParallelScale(state["parallelScale"])
       cameraNode.ResetClippingRange()
 
+    layoutManager = slicer.app.layoutManager()
+    for index in range(layoutManager.threeDViewCount):
+      threeDView = layoutManager.threeDWidget(index).threeDView()
+      viewNode = threeDView.mrmlViewNode()
+      if viewNode.GetID() not in self.lightingState:
+        continue
+      viewLightingState = self.lightingState[viewNode.GetID()]
+      renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
+      renderer.RemoveAllLights()
+      for light in viewLightingState["lightsList"]:
+        renderer.AddLight(light)
+      if "shadowsVisibility" in viewLightingState:
+        viewNode.SetShadowsVisibility(viewLightingState["shadowsVisibility"])
+
     self._restoreMaximizedViews()
     if self.displayNodesState:
       slicer.util.forceRenderAllViews()
     self.displayNodesState = {}
     self.camerasState = {}
+    self.lightingState = {}
     self.initiallyMaximizedViewNodesList = []
+
+  def _setMultiLampLighting(self):
+    """
+    Light the 3D views like the "MultiLamp" lighting mode: a light kit without shadows.
+    """
+    layoutManager = slicer.app.layoutManager()
+    for index in range(layoutManager.threeDViewCount):
+      threeDView = layoutManager.threeDWidget(index).threeDView()
+      viewNode = threeDView.mrmlViewNode()
+      if viewNode.GetID() not in self.lightingState:
+        continue
+      renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
+      renderer.RemoveAllLights()
+      self.multiLampLightKit.AddLightsToRenderer(renderer)
+      if hasattr(viewNode, "SetShadowsVisibility"):
+        viewNode.SetShadowsVisibility(False)
+      threeDView.scheduleRender()
 
   def _getMaximizedViewNodes(self):
     layoutManager = slicer.app.layoutManager()
