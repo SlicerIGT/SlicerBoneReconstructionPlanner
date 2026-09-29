@@ -231,6 +231,7 @@ class VirtualSurgicalPlanAnimation:
     self.displayNodesState = {}
     self.camerasState = {}
     self.lightingState = {}
+    self.viewNodesState = {}
     self.multiLampLightKit = vtk.vtkLightKit()
     self.multiLampLightKit.MaintainLuminanceOn()
     self.tissueTexturesDict = {}
@@ -264,6 +265,7 @@ class VirtualSurgicalPlanAnimation:
     try:
       self._saveState()
       self._setMultiLampLighting()
+      self._hideBoxAndAxisLabels()
       self._setOperatingRoomBackground()
       self._setTissueTextures()
       self._createTemporaryGraftTransforms()
@@ -336,11 +338,12 @@ class VirtualSurgicalPlanAnimation:
     try:
       self._saveState()
       self._setMultiLampLighting()
+      self._hideBoxAndAxisLabels()
       self._setOperatingRoomBackground()
       self._setTissueTextures()
       self._createTemporaryGraftTransforms()
       self.animationStepsList = self._createSteps()
-      progressDialog = slicer.util.createProgressDialog(
+      progressDialog =slicer.util.createProgressDialog(
         windowTitle = "Exporting VSP animation",
         labelText = "Rendering animation frames...",
         value = 0,
@@ -537,7 +540,7 @@ class VirtualSurgicalPlanAnimation:
 
   def _saveState(self):
     """
-    Save model, markup, camera, transform, lighting, background, and maximized-view states.
+    Save model, markup, camera, transform, lighting, background, 3D cube, 3D axis label, and maximized-view states.
     """
     self.displayNodesState = {}
     for index in range(slicer.mrmlScene.GetNumberOfNodes()):
@@ -579,10 +582,15 @@ class VirtualSurgicalPlanAnimation:
       }
 
     self.lightingState = {}
+    self.viewNodesState = {}
     layoutManager = slicer.app.layoutManager()
     for index in range(layoutManager.threeDViewCount):
       threeDView = layoutManager.threeDWidget(index).threeDView()
       viewNode = threeDView.mrmlViewNode()
+      self.viewNodesState[viewNode.GetID()] = {
+        "boxVisible": viewNode.GetBoxVisible(),
+        "axisLabelsVisible": viewNode.GetAxisLabelsVisible(),
+      }
       renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
       lightsList = []
       for lightIndex in range(renderer.GetLights().GetNumberOfItems()):
@@ -660,12 +668,20 @@ class VirtualSurgicalPlanAnimation:
         viewNode.SetShadowsVisibility(viewLightingState["shadowsVisibility"])
     self._removeTissueTextures()
 
+    for viewNodeID, viewNodeState in self.viewNodesState.items():
+      viewNode = slicer.mrmlScene.GetNodeByID(viewNodeID)
+      if viewNode is None:
+        continue
+      viewNode.SetBoxVisible(viewNodeState["boxVisible"])
+      viewNode.SetAxisLabelsVisible(viewNodeState["axisLabelsVisible"])
+
     self._restoreMaximizedViews()
     if self.displayNodesState:
       slicer.util.forceRenderAllViews()
     self.displayNodesState = {}
     self.camerasState = {}
     self.lightingState = {}
+    self.viewNodesState = {}
     self.initiallyMaximizedViewNodesList = []
 
   def _setMultiLampLighting(self):
@@ -684,6 +700,17 @@ class VirtualSurgicalPlanAnimation:
       if hasattr(viewNode, "SetShadowsVisibility"):
         viewNode.SetShadowsVisibility(False)
       threeDView.scheduleRender()
+
+  def _hideBoxAndAxisLabels(self):
+    """
+    Hide the 3D cube and the 3D axis labels of the 3D views during the animation.
+    """
+    for viewNodeID in self.viewNodesState:
+      viewNode = slicer.mrmlScene.GetNodeByID(viewNodeID)
+      if viewNode is None:
+        continue
+      viewNode.SetBoxVisible(False)
+      viewNode.SetAxisLabelsVisible(False)
 
   def _operatingRoomImageFilePath(self):
     """
