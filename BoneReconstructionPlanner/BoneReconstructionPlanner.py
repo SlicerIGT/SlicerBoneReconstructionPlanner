@@ -1440,6 +1440,11 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
           self.logic.setBackgroundVolumeFromID(scalarVolumeID)
           self.logic.setRedSliceForModelsDisplayNodes()
           self.logic.setRedSliceForMarkupsDisplayNodes()
+    else:
+      if USING_GUI:
+        # removes the models and markups from the red slice
+        self.logic.setRedSliceForModelsDisplayNodes()
+        self.logic.setRedSliceForMarkupsDisplayNodes()
 
     self.ui.installAISegmentationsButton.enabled = self._parameterNode.GetParameter("AISegmentationsInstalled") == "False"
     self.ui.runAISegmentationsFrame.enabled = self._parameterNode.GetParameter("AISegmentationsInstalled") == "True"
@@ -1794,7 +1799,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     )
     if currentScalarVolumeChanged == "True":
       self._parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode", "True")
-      if previousScalarVolume is not None:
+      if (previousScalarVolume is not None) and (self.ui.scalarVolumeSelector.currentNode() is not None):
         self.ui.scalarVolumeSelector.currentNode().SetAndObserveTransformNodeID(
           previousScalarVolume.GetTransformNodeID()
         )
@@ -4748,7 +4753,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     removeFolder(getFolder("Mandibular planes"))
     renameFolder(mandibularPlanesFolder2,"Mandibular planes")
 
-  def setRedSliceForModelsDisplayNodes(self):
+  def getBoneOfCurrentScalarVolume(self):
+    """
+    Returns "fibula" or "mandible" depending on which bone centroid is closer to the center
+    of the currentScalarVolume. Returns "" when it can't be decided because there is no
+    currentScalarVolume or the bone models were not created yet
+    """
     parameterNode = self.getParameterNode()
     scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
     fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
@@ -4757,9 +4767,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
     mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
     mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
-    
-    if fibulaCentroidX == "":
-      return
+
+    if (scalarVolume is None) or (fibulaCentroidX == "") or (mandibleCentroidX == ""):
+      return ""
 
     fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
     mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
@@ -4768,7 +4778,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     scalarVolume.GetBounds(bounds)
     bounds = np.array(bounds)
     centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
-    
+
+    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+      return "fibula"
+    else:
+      return "mandible"
+
+  def setRedSliceForModelsDisplayNodes(self):
+    parameterNode = self.getParameterNode()
+    boneOfCurrentScalarVolume = self.getBoneOfCurrentScalarVolume()
+
     fibulaSurgicalGuideBase = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
     mandibleSurgicalGuideBase = parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel")
     bothSidesMandibleGuideBaseModel = parameterNode.GetNodeReference("bothSidesMandibleGuideBaseModel")
@@ -4783,16 +4802,24 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     biggerMiterBoxesList = createListFromFolderName("biggerMiterBoxes Models")
     redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
 
-    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+    fibulaModelsList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase] + biggerMiterBoxesList
+    mandibleModelsList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase, bothSidesMandibleGuideBaseModel] + biggerSawBoxesModelsList
+
+    if boneOfCurrentScalarVolume == "fibula":
       #When fibulaScalarVolume:
-      addIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase] + biggerMiterBoxesList
-      removeIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase, bothSidesMandibleGuideBaseModel] + biggerSawBoxesModelsList
-      
-    else:
+      addIterationList = fibulaModelsList
+      removeIterationList = mandibleModelsList
+
+    elif boneOfCurrentScalarVolume == "mandible":
       #When mandibleScalarVolume:
-      addIterationList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase, bothSidesMandibleGuideBaseModel] + biggerSawBoxesModelsList
-      removeIterationList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase] + biggerMiterBoxesList
-    
+      addIterationList = mandibleModelsList
+      removeIterationList = fibulaModelsList
+
+    else:
+      #When there is no scalarVolume the red slice has no bone context, so none of them is shown there
+      addIterationList = []
+      removeIterationList = fibulaModelsList + mandibleModelsList
+
     for i in range(len(removeIterationList)):
       if removeIterationList[i] is not None:
         displayNode = removeIterationList[i].GetDisplayNode()
@@ -4805,24 +4832,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def setRedSliceForMarkupsDisplayNodes(self):
     parameterNode = self.getParameterNode()
-    scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
-    fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
-    fibulaCentroidY = parameterNode.GetParameter("fibulaCentroidY")
-    fibulaCentroidZ = parameterNode.GetParameter("fibulaCentroidZ")
-    mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
-    mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
-    mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
-
-    if fibulaCentroidX == "":
-      return
-
-    fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
-    mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
-
-    bounds = [0,0,0,0,0,0]
-    scalarVolume.GetBounds(bounds)
-    bounds = np.array(bounds)
-    centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
+    boneOfCurrentScalarVolume = self.getBoneOfCurrentScalarVolume()
 
     # if set to None or [] is because I don't consider them important to be shown in the red slice
     fibulaLine = None
@@ -4849,15 +4859,20 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       + mandibularPlanesList + sawBoxesPlanesList + dentalImplantsPlanesList
     )
 
-    if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+    if boneOfCurrentScalarVolume == "fibula":
       #When fibulaScalarVolume:
       addIterationList = fibulaMarkupsList
       removeIterationList = mandibleMarkupsList
 
-    else:
+    elif boneOfCurrentScalarVolume == "mandible":
       #When mandibleScalarVolume:
       addIterationList = mandibleMarkupsList
       removeIterationList = fibulaMarkupsList
+
+    else:
+      #When there is no scalarVolume the red slice has no bone context, so none of them is shown there
+      addIterationList = []
+      removeIterationList = fibulaMarkupsList + mandibleMarkupsList
 
     for i in range(len(removeIterationList)):
       if removeIterationList[i] is not None:
@@ -5473,21 +5488,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaTextLabelsDepth = float(parameterNode.GetParameter("fibulaTextLabelsDepth_mm"))
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
 
-    scalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
-    fibulaCentroidX = parameterNode.GetParameter("fibulaCentroidX")
-    fibulaCentroidY = parameterNode.GetParameter("fibulaCentroidY")
-    fibulaCentroidZ = parameterNode.GetParameter("fibulaCentroidZ")
-    mandibleCentroidX = parameterNode.GetParameter("mandibleCentroidX")
-    mandibleCentroidY = parameterNode.GetParameter("mandibleCentroidY")
-    mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
-    
-    fibulaCentroid = np.array([float(fibulaCentroidX),float(fibulaCentroidY),float(fibulaCentroidZ)])
-    mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
-
-    bounds = [0,0,0,0,0,0]
-    scalarVolume.GetBounds(bounds)
-    bounds = np.array(bounds)
-    centerOfScalarVolume = np.array([(bounds[0]+bounds[1])/2,(bounds[2]+bounds[3])/2,(bounds[4]+bounds[5])/2])
+    boneOfCurrentScalarVolume = self.getBoneOfCurrentScalarVolume()
 
     fibulaPlanesList = createListFromFolderName("Fibula planes")
 
@@ -5672,7 +5673,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       elif miterBoxesGuideType == "Border":
         biggerMiterBoxDisplayNode.SetVisibility3D(True)
       biggerMiterBoxDisplayNode.SetVisibility2D(True)
-      if np.linalg.norm(fibulaCentroid-centerOfScalarVolume) < np.linalg.norm(mandibleCentroid-centerOfScalarVolume):
+      if boneOfCurrentScalarVolume == "fibula":
         redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
         biggerMiterBoxDisplayNode.AddViewNodeID(redSliceNode.GetID())
       rectangletDisplayNode = rectangletModel.GetDisplayNode()
