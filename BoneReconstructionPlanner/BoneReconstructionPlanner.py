@@ -5714,16 +5714,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       moveNodeToFolder(intersectionModel, intersectionsFolder)
       moveNodeToFolder(pointsIntersectionModel, pointsIntersectionsFolder)
 
-      #Calculations for deltaMiterBoxAxisY
-      sinOfMiterBoxAxisZAndFibulaZVector = [0,0,0]
-      vtk.vtkMath.Cross(miterBoxAxisZ, fibulaZ, sinOfMiterBoxAxisZAndFibulaZVector)
-      sinOfMiterBoxAxisZAndFibulaZ = np.linalg.norm(sinOfMiterBoxAxisZAndFibulaZVector)
-      rotatedMiterBoxAxisY = [0,0,0]
-      vtk.vtkMath.Cross(fibulaZ, miterBoxAxisX, rotatedMiterBoxAxisY)
-      rotatedMiterBoxAxisY = rotatedMiterBoxAxisY/np.linalg.norm(rotatedMiterBoxAxisY)
-      cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY = vtk.vtkMath.Dot(rotatedMiterBoxAxisY, miterBoxAxisY)
-      deltaMiterBoxAxisY = biggerMiterBoxWidth/2*sinOfMiterBoxAxisZAndFibulaZ/cosOfRotatedMiterBoxAxisYAndMiterBoxAxisY
-
       miterBoxToWorldChangeOfFrameTransformNode = slicer.vtkMRMLLinearTransformNode()
       miterBoxToWorldChangeOfFrameTransformNode.SetName("temp%d" % i)
       slicer.mrmlScene.AddNode(miterBoxToWorldChangeOfFrameTransformNode)
