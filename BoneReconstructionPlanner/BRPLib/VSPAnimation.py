@@ -337,6 +337,7 @@ class VirtualSurgicalPlanAnimation:
       self._setMultiLampLighting()
       self._hideBoxAndAxisLabels()
       self._hideVolumeRenderings()
+      self._hideMandiblePlanesNames()
       self._setOperatingRoomBackground()
       self._setTissueTextures()
       self._createDissectionVolumes()
@@ -413,6 +414,7 @@ class VirtualSurgicalPlanAnimation:
       self._setMultiLampLighting()
       self._hideBoxAndAxisLabels()
       self._hideVolumeRenderings()
+      self._hideMandiblePlanesNames()
       self._setOperatingRoomBackground()
       self._setTissueTextures()
       self._createDissectionVolumes()
@@ -644,7 +646,7 @@ class VirtualSurgicalPlanAnimation:
 
   def _saveState(self):
     """
-    Save model, markup, camera, transform, lighting, background, 3D cube, 3D axis label, and maximized-view states.
+    Save model, markup (including name label), camera, transform, lighting, background, 3D cube, 3D axis label, and maximized-view states.
     """
     self.displayNodesState = {}
     for index in range(slicer.mrmlScene.GetNumberOfNodes()):
@@ -672,6 +674,8 @@ class VirtualSurgicalPlanAnimation:
         displayNodeState["specular"] = displayNode.GetSpecular()
       if hasattr(displayNode, "GetPower"):
         displayNodeState["power"] = displayNode.GetPower()
+      if hasattr(displayNode, "GetPropertiesLabelVisibility"):
+        displayNodeState["propertiesLabelVisibility"] = displayNode.GetPropertiesLabelVisibility()
       self.displayNodesState[node.GetID()] = displayNodeState
 
     self.volumeRenderingDisplayNodesState = {}
@@ -746,6 +750,8 @@ class VirtualSurgicalPlanAnimation:
         displayNode.SetSpecular(displayNodeState["specular"])
       if "power" in displayNodeState:
         displayNode.SetPower(displayNodeState["power"])
+      if "propertiesLabelVisibility" in displayNodeState:
+        displayNode.SetPropertiesLabelVisibility(displayNodeState["propertiesLabelVisibility"])
 
     for volumeRenderingDisplayNodeID, visibility in self.volumeRenderingDisplayNodesState.items():
       volumeRenderingDisplayNode = slicer.mrmlScene.GetNodeByID(volumeRenderingDisplayNodeID)
@@ -835,6 +841,15 @@ class VirtualSurgicalPlanAnimation:
       volumeRenderingDisplayNode = slicer.mrmlScene.GetNodeByID(volumeRenderingDisplayNodeID)
       if volumeRenderingDisplayNode is not None:
         volumeRenderingDisplayNode.SetVisibility(False)
+
+  def _hideMandiblePlanesNames(self):
+    """
+    Hide the name labels of the mandibular planes during the animation.
+    """
+    for planeNode in self.animationNodes["mandiblePlanes"]:
+      displayNode = planeNode.GetDisplayNode()
+      if displayNode is not None:
+        displayNode.SetPropertiesLabelVisibility(False)
 
   def _operatingRoomImageFilePath(self):
     """
