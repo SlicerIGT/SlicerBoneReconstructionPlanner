@@ -51,47 +51,52 @@ VSP_ANIMATION_BONE_MATERIAL = {
   "Specular": 0.25,
   "Power": 20.0,
 }
+# Glossier sheen of the wet vessel walls
+VSP_ANIMATION_VESSEL_MATERIAL = {
+  "Specular": 0.5,
+  "Power": 40.0,
+}
 # A cut plane that never matches any position
 VSP_ANIMATION_NO_CUT_PLANE = [0.0, 0.0, 0.0, 1.0]
 
-# The bone texture is computed per pixel from the model coordinates (a solid texture),
-# so the models need no texture coordinates and the texture moves with each bone piece.
+# The tissue textures (bone and vessels) are computed per pixel from the model coordinates
+# (a solid texture), so the models need no texture coordinates and the texture moves with each piece.
 # The model coordinates are computed from the view coordinates because the vertex buffer
 # coordinates (vertexMC) are shifted and scaled by VTK
-VSP_ANIMATION_BONE_FRAGMENT_SHADER_DECLARATIONS = """//VTK::Normal::Dec
-float boneHash(vec3 cell)
+VSP_ANIMATION_TISSUE_FRAGMENT_SHADER_DECLARATIONS = """//VTK::Normal::Dec
+float tissueHash(vec3 cell)
 {
   // Wrap the lattice so the hash stays precise at scene coordinates of hundreds of millimeters
   cell = mod(cell, 289.0);
   return fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
 }
 
-float boneNoise(vec3 position)
+float tissueNoise(vec3 position)
 {
   vec3 cell = floor(position);
   vec3 fraction = fract(position);
   fraction = fraction * fraction * (3.0 - 2.0 * fraction);
-  float noise00 = mix(boneHash(cell), boneHash(cell + vec3(1.0, 0.0, 0.0)), fraction.x);
-  float noise10 = mix(boneHash(cell + vec3(0.0, 1.0, 0.0)), boneHash(cell + vec3(1.0, 1.0, 0.0)), fraction.x);
-  float noise01 = mix(boneHash(cell + vec3(0.0, 0.0, 1.0)), boneHash(cell + vec3(1.0, 0.0, 1.0)), fraction.x);
-  float noise11 = mix(boneHash(cell + vec3(0.0, 1.0, 1.0)), boneHash(cell + vec3(1.0, 1.0, 1.0)), fraction.x);
+  float noise00 = mix(tissueHash(cell), tissueHash(cell + vec3(1.0, 0.0, 0.0)), fraction.x);
+  float noise10 = mix(tissueHash(cell + vec3(0.0, 1.0, 0.0)), tissueHash(cell + vec3(1.0, 1.0, 0.0)), fraction.x);
+  float noise01 = mix(tissueHash(cell + vec3(0.0, 0.0, 1.0)), tissueHash(cell + vec3(1.0, 0.0, 1.0)), fraction.x);
+  float noise11 = mix(tissueHash(cell + vec3(0.0, 1.0, 1.0)), tissueHash(cell + vec3(1.0, 1.0, 1.0)), fraction.x);
   return mix(mix(noise00, noise10, fraction.y), mix(noise01, noise11, fraction.y), fraction.z);
 }
 
-float boneFbm(vec3 position)
+float tissueFbm(vec3 position)
 {
   float value = 0.0;
   float amplitude = 0.5;
   for (int octave = 0; octave < 4; octave++)
   {
-    value += amplitude * boneNoise(position);
+    value += amplitude * tissueNoise(position);
     position = position * 2.03 + vec3(17.1, 31.7, 11.3);
     amplitude *= 0.5;
   }
   return value / 0.9375;
 }
 
-float boneCutFactor(vec4 cutPlane, vec3 position)
+float tissueCutFactor(vec4 cutPlane, vec3 position)
 {
   return 1.0 - smoothstep(0.05, 0.3, abs(dot(cutPlane.xyz, position) - cutPlane.w));
 }
@@ -100,14 +105,14 @@ float boneCutFactor(vec4 cutPlane, vec3 position)
 # Screen space derivatives (dFdx) are only valid before any fragment is discarded (e.g. by depth peeling)
 VSP_ANIMATION_BONE_FRAGMENT_SHADER_UNIFORM_FLOW = """//VTK::UniformFlow::Impl
   vec3 bonePosition = vec3(
-    dot(boneViewToModelRow0, vertexVC),
-    dot(boneViewToModelRow1, vertexVC),
-    dot(boneViewToModelRow2, vertexVC));
-  float boneMottling = boneFbm(bonePosition * 0.15);
-  float bonePatches = boneFbm(bonePosition * 0.06 + vec3(41.0, 7.0, 23.0));
-  float bonePores = boneFbm(bonePosition * 2.2);
-  float boneMarrow = boneFbm(bonePosition * 2.5 + vec3(5.0, 59.0, 13.0));
-  float boneCut = max(boneCutFactor(boneCutPlane0, bonePosition), boneCutFactor(boneCutPlane1, bonePosition));
+    dot(tissueViewToModelRow0, vertexVC),
+    dot(tissueViewToModelRow1, vertexVC),
+    dot(tissueViewToModelRow2, vertexVC));
+  float boneMottling = tissueFbm(bonePosition * 0.15);
+  float bonePatches = tissueFbm(bonePosition * 0.06 + vec3(41.0, 7.0, 23.0));
+  float bonePores = tissueFbm(bonePosition * 2.2);
+  float boneMarrow = tissueFbm(bonePosition * 2.5 + vec3(5.0, 59.0, 13.0));
+  float boneCut = max(tissueCutFactor(tissueCutPlane0, bonePosition), tissueCutFactor(tissueCutPlane1, bonePosition));
   float boneHeight = 0.06 * (0.5 * boneMottling - bonePores) * (1.0 - boneCut);
   vec3 bonePositionDx = dFdx(vertexVC.xyz);
   vec3 bonePositionDy = dFdy(vertexVC.xyz);
@@ -134,19 +139,74 @@ VSP_ANIMATION_BONE_FRAGMENT_SHADER_IMPLEMENTATION = """//VTK::Normal::Impl
 """
 
 VSP_ANIMATION_BONE_FRAGMENT_SHADER_REPLACEMENTS = {
-  "//VTK::Normal::Dec": VSP_ANIMATION_BONE_FRAGMENT_SHADER_DECLARATIONS,
+  "//VTK::Normal::Dec": VSP_ANIMATION_TISSUE_FRAGMENT_SHADER_DECLARATIONS,
   "//VTK::UniformFlow::Impl": VSP_ANIMATION_BONE_FRAGMENT_SHADER_UNIFORM_FLOW,
   "//VTK::Normal::Impl": VSP_ANIMATION_BONE_FRAGMENT_SHADER_IMPLEMENTATION,
 }
 
-VSP_ANIMATION_BONE_FRAGMENT_SHADER_UNIFORMS = [
-  "boneCutPlane0",
-  "boneCutPlane1",
-  "boneViewToModelRow0",
-  "boneViewToModelRow1",
-  "boneViewToModelRow2",
+VSP_ANIMATION_VESSEL_FRAGMENT_SHADER_UNIFORM_FLOW = """//VTK::UniformFlow::Impl
+  vec3 vesselPosition = vec3(
+    dot(tissueViewToModelRow0, vertexVC),
+    dot(tissueViewToModelRow1, vertexVC),
+    dot(tissueViewToModelRow2, vertexVC));
+  float vesselBlood = tissueFbm(vesselPosition * 0.1);
+  float vesselAdventitia = tissueFbm(vesselPosition * 0.15 + vec3(29.0, 3.0, 47.0));
+  // Isolines of the noise (ridges) branch like small vessels, and a coarser noise keeps them sparse
+  float vesselCapillaries = 1.0 - abs(2.0 * tissueFbm(vesselPosition * 0.9 + vec3(13.0, 71.0, 5.0)) - 1.0);
+  float vesselCapillariesWidth = fwidth(vesselCapillaries);
+  float vesselCapillariesMask = smoothstep(0.4, 0.6, tissueFbm(vesselPosition * 0.2 + vec3(61.0, 19.0, 37.0)));
+  float vesselCapillariesLine = vesselCapillariesMask * smoothstep(0.9 - vesselCapillariesWidth, 0.95 + vesselCapillariesWidth, vesselCapillaries);
+  float vesselWrinkles = tissueFbm(vesselPosition * 3.0);
+  float vesselCut = max(tissueCutFactor(tissueCutPlane0, vesselPosition), tissueCutFactor(tissueCutPlane1, vesselPosition));
+  float vesselHeight = (0.03 * vesselCapillariesLine + 0.015 * vesselWrinkles) * (1.0 - vesselCut);
+  vec3 vesselPositionDx = dFdx(vertexVC.xyz);
+  vec3 vesselPositionDy = dFdy(vertexVC.xyz);
+  float vesselHeightDx = dFdx(vesselHeight);
+  float vesselHeightDy = dFdy(vesselHeight);
+"""
+
+VSP_ANIMATION_VESSEL_FRAGMENT_SHADER_IMPLEMENTATION = """//VTK::Normal::Impl
+  // Crimson arterial wall that turns purple where venous blood shows through
+  vec3 vesselColor = mix(vec3(0.62, 0.11, 0.12), vec3(0.36, 0.08, 0.17), smoothstep(0.35, 0.65, vesselBlood));
+  // Pale adventitia with the vasa vasorum running over it
+  vesselColor = mix(vesselColor, vec3(0.85, 0.72, 0.68), 0.2 * smoothstep(0.45, 0.8, vesselAdventitia));
+  vesselColor = mix(vesselColor, vec3(0.42, 0.03, 0.05), 0.7 * vesselCapillariesLine);
+  // The thin wall lets light through near the silhouette
+  float vesselRim = 1.0 - abs(normalVCVSOutput.z);
+  vesselColor = mix(vesselColor, vec3(0.80, 0.25, 0.25), 0.3 * vesselRim * vesselRim);
+  // Transected ends show dark clotted blood
+  vec3 vesselCutColor = mix(vec3(0.14, 0.01, 0.02), vec3(0.24, 0.02, 0.04), smoothstep(0.3, 0.7, vesselWrinkles));
+  vesselColor = mix(vesselColor, vesselCutColor, vesselCut);
+  diffuseColor = diffuseIntensity * vesselColor;
+  ambientColor = ambientIntensity * vesselColor;
+  // Bump the normal along the vasa vasorum and wrinkles (surface gradient bump mapping)
+  vec3 vesselR1 = cross(vesselPositionDy, normalVCVSOutput);
+  vec3 vesselR2 = cross(normalVCVSOutput, vesselPositionDx);
+  float vesselDeterminant = dot(vesselPositionDx, vesselR1);
+  vec3 vesselSurfaceGradient = sign(vesselDeterminant) * (vesselHeightDx * vesselR1 + vesselHeightDy * vesselR2);
+  normalVCVSOutput = normalize(max(abs(vesselDeterminant), 1e-10) * normalVCVSOutput - vesselSurfaceGradient);
+"""
+
+VSP_ANIMATION_VESSEL_FRAGMENT_SHADER_REPLACEMENTS = {
+  "//VTK::Normal::Dec": VSP_ANIMATION_TISSUE_FRAGMENT_SHADER_DECLARATIONS,
+  "//VTK::UniformFlow::Impl": VSP_ANIMATION_VESSEL_FRAGMENT_SHADER_UNIFORM_FLOW,
+  "//VTK::Normal::Impl": VSP_ANIMATION_VESSEL_FRAGMENT_SHADER_IMPLEMENTATION,
+}
+
+# Both tissue shaders replace the same shader tags and use the same uniforms
+VSP_ANIMATION_TISSUE_FRAGMENT_SHADER_TAGS = [
+  "//VTK::Normal::Dec",
+  "//VTK::UniformFlow::Impl",
+  "//VTK::Normal::Impl",
 ]
 
+VSP_ANIMATION_TISSUE_FRAGMENT_SHADER_UNIFORMS = [
+  "tissueCutPlane0",
+  "tissueCutPlane1",
+  "tissueViewToModelRow0",
+  "tissueViewToModelRow1",
+  "tissueViewToModelRow2",
+]
 
 class VirtualSurgicalPlanAnimation:
   """
@@ -173,8 +233,8 @@ class VirtualSurgicalPlanAnimation:
     self.lightingState = {}
     self.multiLampLightKit = vtk.vtkLightKit()
     self.multiLampLightKit.MaintainLuminanceOn()
-    self.boneTexturesDict = {}
-    self.boneTexturesViewsList = []
+    self.tissueTexturesDict = {}
+    self.tissueTexturesViewsList = []
     self.initiallyMaximizedViewNodesList = []
     self.currentMaximizedViewNode = None
     self.temporaryTransformsList = []
@@ -205,7 +265,7 @@ class VirtualSurgicalPlanAnimation:
       self._saveState()
       self._setMultiLampLighting()
       self._setOperatingRoomBackground()
-      self._setBoneTextures()
+      self._setTissueTextures()
       self._createTemporaryGraftTransforms()
       self.animationStepsList = self._createSteps()
       self.playing = True
@@ -277,7 +337,7 @@ class VirtualSurgicalPlanAnimation:
       self._saveState()
       self._setMultiLampLighting()
       self._setOperatingRoomBackground()
-      self._setBoneTextures()
+      self._setTissueTextures()
       self._createTemporaryGraftTransforms()
       self.animationStepsList = self._createSteps()
       progressDialog = slicer.util.createProgressDialog(
@@ -598,7 +658,7 @@ class VirtualSurgicalPlanAnimation:
       renderer.SetEnvironmentRight(viewLightingState["environmentRight"])
       if "shadowsVisibility" in viewLightingState:
         viewNode.SetShadowsVisibility(viewLightingState["shadowsVisibility"])
-    self._removeBoneTextures()
+    self._removeTissueTextures()
 
     self._restoreMaximizedViews()
     if self.displayNodesState:
@@ -683,9 +743,35 @@ class VirtualSurgicalPlanAnimation:
       renderer.SetEnvironmentUp(viewUpDirection[0], viewUpDirection[1], viewUpDirection[2])
       renderer.SetEnvironmentRight(environmentRight[0], environmentRight[1], environmentRight[2])
 
-  def _setBoneTextures(self):
+  def _setTissueTextures(self):
     """
-    Make the bone models look like real bone during the animation, with sawn bone on the osteotomy faces.
+    Make the bone and vessel models look like real tissue during the animation.
+    """
+    self.tissueTexturesDict = {}
+    self._addBoneTextures()
+    self._addVesselTextures()
+
+    # The shader is added and updated right before each render of the 3D views
+    self.tissueTexturesViewsList = []
+    layoutManager = slicer.app.layoutManager()
+    for index in range(layoutManager.threeDViewCount):
+      threeDView = layoutManager.threeDWidget(index).threeDView()
+      modelDisplayableManager = threeDView.displayableManagerByClassName("vtkMRMLModelDisplayableManager")
+      if modelDisplayableManager is None:
+        continue
+      renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
+      observerTag = renderer.AddObserver(vtk.vtkCommand.StartEvent, self._onTissueTexturesRendererStart)
+      self.tissueTexturesViewsList.append({
+        "renderer": renderer,
+        "modelDisplayableManager": modelDisplayableManager,
+        "observerTag": observerTag,
+        "actorsList": [],
+      })
+      threeDView.scheduleRender()
+
+  def _addBoneTextures(self):
+    """
+    Texture the bone models as real bone, with sawn bone on the osteotomy faces.
     """
     noCutPlanesList = [VSP_ANIMATION_NO_CUT_PLANE, VSP_ANIMATION_NO_CUT_PLANE]
     boneModelsList = [self.animationNodes["mandible"], self.animationNodes["fibula"]]
@@ -718,34 +804,72 @@ class VirtualSurgicalPlanAnimation:
         self._transformPlane(fibulaToMandibleMatricesList[pieceIndex], pieceCutPlanesList[1]),
       ])
 
-    self.boneTexturesDict = {}
     for index in range(len(boneModelsList)):
-      displayNode = boneModelsList[index].GetDisplayNode()
-      if displayNode is None:
-        continue
-      # The shader modifies the Gouraud lighting inputs so PBR is not used during the animation
-      displayNode.SetInterpolation(slicer.vtkMRMLDisplayNode.GouraudInterpolation)
-      displayNode.SetSpecular(VSP_ANIMATION_BONE_MATERIAL["Specular"])
-      displayNode.SetPower(VSP_ANIMATION_BONE_MATERIAL["Power"])
-      self.boneTexturesDict[displayNode.GetID()] = cutPlanesListsList[index]
+      self._addTissueTexture(
+        boneModelsList[index],
+        cutPlanesListsList[index],
+        VSP_ANIMATION_BONE_MATERIAL,
+        VSP_ANIMATION_BONE_FRAGMENT_SHADER_REPLACEMENTS
+      )
 
-    # The shader is added and updated right before each render of the 3D views
-    self.boneTexturesViewsList = []
-    layoutManager = slicer.app.layoutManager()
-    for index in range(layoutManager.threeDViewCount):
-      threeDView = layoutManager.threeDWidget(index).threeDView()
-      modelDisplayableManager = threeDView.displayableManagerByClassName("vtkMRMLModelDisplayableManager")
-      if modelDisplayableManager is None:
-        continue
-      renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
-      observerTag = renderer.AddObserver(vtk.vtkCommand.StartEvent, self._onBoneTexturesRendererStart)
-      self.boneTexturesViewsList.append({
-        "renderer": renderer,
-        "modelDisplayableManager": modelDisplayableManager,
-        "observerTag": observerTag,
-        "actorsList": [],
-      })
-      threeDView.scheduleRender()
+  def _addVesselTextures(self):
+    """
+    Texture the vessel models as a dissected vascular pedicle, with clotted blood on the transected ends.
+    """
+    vesselsModel = self.animationNodes["vessels"]
+    if vesselsModel is None:
+      return
+
+    noCutPlanesList = [VSP_ANIMATION_NO_CUT_PLANE, VSP_ANIMATION_NO_CUT_PLANE]
+    vesselModelsList = [vesselsModel]
+    cutPlanesListsList = [noCutPlanesList]
+
+    # Each vessels piece is cut with the same planes as its fibula piece
+    fibulaPlanesList = self.animationNodes["fibulaPlanes"]
+    cutVesselsList = self.animationNodes["cutVessels"]
+    transformedVesselsList = self.animationNodes["transformedVessels"]
+    fibulaToMandibleMatricesList = self.animationNodes["graftTransformMatrices"]
+    for pieceIndex in range(len(cutVesselsList)):
+      cutVessel = cutVesselsList[pieceIndex]
+      pieceCutPlanesList = [
+        self._planeInModelCoordinates(fibulaPlanesList[2 * pieceIndex], cutVessel),
+        self._planeInModelCoordinates(fibulaPlanesList[2 * pieceIndex + 1], cutVessel),
+      ]
+      vesselModelsList.append(cutVessel)
+      cutPlanesListsList.append(pieceCutPlanesList)
+      # Transformed vessels pieces are copies of the cut vessels with the fibula to mandible transform hardened
+      if pieceIndex < len(transformedVesselsList):
+        vesselModelsList.append(transformedVesselsList[pieceIndex])
+        cutPlanesListsList.append([
+          self._transformPlane(fibulaToMandibleMatricesList[pieceIndex], pieceCutPlanesList[0]),
+          self._transformPlane(fibulaToMandibleMatricesList[pieceIndex], pieceCutPlanesList[1]),
+        ])
+
+    for index in range(len(vesselModelsList)):
+      self._addTissueTexture(
+        vesselModelsList[index],
+        cutPlanesListsList[index],
+        VSP_ANIMATION_VESSEL_MATERIAL,
+        VSP_ANIMATION_VESSEL_FRAGMENT_SHADER_REPLACEMENTS
+      )
+
+  def _addTissueTexture(self, modelNode, cutPlanesList, material, fragmentShaderReplacements):
+    """
+    Set the material of the model and register its tissue shader.
+    """
+    if modelNode is None:
+      return
+    displayNode = modelNode.GetDisplayNode()
+    if displayNode is None:
+      return
+    # The shader modifies the Gouraud lighting inputs so PBR is not used during the animation
+    displayNode.SetInterpolation(slicer.vtkMRMLDisplayNode.GouraudInterpolation)
+    displayNode.SetSpecular(material["Specular"])
+    displayNode.SetPower(material["Power"])
+    self.tissueTexturesDict[displayNode.GetID()] = {
+      "cutPlanesList": cutPlanesList,
+      "fragmentShaderReplacements": fragmentShaderReplacements,
+    }
 
   def _planeInModelCoordinates(self, planeNode, modelNode):
     """
@@ -777,28 +901,28 @@ class VirtualSurgicalPlanAnimation:
     transformedNormal = transformedNormal / np.linalg.norm(transformedNormal)
     return [transformedNormal[0], transformedNormal[1], transformedNormal[2], np.dot(transformedNormal, transformedOrigin)]
 
-  def _onBoneTexturesRendererStart(self, renderer, event):
+  def _onTissueTexturesRendererStart(self, renderer, event):
     """
-    Add the bone texture shader to the bone model actors of the view and update
+    Add the tissue texture shaders to the bone and vessel model actors of the view and update
     the transform from view to model coordinates for the current camera.
     """
-    for boneTexturesView in self.boneTexturesViewsList:
-      if boneTexturesView["renderer"] != renderer:
+    for tissueTexturesView in self.tissueTexturesViewsList:
+      if tissueTexturesView["renderer"] != renderer:
         continue
       modelToViewMatrix = vtk.vtkMatrix4x4()
       worldToViewMatrix = renderer.GetActiveCamera().GetModelViewTransformMatrix()
-      for displayNodeID, cutPlanesList in self.boneTexturesDict.items():
+      for displayNodeID, tissueTexture in self.tissueTexturesDict.items():
         # A model may get its actor only after it is shown for the first time
-        actor = boneTexturesView["modelDisplayableManager"].GetActorByID(displayNodeID)
+        actor = tissueTexturesView["modelDisplayableManager"].GetActorByID(displayNodeID)
         if actor is None or not actor.IsA("vtkActor"):
           continue
         fragmentUniforms = actor.GetShaderProperty().GetFragmentCustomUniforms()
-        if actor not in boneTexturesView["actorsList"]:
-          for originalValue, replacementValue in VSP_ANIMATION_BONE_FRAGMENT_SHADER_REPLACEMENTS.items():
+        if actor not in tissueTexturesView["actorsList"]:
+          for originalValue, replacementValue in tissueTexture["fragmentShaderReplacements"].items():
             actor.GetShaderProperty().AddFragmentShaderReplacement(originalValue, True, replacementValue, False)
-          fragmentUniforms.SetUniform4f("boneCutPlane0", cutPlanesList[0])
-          fragmentUniforms.SetUniform4f("boneCutPlane1", cutPlanesList[1])
-          boneTexturesView["actorsList"].append(actor)
+          fragmentUniforms.SetUniform4f("tissueCutPlane0", tissueTexture["cutPlanesList"][0])
+          fragmentUniforms.SetUniform4f("tissueCutPlane1", tissueTexture["cutPlanesList"][1])
+          tissueTexturesView["actorsList"].append(actor)
         vtk.vtkMatrix4x4.Multiply4x4(worldToViewMatrix, actor.GetMatrix(), modelToViewMatrix)
         viewToModelMatrix = vtk.vtkMatrix4x4()
         vtk.vtkMatrix4x4.Invert(modelToViewMatrix, viewToModelMatrix)
@@ -806,22 +930,22 @@ class VirtualSurgicalPlanAnimation:
           viewToModelRow = [0.0, 0.0, 0.0, 0.0]
           for column in range(4):
             viewToModelRow[column] = viewToModelMatrix.GetElement(row, column)
-          fragmentUniforms.SetUniform4f("boneViewToModelRow%d" % row, viewToModelRow)
+          fragmentUniforms.SetUniform4f("tissueViewToModelRow%d" % row, viewToModelRow)
 
-  def _removeBoneTextures(self):
+  def _removeTissueTextures(self):
     """
-    Remove the bone texture shader from all actors that received it.
+    Remove the tissue texture shaders from all actors that received them.
     """
-    for boneTexturesView in self.boneTexturesViewsList:
-      boneTexturesView["renderer"].RemoveObserver(boneTexturesView["observerTag"])
-      for actor in boneTexturesView["actorsList"]:
+    for tissueTexturesView in self.tissueTexturesViewsList:
+      tissueTexturesView["renderer"].RemoveObserver(tissueTexturesView["observerTag"])
+      for actor in tissueTexturesView["actorsList"]:
         shaderProperty = actor.GetShaderProperty()
-        for originalValue in VSP_ANIMATION_BONE_FRAGMENT_SHADER_REPLACEMENTS:
+        for originalValue in VSP_ANIMATION_TISSUE_FRAGMENT_SHADER_TAGS:
           shaderProperty.ClearFragmentShaderReplacement(originalValue, True)
-        for uniformName in VSP_ANIMATION_BONE_FRAGMENT_SHADER_UNIFORMS:
+        for uniformName in VSP_ANIMATION_TISSUE_FRAGMENT_SHADER_UNIFORMS:
           shaderProperty.GetFragmentCustomUniforms().RemoveUniform(uniformName)
-    self.boneTexturesViewsList = []
-    self.boneTexturesDict = {}
+    self.tissueTexturesViewsList = []
+    self.tissueTexturesDict = {}
 
   def _getMaximizedViewNodes(self):
     layoutManager = slicer.app.layoutManager()
