@@ -46,6 +46,107 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
 VSP_ANIMATION_VIDEO_FRAME_RATE = 30
 VSP_ANIMATION_VIDEO_OPTIONS = "-codec libx264 -preset slower -pix_fmt yuv420p"
 
+# Wet bone sheen under the MultiLamp lighting
+VSP_ANIMATION_BONE_MATERIAL = {
+  "Specular": 0.25,
+  "Power": 20.0,
+}
+# A cut plane that never matches any position
+VSP_ANIMATION_NO_CUT_PLANE = [0.0, 0.0, 0.0, 1.0]
+
+# The bone texture is computed per pixel from the model coordinates (a solid texture),
+# so the models need no texture coordinates and the texture moves with each bone piece.
+# The model coordinates are computed from the view coordinates because the vertex buffer
+# coordinates (vertexMC) are shifted and scaled by VTK
+VSP_ANIMATION_BONE_FRAGMENT_SHADER_DECLARATIONS = """//VTK::Normal::Dec
+float boneHash(vec3 cell)
+{
+  // Wrap the lattice so the hash stays precise at scene coordinates of hundreds of millimeters
+  cell = mod(cell, 289.0);
+  return fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+}
+
+float boneNoise(vec3 position)
+{
+  vec3 cell = floor(position);
+  vec3 fraction = fract(position);
+  fraction = fraction * fraction * (3.0 - 2.0 * fraction);
+  float noise00 = mix(boneHash(cell), boneHash(cell + vec3(1.0, 0.0, 0.0)), fraction.x);
+  float noise10 = mix(boneHash(cell + vec3(0.0, 1.0, 0.0)), boneHash(cell + vec3(1.0, 1.0, 0.0)), fraction.x);
+  float noise01 = mix(boneHash(cell + vec3(0.0, 0.0, 1.0)), boneHash(cell + vec3(1.0, 0.0, 1.0)), fraction.x);
+  float noise11 = mix(boneHash(cell + vec3(0.0, 1.0, 1.0)), boneHash(cell + vec3(1.0, 1.0, 1.0)), fraction.x);
+  return mix(mix(noise00, noise10, fraction.y), mix(noise01, noise11, fraction.y), fraction.z);
+}
+
+float boneFbm(vec3 position)
+{
+  float value = 0.0;
+  float amplitude = 0.5;
+  for (int octave = 0; octave < 4; octave++)
+  {
+    value += amplitude * boneNoise(position);
+    position = position * 2.03 + vec3(17.1, 31.7, 11.3);
+    amplitude *= 0.5;
+  }
+  return value / 0.9375;
+}
+
+float boneCutFactor(vec4 cutPlane, vec3 position)
+{
+  return 1.0 - smoothstep(0.05, 0.3, abs(dot(cutPlane.xyz, position) - cutPlane.w));
+}
+"""
+
+# Screen space derivatives (dFdx) are only valid before any fragment is discarded (e.g. by depth peeling)
+VSP_ANIMATION_BONE_FRAGMENT_SHADER_UNIFORM_FLOW = """//VTK::UniformFlow::Impl
+  vec3 bonePosition = vec3(
+    dot(boneViewToModelRow0, vertexVC),
+    dot(boneViewToModelRow1, vertexVC),
+    dot(boneViewToModelRow2, vertexVC));
+  float boneMottling = boneFbm(bonePosition * 0.15);
+  float bonePatches = boneFbm(bonePosition * 0.06 + vec3(41.0, 7.0, 23.0));
+  float bonePores = boneFbm(bonePosition * 2.2);
+  float boneMarrow = boneFbm(bonePosition * 2.5 + vec3(5.0, 59.0, 13.0));
+  float boneCut = max(boneCutFactor(boneCutPlane0, bonePosition), boneCutFactor(boneCutPlane1, bonePosition));
+  float boneHeight = 0.06 * (0.5 * boneMottling - bonePores) * (1.0 - boneCut);
+  vec3 bonePositionDx = dFdx(vertexVC.xyz);
+  vec3 bonePositionDy = dFdy(vertexVC.xyz);
+  float boneHeightDx = dFdx(boneHeight);
+  float boneHeightDy = dFdy(boneHeight);
+"""
+
+VSP_ANIMATION_BONE_FRAGMENT_SHADER_IMPLEMENTATION = """//VTK::Normal::Impl
+  // Ivory cortical bone with blood tinted patches and small dark pores
+  vec3 boneColor = mix(vec3(0.80, 0.72, 0.58), vec3(0.93, 0.89, 0.80), smoothstep(0.3, 0.7, boneMottling));
+  boneColor = mix(boneColor, vec3(0.83, 0.60, 0.53), 0.4 * smoothstep(0.55, 0.75, bonePatches));
+  boneColor *= 1.0 - 0.18 * smoothstep(0.62, 0.82, bonePores);
+  // Osteotomy faces show pale sawn bone with red marrow speckles
+  vec3 boneCutColor = mix(vec3(0.92, 0.86, 0.80), vec3(0.62, 0.18, 0.15), smoothstep(0.6, 0.8, boneMarrow));
+  boneColor = mix(boneColor, boneCutColor, boneCut);
+  diffuseColor = diffuseIntensity * boneColor;
+  ambientColor = ambientIntensity * boneColor;
+  // Bump the normal along the pores (surface gradient bump mapping)
+  vec3 boneR1 = cross(bonePositionDy, normalVCVSOutput);
+  vec3 boneR2 = cross(normalVCVSOutput, bonePositionDx);
+  float boneDeterminant = dot(bonePositionDx, boneR1);
+  vec3 boneSurfaceGradient = sign(boneDeterminant) * (boneHeightDx * boneR1 + boneHeightDy * boneR2);
+  normalVCVSOutput = normalize(max(abs(boneDeterminant), 1e-10) * normalVCVSOutput - boneSurfaceGradient);
+"""
+
+VSP_ANIMATION_BONE_FRAGMENT_SHADER_REPLACEMENTS = {
+  "//VTK::Normal::Dec": VSP_ANIMATION_BONE_FRAGMENT_SHADER_DECLARATIONS,
+  "//VTK::UniformFlow::Impl": VSP_ANIMATION_BONE_FRAGMENT_SHADER_UNIFORM_FLOW,
+  "//VTK::Normal::Impl": VSP_ANIMATION_BONE_FRAGMENT_SHADER_IMPLEMENTATION,
+}
+
+VSP_ANIMATION_BONE_FRAGMENT_SHADER_UNIFORMS = [
+  "boneCutPlane0",
+  "boneCutPlane1",
+  "boneViewToModelRow0",
+  "boneViewToModelRow1",
+  "boneViewToModelRow2",
+]
+
 
 class VirtualSurgicalPlanAnimation:
   """
@@ -72,6 +173,8 @@ class VirtualSurgicalPlanAnimation:
     self.lightingState = {}
     self.multiLampLightKit = vtk.vtkLightKit()
     self.multiLampLightKit.MaintainLuminanceOn()
+    self.boneTexturesDict = {}
+    self.boneTexturesViewsList = []
     self.initiallyMaximizedViewNodesList = []
     self.currentMaximizedViewNode = None
     self.temporaryTransformsList = []
@@ -102,6 +205,7 @@ class VirtualSurgicalPlanAnimation:
       self._saveState()
       self._setMultiLampLighting()
       self._setOperatingRoomBackground()
+      self._setBoneTextures()
       self._createTemporaryGraftTransforms()
       self.animationStepsList = self._createSteps()
       self.playing = True
@@ -173,6 +277,7 @@ class VirtualSurgicalPlanAnimation:
       self._saveState()
       self._setMultiLampLighting()
       self._setOperatingRoomBackground()
+      self._setBoneTextures()
       self._createTemporaryGraftTransforms()
       self.animationStepsList = self._createSteps()
       progressDialog = slicer.util.createProgressDialog(
@@ -394,6 +499,12 @@ class VirtualSurgicalPlanAnimation:
         displayNodeState["opacity"] = displayNode.GetOpacity()
       if hasattr(displayNode, "GetColor"):
         displayNodeState["color"] = tuple(displayNode.GetColor())
+      if hasattr(displayNode, "GetInterpolation"):
+        displayNodeState["interpolation"] = displayNode.GetInterpolation()
+      if hasattr(displayNode, "GetSpecular"):
+        displayNodeState["specular"] = displayNode.GetSpecular()
+      if hasattr(displayNode, "GetPower"):
+        displayNodeState["power"] = displayNode.GetPower()
       self.displayNodesState[node.GetID()] = displayNodeState
 
     self.camerasState = {}
@@ -452,6 +563,12 @@ class VirtualSurgicalPlanAnimation:
         displayNode.SetOpacity(displayNodeState["opacity"])
       if "color" in displayNodeState:
         displayNode.SetColor(displayNodeState["color"])
+      if "interpolation" in displayNodeState:
+        displayNode.SetInterpolation(displayNodeState["interpolation"])
+      if "specular" in displayNodeState:
+        displayNode.SetSpecular(displayNodeState["specular"])
+      if "power" in displayNodeState:
+        displayNode.SetPower(displayNodeState["power"])
 
     for viewNodeID, state in self.camerasState.items():
       viewNode = slicer.mrmlScene.GetNodeByID(viewNodeID)
@@ -481,6 +598,7 @@ class VirtualSurgicalPlanAnimation:
       renderer.SetEnvironmentRight(viewLightingState["environmentRight"])
       if "shadowsVisibility" in viewLightingState:
         viewNode.SetShadowsVisibility(viewLightingState["shadowsVisibility"])
+    self._removeBoneTextures()
 
     self._restoreMaximizedViews()
     if self.displayNodesState:
@@ -564,6 +682,146 @@ class VirtualSurgicalPlanAnimation:
       renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
       renderer.SetEnvironmentUp(viewUpDirection[0], viewUpDirection[1], viewUpDirection[2])
       renderer.SetEnvironmentRight(environmentRight[0], environmentRight[1], environmentRight[2])
+
+  def _setBoneTextures(self):
+    """
+    Make the bone models look like real bone during the animation, with sawn bone on the osteotomy faces.
+    """
+    noCutPlanesList = [VSP_ANIMATION_NO_CUT_PLANE, VSP_ANIMATION_NO_CUT_PLANE]
+    boneModelsList = [self.animationNodes["mandible"], self.animationNodes["fibula"]]
+    cutPlanesListsList = [noCutPlanesList, noCutPlanesList]
+
+    resectedMandible = self.animationNodes["resectedMandible"]
+    resectionPlanesList = self.animationNodes["resectionPlanes"]
+    boneModelsList.append(resectedMandible)
+    cutPlanesListsList.append([
+      self._planeInModelCoordinates(resectionPlanesList[0], resectedMandible),
+      self._planeInModelCoordinates(resectionPlanesList[1], resectedMandible),
+    ])
+
+    fibulaPlanesList = self.animationNodes["fibulaPlanes"]
+    fibulaPiecesList = self.animationNodes["fibulaPieces"]
+    transformedFibulaPiecesList = self.animationNodes["transformedFibulaPieces"]
+    fibulaToMandibleMatricesList = self.animationNodes["graftTransformMatrices"]
+    for pieceIndex in range(len(fibulaPiecesList)):
+      fibulaPiece = fibulaPiecesList[pieceIndex]
+      pieceCutPlanesList = [
+        self._planeInModelCoordinates(fibulaPlanesList[2 * pieceIndex], fibulaPiece),
+        self._planeInModelCoordinates(fibulaPlanesList[2 * pieceIndex + 1], fibulaPiece),
+      ]
+      boneModelsList.append(fibulaPiece)
+      cutPlanesListsList.append(pieceCutPlanesList)
+      # Transformed fibula pieces are copies of the fibula pieces with the fibula to mandible transform hardened
+      boneModelsList.append(transformedFibulaPiecesList[pieceIndex])
+      cutPlanesListsList.append([
+        self._transformPlane(fibulaToMandibleMatricesList[pieceIndex], pieceCutPlanesList[0]),
+        self._transformPlane(fibulaToMandibleMatricesList[pieceIndex], pieceCutPlanesList[1]),
+      ])
+
+    self.boneTexturesDict = {}
+    for index in range(len(boneModelsList)):
+      displayNode = boneModelsList[index].GetDisplayNode()
+      if displayNode is None:
+        continue
+      # The shader modifies the Gouraud lighting inputs so PBR is not used during the animation
+      displayNode.SetInterpolation(slicer.vtkMRMLDisplayNode.GouraudInterpolation)
+      displayNode.SetSpecular(VSP_ANIMATION_BONE_MATERIAL["Specular"])
+      displayNode.SetPower(VSP_ANIMATION_BONE_MATERIAL["Power"])
+      self.boneTexturesDict[displayNode.GetID()] = cutPlanesListsList[index]
+
+    # The shader is added and updated right before each render of the 3D views
+    self.boneTexturesViewsList = []
+    layoutManager = slicer.app.layoutManager()
+    for index in range(layoutManager.threeDViewCount):
+      threeDView = layoutManager.threeDWidget(index).threeDView()
+      modelDisplayableManager = threeDView.displayableManagerByClassName("vtkMRMLModelDisplayableManager")
+      if modelDisplayableManager is None:
+        continue
+      renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
+      observerTag = renderer.AddObserver(vtk.vtkCommand.StartEvent, self._onBoneTexturesRendererStart)
+      self.boneTexturesViewsList.append({
+        "renderer": renderer,
+        "modelDisplayableManager": modelDisplayableManager,
+        "observerTag": observerTag,
+        "actorsList": [],
+      })
+      threeDView.scheduleRender()
+
+  def _planeInModelCoordinates(self, planeNode, modelNode):
+    """
+    Return the plane as [normalX, normalY, normalZ, offset] in the coordinates of the model points.
+    """
+    origin = np.zeros(3)
+    planeNode.GetOriginWorld(origin)
+    normal = np.zeros(3)
+    planeNode.GetNormalWorld(normal)
+    worldToModelMatrix = vtk.vtkMatrix4x4()
+    parentTransformNode = modelNode.GetParentTransformNode()
+    if parentTransformNode is not None:
+      parentTransformNode.GetMatrixTransformFromWorld(worldToModelMatrix)
+    modelOrigin = self._transformPoint(worldToModelMatrix, origin)
+    modelNormal = self._transformPoint(self._rotationOnlyMatrix(worldToModelMatrix), normal)
+    modelNormal = modelNormal / np.linalg.norm(modelNormal)
+    return [modelNormal[0], modelNormal[1], modelNormal[2], np.dot(modelNormal, modelOrigin)]
+
+  def _transformPlane(self, matrix, plane):
+    """
+    Return the [normalX, normalY, normalZ, offset] plane moved by a rigid transform matrix.
+    """
+    normal = np.array(plane[:3])
+    if np.linalg.norm(normal) == 0.0:
+      return plane
+    origin = normal * plane[3]
+    transformedOrigin = self._transformPoint(matrix, origin)
+    transformedNormal = self._transformPoint(self._rotationOnlyMatrix(matrix), normal)
+    transformedNormal = transformedNormal / np.linalg.norm(transformedNormal)
+    return [transformedNormal[0], transformedNormal[1], transformedNormal[2], np.dot(transformedNormal, transformedOrigin)]
+
+  def _onBoneTexturesRendererStart(self, renderer, event):
+    """
+    Add the bone texture shader to the bone model actors of the view and update
+    the transform from view to model coordinates for the current camera.
+    """
+    for boneTexturesView in self.boneTexturesViewsList:
+      if boneTexturesView["renderer"] != renderer:
+        continue
+      modelToViewMatrix = vtk.vtkMatrix4x4()
+      worldToViewMatrix = renderer.GetActiveCamera().GetModelViewTransformMatrix()
+      for displayNodeID, cutPlanesList in self.boneTexturesDict.items():
+        # A model may get its actor only after it is shown for the first time
+        actor = boneTexturesView["modelDisplayableManager"].GetActorByID(displayNodeID)
+        if actor is None or not actor.IsA("vtkActor"):
+          continue
+        fragmentUniforms = actor.GetShaderProperty().GetFragmentCustomUniforms()
+        if actor not in boneTexturesView["actorsList"]:
+          for originalValue, replacementValue in VSP_ANIMATION_BONE_FRAGMENT_SHADER_REPLACEMENTS.items():
+            actor.GetShaderProperty().AddFragmentShaderReplacement(originalValue, True, replacementValue, False)
+          fragmentUniforms.SetUniform4f("boneCutPlane0", cutPlanesList[0])
+          fragmentUniforms.SetUniform4f("boneCutPlane1", cutPlanesList[1])
+          boneTexturesView["actorsList"].append(actor)
+        vtk.vtkMatrix4x4.Multiply4x4(worldToViewMatrix, actor.GetMatrix(), modelToViewMatrix)
+        viewToModelMatrix = vtk.vtkMatrix4x4()
+        vtk.vtkMatrix4x4.Invert(modelToViewMatrix, viewToModelMatrix)
+        for row in range(3):
+          viewToModelRow = [0.0, 0.0, 0.0, 0.0]
+          for column in range(4):
+            viewToModelRow[column] = viewToModelMatrix.GetElement(row, column)
+          fragmentUniforms.SetUniform4f("boneViewToModelRow%d" % row, viewToModelRow)
+
+  def _removeBoneTextures(self):
+    """
+    Remove the bone texture shader from all actors that received it.
+    """
+    for boneTexturesView in self.boneTexturesViewsList:
+      boneTexturesView["renderer"].RemoveObserver(boneTexturesView["observerTag"])
+      for actor in boneTexturesView["actorsList"]:
+        shaderProperty = actor.GetShaderProperty()
+        for originalValue in VSP_ANIMATION_BONE_FRAGMENT_SHADER_REPLACEMENTS:
+          shaderProperty.ClearFragmentShaderReplacement(originalValue, True)
+        for uniformName in VSP_ANIMATION_BONE_FRAGMENT_SHADER_UNIFORMS:
+          shaderProperty.GetFragmentCustomUniforms().RemoveUniform(uniformName)
+    self.boneTexturesViewsList = []
+    self.boneTexturesDict = {}
 
   def _getMaximizedViewNodes(self):
     layoutManager = slicer.app.layoutManager()
