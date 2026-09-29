@@ -52,6 +52,11 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
 VSP_ANIMATION_VIDEO_FRAME_RATE = 30
 VSP_ANIMATION_VIDEO_OPTIONS = "-codec libx264 -preset slower -pix_fmt yuv420p"
 
+# The schematic mode shows the plan models as they are, the realistic mode adds the operating room background,
+# the bone and vessel textures, and the head and leg dissections
+VSP_ANIMATION_SCHEMATIC_MODE = "Schematic"
+VSP_ANIMATION_REALISTIC_MODE = "Realistic"
+
 # The mandible view looks at the face from the front
 VSP_ANIMATION_MANDIBLE_CAMERA_DIRECTION = [0.0, -1.0, 0.0]
 VSP_ANIMATION_MANDIBLE_VIEW_UP_DIRECTION = [0.0, 0.0, 1.0]
@@ -293,6 +298,7 @@ class VirtualSurgicalPlanAnimation:
     self.timer.setInterval(self.FRAME_INTERVAL_MS)
     self.timer.connect("timeout()", self._onTimer)
     self.playing = False
+    self.realisticMode = False
     self.animationStepsList = []
     self.currentAnimationStep = None
     self.currentAnimationStepStartedAt = 0.0
@@ -325,6 +331,7 @@ class VirtualSurgicalPlanAnimation:
     if self.playing:
       return True
 
+    self.realisticMode = self.logic.getParameterNode().GetParameter("vspAnimationMode") == VSP_ANIMATION_REALISTIC_MODE
     validationError = self._collectAnimationNodes()
     if validationError:
       slicer.util.errorDisplay(validationError)
@@ -333,15 +340,7 @@ class VirtualSurgicalPlanAnimation:
       slicer.util.warningDisplay("\n".join(self.animationWarningsList))
 
     try:
-      self._saveState()
-      self._setMultiLampLighting()
-      self._hideBoxAndAxisLabels()
-      self._hideVolumeRenderings()
-      self._hideMandiblePlanesNames()
-      self._setOperatingRoomBackground()
-      self._setTissueTextures()
-      self._createDissectionVolumes()
-      self._createTemporaryGraftTransforms()
+      self._setUpScene()
       self.animationStepsList = self._createSteps()
       self.playing = True
       self._notifyStateChanged()
@@ -398,6 +397,7 @@ class VirtualSurgicalPlanAnimation:
       )
       return False
 
+    self.realisticMode = self.logic.getParameterNode().GetParameter("vspAnimationMode") == VSP_ANIMATION_REALISTIC_MODE
     validationError = self._collectAnimationNodes()
     if validationError:
       slicer.util.errorDisplay(validationError)
@@ -410,17 +410,9 @@ class VirtualSurgicalPlanAnimation:
     frameFileNamePattern = "frame-%05d.jpg"
     progressDialog = None
     try:
-      self._saveState()
-      self._setMultiLampLighting()
-      self._hideBoxAndAxisLabels()
-      self._hideVolumeRenderings()
-      self._hideMandiblePlanesNames()
-      self._setOperatingRoomBackground()
-      self._setTissueTextures()
-      self._createDissectionVolumes()
-      self._createTemporaryGraftTransforms()
+      self._setUpScene()
       self.animationStepsList = self._createSteps()
-      progressDialog =slicer.util.createProgressDialog(
+      progressDialog = slicer.util.createProgressDialog(
         windowTitle = "Exporting VSP animation",
         labelText = "Rendering animation frames...",
         value = 0,
@@ -559,13 +551,17 @@ class VirtualSurgicalPlanAnimation:
         missingNodesList.append(nodeName)
     if missingNodesList:
       return "Cannot play the VSP animation. Missing: %s." % ", ".join(missingNodesList)
-    self.animationNodes["headCT"] = self._dissectionCTVolume("headCT", self.animationNodes["mandible"])
-    self.animationNodes["legsCT"] = self._dissectionCTVolume("legsCT", self.animationNodes["fibula"])
+    self.animationNodes["headCT"] = None
+    self.animationNodes["legsCT"] = None
     missingOptionalNodesList = []
-    if self.animationNodes["headCT"] is None:
-      missingOptionalNodesList.append("head CT volume")
-    if self.animationNodes["legsCT"] is None:
-      missingOptionalNodesList.append("leg CT volume")
+    # The dissections are only shown in the realistic mode
+    if self.realisticMode:
+      self.animationNodes["headCT"] = self._dissectionCTVolume("headCT", self.animationNodes["mandible"])
+      self.animationNodes["legsCT"] = self._dissectionCTVolume("legsCT", self.animationNodes["fibula"])
+      if self.animationNodes["headCT"] is None:
+        missingOptionalNodesList.append("head CT volume")
+      if self.animationNodes["legsCT"] is None:
+        missingOptionalNodesList.append("leg CT volume")
     if self.animationNodes["mandibleGuide"] is None:
       missingOptionalNodesList.append("mandible surgical guide")
     if self.animationNodes["fibulaGuide"] is None:
@@ -643,6 +639,21 @@ class VirtualSurgicalPlanAnimation:
       transformNode.GetMatrixTransformToParent(matrix)
       fibulaToMandibleMatricesList.append(matrix)
     return fibulaToMandibleMatricesList
+
+  def _setUpScene(self):
+    """
+    Save the scene state and set up the lighting, views, and models of the animation mode.
+    """
+    self._saveState()
+    self._setMultiLampLighting()
+    self._hideVolumeRenderings()
+    self._hideMandiblePlanesNames()
+    if self.realisticMode:
+      self._hideBoxAndAxisLabels()
+      self._setOperatingRoomBackground()
+      self._setTissueTextures()
+      self._createDissectionVolumes()
+    self._createTemporaryGraftTransforms()
 
   def _saveState(self):
     """
@@ -904,6 +915,9 @@ class VirtualSurgicalPlanAnimation:
     for index in range(layoutManager.threeDViewCount):
       threeDView = layoutManager.threeDWidget(index).threeDView()
       if threeDView.mrmlViewNode() != viewNode:
+        continue
+      # Only views showing the operating room background (realistic mode) are oriented
+      if "operatingRoomSkybox" not in self.lightingState.get(viewNode.GetID(), {}):
         continue
       renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
       renderer.SetEnvironmentUp(viewUpDirection[0], viewUpDirection[1], viewUpDirection[2])
@@ -1842,9 +1856,13 @@ class VirtualSurgicalPlanAnimation:
         (animationDurationsDict["graftingDissectLeg"], lambda progress: self._dissect("leg", progress)),
         (animationDurationsDict["graftingHideLeg"], lambda progress: self._hideDissection("leg", progress)),
       ])
-    # The vessels stay visible until the fibula is exchanged for the pieces
+    # In the realistic mode the dissected vessels stay visible until the fibula is exchanged for the pieces
+    if self.realisticMode:
+      fibulaOnlyNodesList = self._fibulaAndVesselsList()
+    else:
+      fibulaOnlyNodesList = [self.animationNodes["fibula"]]
     animationStepsList.extend([
-      (animationDurationsDict["graftingFibulaOnly"], lambda progress: self._showOnly(self._fibulaAndVesselsList())),
+      (animationDurationsDict["graftingFibulaOnly"], lambda progress: self._showOnly(fibulaOnlyNodesList)),
       (animationDurationsDict["graftingZoomFibula"], self._zoomIntoFibula),
     ])
     if self.animationNodes["fibulaGuide"] is not None:

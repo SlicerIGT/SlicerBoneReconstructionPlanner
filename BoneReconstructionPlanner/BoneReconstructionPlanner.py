@@ -713,6 +713,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.fibulaTextLabelsModeComboBox.currentTextChanged.connect(self.updateMiterBoxes)
     self.ui.sawBoxesGuideTypeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleTextLabelsModeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
+    self.ui.vspAnimationModeComboBox.currentTextChanged.connect(self.updateParameterNodeFromGUI)
 
     # Buttons
     self.ui.emailBugReportButton.connect('clicked(bool)',self.onEmailBugReportButton)
@@ -1688,6 +1689,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self.vspAnimation.stop(restore=True)
     self.ui.playVSPAnimationButton.enabled = lockVSPChecked
     self.ui.exportVSPAnimationButton.enabled = lockVSPChecked
+    self.ui.vspAnimationModeComboBox.currentText = self._parameterNode.GetParameter("vspAnimationMode")
 
     showMandiblePlanesChecked = self._parameterNode.GetParameter("showMandiblePlanes") == "True"
     self.ui.showMandiblePlanesToolButton.checked = showMandiblePlanesChecked
@@ -1862,6 +1864,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("fibulaTextLabelsMode", self.ui.fibulaTextLabelsModeComboBox.currentText)
     self._parameterNode.SetParameter("sawBoxesGuideType", self.ui.sawBoxesGuideTypeComboBox.currentText)
     self._parameterNode.SetParameter("mandibleTextLabelsMode", self.ui.mandibleTextLabelsModeComboBox.currentText)
+    self._parameterNode.SetParameter("vspAnimationMode", self.ui.vspAnimationModeComboBox.currentText)
     self._parameterNode.SetParameter("kindOfMandibleResection", self.ui.kindOfMandibleResectionComboBox.currentText)
     if self.ui.mandibleSideToRemoveComboBox.currentText != "":
       self._parameterNode.SetParameter("mandibleSideToRemove", self.ui.mandibleSideToRemoveComboBox.currentText)
@@ -2188,6 +2191,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     button.setIcon(button.style().standardIcon(standardPixmap))
     button.toolTip = "Stop Virtual Surgical Plan animation" if playing else "Play Virtual Surgical Plan animation"
     button.blockSignals(wasBlockingSignals)
+    # The animation mode can only be changed while the animation is not playing
+    self.ui.vspAnimationModeComboBox.enabled = not playing
 
   def onNeomandibleVisibilityButton(self,checked):
     """

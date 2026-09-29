@@ -83,5 +83,6 @@
     "sawBoxesBoxType": "Regular",
     "sawBoxesGuideType": "Slot",
     "fibulaTextLabelsMode": "Emboss",
-    "mandibleTextLabelsMode": "Emboss"
+    "mandibleTextLabelsMode": "Emboss",
+    "vspAnimationMode": "Schematic"
 }
