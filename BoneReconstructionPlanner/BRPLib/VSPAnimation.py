@@ -101,6 +101,7 @@ class VirtualSurgicalPlanAnimation:
     try:
       self._saveState()
       self._setMultiLampLighting()
+      self._setOperatingRoomBackground()
       self._createTemporaryGraftTransforms()
       self.animationStepsList = self._createSteps()
       self.playing = True
@@ -171,6 +172,7 @@ class VirtualSurgicalPlanAnimation:
     try:
       self._saveState()
       self._setMultiLampLighting()
+      self._setOperatingRoomBackground()
       self._createTemporaryGraftTransforms()
       self.animationStepsList = self._createSteps()
       progressDialog = slicer.util.createProgressDialog(
@@ -370,7 +372,7 @@ class VirtualSurgicalPlanAnimation:
 
   def _saveState(self):
     """
-    Save model, markup, camera, transform, lighting, and maximized-view states.
+    Save model, markup, camera, transform, lighting, background, and maximized-view states.
     """
     self.displayNodesState = {}
     for index in range(slicer.mrmlScene.GetNumberOfNodes()):
@@ -414,7 +416,15 @@ class VirtualSurgicalPlanAnimation:
       lightsList = []
       for lightIndex in range(renderer.GetLights().GetNumberOfItems()):
         lightsList.append(renderer.GetLights().GetItemAsObject(lightIndex))
-      viewLightingState = {"lightsList": lightsList}
+      environmentUp = [0.0, 0.0, 0.0]
+      renderer.GetEnvironmentUp(environmentUp)
+      environmentRight = [0.0, 0.0, 0.0]
+      renderer.GetEnvironmentRight(environmentRight)
+      viewLightingState = {
+        "lightsList": lightsList,
+        "environmentUp": environmentUp,
+        "environmentRight": environmentRight,
+      }
       if hasattr(viewNode, "GetShadowsVisibility"):
         viewLightingState["shadowsVisibility"] = viewNode.GetShadowsVisibility()
       self.lightingState[viewNode.GetID()] = viewLightingState
@@ -465,6 +475,10 @@ class VirtualSurgicalPlanAnimation:
       renderer.RemoveAllLights()
       for light in viewLightingState["lightsList"]:
         renderer.AddLight(light)
+      if "operatingRoomSkybox" in viewLightingState:
+        renderer.RemoveActor(viewLightingState["operatingRoomSkybox"])
+      renderer.SetEnvironmentUp(viewLightingState["environmentUp"])
+      renderer.SetEnvironmentRight(viewLightingState["environmentRight"])
       if "shadowsVisibility" in viewLightingState:
         viewNode.SetShadowsVisibility(viewLightingState["shadowsVisibility"])
 
@@ -492,6 +506,64 @@ class VirtualSurgicalPlanAnimation:
       if hasattr(viewNode, "SetShadowsVisibility"):
         viewNode.SetShadowsVisibility(False)
       threeDView.scheduleRender()
+
+  def _operatingRoomImageFilePath(self):
+    """
+    Return the operating room panorama of the Lights module (Sandbox extension) or None if not available.
+    """
+    if not hasattr(slicer.modules, "lights"):
+      return None
+    imageFilePath = os.path.join(os.path.dirname(slicer.modules.lights.path), "Resources", "hospital_room.jpg")
+    if not os.path.exists(imageFilePath):
+      return None
+    return imageFilePath
+
+  def _setOperatingRoomBackground(self):
+    """
+    Show the operating room panorama of the Lights module behind the models of the 3D views.
+    """
+    imageFilePath = self._operatingRoomImageFilePath()
+    if imageFilePath is None:
+      logging.warning("Operating room image of the Lights module not found. The VSP animation will keep the view background.")
+      return
+    imageReader = vtk.vtkJPEGReader()
+    imageReader.SetFileName(imageFilePath)
+    layoutManager = slicer.app.layoutManager()
+    for index in range(layoutManager.threeDViewCount):
+      threeDView = layoutManager.threeDWidget(index).threeDView()
+      viewNode = threeDView.mrmlViewNode()
+      if viewNode.GetID() not in self.lightingState:
+        continue
+      if viewNode.GetRenderMode() == slicer.vtkMRMLViewNode.Orthographic:
+        # The skybox is only drawn correctly with perspective projection
+        continue
+      # Each view has its own OpenGL context so it needs its own texture
+      texture = vtk.vtkTexture()
+      texture.SetInputConnection(imageReader.GetOutputPort())
+      texture.SetColorModeToDirectScalars()
+      texture.InterpolateOn()
+      skybox = vtk.vtkSkybox()
+      skybox.SetTexture(texture)
+      # The image is an equirectangular panorama
+      skybox.SetProjectionToSphere()
+      renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
+      renderer.AddActor(skybox)
+      self.lightingState[viewNode.GetID()]["operatingRoomSkybox"] = skybox
+      threeDView.scheduleRender()
+
+  def _orientOperatingRoomBackground(self, viewNode, cameraDirection, viewUpDirection):
+    """
+    Keep the floor of the operating room down on the screen and the operating lamp side of the room behind the models.
+    """
+    environmentRight = np.cross(cameraDirection, viewUpDirection)
+    layoutManager = slicer.app.layoutManager()
+    for index in range(layoutManager.threeDViewCount):
+      threeDView = layoutManager.threeDWidget(index).threeDView()
+      if threeDView.mrmlViewNode() != viewNode:
+        continue
+      renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
+      renderer.SetEnvironmentUp(viewUpDirection[0], viewUpDirection[1], viewUpDirection[2])
+      renderer.SetEnvironmentRight(environmentRight[0], environmentRight[1], environmentRight[2])
 
   def _getMaximizedViewNodes(self):
     layoutManager = slicer.app.layoutManager()
@@ -863,6 +935,7 @@ class VirtualSurgicalPlanAnimation:
       cameraNode.SetFocalPoint(centroid)
       cameraNode.SetViewUp(viewUpDirection)
       cameraNode.ResetClippingRange()
+      self._orientOperatingRoomBackground(viewNode, cameraDirection, viewUpDirection)
       return
 
     donorLeg = self.logic.getParameterNode().GetParameter("donorLeg")
@@ -887,6 +960,7 @@ class VirtualSurgicalPlanAnimation:
     cameraNode.SetViewUp(viewUpDirection)
     cameraNode.SetParallelScale(parallelScale)
     cameraNode.ResetClippingRange()
+    self._orientOperatingRoomBackground(viewNode, cameraDirection, viewUpDirection)
 
   def _cameraPoseFittingBounds(self, cameraNode, bounds, cameraDirection, margin):
     """
