@@ -15,6 +15,9 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
   # Resection animation
   "resectionSaveState": 0.0,
   "resectionSetView": 0.0,
+  "resectionShowHead": 2.0,
+  "resectionDissectHead": 6.0,
+  "resectionHideHead": 2.0,
   "resectionMandibleOnly": 3.0,
   "resectionShowGuide": 3.0,
   "resectionShowPlanes": 5.0,
@@ -45,6 +48,64 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
 
 VSP_ANIMATION_VIDEO_FRAME_RATE = 30
 VSP_ANIMATION_VIDEO_OPTIONS = "-codec libx264 -preset slower -pix_fmt yuv420p"
+
+# The mandible view looks at the face from the front
+VSP_ANIMATION_MANDIBLE_CAMERA_DIRECTION = [0.0, -1.0, 0.0]
+VSP_ANIMATION_MANDIBLE_VIEW_UP_DIRECTION = [0.0, 0.0, 1.0]
+
+# The dissection carves the head CT, resampled into a grid aligned with the mandible view,
+# from the skin down to the mandible
+VSP_ANIMATION_DISSECTION_SPACING_MM = 0.6
+# Region of the head kept around the mandible across the view
+VSP_ANIMATION_DISSECTION_VIEW_MARGIN_MM = 80.0
+# How far the dissection opening extends past the outline of the mandible
+VSP_ANIMATION_DISSECTION_OPENING_MARGIN_MM = 10.0
+VSP_ANIMATION_DISSECTION_SKIN_THICKNESS_MM = 2.0
+VSP_ANIMATION_DISSECTION_AIR_HU = -1024
+VSP_ANIMATION_DISSECTION_MAXIMUM_HU = 3071
+VSP_ANIMATION_DISSECTION_BODY_THRESHOLD_HU = -400
+# Only soft tissue is dissected, other bones stay
+VSP_ANIMATION_DISSECTION_BONE_THRESHOLD_HU = 250
+# Parts of the mandible behind this thickness of other bones are not dissected
+VSP_ANIMATION_DISSECTION_HIDING_BONE_MM = 2.0
+# The skin voxels are mirrored below the air values (skin value = mirror - HU) so the skin gets its own
+# color while the values stay continuous with the air in front of the skin
+VSP_ANIMATION_DISSECTION_SKIN_MIRROR_VALUE = 2 * VSP_ANIMATION_DISSECTION_AIR_HU
+# The skin opens along the middle of the mandible outline first and reaches the opening margin at this time
+VSP_ANIMATION_DISSECTION_LATERAL_WEIGHT = 0.35
+# The dissection reaches the mandible inside this fraction of the opening and gets shallower up to its margin
+VSP_ANIMATION_DISSECTION_FULL_DEPTH_LATERAL = 0.7
+# Voxels fade into air while the carved surface is within this many voxels, so the carved surfaces are smooth.
+# The fade lasts between the minimum and maximum fractions of the dissection
+VSP_ANIMATION_DISSECTION_SOFTNESS_VOXELS = 2.0
+VSP_ANIMATION_DISSECTION_MINIMUM_SOFTNESS = 0.02
+VSP_ANIMATION_DISSECTION_MAXIMUM_SOFTNESS = 0.2
+VSP_ANIMATION_DISSECTION_NOISE_WEIGHT = 0.08
+VSP_ANIMATION_DISSECTION_NOISE_CELL_MM = 6.0
+# Transfer functions of the dissected head: mirrored skin, air, fat, muscle, bone and enamel
+VSP_ANIMATION_DISSECTION_COLOR_POINTS = [
+  [-2300.0, 0.86, 0.64, 0.53],
+  [-1650.0, 0.86, 0.64, 0.53],
+  [-1024.0, 0.0, 0.0, 0.0],
+  [-300.0, 0.93, 0.80, 0.42],
+  [-60.0, 0.93, 0.80, 0.42],
+  [0.0, 0.62, 0.16, 0.14],
+  [80.0, 0.55, 0.12, 0.11],
+  [200.0, 0.93, 0.89, 0.80],
+  [1500.0, 0.97, 0.96, 0.92],
+  [3071.0, 0.97, 0.96, 0.92],
+]
+# Fat and muscle are translucent so the thin layers crossed at the carved surfaces do not tint them
+VSP_ANIMATION_DISSECTION_OPACITY_POINTS = [
+  [-2300.0, 1.0],
+  [-1750.0, 1.0],
+  [-1650.0, 0.0],
+  [-300.0, 0.0],
+  [-150.0, 0.35],
+  [80.0, 0.4],
+  [250.0, 1.0],
+  [3071.0, 1.0],
+]
 
 # Wet bone sheen under the MultiLamp lighting
 VSP_ANIMATION_BONE_MATERIAL = {
@@ -232,6 +293,7 @@ class VirtualSurgicalPlanAnimation:
     self.camerasState = {}
     self.lightingState = {}
     self.viewNodesState = {}
+    self.volumeRenderingDisplayNodesState = {}
     self.multiLampLightKit = vtk.vtkLightKit()
     self.multiLampLightKit.MaintainLuminanceOn()
     self.tissueTexturesDict = {}
@@ -241,6 +303,7 @@ class VirtualSurgicalPlanAnimation:
     self.temporaryTransformsList = []
     self.graftPieceTransformNodeIDsList = []
     self.graftJointsList = []
+    self.dissectionDict = {}
     self.animationNodes = {}
     self.animationWarningsList = []
     self.mandibleViewCamera = None
@@ -266,8 +329,10 @@ class VirtualSurgicalPlanAnimation:
       self._saveState()
       self._setMultiLampLighting()
       self._hideBoxAndAxisLabels()
+      self._hideVolumeRenderings()
       self._setOperatingRoomBackground()
       self._setTissueTextures()
+      self._createDissectionVolume()
       self._createTemporaryGraftTransforms()
       self.animationStepsList = self._createSteps()
       self.playing = True
@@ -296,6 +361,7 @@ class VirtualSurgicalPlanAnimation:
     if restore and self.displayNodesState:
       self._restoreState()
     self._removeTemporaryTransforms()
+    self._removeDissectionVolume()
     if wasPlaying:
       self._notifyStateChanged()
 
@@ -339,8 +405,10 @@ class VirtualSurgicalPlanAnimation:
       self._saveState()
       self._setMultiLampLighting()
       self._hideBoxAndAxisLabels()
+      self._hideVolumeRenderings()
       self._setOperatingRoomBackground()
       self._setTissueTextures()
+      self._createDissectionVolume()
       self._createTemporaryGraftTransforms()
       self.animationStepsList = self._createSteps()
       progressDialog =slicer.util.createProgressDialog(
@@ -482,15 +550,18 @@ class VirtualSurgicalPlanAnimation:
         missingNodesList.append(nodeName)
     if missingNodesList:
       return "Cannot play the VSP animation. Missing: %s." % ", ".join(missingNodesList)
-    missingGuidesList = []
+    self.animationNodes["headCT"] = self._headCTVolume()
+    missingOptionalNodesList = []
+    if self.animationNodes["headCT"] is None:
+      missingOptionalNodesList.append("head CT volume")
     if self.animationNodes["mandibleGuide"] is None:
-      missingGuidesList.append("mandible surgical guide")
+      missingOptionalNodesList.append("mandible surgical guide")
     if self.animationNodes["fibulaGuide"] is None:
-      missingGuidesList.append("fibula surgical guide")
-    if missingGuidesList:
+      missingOptionalNodesList.append("fibula surgical guide")
+    if missingOptionalNodesList:
       self.animationWarningsList.append(
-        "The following models are missing and their animation scenes will be skipped: %s."
-        % ", ".join(missingGuidesList)
+        "The following nodes are missing and their animation scenes will be skipped: %s."
+        % ", ".join(missingOptionalNodesList)
       )
     if len(mandiblePlanesList) < 2 or len(fibulaPlanesList) == 0 or len(fibulaPiecesList) == 0:
       return "Cannot play the VSP animation because the plan results are incomplete."
@@ -516,6 +587,29 @@ class VirtualSurgicalPlanAnimation:
       return "Cannot play the VSP animation because fibula piece transforms are incomplete."
     self.animationNodes["graftTransformMatrices"] = transformMatricesList
     return None
+
+  def _headCTVolume(self):
+    """
+    Get the head CT used to segment the mandible, or None if it is not available.
+    """
+    parameterNode = self.logic.getParameterNode()
+    headCTVolume = parameterNode.GetNodeReference("headCT")
+    if headCTVolume is not None and headCTVolume.GetImageData() is not None:
+      return headCTVolume
+
+    # The head CT is only referenced when the automatic segmentation was used,
+    # otherwise use the current volume if it contains the mandible
+    currentScalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
+    if currentScalarVolume is None or currentScalarVolume.GetImageData() is None:
+      return None
+    rasToIJKMatrix = vtk.vtkMatrix4x4()
+    currentScalarVolume.GetRASToIJKMatrix(rasToIJKMatrix)
+    mandibleCentroidIJK = self._transformPoint(rasToIJKMatrix, getCentroid(self.animationNodes["mandible"]))
+    dimensions = currentScalarVolume.GetImageData().GetDimensions()
+    for index in range(3):
+      if mandibleCentroidIJK[index] < -0.5 or mandibleCentroidIJK[index] > dimensions[index] - 0.5:
+        return None
+    return currentScalarVolume
 
   def _graftTransformMatrices(self):
     """
@@ -569,6 +663,11 @@ class VirtualSurgicalPlanAnimation:
       if hasattr(displayNode, "GetPower"):
         displayNodeState["power"] = displayNode.GetPower()
       self.displayNodesState[node.GetID()] = displayNodeState
+
+    self.volumeRenderingDisplayNodesState = {}
+    volumeRenderingDisplayNodesList = slicer.util.getNodesByClass("vtkMRMLVolumeRenderingDisplayNode")
+    for volumeRenderingDisplayNode in volumeRenderingDisplayNodesList:
+      self.volumeRenderingDisplayNodesState[volumeRenderingDisplayNode.GetID()] = volumeRenderingDisplayNode.GetVisibility()
 
     self.camerasState = {}
     for singletonTag in (slicer.MANDIBLE_VIEW_SINGLETON_TAG, slicer.FIBULA_VIEW_SINGLETON_TAG):
@@ -638,6 +737,11 @@ class VirtualSurgicalPlanAnimation:
       if "power" in displayNodeState:
         displayNode.SetPower(displayNodeState["power"])
 
+    for volumeRenderingDisplayNodeID, visibility in self.volumeRenderingDisplayNodesState.items():
+      volumeRenderingDisplayNode = slicer.mrmlScene.GetNodeByID(volumeRenderingDisplayNodeID)
+      if volumeRenderingDisplayNode is not None:
+        volumeRenderingDisplayNode.SetVisibility(visibility)
+
     for viewNodeID, state in self.camerasState.items():
       viewNode = slicer.mrmlScene.GetNodeByID(viewNodeID)
       if viewNode is None:
@@ -679,6 +783,7 @@ class VirtualSurgicalPlanAnimation:
     if self.displayNodesState:
       slicer.util.forceRenderAllViews()
     self.displayNodesState = {}
+    self.volumeRenderingDisplayNodesState = {}
     self.camerasState = {}
     self.lightingState = {}
     self.viewNodesState = {}
@@ -711,6 +816,15 @@ class VirtualSurgicalPlanAnimation:
         continue
       viewNode.SetBoxVisible(False)
       viewNode.SetAxisLabelsVisible(False)
+
+  def _hideVolumeRenderings(self):
+    """
+    Hide the volume renderings of the scene during the animation.
+    """
+    for volumeRenderingDisplayNodeID in self.volumeRenderingDisplayNodesState:
+      volumeRenderingDisplayNode = slicer.mrmlScene.GetNodeByID(volumeRenderingDisplayNodeID)
+      if volumeRenderingDisplayNode is not None:
+        volumeRenderingDisplayNode.SetVisibility(False)
 
   def _operatingRoomImageFilePath(self):
     """
@@ -974,6 +1088,365 @@ class VirtualSurgicalPlanAnimation:
     self.tissueTexturesViewsList = []
     self.tissueTexturesDict = {}
 
+  def _createDissectionVolume(self):
+    """
+    Create the head volume rendering of the dissection: a copy of the head CT resampled into a grid
+    aligned with the mandible view, and the order in which its soft tissue is carved from the skin
+    down to the mandible.
+    """
+    self.dissectionDict = {}
+    headCTVolume = self.animationNodes["headCT"]
+    if headCTVolume is None:
+      return
+
+    import scipy.ndimage
+    from vtk.util.numpy_support import vtk_to_numpy
+    qt.QApplication.setOverrideCursor(qt.Qt.WaitCursor)
+    try:
+      spacing = VSP_ANIMATION_DISSECTION_SPACING_MM
+      cameraDirection = np.array(VSP_ANIMATION_MANDIBLE_CAMERA_DIRECTION)
+      viewUpDirection = np.array(VSP_ANIMATION_MANDIBLE_VIEW_UP_DIRECTION)
+      # Grid axes: right and up of the view, and depth from the camera
+      gridAxesList = [np.cross(cameraDirection, viewUpDirection), viewUpDirection, cameraDirection]
+
+      # The mandible was segmented from the head CT, so the head CT is used without its parent transform
+      ctIJKToRASMatrix = vtk.vtkMatrix4x4()
+      headCTVolume.GetIJKToRASMatrix(ctIJKToRASMatrix)
+      ctDimensions = headCTVolume.GetImageData().GetDimensions()
+      ctMinimumsList = [np.inf, np.inf, np.inf]
+      ctMaximumsList = [-np.inf, -np.inf, -np.inf]
+      for i in (0, ctDimensions[0] - 1):
+        for j in (0, ctDimensions[1] - 1):
+          for k in (0, ctDimensions[2] - 1):
+            corner = self._transformPoint(ctIJKToRASMatrix, [i, j, k])
+            for axisIndex in range(3):
+              coordinate = np.dot(corner, gridAxesList[axisIndex])
+              ctMinimumsList[axisIndex] = min(ctMinimumsList[axisIndex], coordinate)
+              ctMaximumsList[axisIndex] = max(ctMaximumsList[axisIndex], coordinate)
+
+      mandiblePolyData = self._polyDataInWorldCoordinates(self.animationNodes["mandible"])
+      mandiblePointsArray = vtk_to_numpy(mandiblePolyData.GetPoints().GetData())
+      gridMinimumsList = list(ctMinimumsList)
+      gridMaximumsList = list(ctMaximumsList)
+      # Across the view only the region around the mandible is kept
+      for axisIndex in range(2):
+        mandibleCoordinatesArray = mandiblePointsArray.dot(gridAxesList[axisIndex])
+        gridMinimumsList[axisIndex] = max(ctMinimumsList[axisIndex], mandibleCoordinatesArray.min() - VSP_ANIMATION_DISSECTION_VIEW_MARGIN_MM)
+        gridMaximumsList[axisIndex] = min(ctMaximumsList[axisIndex], mandibleCoordinatesArray.max() + VSP_ANIMATION_DISSECTION_VIEW_MARGIN_MM)
+      gridDimensionsList = []
+      gridOrigin = np.zeros(3)
+      for axisIndex in range(3):
+        gridDimensionsList.append(int(np.floor((gridMaximumsList[axisIndex] - gridMinimumsList[axisIndex]) / spacing)) + 1)
+        gridOrigin = gridOrigin + gridAxesList[axisIndex] * gridMinimumsList[axisIndex]
+      gridIJKToRASMatrix = vtk.vtkMatrix4x4()
+      for axisIndex in range(3):
+        for row in range(3):
+          gridIJKToRASMatrix.SetElement(row, axisIndex, gridAxesList[axisIndex][row] * spacing)
+        gridIJKToRASMatrix.SetElement(axisIndex, 3, gridOrigin[axisIndex])
+
+      # Resample the head CT into the grid
+      ctRASToIJKMatrix = vtk.vtkMatrix4x4()
+      headCTVolume.GetRASToIJKMatrix(ctRASToIJKMatrix)
+      gridToCTIJKMatrix = vtk.vtkMatrix4x4()
+      vtk.vtkMatrix4x4.Multiply4x4(ctRASToIJKMatrix, gridIJKToRASMatrix, gridToCTIJKMatrix)
+      ctImageData = vtk.vtkImageData()
+      ctImageData.ShallowCopy(headCTVolume.GetImageData())
+      ctImageData.SetOrigin(0.0, 0.0, 0.0)
+      ctImageData.SetSpacing(1.0, 1.0, 1.0)
+      reslice = vtk.vtkImageReslice()
+      reslice.SetInputData(ctImageData)
+      reslice.SetResliceAxes(gridToCTIJKMatrix)
+      reslice.SetInterpolationModeToLinear()
+      reslice.SetOutputSpacing(1.0, 1.0, 1.0)
+      reslice.SetOutputOrigin(0.0, 0.0, 0.0)
+      reslice.SetOutputExtent(0, gridDimensionsList[0] - 1, 0, gridDimensionsList[1] - 1, 0, gridDimensionsList[2] - 1)
+      reslice.SetOutputScalarType(vtk.VTK_SHORT)
+      reslice.SetBackgroundLevel(VSP_ANIMATION_DISSECTION_AIR_HU)
+      reslice.Update()
+      # Array indices are [depth, up, right] so each [:, up, right] column goes from the camera into the head
+      arrayShape = (gridDimensionsList[2], gridDimensionsList[1], gridDimensionsList[0])
+      headArray = vtk_to_numpy(reslice.GetOutput().GetPointData().GetScalars()).reshape(arrayShape).copy()
+      np.clip(headArray, VSP_ANIMATION_DISSECTION_AIR_HU, VSP_ANIMATION_DISSECTION_MAXIMUM_HU, out = headArray)
+
+      # Voxelize the mandible model into the grid
+      gridToWorldTransform = vtk.vtkTransform()
+      gridToWorldTransform.SetMatrix(gridIJKToRASMatrix)
+      worldToGridTransformFilter = vtk.vtkTransformPolyDataFilter()
+      worldToGridTransformFilter.SetInputData(mandiblePolyData)
+      worldToGridTransformFilter.SetTransform(gridToWorldTransform.GetInverse())
+      polyDataToImageStencil = vtk.vtkPolyDataToImageStencil()
+      polyDataToImageStencil.SetInputConnection(worldToGridTransformFilter.GetOutputPort())
+      polyDataToImageStencil.SetOutputOrigin(0.0, 0.0, 0.0)
+      polyDataToImageStencil.SetOutputSpacing(1.0, 1.0, 1.0)
+      polyDataToImageStencil.SetOutputWholeExtent(0, gridDimensionsList[0] - 1, 0, gridDimensionsList[1] - 1, 0, gridDimensionsList[2] - 1)
+      stencilToImage = vtk.vtkImageStencilToImage()
+      stencilToImage.SetInputConnection(polyDataToImageStencil.GetOutputPort())
+      stencilToImage.SetInsideValue(1)
+      stencilToImage.SetOutsideValue(0)
+      stencilToImage.SetOutputScalarTypeToUnsignedChar()
+      stencilToImage.Update()
+      mandibleMask = vtk_to_numpy(stencilToImage.GetOutput().GetPointData().GetScalars()).reshape(arrayShape) > 0
+      if not mandibleMask.any():
+        logging.warning("The mandible model is outside the head CT. The VSP animation will skip the dissection.")
+        return
+
+      # First voxel of the body in each column, ignoring isolated noise voxels in the air
+      bodyMask = headArray > VSP_ANIMATION_DISSECTION_BODY_THRESHOLD_HU
+      solidBodyMask = bodyMask.copy()
+      solidBodyMask[:-2] = bodyMask[:-2] & bodyMask[1:-1] & bodyMask[2:]
+      bodyColumnsMask = solidBodyMask.any(axis = 0)
+      skinFrontArray = np.argmax(solidBodyMask, axis = 0)
+      # Voxels around the mandible model, where the bone of the mandible in the CT is
+      mandibleVoidMask = scipy.ndimage.binary_dilation(mandibleMask, iterations = 2)
+      sortedCarveIndices, sortedCarveTimes, sortedCarveSoftness = self._dissectionCarveOrder(
+        headArray, mandibleMask, mandibleVoidMask, bodyColumnsMask, skinFrontArray
+      )
+
+      # The skin, and the air in front of it, are mirrored into their own band of values so the skin gets the skin color.
+      # Columns beside deeper skin (the sides of the face) get deeper skin too
+      depthIndicesArray = np.arange(arrayShape[0]).reshape(-1, 1, 1)
+      skinThicknessVoxels = max(1, int(round(VSP_ANIMATION_DISSECTION_SKIN_THICKNESS_MM / spacing)))
+      shellFrontArray = scipy.ndimage.maximum_filter(np.where(bodyColumnsMask, skinFrontArray, arrayShape[0]), size = 3)
+      skinMask = (
+        bodyColumnsMask[np.newaxis] &
+        (headArray < VSP_ANIMATION_DISSECTION_BONE_THRESHOLD_HU) &
+        (depthIndicesArray < shellFrontArray[np.newaxis] + skinThicknessVoxels)
+      )
+      headArray[skinMask] = VSP_ANIMATION_DISSECTION_SKIN_MIRROR_VALUE - headArray[skinMask]
+
+      # The bone of the mandible in the CT is always removed so it does not cover the mandible model.
+      # It fades into air along the blurred mandible so the tissue around the mandible has a smooth surface
+      mandibleBoxSlicesList = []
+      for axisIndex in range(3):
+        otherAxesList = []
+        for otherAxisIndex in range(3):
+          if otherAxisIndex != axisIndex:
+            otherAxesList.append(otherAxisIndex)
+        axisIndicesArray = np.nonzero(mandibleVoidMask.any(axis = tuple(otherAxesList)))[0]
+        mandibleBoxSlicesList.append(slice(
+          max(0, axisIndicesArray.min() - 4),
+          min(arrayShape[axisIndex], axisIndicesArray.max() + 5)
+        ))
+      mandibleBoxSlices = tuple(mandibleBoxSlicesList)
+      blurredMandibleArray = scipy.ndimage.gaussian_filter(mandibleMask[mandibleBoxSlices].astype(np.float32), 1.5)
+      voidFractionArray = np.clip((blurredMandibleArray - 0.03) / 0.13, 0.0, 1.0)
+      headBoxArray = headArray[mandibleBoxSlices]
+      headBoxArray[:] = np.round(headBoxArray + (VSP_ANIMATION_DISSECTION_AIR_HU - headBoxArray) * voidFractionArray)
+
+      dissectionVolume = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode", "VSP animation dissection")
+      dissectionVolume.SetHideFromEditors(True)
+      dissectionVolume.SetIJKToRASMatrix(gridIJKToRASMatrix)
+      slicer.util.updateVolumeFromArray(dissectionVolume, headArray)
+      volumeRenderingDisplayNode = slicer.modules.volumerendering.logic().CreateDefaultVolumeRenderingNodes(dissectionVolume)
+      volumeRenderingDisplayNode.SetVisibility(False)
+      volumeRenderingDisplayNode.AddViewNodeID(self._viewNode("mandible").GetID())
+      volumeRenderingDisplayNode.SetCroppingEnabled(False)
+      volumeProperty = volumeRenderingDisplayNode.GetVolumePropertyNode().GetVolumeProperty()
+      colorTransferFunction = volumeProperty.GetRGBTransferFunction()
+      colorTransferFunction.RemoveAllPoints()
+      for colorPoint in VSP_ANIMATION_DISSECTION_COLOR_POINTS:
+        colorTransferFunction.AddRGBPoint(colorPoint[0], colorPoint[1], colorPoint[2], colorPoint[3])
+      volumeProperty.SetInterpolationTypeToLinear()
+      volumeProperty.ShadeOn()
+      volumeProperty.SetAmbient(0.4)
+      volumeProperty.SetDiffuse(0.8)
+      volumeProperty.SetSpecular(0.15)
+      volumeProperty.SetSpecularPower(20.0)
+      volumeProperty.DisableGradientOpacityOn()
+      volumeProperty.SetScalarOpacityUnitDistance(spacing)
+
+      self.dissectionDict = {
+        "volumeNodeID": dissectionVolume.GetID(),
+        "volumeRenderingDisplayNodeID": volumeRenderingDisplayNode.GetID(),
+        # The volume array is carved in place
+        "flatArray": slicer.util.arrayFromVolume(dissectionVolume).reshape(-1),
+        "originalFlatArray": headArray.reshape(-1),
+        "sortedCarveIndices": sortedCarveIndices,
+        "sortedCarveTimes": sortedCarveTimes,
+        "sortedCarveSoftness": sortedCarveSoftness,
+        "carvedCount": 0,
+        "carvingCount": 0,
+      }
+      self._setHeadOpacity(1.0)
+    finally:
+      qt.QApplication.restoreOverrideCursor()
+
+  def _polyDataInWorldCoordinates(self, modelNode):
+    polyData = modelNode.GetPolyData()
+    parentTransformNode = modelNode.GetParentTransformNode()
+    if parentTransformNode is None:
+      return polyData
+    modelToWorldTransform = vtk.vtkGeneralTransform()
+    parentTransformNode.GetTransformToWorld(modelToWorldTransform)
+    transformFilter = vtk.vtkTransformPolyDataFilter()
+    transformFilter.SetInputData(polyData)
+    transformFilter.SetTransform(modelToWorldTransform)
+    transformFilter.Update()
+    return transformFilter.GetOutput()
+
+  def _dissectionCarveOrder(self, headArray, mandibleMask, mandibleVoidMask, bodyColumnsMask, skinFrontArray):
+    """
+    Get the soft tissue voxels in front of the mandible sorted by the time they are carved.
+    The skin opens along the middle of the mandible outline first, then the opening widens
+    and deepens layer by layer until the mandible is reached at time 1.
+    """
+    import scipy.ndimage
+    spacing = VSP_ANIMATION_DISSECTION_SPACING_MM
+    columnsShape = headArray.shape[1:]
+    depthIndicesArray = np.arange(headArray.shape[0]).reshape(-1, 1, 1)
+    mandibleFrontArray = np.argmax(mandibleMask, axis = 0)
+    # Only the parts of the mandible that are not hidden behind other bones (teeth, maxilla, zygoma) are dissected
+    otherBoneInFrontCountArray = np.count_nonzero(
+      (headArray >= VSP_ANIMATION_DISSECTION_BONE_THRESHOLD_HU) &
+      ~mandibleVoidMask &
+      (depthIndicesArray < mandibleFrontArray[np.newaxis]),
+      axis = 0
+    )
+    hidingBoneVoxels = max(1, int(round(VSP_ANIMATION_DISSECTION_HIDING_BONE_MM / spacing)))
+    silhouetteMask = mandibleMask.any(axis = 0) & (otherBoneInFrontCountArray < hidingBoneVoxels)
+
+    # The same seed gives the same dissection in every play and video
+    randomGenerator = np.random.default_rng(0)
+    noiseArraysList = []
+    for noiseIndex in range(2):
+      coarseShape = (
+        max(2, int(round(columnsShape[0] * spacing / VSP_ANIMATION_DISSECTION_NOISE_CELL_MM))),
+        max(2, int(round(columnsShape[1] * spacing / VSP_ANIMATION_DISSECTION_NOISE_CELL_MM))),
+      )
+      noiseArray = scipy.ndimage.zoom(
+        randomGenerator.random(coarseShape),
+        (columnsShape[0] / coarseShape[0], columnsShape[1] / coarseShape[1]),
+        order = 3
+      )
+      noiseArray = np.pad(
+        noiseArray,
+        ((0, max(0, columnsShape[0] - noiseArray.shape[0])), (0, max(0, columnsShape[1] - noiseArray.shape[1]))),
+        mode = "edge"
+      )
+      noiseArraysList.append(noiseArray[:columnsShape[0], :columnsShape[1]])
+    marginNoiseArray = noiseArraysList[0]
+    timeNoiseArray = noiseArraysList[1]
+
+    # Signed distance to the outline of the mandible as seen from the camera, negative inside
+    outsideDistanceArray = scipy.ndimage.distance_transform_edt(~silhouetteMask, sampling = spacing)
+    insideDistanceArray = scipy.ndimage.distance_transform_edt(silhouetteMask, sampling = spacing)
+    signedDistanceArray = outsideDistanceArray - insideDistanceArray
+    # Smooth depth of the mandible, filled around its outline, so the dissection does not step from column to column.
+    # Columns next to the outline are dissected as deep as the mandible beside them
+    silhouetteWeightsArray = silhouetteMask.astype(float)
+    fillSigma = VSP_ANIMATION_DISSECTION_OPENING_MARGIN_MM / spacing / 2.0
+    smoothMandibleFrontArray = (
+      scipy.ndimage.gaussian_filter(mandibleFrontArray * silhouetteWeightsArray, fillSigma) /
+      np.maximum(scipy.ndimage.gaussian_filter(silhouetteWeightsArray, fillSigma), 1e-6)
+    )
+    # Deepest voxel of each column that may be carved: the front of the mandible, or a few voxels past the smooth
+    # depth next to it so the carve times give the bottom of the wound a smooth surface
+    softnessVoxels = int(np.ceil(2.0 * VSP_ANIMATION_DISSECTION_SOFTNESS_VOXELS))
+    columnCarveBottomArray = np.where(
+      silhouetteMask, mandibleFrontArray, np.ceil(smoothMandibleFrontArray) + softnessVoxels
+    ).astype(int)
+    bodyWeightsArray = bodyColumnsMask.astype(float)
+    smoothSkinFrontArray = (
+      scipy.ndimage.gaussian_filter(skinFrontArray * bodyWeightsArray, 1.5) /
+      np.maximum(scipy.ndimage.gaussian_filter(bodyWeightsArray, 1.5), 1e-6)
+    )
+    openingMarginArray = VSP_ANIMATION_DISSECTION_OPENING_MARGIN_MM * (0.6 + 0.8 * marginNoiseArray)
+    # Lateral position in the opening: 0 in the middle of the mandible outline and 1 at the opening margin
+    minimumSignedDistance = signedDistanceArray.min()
+    lateralArray = (signedDistanceArray - minimumSignedDistance) / (openingMarginArray - minimumSignedDistance)
+    # Time when the skin of each column opens
+    columnOpeningTimeArray = VSP_ANIMATION_DISSECTION_LATERAL_WEIGHT * lateralArray
+    # Fraction of the depth down to the mandible that is dissected, so the wound walls slope near the margin.
+    # It gets negative past the margin so the carve times keep growing there
+    columnMaximumDepthArray = np.minimum(
+      (1.0 - lateralArray) / (1.0 - VSP_ANIMATION_DISSECTION_FULL_DEPTH_LATERAL), 1.0
+    )
+    # The margin columns are included too so the rim of the opening fades smoothly
+    candidateColumnsMask = (
+      bodyColumnsMask &
+      (lateralArray < 1.2) &
+      (columnCarveBottomArray > skinFrontArray)
+    )
+    candidateUpIndicesArray, candidateRightIndicesArray = np.nonzero(candidateColumnsMask)
+    if len(candidateUpIndicesArray) == 0:
+      return np.zeros(0, dtype = np.int64), np.zeros(0, dtype = np.float32), np.zeros(0, dtype = np.float32)
+
+    # Carve times are computed for every voxel of the box around the opening so their gradient is known
+    upSlice = slice(candidateUpIndicesArray.min(), candidateUpIndicesArray.max() + 1)
+    rightSlice = slice(candidateRightIndicesArray.min(), candidateRightIndicesArray.max() + 1)
+    depthSlice = slice(
+      int(skinFrontArray[candidateColumnsMask].min()),
+      min(headArray.shape[0], int(columnCarveBottomArray[candidateColumnsMask].max()) + 1)
+    )
+    boxDepthIndicesArray = np.arange(depthSlice.start, depthSlice.stop, dtype = np.float32).reshape(-1, 1, 1)
+    boxSkinFrontArray = smoothSkinFrontArray[upSlice, rightSlice][np.newaxis]
+    boxMandibleFrontArray = smoothMandibleFrontArray[upSlice, rightSlice][np.newaxis]
+    # Depth fraction from the outer side of the skin voxel (0) to the mandible (1)
+    boxDepthFractionArray = (
+      (boxDepthIndicesArray - boxSkinFrontArray + 1.0) /
+      np.maximum(boxMandibleFrontArray - boxSkinFrontArray + 1.0, 1.0)
+    )
+    # The mandible itself is exposed however deep its smooth depth says it is
+    boxDepthFractionArray = np.where(
+      silhouetteMask[upSlice, rightSlice][np.newaxis],
+      np.minimum(boxDepthFractionArray, 1.0),
+      boxDepthFractionArray
+    )
+    boxOpeningTimeArray = columnOpeningTimeArray[upSlice, rightSlice][np.newaxis]
+    # Each column is dissected from the time its skin opens until time 1, and the sloped wound walls are reached last
+    boxDissectionTimesArray = np.maximum(
+      boxOpeningTimeArray + (1.0 - boxOpeningTimeArray) * np.clip(boxDepthFractionArray, 0.0, 1.0),
+      1.0 + boxDepthFractionArray - columnMaximumDepthArray[upSlice, rightSlice][np.newaxis]
+    )
+    # The voxels inside the wound have faded into air by time 1, even with noise
+    boxCarveTimesArray = (
+      (1.0 - 0.5 * VSP_ANIMATION_DISSECTION_MAXIMUM_SOFTNESS - VSP_ANIMATION_DISSECTION_NOISE_WEIGHT) * boxDissectionTimesArray +
+      VSP_ANIMATION_DISSECTION_NOISE_WEIGHT * np.clip(timeNoiseArray[upSlice, rightSlice], 0.0, 1.0)[np.newaxis]
+    ).astype(np.float32)
+    # Each voxel fades into air while the carved surface crosses it, which takes about the same number
+    # of voxels everywhere, so the carved surfaces are smooth
+    gradientArraysList = np.gradient(boxCarveTimesArray)
+    boxSoftnessArray = VSP_ANIMATION_DISSECTION_SOFTNESS_VOXELS * np.sqrt(
+      gradientArraysList[0] ** 2 + gradientArraysList[1] ** 2 + gradientArraysList[2] ** 2
+    )
+    boxSoftnessArray = np.clip(
+      boxSoftnessArray, VSP_ANIMATION_DISSECTION_MINIMUM_SOFTNESS, VSP_ANIMATION_DISSECTION_MAXIMUM_SOFTNESS
+    )
+
+    carveMask = (
+      candidateColumnsMask[upSlice, rightSlice][np.newaxis] &
+      (headArray[depthSlice, upSlice, rightSlice] < VSP_ANIMATION_DISSECTION_BONE_THRESHOLD_HU) &
+      (boxDepthIndicesArray >= skinFrontArray[upSlice, rightSlice][np.newaxis]) &
+      (boxDepthIndicesArray <= columnCarveBottomArray[upSlice, rightSlice][np.newaxis]) &
+      (boxCarveTimesArray < 1.0 + 0.5 * boxSoftnessArray)
+    )
+    depthIndexArray, upIndexArray, rightIndexArray = np.nonzero(carveMask)
+    carveTimesArray = boxCarveTimesArray[carveMask]
+    carveSoftnessArray = boxSoftnessArray[carveMask]
+    carveIndicesArray = np.ravel_multi_index(
+      (depthIndexArray + depthSlice.start, upIndexArray + upSlice.start, rightIndexArray + rightSlice.start),
+      headArray.shape
+    )
+    carveOrderArray = np.argsort(carveTimesArray, kind = "stable")
+    return carveIndicesArray[carveOrderArray], carveTimesArray[carveOrderArray], carveSoftnessArray[carveOrderArray]
+
+  def _removeDissectionVolume(self):
+    if not self.dissectionDict:
+      return
+    volumeRenderingDisplayNode = slicer.mrmlScene.GetNodeByID(self.dissectionDict["volumeRenderingDisplayNodeID"])
+    if volumeRenderingDisplayNode is not None:
+      volumePropertyNode = volumeRenderingDisplayNode.GetVolumePropertyNode()
+      roiNode = volumeRenderingDisplayNode.GetMarkupsROINode()
+      slicer.mrmlScene.RemoveNode(volumeRenderingDisplayNode)
+      if volumePropertyNode is not None:
+        slicer.mrmlScene.RemoveNode(volumePropertyNode)
+      if roiNode is not None:
+        slicer.mrmlScene.RemoveNode(roiNode)
+    volumeNode = slicer.mrmlScene.GetNodeByID(self.dissectionDict["volumeNodeID"])
+    if volumeNode is not None:
+      slicer.mrmlScene.RemoveNode(volumeNode)
+    self.dissectionDict = {}
+
   def _getMaximizedViewNodes(self):
     layoutManager = slicer.app.layoutManager()
     try:
@@ -1214,8 +1687,16 @@ class VirtualSurgicalPlanAnimation:
     animationStepsList = [
       (animationDurationsDict["resectionSaveState"], lambda progress: None),
       (animationDurationsDict["resectionSetView"], lambda progress: self._setView("mandible")),
-      (animationDurationsDict["resectionMandibleOnly"], lambda progress: self._showOnly([self.animationNodes["mandible"]])),
     ]
+    if self.dissectionDict:
+      animationStepsList.extend([
+        (animationDurationsDict["resectionShowHead"], self._showHead),
+        (animationDurationsDict["resectionDissectHead"], self._dissectHead),
+        (animationDurationsDict["resectionHideHead"], self._hideHead),
+      ])
+    animationStepsList.append(
+      (animationDurationsDict["resectionMandibleOnly"], lambda progress: self._showOnly([self.animationNodes["mandible"]]))
+    )
     if self.animationNodes["mandibleGuide"] is not None:
       animationStepsList.append(
         (animationDurationsDict["resectionShowGuide"], lambda progress: self._fadeNodes([self.animationNodes["mandibleGuide"]], progress, True))
@@ -1330,8 +1811,8 @@ class VirtualSurgicalPlanAnimation:
     cameraNode = slicer.modules.cameras.logic().GetViewActiveCameraNode(viewNode)
     if viewName == "mandible":
       modelNode = self.animationNodes["mandible"]
-      cameraDirection = np.array([0.0, -1.0, 0.0])
-      viewUpDirection = np.array([0.0, 0.0, 1.0])
+      cameraDirection = np.array(VSP_ANIMATION_MANDIBLE_CAMERA_DIRECTION)
+      viewUpDirection = np.array(VSP_ANIMATION_MANDIBLE_VIEW_UP_DIRECTION)
       centroid = getCentroid(modelNode)
       position = centroid - cameraDirection * 300.0
       self.mandibleViewCamera = {
@@ -1668,6 +2149,89 @@ class VirtualSurgicalPlanAnimation:
       for index in range(3)
     ]
     node.GetDisplayNode().SetColor(color)
+
+  def _showHead(self, progress):
+    """
+    Show the intact head in front of the mandible before the dissection.
+    """
+    self._showOnly([self.animationNodes["mandible"]])
+    self._carveHead(0.0)
+    self._setHeadOpacity(1.0)
+    self._setHeadVisible(True)
+
+  def _dissectHead(self, progress):
+    """
+    Carve the head from the skin down to the mandible.
+    """
+    easedProgress = progress * progress * (3.0 - 2.0 * progress)
+    self._carveHead(easedProgress)
+
+  def _hideHead(self, progress):
+    """
+    Fade out the dissected head so only the mandible remains.
+    """
+    # The opacity of the volume adds up along the tissue depth so it has to drop faster than linearly
+    self._setHeadOpacity((1.0 - progress) ** 3)
+    self._setHeadVisible(progress < 1.0)
+
+  def _carveHead(self, carveProgress):
+    """
+    Turn into air the voxels whose carve time has passed, fading the ones the carved surface is crossing.
+    """
+    if not self.dissectionDict:
+      return
+    sortedCarveIndices = self.dissectionDict["sortedCarveIndices"]
+    sortedCarveTimes = self.dissectionDict["sortedCarveTimes"]
+    originalFlatArray = self.dissectionDict["originalFlatArray"]
+    flatArray = self.dissectionDict["flatArray"]
+    # Voxels before carvedCount are air, voxels up to carvingCount may be fading
+    if carveProgress <= 0.0:
+      carvedCount = 0
+      carvingCount = 0
+    else:
+      halfMaximumSoftness = 0.5 * VSP_ANIMATION_DISSECTION_MAXIMUM_SOFTNESS
+      carvedCount = int(np.searchsorted(sortedCarveTimes, carveProgress - halfMaximumSoftness, side = "right"))
+      carvingCount = int(np.searchsorted(sortedCarveTimes, carveProgress + halfMaximumSoftness, side = "right"))
+    previousCarvedCount = self.dissectionDict["carvedCount"]
+    previousCarvingCount = self.dissectionDict["carvingCount"]
+    if carvedCount == previousCarvedCount and carvingCount == previousCarvingCount and carvedCount == carvingCount:
+      return
+
+    if carvedCount > previousCarvedCount:
+      flatArray[sortedCarveIndices[previousCarvedCount:carvedCount]] = VSP_ANIMATION_DISSECTION_AIR_HU
+    carvingIndices = sortedCarveIndices[carvedCount:carvingCount]
+    # Half faded when the carved surface is on the voxel
+    carvingFractions = np.clip(
+      0.5 + (carveProgress - sortedCarveTimes[carvedCount:carvingCount]) /
+      self.dissectionDict["sortedCarveSoftness"][carvedCount:carvingCount],
+      0.0, 1.0
+    )
+    originalValues = originalFlatArray[carvingIndices]
+    flatArray[carvingIndices] = np.round(
+      originalValues + (VSP_ANIMATION_DISSECTION_AIR_HU - originalValues) * carvingFractions
+    )
+    # Going back in time restores the voxels that are not carved anymore
+    if previousCarvingCount > carvingCount:
+      restoredIndices = sortedCarveIndices[carvingCount:previousCarvingCount]
+      flatArray[restoredIndices] = originalFlatArray[restoredIndices]
+    self.dissectionDict["carvedCount"] = carvedCount
+    self.dissectionDict["carvingCount"] = carvingCount
+    slicer.util.arrayFromVolumeModified(slicer.mrmlScene.GetNodeByID(self.dissectionDict["volumeNodeID"]))
+
+  def _setHeadOpacity(self, opacityFactor):
+    if not self.dissectionDict:
+      return
+    volumeRenderingDisplayNode = slicer.mrmlScene.GetNodeByID(self.dissectionDict["volumeRenderingDisplayNodeID"])
+    scalarOpacity = volumeRenderingDisplayNode.GetVolumePropertyNode().GetVolumeProperty().GetScalarOpacity()
+    scalarOpacity.RemoveAllPoints()
+    for opacityPoint in VSP_ANIMATION_DISSECTION_OPACITY_POINTS:
+      scalarOpacity.AddPoint(opacityPoint[0], opacityPoint[1] * opacityFactor)
+
+  def _setHeadVisible(self, visible):
+    if not self.dissectionDict:
+      return
+    volumeRenderingDisplayNode = slicer.mrmlScene.GetNodeByID(self.dissectionDict["volumeRenderingDisplayNodeID"])
+    volumeRenderingDisplayNode.SetVisibility(visible)
 
   def _exchangeFibulaForPieces(self, progress):
     fibulaPiecesList = self.animationNodes["fibulaPieces"]
