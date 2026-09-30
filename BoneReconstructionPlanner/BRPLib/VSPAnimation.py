@@ -52,6 +52,16 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
 VSP_ANIMATION_VIDEO_FRAME_RATE = 30
 VSP_ANIMATION_VIDEO_OPTIONS = "-codec libx264 -preset slower -pix_fmt yuv420p"
 
+# Caption shown at the bottom of the view while the fibula planes are shown and the fibula guide is hidden
+VSP_ANIMATION_OSTEOTOMIES_CAPTION = "Protect the vessels while doing the osteotomies"
+VSP_ANIMATION_CAPTION_FONT_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Resources", "Fonts", "OpenSans-Bold.ttf")
+VSP_ANIMATION_CAPTION_FADE_SECONDS = 0.5
+# Fractions of the view size
+VSP_ANIMATION_CAPTION_WIDTH_FRACTION = 0.9
+VSP_ANIMATION_CAPTION_HEIGHT_FRACTION = 0.05
+VSP_ANIMATION_CAPTION_BOTTOM_FRACTION = 0.05
+VSP_ANIMATION_CAPTION_BACKGROUND_OPACITY = 0.6
+
 # The schematic mode shows the plan models as they are, the realistic mode adds the operating room background,
 # the bone and vessel textures, and the head and leg dissections
 VSP_ANIMATION_SCHEMATIC_MODE = "Schematic"
@@ -311,6 +321,7 @@ class VirtualSurgicalPlanAnimation:
     self.multiLampLightKit.MaintainLuminanceOn()
     self.tissueTexturesDict = {}
     self.tissueTexturesViewsList = []
+    self.captionViewsList = []
     self.initiallyMaximizedViewNodesList = []
     self.currentMaximizedViewNode = None
     self.temporaryTransformsList = []
@@ -365,6 +376,7 @@ class VirtualSurgicalPlanAnimation:
     self.fibulaFullViewCamera = None
     self.fibulaZoomedViewCamera = None
     self.fibulaAssemblyViewCamera = None
+    self._removeCaptions()
     if restore and self.displayNodesState:
       self._restoreState()
     self._removeTemporaryTransforms()
@@ -648,6 +660,7 @@ class VirtualSurgicalPlanAnimation:
     self._setMultiLampLighting()
     self._hideVolumeRenderings()
     self._hideMandiblePlanesNames()
+    self._createCaptions()
     if self.realisticMode:
       self._hideBoxAndAxisLabels()
       self._setOperatingRoomBackground()
@@ -861,6 +874,82 @@ class VirtualSurgicalPlanAnimation:
       displayNode = planeNode.GetDisplayNode()
       if displayNode is not None:
         displayNode.SetPropertiesLabelVisibility(False)
+
+  def _createCaptions(self):
+    """
+    Add a hidden caption at the bottom of each 3D view.
+    """
+    self.captionViewsList = []
+    layoutManager = slicer.app.layoutManager()
+    for index in range(layoutManager.threeDViewCount):
+      threeDView = layoutManager.threeDWidget(index).threeDView()
+      viewNode = threeDView.mrmlViewNode()
+      if viewNode.GetID() not in self.viewNodesState:
+        continue
+      textActor = vtk.vtkTextActor()
+      textProperty = textActor.GetTextProperty()
+      if os.path.isfile(VSP_ANIMATION_CAPTION_FONT_FILE_PATH):
+        textProperty.SetFontFamily(vtk.VTK_FONT_FILE)
+        textProperty.SetFontFile(VSP_ANIMATION_CAPTION_FONT_FILE_PATH)
+      else:
+        textProperty.SetFontFamilyToArial()
+        textProperty.BoldOn()
+      textProperty.SetColor(1.0, 1.0, 1.0)
+      textProperty.SetBackgroundColor(0.0, 0.0, 0.0)
+      textProperty.SetJustificationToCentered()
+      textProperty.SetVerticalJustificationToBottom()
+      textActor.SetTextScaleModeToNone()
+      textActor.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+      textActor.SetPosition(0.5, VSP_ANIMATION_CAPTION_BOTTOM_FRACTION)
+      textActor.VisibilityOff()
+      renderer = threeDView.renderWindow().GetRenderers().GetFirstRenderer()
+      renderer.AddActor2D(textActor)
+      self.captionViewsList.append({
+        "viewNodeID": viewNode.GetID(),
+        "renderer": renderer,
+        "textActor": textActor,
+      })
+
+  def _showCaption(self, text, opacity):
+    """
+    Show the caption on the maximized view with the given opacity, hiding it when the opacity is zero.
+    """
+    for captionView in self.captionViewsList:
+      textActor = captionView["textActor"]
+      visible = (
+        opacity > 0.0 and
+        self.currentMaximizedViewNode is not None and
+        captionView["viewNodeID"] == self.currentMaximizedViewNode.GetID()
+      )
+      if visible:
+        textActor.SetInput(text)
+        # Fit the text to the current size of the view, which may change between play and export
+        rendererSize = captionView["renderer"].GetSize()
+        textActor.SetConstrainedFontSize(
+          captionView["renderer"],
+          int(rendererSize[0] * VSP_ANIMATION_CAPTION_WIDTH_FRACTION),
+          int(rendererSize[1] * VSP_ANIMATION_CAPTION_HEIGHT_FRACTION)
+        )
+        textActor.GetTextProperty().SetOpacity(opacity)
+        textActor.GetTextProperty().SetBackgroundOpacity(VSP_ANIMATION_CAPTION_BACKGROUND_OPACITY * opacity)
+      textActor.SetVisibility(visible)
+
+  def _captionOpacity(self, progress, duration, fadingIn, fadingOut):
+    """
+    Get the caption opacity fading in at the start and fading out at the end of the shot.
+    """
+    elapsedTime = progress * duration
+    opacity = 1.0
+    if fadingIn:
+      opacity = min(opacity, elapsedTime / VSP_ANIMATION_CAPTION_FADE_SECONDS)
+    if fadingOut:
+      opacity = min(opacity, (duration - elapsedTime) / VSP_ANIMATION_CAPTION_FADE_SECONDS)
+    return min(1.0, max(0.0, opacity))
+
+  def _removeCaptions(self):
+    for captionView in self.captionViewsList:
+      captionView["renderer"].RemoveActor2D(captionView["textActor"])
+    self.captionViewsList = []
 
   def _operatingRoomImageFilePath(self):
     """
@@ -1869,12 +1958,13 @@ class VirtualSurgicalPlanAnimation:
       animationStepsList.append(
         (animationDurationsDict["graftingShowGuide"], lambda progress: self._fadeNodes([self.animationNodes["fibulaGuide"]], progress, True))
       )
+    # The osteotomies caption stays on from the first fibula plane until the fibula guide is hidden
     animationStepsList.append(
-      (fibulaPlaneDuration, lambda progress: self._showSequentially(self.animationNodes["fibulaPlanes"], progress))
+      (fibulaPlaneDuration, lambda progress: self._showFibulaPlanesWithCaption(progress, fibulaPlaneDuration, self.animationNodes["fibulaGuide"] is None))
     )
     if self.animationNodes["fibulaGuide"] is not None:
       animationStepsList.append(
-        (animationDurationsDict["graftingHideGuide"], lambda progress: self._fadeNodes([self.animationNodes["fibulaGuide"]], progress, False))
+        (animationDurationsDict["graftingHideGuide"], lambda progress: self._hideFibulaGuideWithCaption(progress, animationDurationsDict["graftingHideGuide"]))
       )
     animationStepsList.extend([
       (piecePairDuration, self._exchangeFibulaForPieces),
@@ -2398,6 +2488,14 @@ class VirtualSurgicalPlanAnimation:
       return
     volumeRenderingDisplayNode = slicer.mrmlScene.GetNodeByID(self.dissectionsDict[dissectionName]["volumeRenderingDisplayNodeID"])
     volumeRenderingDisplayNode.SetVisibility(visible)
+
+  def _showFibulaPlanesWithCaption(self, progress, duration, captionFadingOut):
+    self._showSequentially(self.animationNodes["fibulaPlanes"], progress)
+    self._showCaption(VSP_ANIMATION_OSTEOTOMIES_CAPTION, self._captionOpacity(progress, duration, True, captionFadingOut))
+
+  def _hideFibulaGuideWithCaption(self, progress, duration):
+    self._fadeNodes([self.animationNodes["fibulaGuide"]], progress, False)
+    self._showCaption(VSP_ANIMATION_OSTEOTOMIES_CAPTION, self._captionOpacity(progress, duration, False, True))
 
   def _exchangeFibulaForPieces(self, progress):
     fibulaPiecesList = self.animationNodes["fibulaPieces"]
