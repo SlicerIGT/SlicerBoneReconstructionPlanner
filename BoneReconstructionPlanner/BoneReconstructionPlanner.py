@@ -225,6 +225,7 @@ def confirm_clean_and_load_test_data():
     return False
   if result_code == qt.QMessageBox.AcceptRole:
     confirm_cache_size_is_enough_for_test_data()
+    slicer.mrmlScene.Clear()
     import SampleData
     sampleDataLogic = SampleData.SampleDataLogic()
     sampleDataLogic.downloadSample('CTMandible')
