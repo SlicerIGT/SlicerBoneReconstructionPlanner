@@ -33,6 +33,7 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
   "graftingHideLeg": 2.0,
   "graftingFibulaOnly": 0.5,
   "graftingZoomFibula": 2.0,
+  "graftingHideVessels": 1.0,
   "graftingShowGuide": 3.0,
   "graftingShowEachPlane": 1.0,
   "graftingHideGuide": 3.0,
@@ -1945,15 +1946,16 @@ class VirtualSurgicalPlanAnimation:
         (animationDurationsDict["graftingDissectLeg"], lambda progress: self._dissect("leg", progress)),
         (animationDurationsDict["graftingHideLeg"], lambda progress: self._hideDissection("leg", progress)),
       ])
-    # In the realistic mode the dissected vessels stay visible until the fibula is exchanged for the pieces
-    if self.realisticMode:
-      fibulaOnlyNodesList = self._fibulaAndVesselsList()
-    else:
-      fibulaOnlyNodesList = [self.animationNodes["fibula"]]
+    # The vessels stay visible until they fade out before the fibula guide is shown, so it is clear where the vessels pieces come from
     animationStepsList.extend([
-      (animationDurationsDict["graftingFibulaOnly"], lambda progress: self._showOnly(fibulaOnlyNodesList)),
+      (animationDurationsDict["graftingFibulaOnly"], lambda progress: self._showOnly(self._fibulaAndVesselsList())),
       (animationDurationsDict["graftingZoomFibula"], self._zoomIntoFibula),
     ])
+    # The vessels are hidden so they do not cover the fibula guide and planes
+    if self.animationNodes["vessels"] is not None:
+      animationStepsList.append(
+        (animationDurationsDict["graftingHideVessels"], lambda progress: self._fadeNodes([self.animationNodes["vessels"]], progress, False))
+      )
     if self.animationNodes["fibulaGuide"] is not None:
       animationStepsList.append(
         (animationDurationsDict["graftingShowGuide"], lambda progress: self._fadeNodes([self.animationNodes["fibulaGuide"]], progress, True))
@@ -2506,7 +2508,7 @@ class VirtualSurgicalPlanAnimation:
       if index < len(cutVesselsList):
         fibulaPieceAndVesselList.append(cutVesselsList[index])
       self._fadeNodes(fibulaPieceAndVesselList, localProgress, True)
-    self._fadeNodes([self.animationNodes["fibula"], self.animationNodes["vessels"]], progress, False)
+    self._fadeNodes([self.animationNodes["fibula"]], progress, False)
 
   def _graftPieceMatricesList(self, progress):
     """
