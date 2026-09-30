@@ -13,6 +13,8 @@ set(MODULE_PYTHON_SCRIPTS
 
 set(MODULE_PYTHON_RESOURCES
   Resources/defaultParameters.json
+  Resources/Fonts/OpenSans-Bold.ttf
+  Resources/Fonts/OpenSans-Bold_LICENSE.txt
   Resources/UI/${MODULE_NAME}.ui
   Resources/Icons/${MODULE_NAME}.png
   Resources/Icons/add_48.svg
