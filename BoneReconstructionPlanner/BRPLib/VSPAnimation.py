@@ -15,37 +15,38 @@ VSP_ANIMATION_DURATIONS_SECONDS = {
   # Resection animation
   "resectionSaveState": 0.0,
   "resectionSetView": 0.0,
-  "resectionShowHead": 2.0,
-  "resectionDissectHead": 6.0,
-  "resectionHideHead": 2.0,
-  "resectionMandibleOnly": 3.0,
-  "resectionShowGuide": 3.0,
-  "resectionShowPlanes": 5.0,
-  "resectionHideGuide": 3.0,
-  "resectionExchangeMandible": 3.0,
-  "resectionRestoreColor": 3.0,
-  "resectionHidePlanes": 3.0,
-  "resectionPause": 3.0,
+  "resectionShowHead": 1.5,
+  "resectionDissectHead": 4.0,
+  "resectionHideHead": 1.5,
+  "resectionMandibleOnly": 1.5,
+  "resectionShowGuide": 1.5,
+  "resectionShowPlanes": 3.0,
+  "resectionHideGuide": 1.0,
+  "resectionExchangeMandible": 2.5,
+  "resectionRestoreColor": 1.0,
+  "resectionHidePlanes": 1.0,
+  "resectionPause": 1.5,
   # Grafting animation
   "graftingSetView": 0.0,
-  "graftingShowLeg": 2.0,
-  "graftingDissectLeg": 6.0,
-  "graftingHideLeg": 2.0,
-  "graftingFibulaOnly": 0.5,
-  "graftingZoomFibula": 2.0,
+  "graftingShowLeg": 1.5,
+  "graftingDissectLeg": 4.0,
+  "graftingHideLeg": 1.5,
+  "graftingFibulaOnly": 1.0,
+  "graftingZoomFibula": 1.5,
   "graftingHideVessels": 1.0,
-  "graftingShowGuide": 3.0,
-  "graftingShowEachPlane": 1.0,
-  "graftingHideGuide": 3.0,
-  "graftingShowEachPiecePair": 1.0,
-  "graftingHidePlanes": 3.0,
-  "graftingRotateView": 3.0,
-  "graftingJoinPieces": 5.0,
+  "graftingShowGuide": 1.5,
+  "graftingShowEachPlane": 0.75,
+  "graftingHideGuide": 1.5,
+  "graftingShowEachPiecePair": 0.75,
+  "graftingHidePlanes": 1.0,
+  "graftingRotateView": 2.0,
+  "graftingJoinEachPiece": 2.5,
+  "graftingPause": 1.0,
   "graftingHidePieces": 0.0,
   # Reconstruction animation
   "reconstructionSetView": 0.0,
-  "reconstructionShowGraft": 5.0,
-  "reconstructionRotateView": 3.0,
+  "reconstructionShowGraft": 2.5,
+  "reconstructionRotateView": 2.5,
   "reconstructionPause": 3.0,
   "reconstructionRestoreState": 0.0,
 }
@@ -1906,6 +1907,11 @@ class VirtualSurgicalPlanAnimation:
     animationDurationsDict = VSP_ANIMATION_DURATIONS_SECONDS
     fibulaPlaneDuration = animationDurationsDict["graftingShowEachPlane"] * len(self.animationNodes["fibulaPlanes"])
     piecePairDuration = animationDurationsDict["graftingShowEachPiecePair"] * len(self.animationNodes["fibulaPieces"])
+    joinDuration = animationDurationsDict["graftingJoinEachPiece"] * len(self.graftJointsList)
+    # The bone textures hide the model colors, so the color change is only animated in the schematic mode
+    restoreColorDuration = animationDurationsDict["resectionRestoreColor"]
+    if self.realisticMode:
+      restoreColorDuration = 0.0
     mandibleColor = tuple(self.animationNodes["mandible"].GetDisplayNode().GetColor())
     resectedColor = self.displayNodesState[self.animationNodes["resectedMandible"].GetID()]["color"]
 
@@ -1935,7 +1941,7 @@ class VirtualSurgicalPlanAnimation:
       )
     animationStepsList.extend([
       (animationDurationsDict["resectionExchangeMandible"], lambda progress: self._exchangeMandible(progress, mandibleColor)),
-      (animationDurationsDict["resectionRestoreColor"], lambda progress: self._interpolateColor(self.animationNodes["resectedMandible"], mandibleColor, resectedColor, progress)),
+      (restoreColorDuration, lambda progress: self._interpolateColor(self.animationNodes["resectedMandible"], mandibleColor, resectedColor, progress)),
       (animationDurationsDict["resectionHidePlanes"], lambda progress: self._fadeNodes(self.animationNodes["resectionPlanes"], progress, False)),
       (animationDurationsDict["resectionPause"], lambda progress: None),
       (animationDurationsDict["graftingSetView"], lambda progress: self._setView("fibula")),
@@ -1977,7 +1983,8 @@ class VirtualSurgicalPlanAnimation:
         (animationDurationsDict["graftingRotateView"], self._rotateIntoFibulaAssemblyView)
       )
     animationStepsList.extend([
-      (animationDurationsDict["graftingJoinPieces"], self._joinGraft),
+      (joinDuration, self._joinGraft),
+      (animationDurationsDict["graftingPause"], lambda progress: None),
       (animationDurationsDict["graftingHidePieces"], lambda progress: self._hideNodes(self.animationNodes["fibulaPieces"] + self.animationNodes["cutVessels"])),
       (animationDurationsDict["reconstructionSetView"], lambda progress: self._prepareReconstructionView()),
       (animationDurationsDict["reconstructionShowGraft"], lambda progress: self._fadeNodes(self.animationNodes["transformedFibulaPieces"] + self.animationNodes["transformedVessels"], progress, True)),
