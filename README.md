@@ -95,7 +95,7 @@ https://www.sciencedirect.com/science/article/pii/S2666964123000103
   - [Personalized Mandible Surgical Guide](#personalized-mandible-surgical-guide)
   - [Mandible Reconstruction Simulation](#mandible-reconstruction-simulation)
   - [Export the planning outputs](#export-the-planning-outputs)
-  - [Settings](#settings)
+  - [Visualization options](#visualization-options)
 - [User contact and feedback](#user-contact-and-feedback)
   - [Contact](#contact)
 - [License](#license)
@@ -191,7 +191,7 @@ See more than 40 plans of other users:
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/Unofficial_BRP_Videotutorial_5.6.2_Spanish.zip" >Unofficial Spanish videotutorial</a> (credits to @marf-slicer)
 
 # Instructions
-(last validated Sep 12th, 2026)
+(last validated September 30th, 2026)
 
 ## Installing BoneReconstructionPlanner
 
@@ -227,16 +227,15 @@ Example of a fibula segmentation:
 6. Go to Wrap Solidify effect, on Advanced button set the suggested configuration below (by @SteveMaisi) and click apply. (This is needed because it is recommended that bone segmentations have no holes inside so the assisted miterBox positioning algorithms work well).
 ![192679644-995cbed7-9732-4f87-a936-55e000179fc4](https://user-images.githubusercontent.com/19158307/193409717-40605b9b-e48f-4a51-8332-967a08a9e30c.png)
 7. Correct new inaccurate protrusions if needed.
-8. The bone segment (fibula in this case) should be the first of the segment-list of the segmentation. In other words the bone segment should be in position zero of the list.
-![Screenshot from 2025-05-01 21-19-51_2](https://github.com/user-attachments/assets/c60a8b3f-dde2-4a71-ab5b-084c75edc431)
+8. The bone segment (fibula in this case) can be anywhere in the segment list of the segmentation, you will select it in the segment selector of BoneReconstructionPlanner.
 
 You'll have to do the same for the mandible in another segmentation node.
 
 ## Virtual Surgical Planning
 
 1. Click the search icon on the left of the module selector and write 'BoneReconstructionPlanner'. Click "Switch to module".
-2. Select the mandibular segmentation and the mandible segment; and the fibula segmentation and the fibula segment. If you are doing your first plan you can use the test data by clicking "Load test case".
-3. If you have a segmentation of the fibula's vessels also select the corresponding segmentation and segment. The virtual plan can show the ending posion of the fibula vessels on the neck and their visibility is controlled by the available checkbox.
+2. Select the mandibular segmentation and the mandible segment; and the fibula segmentation and the fibula segment. If you are doing your first plan you can use the test data by clicking "Load test case" (the scene is cleaned before loading the test data).
+3. If you have a segmentation of the fibula's vessels also select the corresponding segmentation and segment. The virtual plan can show the ending position of the fibula vessels on the neck and their visibility is controlled by the "Show vessels next to fibula and over neck" checkbox.
 4. Select the donor leg: Left or Right
 5. If you did the earlier steps, you should be able to click "Create 3D models". 
 The fibula line will be created automatically from the fibula 3D model but you may change it if needed erasing its points and creating new ones. Try to draw the points over the fibula diaphysis.
@@ -247,17 +246,19 @@ The fibula line will be created automatically from the fibula 3D model but you m
 10. Click "Update virtual plan" to make the reconstruction and create the fibula cut planes. If VSP visualization is not working correctly you can try a hard-update using the button with recycle arrows next to it.
 11. Move the mandible planes as desired to change the position/orientation of the cuts.
 12. Click "Update virtual plan" again. And repeat as many times as needed.
-If you tick the button it will react on plane movements and update automatically.
+If the checkbox of the "Update virtual plan" button is ticked (default) the plan reacts to plane movements and updates automatically.
 13. Check the available "Visualization Options" as sometimes you need to modify the which or how much data is visible at a given moment to ease the work. You'll get explicative tooltips by hovering the mouse over each widget.
+14. When you are happy with the plan, lock it with the padlock button next to the update buttons so it is not changed by accident. While locked, you can play the animation of the plan or export it as a video.
 
 ## Personalized Fibula Guide Generation
 
-0. Go to "Fibula Surgical Guide Creation" section of BoneReconstructionPlanner. If the VSP changes, please remind all steps in this section need to be carried over again, same goes for the [Mandible Surgical Guide](#personalized-mandible-surgical-guide).
-1. If "Check security margin on miter box creation" is checked, each saw-cut (and the bone it eats) will be tested to not collide with others.
-2. Press shift over some fibula piece on the corresponding 3D view. The model should be visible on the 2D slice with the corresponding color as an edge. [Create a line](https://slicer.readthedocs.io/en/5.6/user_guide/modules/markups.html#place-new-markups) over the 2D slice of the fibula that will set the direction of the miterBoxes (with this you select, for example, lateral approach or posterior approach). The line should me drawn from the centerline of the fibula to a point that is distal from the first one on the 2D slice of the fibula.
+0. Go to "Fibula Surgical Guide Generation" section of BoneReconstructionPlanner. If the VSP changes, please remind all steps in this section need to be carried over again, same goes for the [Mandible Surgical Guide](#personalized-mandible-surgical-guide).
+1. If "Check security margin on miter box creation" is checked, each saw-cut (and the bone it eats) will be tested to not collide with others using the "Security margin (mm)".
+2. Select the fibula CT on the "Scalar volume" selector of the "Visualization Options" and press shift over some fibula piece on the corresponding 3D view. The model should be visible on the 2D slice with the corresponding color as an edge.
+3. Click the place button of the "Miter box direction line" and click two points over the 2D slice of the fibula. This line sets the direction of the miterBoxes (with this you select, for example, lateral approach or posterior approach). The line should be drawn from a point that belongs to the centerline of the fibula to a point that is distal from the first one on the 2D slice of the fibula.
 ![Screenshot from 2025-05-02 13-45-01](https://github.com/user-attachments/assets/8df9032c-8dc2-4203-a263-5554161265f9)
-3. Choose the line you have just created in the "Miter box direction line" selector.
-4. Select the parameters of the miter boxes: length, width, height, wall thickness and tolerance (this last option is inside the Settings widget and it applies also to sawBoxes of the mandible). The combination of tolerance and the slot width suggested by most experienced user (@mrtig) is summarized below (more info [here](/Docs/NOTES.md#tolerance-and-slot-width)):
+As soon as the line has its two points the yellow miterBoxes appear, each one with a slit for the saw to go through. Moving the line points updates the miterBoxes (do it also after updating the virtual plan, since the miterBoxes are not updated with it).
+4. Select the parameters of the miter boxes: slot width, slot length, slot height, slot wall, bigger miter box distance to fibula and clearance (this last option is inside the Settings section and it applies also to sawBoxes of the mandible). The miterBoxes are updated automatically when a parameter changes. The combination of clearance and the slot width suggested by most experienced user (@mrtig) is summarized below (more info [here](/Docs/NOTES.md#tolerance-and-slot-width)):
 
 ```
   These equations:
@@ -268,46 +269,46 @@ If you tick the button it will react on plane movements and update automatically
   clearanceFitPrintingTolerance = 0.4mm
 ```
 
-5. Click "Create miter boxes from fibula planes". The yellow miterBoxes will appear, each one with a long box that will create the slit for the saw to go through.
+5. Most distal miterBox will be labelled with a "D" and the most proximal miterBox will have a label that identifies laterality ("R" for right leg, "L" for left leg).
 
 ## Create the Fibula Guide Base
-6. Go to the segment editor, add a new segment and create a copy (using the copy-logical-operator) of the fibula segment, rename it to "fibGuideBase".
-7. Use Hollow tool with "inside surface" option and some "shell thickness" between 3mm to 6mm. The number should be decision of the user. Usually more thickness makes the contact between the miterBoxes and the guideBase easier to achieve but sometimes the guideBase ends up too big, wasting material or being uncomfortable. You can solve this, using a smaller shell if you do "masked painting" in the areas that need filling.
-[Here is explained how to do it](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40#discussioncomment-1607995)
-8. Shape the guidebase using scissors effect. The guidebase should still be in contact with all miterBoxes after finishing this step.
-9. Optionally, add a mark on the guidebase to recognize the caudality (i.e. part of the surgical guide that should be positioned nearer to the feet).
-10. Go to the data module and leave only the "fibGuideBase" segment visible on its segmentation, right-click it and press "Export visible segments to models".
+6. Set the "Guidebase thickness (mm)", "Guidebase angle" and "Guidebase margin" (hover the mouse over them for a descriptive tooltip) and click "Generate fibula guidebase". The guide base is created around the fibula segment you selected, spanning all the miterBoxes, and it is selected on the "Fibula surgical guide base" selector. Click the button again if you change these parameters or the miterBoxes.
+7. Alternatively, you can make the guide base manually and select it on the "Fibula surgical guide base" selector:
+   - Go to the segment editor, add a new segment and create a copy (using the copy-logical-operator) of the fibula segment, rename it to "fibGuideBase".
+   - Use Hollow tool with "inside surface" option and some "shell thickness" between 3mm to 6mm. The number should be decision of the user. Usually more thickness makes the contact between the miterBoxes and the guideBase easier to achieve but sometimes the guideBase ends up too big, wasting material or being too bulky. You can solve this, using a smaller shell if you do "masked painting" in the areas that need filling. [Here is explained how to do it](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/discussions/40#discussioncomment-1607995)
+   - Shape the guidebase using scissors effect. The guidebase should still be in contact with all miterBoxes after finishing this step.
+   - Go to the data module and leave only the "fibGuideBase" segment visible on its segmentation, right-click it and press "Export visible segments to models".
 
 ## Finish the Fibula Surgical Guide
-11. On the "Fibula Surgical Guide Generation" layout of BRP, click on the button "Create fiducial list" and position around one point per segment were you want the screw-hole to be (the fibGuideBase model should be visible).
-12. Select the fibula guide base model that you exported on the corresponding model selector. Be sure the correct pointList is selected on the corresponding point selector.
-13. Click "Create cylinder from fiducial list and fibula surgical guide base". Some cylinders should appear over the fibula guide base.
-14. Congratulations: You are ready to execute boolean operations to create the guide. Click on "Make boolean operations to surgical guide base with screwHolesCylinders and miterBoxes". The guide will be created, you can be sure by using the NodeControlBox that is above and hiding everything else by clicking each "eye icon" of the component objects. The name of the guide will end with the word "Prototype". If you execute this button again after you did some changes to the plan (e.g. changed miterBoxes position) a new prototype will be created. 
-15. (Infrequently needed) If boolean operations fail or there is a software crash in the step above, then shift by 0.1mm the virtual plan (i.e. "Initial space"), recalculate the fibula planes, recreate the miterBoxes and execute the boolean operations again.
+8. Click the place button of the screw holes "Points" and click over the fibula guide base where you want the screw-holes to be (around one point per segment). A cylinder perpendicular to the guide base appears for each point, and they are updated when you move or delete points. "Radius (mm)" sets the radius of the cylinders.
+9. Congratulations: You are ready to execute boolean operations to create the guide. Click on "Create fibula surgical guide". Use the "Guide elements visible" and "Guide visible" checkboxes to see the guide alone. The guide is named "FibulaSurgicalGuidePrototype". If you click this button again after you did some changes to the plan (e.g. changed miterBoxes position) a new prototype will be created ("FibulaSurgicalGuidePrototype_1", "FibulaSurgicalGuidePrototype_2", etc).
+10. (Infrequently needed) If boolean operations fail or there is a software crash in the step above, then shift by 0.1mm the virtual plan (i.e. "Initial space"), update the virtual plan, update the miterBoxes (e.g. moving a point of the "Miter box direction line") and execute the boolean operations again.
 
 ## Personalized Mandible Surgical Guide
 
-The workflow doesn't differ much from fibula guide creation.
-Except that:
-- The sawBoxes are movable and you should only move them inside the cut plane, to correct automatic mispositioning. After that hide the "biggerSawBoxes interaction handles" so you have a comfortable experience on later steps.
-- If you are doing a "Segmental Mandibulectomy", you need to segment two guide bases, one for each planar cut, and copy them together to the same segment. Then export them as a unique model as explained on the earlier section.
-- Optionally, you could create a bridge between both mandible guidebases to achieve a rigid connection between them when the mandible surgical guide is finished. The bridge can be created with the module "MarkupsToModel".
-- If you created the VSP with "Hemimandibulectomy" mode you just need one mandible guidebase and the bridge is not needed nor allowed.
-- You need to put the correct models on the corresponding selectors on "Mandible Surgical Guide Generation" panel
+This part of the workflow has some similarities with the fibula guide creation. On the "Mandible Surgical Guide Generation" section:
+- Set the parameters of the saw boxes (the clearance of the Settings section also applies to them) and click "Create mandible resection boxes". There will be one sawBox per resection cut: two with "Segmental Mandibulectomy" and one with "Hemimandibulectomy".
+- One sawBox will have a label that indicates laterality (i.e. "R" or "L").
+- The sawBoxes are movable and you should only move them inside the cut plane, to correct automatic mispositioning.
+- By default ("Use guide bases from curves" checked) the guide bases are made from curves: click the place button of "Left side base" and "Right side base" and draw a closed curve over the mandible surface next to each resection cut. Each guidebase is the mandible surface enclosed by its curve extruded by the "Guidebase thickness (mm)". With "Hemimandibulectomy" you just need the guide base of the remaining side.
+- Alternatively, uncheck "Use guide bases from curves" and select a segmented guide base model on the "Mandible surgical guide bases" selector. If you are doing a "Segmental Mandibulectomy", you need to segment two guide bases, one for each planar cut, and copy them together to the same segment. Then export them as a unique model as explained on the earlier section.
+- Optionally, with "Segmental Mandibulectomy", you could create a bridge between both mandible guidebases to achieve a rigid connection between them when the mandible surgical guide is finished: click the place button of "Mandible bridge" and click the pass-by points of the bridge. "Radius (mm)" sets its thickness. If you created the VSP with "Hemimandibulectomy" mode the bridge is not needed nor allowed.
+- Click the place button of the screw holes "Points" and click over the guide bases where you want the screw-holes to be. The cylinders appear automatically.
+- Click "Create mandible surgical guide". The guide is named "MandibleSurgicalGuidePrototype" (and "MandibleSurgicalGuidePrototype_1", etc, if you click the button again).
 
 ## Mandible Reconstruction Simulation
 This maybe useful for users that want to prebend plates with a 3D printed model.
 1. Do a [Virtual Surgical Plan](#virtual-surgical-planning)
-2. Optionally, you can add an inter-condylar beam (i.e. a tube model) to the reconstruction for more rigidity. You can create the tube easily from a markups line with points that connects both condyles using the "Markups To Model" module. Select the beam model on the selector that is next to the "Create 3D model of the reconstruction for 3D printing" button.
-3. Click "Create 3D model of the reconstruction for 3D printing" button.
+2. Optionally, you can add an inter-condylar beam to the reconstruction for more rigidity. Click the place button of "Create beam" and click over both condyles. Make the beam thicker or thinner with the "+" and "-" buttons, and show or hide it with the eye button.
+3. Click the "Create neomandible" button. The beam is included if you created it. Show or hide the neomandible with the eye button next to it.
 ![Screenshot from 2025-05-02 16-01-49](https://github.com/user-attachments/assets/7e9416be-1df4-49b2-a118-b1ea95e50597)
 
 ## Export the planning outputs
 - You may want to [export](https://slicer.readthedocs.io/en/latest/user_guide/data_loading_and_saving.html#export-data) the 3D models you created of mandible and fibula custom surgical guides, and the neomandible. Remember to select the ".stl" export format (which is the format used for 3D printers).
 
-## Settings
+## Visualization options
 
-You can use the "Lights rendering" setting to make the 3D visualizations nicer. Try "MultiLamp and Shadows", if you don't like it, you can always go back to "Lamp" default setting.
+On Virtual Surgical Planning, you can use the "Lights rendering" setting to make the 3D visualizations nicer. Try "MultiLamp and Shadows", if you don't like it, you can always go back to "Lamp" default setting.
 <img src="BoneReconstructionPlanner/Resources/Pictures/screenshotNicerRendering.png"/>
 
 # User contact and feedback
