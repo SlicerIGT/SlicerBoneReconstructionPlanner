@@ -191,7 +191,7 @@ See more than 40 plans of other users:
 - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/Unofficial_BRP_Videotutorial_5.6.2_Spanish.zip" >Unofficial Spanish videotutorial</a> (credits to @marf-slicer)
 
 # Instructions
-(last validated May 2nd, 2025)
+(last validated Sep 12th, 2026)
 
 ## Installing BoneReconstructionPlanner
 
