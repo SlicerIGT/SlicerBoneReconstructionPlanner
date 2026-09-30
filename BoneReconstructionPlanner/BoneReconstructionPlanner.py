@@ -6007,11 +6007,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       planeCollection.AddItem(plane)
 
 
-    laterality = parameterNode.GetParameter("donorLeg") + " "
-    organ = "Fibula"
+    # use the fibula segment selected by the user, it can be anywhere in the segment list
+    fibulaSegmentID = parameterNode.GetParameter("fibulaSegment")
+    fibulaSegment = fibulaSegmentation.GetSegmentation().GetSegment(fibulaSegmentID)
+    if fibulaSegment is not None:
+      fibulaSegmentName = fibulaSegment.GetName()
+    else:
+      # name given by the AI segmentation
+      laterality = parameterNode.GetParameter("donorLeg") + " "
+      organ = "Fibula"
+      fibulaSegmentName = laterality + organ
     hollowWithMarginSegmentID = createHollowWithMargin(
       fibulaSegmentation,
-      laterality + organ,
+      fibulaSegmentName,
       fibulaGuidebaseMargin,
       fibulaGuidebaseThickness,
       planeCollection
