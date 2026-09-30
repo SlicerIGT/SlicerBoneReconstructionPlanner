@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>589</width>
-    <height>3813</height>
+    <height>3989</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -75,89 +75,109 @@
     </widget>
    </item>
    <item>
+    <widget class="ctkCollapsibleButton" name="CTsCollapsibleButton">
+     <property name="text">
+      <string>CTs</string>
+     </property>
+     <property name="contentsFrameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_25">
+      <item>
+       <widget class="QFrame" name="frame_2">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QFormLayout" name="formLayout_18">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_54">
+           <property name="text">
+            <string>Head CT</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="qMRMLNodeComboBox" name="headCTSelector">
+           <property name="toolTip">
+            <string>Select the head CT</string>
+           </property>
+           <property name="nodeTypes">
+            <stringlist notr="true">
+             <string>vtkMRMLScalarVolumeNode</string>
+            </stringlist>
+           </property>
+           <property name="hideChildNodeTypes">
+            <stringlist notr="true"/>
+           </property>
+           <property name="noneEnabled">
+            <bool>true</bool>
+           </property>
+           <property name="addEnabled">
+            <bool>false</bool>
+           </property>
+           <property name="interactionNodeSingletonTag">
+            <string notr="true"/>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_55">
+           <property name="text">
+            <string>Leg/s CT</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="qMRMLNodeComboBox" name="legsCTSelector">
+           <property name="toolTip">
+            <string>Select the leg CT</string>
+           </property>
+           <property name="nodeTypes">
+            <stringlist notr="true">
+             <string>vtkMRMLScalarVolumeNode</string>
+            </stringlist>
+           </property>
+           <property name="hideChildNodeTypes">
+            <stringlist notr="true"/>
+           </property>
+           <property name="noneEnabled">
+            <bool>true</bool>
+           </property>
+           <property name="addEnabled">
+            <bool>false</bool>
+           </property>
+           <property name="interactionNodeSingletonTag">
+            <string notr="true"/>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="ctkCollapsibleButton" name="AISegmentationCollapsibleButton">
      <property name="toolTip">
       <string/>
      </property>
      <property name="text">
-      <string>CTs and AI</string>
+      <string>AI</string>
      </property>
      <property name="collapsed">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_21">
-      <item>
-       <layout class="QFormLayout" name="formLayout_18">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_54">
-          <property name="text">
-           <string>Head CT</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_55">
-          <property name="text">
-           <string>Leg/s CT</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="qMRMLNodeComboBox" name="headCTSelector">
-          <property name="toolTip">
-           <string>Select the head CT</string>
-          </property>
-          <property name="nodeTypes">
-           <stringlist notr="true">
-            <string>vtkMRMLScalarVolumeNode</string>
-           </stringlist>
-          </property>
-          <property name="hideChildNodeTypes">
-           <stringlist notr="true"/>
-          </property>
-          <property name="noneEnabled">
-           <bool>true</bool>
-          </property>
-          <property name="addEnabled">
-           <bool>false</bool>
-          </property>
-          <property name="interactionNodeSingletonTag">
-           <string notr="true"/>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="qMRMLNodeComboBox" name="legsCTSelector">
-          <property name="toolTip">
-           <string>Select the leg CT</string>
-          </property>
-          <property name="nodeTypes">
-           <stringlist notr="true">
-            <string>vtkMRMLScalarVolumeNode</string>
-           </stringlist>
-          </property>
-          <property name="hideChildNodeTypes">
-           <stringlist notr="true"/>
-          </property>
-          <property name="noneEnabled">
-           <bool>true</bool>
-          </property>
-          <property name="addEnabled">
-           <bool>false</bool>
-          </property>
-          <property name="interactionNodeSingletonTag">
-           <string notr="true"/>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
       <item>
        <widget class="QPushButton" name="installAISegmentationsButton">
         <property name="toolTip">
@@ -787,157 +807,10 @@ preview (takes more time)</string>
                 </property>
                </widget>
               </item>
-                            <item>
-                             <widget class="QToolButton" name="playVSPAnimationButton">
-                                <property name="sizePolicy">
-                                 <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-                                    <horstretch>0</horstretch>
-                                    <verstretch>0</verstretch>
-                                 </sizepolicy>
-                                </property>
-                                <property name="toolTip">
-                                 <string>Play Virtual Surgical Plan animation</string>
-                                </property>
-                                <property name="text">
-                                 <string/>
-                                </property>
-                                <property name="checkable">
-                                 <bool>true</bool>
-                                </property>
-                             </widget>
-                            </item>
-              <item>
-               <widget class="QToolButton" name="exportVSPAnimationButton">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>Export Virtual Surgical Plan animation as a MP4 video</string>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
              </layout>
             </widget>
            </item>
           </layout>
-         </item>
-         <item>
-          <widget class="QFrame" name="create3DModelOfTheReconstructionFrame">
-           <property name="frameShape">
-            <enum>QFrame::NoFrame</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Plain</enum>
-           </property>
-           <layout class="QGridLayout" name="gridLayout">
-            <item row="0" column="1">
-             <widget class="QPushButton" name="create3DModelOfTheReconstructionButton">
-              <property name="acceptDrops">
-               <bool>false</bool>
-              </property>
-              <property name="toolTip">
-               <string>Create 3D model of the neomandible for 3D printing. The intercondylar beam will be fused to it if exists</string>
-              </property>
-              <property name="text">
-               <string>Create
-neomandible</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="2">
-             <widget class="QLabel" name="label_2">
-              <property name="toolTip">
-               <string>Control the two points the beam will join. The beam will be created after placing its two points</string>
-              </property>
-              <property name="text">
-               <string>Create beam </string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="3">
-             <layout class="QVBoxLayout" name="verticalLayout_9">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="qSlicerMarkupsPlaceWidget" name="interCondylarBeamLinePlaceWidget">
-                <property name="toolTip">
-                 <string>Control the two points the beam will join</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_8">
-                <property name="leftMargin">
-                 <number>0</number>
-                </property>
-                <property name="topMargin">
-                 <number>0</number>
-                </property>
-                <item>
-                 <widget class="QToolButton" name="interCondylarBeamVisibilityToolButton">
-                  <property name="toolTip">
-                   <string>Show or hide the intercondylar beam</string>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="checkable">
-                   <bool>true</bool>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QToolButton" name="interCondylarBeamIncreaseSizeButton">
-                  <property name="toolTip">
-                   <string>Make the intercondylar beam thicker</string>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QToolButton" name="interCondylarBeamDecreaseSizeButton">
-                  <property name="toolTip">
-                   <string>Make the intercondylar beam thinner</string>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </item>
-            <item row="0" column="0">
-             <widget class="QToolButton" name="neomandibleVisibilityButton">
-              <property name="toolTip">
-               <string>Show or hide neomandible 3D model</string>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
          </item>
          <item>
           <widget class="ctkCollapsibleButton" name="CollapsibleButton_6">
@@ -1221,32 +1094,265 @@ segments lengths</string>
         </layout>
        </widget>
       </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="ctkCollapsibleButton" name="CollapsibleButton_9">
+     <property name="text">
+      <string>VSP Animation</string>
+     </property>
+     <property name="contentsFrameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_29">
       <item>
-       <widget class="qMRMLSubjectHierarchyTreeView" name="nodesControlView">
+       <widget class="QFrame" name="frame_10">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_16">
+         <item>
+          <widget class="QToolButton" name="playVSPAnimationButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Play Virtual Surgical Plan animation</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="exportVSPAnimationButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Export Virtual Surgical Plan animation as a MP4 video</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="vspAnimationModeComboBox">
+           <property name="toolTip">
+            <string>Virtual Surgical Plan animation mode. Schematic: plain models. Realistic: operating room background, bone and vessel textures, and head and leg dissections from the CTs</string>
+           </property>
+           <item>
+            <property name="text">
+             <string>Schematic</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Realistic</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="ctkCollapsibleButton" name="CollapsibleButton_7">
+     <property name="text">
+      <string>Data tree</string>
+     </property>
+     <property name="collapsed">
+      <bool>true</bool>
+     </property>
+     <property name="contentsFrameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_27">
+      <item>
+       <widget class="QFrame" name="frame_9">
         <property name="minimumSize">
          <size>
           <width>0</width>
-          <height>400</height>
+          <height>0</height>
          </size>
         </property>
-        <property name="toolTip">
-         <string>Control visibility of planning objects and rename or delete nodes</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
-        <property name="animated">
-         <bool>true</bool>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
         </property>
-        <property name="nodeTypes">
-         <stringlist>
-          <string>vtkMRMLMarkupsNode</string>
-          <string>vtkMRMLModelNode</string>
-         </stringlist>
+        <layout class="QVBoxLayout" name="verticalLayout_26">
+         <item>
+          <widget class="qMRMLSubjectHierarchyTreeView" name="nodesControlView">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>400</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Control visibility of planning objects and rename or delete nodes</string>
+           </property>
+           <property name="animated">
+            <bool>true</bool>
+           </property>
+           <property name="nodeTypes">
+            <stringlist>
+             <string>vtkMRMLMarkupsNode</string>
+             <string>vtkMRMLModelNode</string>
+            </stringlist>
+           </property>
+           <property name="idColumnVisible">
+            <bool>false</bool>
+           </property>
+           <property name="transformColumnVisible">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="ctkCollapsibleButton" name="CollapsibleButton_8">
+     <property name="text">
+      <string>Neomandible Generation</string>
+     </property>
+     <property name="contentsFrameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_28">
+      <item>
+       <widget class="QFrame" name="create3DModelOfTheReconstructionFrame">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
         </property>
-        <property name="idColumnVisible">
-         <bool>false</bool>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
         </property>
-        <property name="transformColumnVisible">
-         <bool>false</bool>
-        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QToolButton" name="neomandibleVisibilityButton">
+           <property name="toolTip">
+            <string>Show or hide neomandible 3D model</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QPushButton" name="create3DModelOfTheReconstructionButton">
+           <property name="acceptDrops">
+            <bool>false</bool>
+           </property>
+           <property name="toolTip">
+            <string>Create 3D model of the neomandible for 3D printing. The intercondylar beam will be fused to it if exists</string>
+           </property>
+           <property name="text">
+            <string>Create
+neomandible</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="label_2">
+           <property name="toolTip">
+            <string>Control the two points the beam will join. The beam will be created after placing its two points</string>
+           </property>
+           <property name="text">
+            <string>Create beam </string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <layout class="QVBoxLayout" name="verticalLayout_9">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="qSlicerMarkupsPlaceWidget" name="interCondylarBeamLinePlaceWidget">
+             <property name="toolTip">
+              <string>Control the two points the beam will join</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_8">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QToolButton" name="interCondylarBeamVisibilityToolButton">
+               <property name="toolTip">
+                <string>Show or hide the intercondylar beam</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QToolButton" name="interCondylarBeamIncreaseSizeButton">
+               <property name="toolTip">
+                <string>Make the intercondylar beam thicker</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QToolButton" name="interCondylarBeamDecreaseSizeButton">
+               <property name="toolTip">
+                <string>Make the intercondylar beam thinner</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
