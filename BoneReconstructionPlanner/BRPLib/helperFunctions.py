@@ -483,6 +483,8 @@ def getSegmentStatistics(segmentID, segmentationNode):
 
   segStatLogic = SegmentStatistics.SegmentStatisticsLogic()
   segStatLogic.getParameterNode().SetParameter("Segmentation", segmentationNode.GetID())
+  # by default only visible segments are computed, so a hidden segment would have no statistics
+  segStatLogic.getParameterNode().SetParameter("visibleSegmentsOnly", "False")
   segStatLogic.getParameterNode().SetParameter("LabelmapSegmentStatisticsPlugin.enabled", "True")
   segStatLogic.getParameterNode().SetParameter("ScalarVolumeSegmentStatisticsPlugin.enabled", "False")
   segStatLogic.getParameterNode().SetParameter("ClosedSurfaceSegmentStatisticsPlugin.enabled", "False")
