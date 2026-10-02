@@ -694,6 +694,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibleScrewHoleCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleBridgeRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.mandibleGuidebaseThicknessSpinBox.valueChanged.connect(self.updateMandibleGuideBases)
+    self.ui.mandibleGuidebaseMarginSpinBox.valueChanged.connect(self.updateMandibleGuideBases)
     self.ui.dentalImplantCylinderRadiusSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.dentalImplantCylinderHeightSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
     self.ui.dentalImplantDrillGuideWallSpinBox.valueChanged.connect(self.updateParameterNodeFromGUI)
@@ -826,8 +827,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if self._updatingGUIFromParameterNode:
       return
     self.updateParameterNodeFromGUI(caller=None, event=None)
-    self.logic.onLeftSideMandibleGuideBaseCurvePointUpdated()
-    self.logic.onRightSideMandibleGuideBaseCurvePointUpdated()
+    self.logic.updateMandibleGuideBasesTimer.start()
   
   def cleanup(self):
     """
@@ -1516,6 +1516,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.mandibleScrewHoleCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleScrewHoleCylinderRadius_mm")))
     self.ui.mandibleBridgeRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleBridgeRadius_mm")))
     self.ui.mandibleGuidebaseThicknessSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleGuidebaseThickness_mm")))
+    self.ui.mandibleGuidebaseMarginSpinBox.setValue(float(self._parameterNode.GetParameter("mandibleGuidebaseMargin_mm")))
     self.ui.dentalImplantCylinderRadiusSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantCylinderRadius_mm")))
     self.ui.dentalImplantCylinderHeightSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantCylinderHeight_mm")))
     self.ui.dentalImplantDrillGuideWallSpinBox.setValue(float(self._parameterNode.GetParameter("dentalImplantDrillGuideWall_mm")))
@@ -1846,6 +1847,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode.SetParameter("mandibleScrewHoleCylinderRadius_mm", str(self.ui.mandibleScrewHoleCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("mandibleBridgeRadius_mm", str(self.ui.mandibleBridgeRadiusSpinBox.value))
     self._parameterNode.SetParameter("mandibleGuidebaseThickness_mm", str(self.ui.mandibleGuidebaseThicknessSpinBox.value))
+    self._parameterNode.SetParameter("mandibleGuidebaseMargin_mm", str(self.ui.mandibleGuidebaseMarginSpinBox.value))
     self._parameterNode.SetParameter("dentalImplantCylinderRadius_mm", str(self.ui.dentalImplantCylinderRadiusSpinBox.value))
     self._parameterNode.SetParameter("dentalImplantCylinderHeight_mm", str(self.ui.dentalImplantCylinderHeightSpinBox.value))
     self._parameterNode.SetParameter("dentalImplantDrillGuideWall_mm", str(self.ui.dentalImplantDrillGuideWallSpinBox.value))
@@ -2578,6 +2580,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.updateFibuladentalImplantsTimer.setInterval(150)
     self.updateFibuladentalImplantsTimer.setSingleShot(True)
     self.updateFibuladentalImplantsTimer.connect('timeout()', self.onUpdateFibulaDentalImplantsTimerTimeout)
+    # the margin makes each guide base update take seconds, so wait for the spinboxes to settle
+    self.updateMandibleGuideBasesTimer = qt.QTimer()
+    self.updateMandibleGuideBasesTimer.setInterval(500)
+    self.updateMandibleGuideBasesTimer.setSingleShot(True)
+    self.updateMandibleGuideBasesTimer.connect('timeout()', self.onUpdateMandibleGuideBasesTimerTimeout)
 
   def setDefaultParameters(self, parameterNode):
     """
@@ -3495,6 +3502,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if fibulaLine.GetNumberOfControlPoints() == 2:
       self.centerFibulaLine()
   
+  def onUpdateMandibleGuideBasesTimerTimeout(self):
+    self.onLeftSideMandibleGuideBaseCurvePointUpdated()
+    self.onRightSideMandibleGuideBaseCurvePointUpdated()
+
   def onLeftSideMandibleGuideBaseCurvePointUpdated(self,sourceNode=None,event=None):
     parameterNode = self.getParameterNode()
     leftSideMandibleGuideBaseCurve = self.getLeftSideMandibleGuideBaseCurve()
@@ -3524,6 +3535,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     leftSideMandibleGuideBaseCurve = self.getLeftSideMandibleGuideBaseCurve()
     mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     mandibleGuidebaseThickness = float(parameterNode.GetParameter("mandibleGuidebaseThickness_mm"))
+    mandibleGuidebaseMargin = float(parameterNode.GetParameter("mandibleGuidebaseMargin_mm"))
 
     leftSideMandibleGuideBaseModel = parameterNode.GetNodeReference("leftSideMandibleGuideBaseModel")
     if leftSideMandibleGuideBaseModel is None:
@@ -3569,9 +3581,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if np.dot(averageNormal, outwardDirection) < 0:
       averageNormal = -averageNormal
 
+    # With a margin, extrude the patch of the mandible surface grown by the margin instead,
+    # so the bone touching face of the guide base stays separated from the bone
+    polyDataToExtrude = curveCutModel.GetPolyData()
+    if mandibleGuidebaseMargin > 0:
+      polyDataToExtrude = self.createMarginGuideBasePatch(leftSideMandibleGuideBaseCurve, curveCutModel)
+      if polyDataToExtrude is None:
+        slicer.mrmlScene.RemoveNode(dynamicModelerNode)
+        slicer.mrmlScene.RemoveNode(curveCutModel)
+        return
+
     # Extrude the patch along the average normal to give it the requested thickness
     extrudeFilter = vtk.vtkLinearExtrusionFilter()
-    extrudeFilter.SetInputData(curveCutModel.GetPolyData())
+    extrudeFilter.SetInputData(polyDataToExtrude)
     extrudeFilter.SetExtrusionTypeToVectorExtrusion()
     extrudeFilter.SetVector(averageNormal * mandibleGuidebaseThickness)
     extrudeFilter.CappingOn()
@@ -3589,6 +3611,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     rightSideMandibleGuideBaseCurve = self.getRightSideMandibleGuideBaseCurve()
     mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     mandibleGuidebaseThickness = float(parameterNode.GetParameter("mandibleGuidebaseThickness_mm"))
+    mandibleGuidebaseMargin = float(parameterNode.GetParameter("mandibleGuidebaseMargin_mm"))
 
     rightSideMandibleGuideBaseModel = parameterNode.GetNodeReference("rightSideMandibleGuideBaseModel")
     if rightSideMandibleGuideBaseModel is None:
@@ -3634,9 +3657,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if np.dot(averageNormal, outwardDirection) < 0:
       averageNormal = -averageNormal
 
+    # With a margin, extrude the patch of the mandible surface grown by the margin instead,
+    # so the bone touching face of the guide base stays separated from the bone
+    polyDataToExtrude = curveCutModel.GetPolyData()
+    if mandibleGuidebaseMargin > 0:
+      polyDataToExtrude = self.createMarginGuideBasePatch(rightSideMandibleGuideBaseCurve, curveCutModel)
+      if polyDataToExtrude is None:
+        slicer.mrmlScene.RemoveNode(dynamicModelerNode)
+        slicer.mrmlScene.RemoveNode(curveCutModel)
+        return
+
     # Extrude the patch along the average normal to give it the requested thickness
     extrudeFilter = vtk.vtkLinearExtrusionFilter()
-    extrudeFilter.SetInputData(curveCutModel.GetPolyData())
+    extrudeFilter.SetInputData(polyDataToExtrude)
     extrudeFilter.SetExtrusionTypeToVectorExtrusion()
     extrudeFilter.SetVector(averageNormal * mandibleGuidebaseThickness)
     extrudeFilter.CappingOn()
@@ -3707,7 +3740,75 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       self.setRedSliceForMarkupsDisplayNodes()
     
     bothSidesMandibleGuideBaseModel.SetAndObservePolyData(finalPolyData)
-  
+
+  def createMarginGuideBasePatch(self, mandibleGuideBaseCurve, curveCutModel):
+    """
+    Return the patch enclosed by the guide base curve of the mandible surface grown by the margin.
+    The margin is computed in labelmap domain only inside a small box around this side's patch
+    """
+    parameterNode = self.getParameterNode()
+    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
+    mandibleGuidebaseMargin = float(parameterNode.GetParameter("mandibleGuidebaseMargin_mm"))
+
+    # the fine grid does not need to be coarser than the mandible segmentation
+    mandibleSegmentationSpacing = None
+    mandibularSegmentation = parameterNode.GetNodeReference("mandibularSegmentation")
+    if mandibularSegmentation is not None:
+      mandibularSegment = mandibularSegmentation.GetSegmentation().GetSegment(parameterNode.GetParameter("mandibularSegment"))
+      if mandibularSegment is not None:
+        mandibularLabelmap = mandibularSegment.GetRepresentation(slicer.vtkSegmentationConverter.GetSegmentationBinaryLabelmapRepresentationName())
+        if mandibularLabelmap is not None:
+          mandibleSegmentationSpacing = min(mandibularLabelmap.GetSpacing())
+
+    patchBounds = [0.0]*6
+    curveCutModel.GetPolyData().GetBounds(patchBounds)
+    marginSurfacePolyData = createMarginSurfaceInsideBounds(
+      mandibleModelNode.GetPolyData(),
+      patchBounds,
+      mandibleGuidebaseMargin,
+      mandibleSegmentationSpacing
+    )
+
+    marginSurfaceModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "temporalMarginMandibleSurfaceModel")
+    marginSurfaceModel.SetAndObservePolyData(marginSurfacePolyData)
+
+    # The margin surface is closed by flat walls where the box cut it, so the smallest region
+    # enclosed by the curve may not be the right one. Use the point of the original patch closest
+    # to its centroid instead: it is on the bone inside the curve, so the closest point of the
+    # margin surface to it is right above it, inside the curve
+    patchPolyData = curveCutModel.GetPolyData()
+    insidePointID = patchPolyData.FindPoint(getCentroid(curveCutModel))
+    insidePointPosition = patchPolyData.GetPoint(insidePointID)
+    insidePointNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode", "temporalMarginPatchInsidePoint")
+    insidePointNode.AddControlPoint(insidePointPosition)
+    if insidePointNode.GetDisplayNode() is not None:
+      insidePointNode.GetDisplayNode().SetVisibility(False)
+
+    marginPatchModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "temporalMarginPatchModel")
+
+    dynamicModelerNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLDynamicModelerNode")
+    dynamicModelerNode.SetToolName("Curve cut")
+    dynamicModelerNode.SetNodeReferenceID("CurveCut.InputModel", marginSurfaceModel.GetID())
+    dynamicModelerNode.SetNodeReferenceID("CurveCut.InputCurve", mandibleGuideBaseCurve.GetID())
+    dynamicModelerNode.SetNodeReferenceID("CurveCut.InsidePoint", insidePointNode.GetID())
+    dynamicModelerNode.SetNodeReferenceID("CurveCut.OutputInside", marginPatchModel.GetID())
+    dynamicModelerNode.SetAttribute("CurveCut.StraightCut", "1")
+    slicer.modules.dynamicmodeler.logic().RunDynamicModelerTool(dynamicModelerNode)
+
+    marginPatchPolyData = None
+    if marginPatchModel.GetPolyData() is not None and marginPatchModel.GetPolyData().GetNumberOfPoints() > 0:
+      marginPatchPolyData = vtk.vtkPolyData()
+      marginPatchPolyData.DeepCopy(marginPatchModel.GetPolyData())
+    else:
+      logging.warning("The guide base curve did not cut the mandible surface grown by the margin")
+
+    slicer.mrmlScene.RemoveNode(dynamicModelerNode)
+    slicer.mrmlScene.RemoveNode(marginPatchModel)
+    slicer.mrmlScene.RemoveNode(insidePointNode)
+    slicer.mrmlScene.RemoveNode(marginSurfaceModel)
+
+    return marginPatchPolyData
+
   def onPlanePointAdded(self,sourceNode,event):
     parameterNode = self.getParameterNode()
     mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")

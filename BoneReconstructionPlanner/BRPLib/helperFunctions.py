@@ -1081,6 +1081,173 @@ def _getReusableSegmentEditorWidget():
     _reusableSegmentEditorWidget = widget
   return _reusableSegmentEditorWidget
 
+def rasterizeClosedSurfaceOnIsotropicGrid(surfacePolyData, origin, spacing, dims):
+  # axis-aligned (identity-direction) fine geometry in RAS, as an
+  # image-to-world matrix (spacing on the diagonal, grid origin in translation)
+  imageToWorld = vtk.vtkMatrix4x4()
+  imageToWorld.SetElement(0, 0, spacing)
+  imageToWorld.SetElement(1, 1, spacing)
+  imageToWorld.SetElement(2, 2, spacing)
+  imageToWorld.SetElement(0, 3, origin[0])
+  imageToWorld.SetElement(1, 3, origin[1])
+  imageToWorld.SetElement(2, 3, origin[2])
+
+  # the grid has identity directions (axis-aligned in RAS), so the
+  # surface can be voxelized with a plain image stencil in RAS coordinates.
+  whiteImage = vtk.vtkImageData()
+  whiteImage.SetExtent(0, dims[0] - 1, 0, dims[1] - 1, 0, dims[2] - 1)
+  whiteImage.SetSpacing(spacing, spacing, spacing)
+  whiteImage.SetOrigin(*origin)
+  whiteImage.AllocateScalars(vtk.VTK_UNSIGNED_CHAR, 1)
+  whiteImage.GetPointData().GetScalars().Fill(1)
+
+  pol2stenc = vtk.vtkPolyDataToImageStencil()
+  pol2stenc.SetInputData(surfacePolyData)
+  pol2stenc.SetOutputOrigin(origin)
+  pol2stenc.SetOutputSpacing(spacing, spacing, spacing)
+  pol2stenc.SetOutputWholeExtent(whiteImage.GetExtent())
+  pol2stenc.Update()
+
+  imgstenc = vtk.vtkImageStencil()
+  imgstenc.SetInputData(whiteImage)
+  imgstenc.SetStencilConnection(pol2stenc.GetOutputPort())
+  imgstenc.ReverseStencilOff()
+  imgstenc.SetBackgroundValue(0)
+  imgstenc.Update()
+
+  labelmap = slicer.vtkOrientedImageData()
+  labelmap.DeepCopy(imgstenc.GetOutput())
+  labelmap.SetGeometryFromImageToWorldMatrix(imageToWorld)
+  return labelmap
+
+def createMarginSurfaceInsideBounds(
+    surfacePolyData,
+    bounds,
+    marginSizeMm,
+    maximumSpacingMm=None
+):
+  # Grows a closed surface by marginSizeMm in labelmap domain, but only inside
+  # a small box around bounds (plus padding). The returned closed surface is
+  # only meaningful inside that box: its walls are flat caps where the box cut
+  # the bone. Restricting the grid to the box is what keeps a very fine
+  # spacing affordable (the whole bone extent is never allocated).
+  maximumNumberOfVoxels = 50_000_000   # ~50 MB uint8 budget; tune as needed
+
+  # the grown surface at a point only depends on the bone within marginSizeMm
+  # of it, so 2*margin keeps the grown surface over bounds exact, and the extra
+  # mm leave a ring around it (e.g. for a curve cut to project its loop on)
+  pad = 2.0 * marginSizeMm + 3.0
+  boxBounds = [
+    bounds[0] - pad, bounds[1] + pad,
+    bounds[2] - pad, bounds[3] + pad,
+    bounds[4] - pad, bounds[5] + pad,
+  ]
+
+  # Clip the surface to the box before rasterizing it. vtkPolyDataToImageStencil
+  # visits every cell of its input for every slice, so feeding it the whole
+  # high resolution bone would dominate the computing time.
+  boxPlanes = vtk.vtkPlaneCollection()
+  for i in range(3):
+    lowerPlaneNormal = [0.0, 0.0, 0.0]
+    lowerPlaneNormal[i] = 1.0
+    lowerPlaneOrigin = [0.0, 0.0, 0.0]
+    lowerPlaneOrigin[i] = boxBounds[2 * i]
+    lowerPlane = vtk.vtkPlane()
+    lowerPlane.SetNormal(lowerPlaneNormal)
+    lowerPlane.SetOrigin(lowerPlaneOrigin)
+    boxPlanes.AddItem(lowerPlane)
+
+    upperPlaneNormal = [0.0, 0.0, 0.0]
+    upperPlaneNormal[i] = -1.0
+    upperPlaneOrigin = [0.0, 0.0, 0.0]
+    upperPlaneOrigin[i] = boxBounds[2 * i + 1]
+    upperPlane = vtk.vtkPlane()
+    upperPlane.SetNormal(upperPlaneNormal)
+    upperPlane.SetOrigin(upperPlaneOrigin)
+    boxPlanes.AddItem(upperPlane)
+
+  surfaceInsideBox = surfacePolyData
+  ensureExplicitCellArraysStorage(surfacePolyData) # WORKAROUND
+  clipper = vtk.vtkClipClosedSurface()
+  clipper.SetInputData(surfacePolyData)
+  clipper.SetClippingPlanes(boxPlanes)
+  clipper.InsideOutOff()
+  clipper.Update()
+  if clipper.GetOutput().GetNumberOfPoints() > 0:
+    surfaceInsideBox = clipper.GetOutput()
+
+  extentMm = [boxBounds[2 * i + 1] - boxBounds[2 * i] for i in range(3)]
+
+  # same spacing rule as createHollowWithMargin: half the margin so it does
+  # not snap to whole voxels, never coarser than the source segmentation, and
+  # coarsened only if the voxel budget is exceeded
+  affordableSpacing = (
+      extentMm[0] * extentMm[1] * extentMm[2] / maximumNumberOfVoxels
+  ) ** (1.0 / 3.0)
+  desiredSpacing = marginSizeMm / 2.0
+  if maximumSpacingMm is not None:
+    desiredSpacing = min(desiredSpacing, maximumSpacingMm)
+  fineSpacing = max(desiredSpacing, affordableSpacing)
+
+  if fineSpacing > marginSizeMm:
+    logging.warning(
+        f"createMarginSurfaceInsideBounds: margin {marginSizeMm}mm cannot be represented "
+        f"within the {maximumNumberOfVoxels} voxel budget for this geometry; "
+        f"using {fineSpacing:.3f}mm spacing (margin will be coarse).")
+
+  dims = [max(1, int(np.ceil(extentMm[i] / fineSpacing))) for i in range(3)]
+  origin = (boxBounds[0], boxBounds[2], boxBounds[4])
+  logging.info(
+      f"createMarginSurfaceInsideBounds: {dims[0]}x{dims[1]}x{dims[2]} voxels "
+      f"at {fineSpacing:.3f}mm spacing")
+  boneLabelmap = rasterizeClosedSurfaceOnIsotropicGrid(surfaceInsideBox, origin, fineSpacing, dims)
+
+  # Run the Margin effect on a temporary segmentation node whose own geometry
+  # IS the fine grid (see createHollowWithMargin for why the reference image
+  # geometry must be pinned and why the editor widget is a reused one)
+  marginSegmentID = "marginSurface"
+  tempSegmentationNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
+  # keep it visible: the Margin effect asks with a modal dialog to show a hidden segment
+  tempSegmentationNode.CreateDefaultDisplayNodes()
+  tempSegmentationNode.GetSegmentation().AddEmptySegment(marginSegmentID, marginSegmentID)
+  slicer.vtkSlicerSegmentationsModuleLogic.SetBinaryLabelmapToSegment(
+      boneLabelmap, tempSegmentationNode, marginSegmentID,
+      slicer.vtkSlicerSegmentationsModuleLogic.MODE_REPLACE)
+  tempSegmentationNode.GetSegmentation().SetConversionParameter(
+      slicer.vtkSegmentationConverter.GetReferenceImageGeometryParameterName(),
+      slicer.vtkSegmentationConverter.SerializeImageGeometry(boneLabelmap))
+
+  segmentEditorWidget = _getReusableSegmentEditorWidget()
+  segmentEditorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+  segmentEditorWidget.setMRMLSegmentEditorNode(segmentEditorNode)
+  segmentEditorWidget.setSegmentationNode(tempSegmentationNode)
+  segmentEditorNode.SetOverwriteMode(slicer.vtkMRMLSegmentEditorNode.OverwriteNone)
+  segmentEditorNode.SetMaskMode(slicer.vtkMRMLSegmentationNode.EditAllowedEverywhere)
+  segmentEditorNode.SetSourceVolumeIntensityMask(False)
+  segmentEditorNode.SetSelectedSegmentID(marginSegmentID)
+
+  segmentEditorWidget.setCurrentSegmentID(marginSegmentID)
+  segmentEditorWidget.setActiveEffectByName("Margin")
+  effect = segmentEditorWidget.activeEffect()
+  effect.setParameter("MarginSizeMm", str(marginSizeMm)) # positive = grow
+  effect.self().onApply()
+
+  # detach the reusable editor widget from the nodes before removing them
+  segmentEditorWidget.setActiveEffectByName("None")
+  segmentEditorWidget.setSegmentationNode(None)
+  segmentEditorWidget.setMRMLSegmentEditorNode(None)
+
+  tempSegmentationNode.GetSegmentation().CreateRepresentation(
+      slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName())
+  marginSurface = vtk.vtkPolyData()
+  slicer.vtkSlicerSegmentationsModuleLogic.GetSegmentClosedSurfaceRepresentation(
+      tempSegmentationNode, marginSegmentID, marginSurface)
+
+  slicer.mrmlScene.RemoveNode(segmentEditorNode)
+  slicer.mrmlScene.RemoveNode(tempSegmentationNode)
+
+  return marginSurface
+
 def createHollowWithMargin(
     segmentationNode,
     fibulaSegmentName,
@@ -1201,49 +1368,14 @@ def createHollowWithMargin(
 
   dims = [max(1, int(np.ceil(extentMm[i] / fineSpacing))) for i in range(3)]
 
-  # axis-aligned (identity-direction) fine geometry in RAS, as an
-  # image-to-world matrix (spacing on the diagonal, grid origin in translation)
-  imageToWorld = vtk.vtkMatrix4x4()
-  imageToWorld.SetElement(0, 0, fineSpacing)
-  imageToWorld.SetElement(1, 1, fineSpacing)
-  imageToWorld.SetElement(2, 2, fineSpacing)
-  imageToWorld.SetElement(0, 3, bounds[0] - pad)
-  imageToWorld.SetElement(1, 3, bounds[2] - pad)
-  imageToWorld.SetElement(2, 3, bounds[4] - pad)
-
   # Rasterize the SMOOTH fibula closed surface directly onto the fine grid,
   # instead of nearest-neighbor upsampling the coarse binary labelmap. NN
   # upsampling cannot add detail: it bakes the original ~1mm voxel steps into
   # the fine grid as sharp flat faces, so the margined surface comes out
   # visibly staircased. Rasterizing the surface yields steps at the fine
   # spacing (sub-visible) and matches the fibula surface used elsewhere.
-  # the fine grid has identity directions (axis-aligned in RAS), so the
-  # surface can be voxelized with a plain image stencil in RAS coordinates.
   origin = (bounds[0] - pad, bounds[2] - pad, bounds[4] - pad)
-  whiteImage = vtk.vtkImageData()
-  whiteImage.SetExtent(0, dims[0] - 1, 0, dims[1] - 1, 0, dims[2] - 1)
-  whiteImage.SetSpacing(fineSpacing, fineSpacing, fineSpacing)
-  whiteImage.SetOrigin(*origin)
-  whiteImage.AllocateScalars(vtk.VTK_UNSIGNED_CHAR, 1)
-  whiteImage.GetPointData().GetScalars().Fill(1)
-
-  pol2stenc = vtk.vtkPolyDataToImageStencil()
-  pol2stenc.SetInputData(fibulaPoly)
-  pol2stenc.SetOutputOrigin(origin)
-  pol2stenc.SetOutputSpacing(fineSpacing, fineSpacing, fineSpacing)
-  pol2stenc.SetOutputWholeExtent(whiteImage.GetExtent())
-  pol2stenc.Update()
-
-  imgstenc = vtk.vtkImageStencil()
-  imgstenc.SetInputData(whiteImage)
-  imgstenc.SetStencilConnection(pol2stenc.GetOutputPort())
-  imgstenc.ReverseStencilOff()
-  imgstenc.SetBackgroundValue(0)
-  imgstenc.Update()
-
-  resampledFibula = slicer.vtkOrientedImageData()
-  resampledFibula.DeepCopy(imgstenc.GetOutput())
-  resampledFibula.SetGeometryFromImageToWorldMatrix(imageToWorld)
+  resampledFibula = rasterizeClosedSurfaceOnIsotropicGrid(fibulaPoly, origin, fineSpacing, dims)
 
   # --- Run the Margin/Hollow effects on a temporary segmentation node whose
   # own geometry IS the fine grid. The segment editor applies its effects on a
