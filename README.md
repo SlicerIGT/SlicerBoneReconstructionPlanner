@@ -248,7 +248,8 @@ The fibula line will be created automatically from the fibula 3D model but you m
 12. Click "Update virtual plan" again. And repeat as many times as needed.
 If the checkbox of the "Update virtual plan" button is ticked (default) the plan reacts to plane movements and updates automatically.
 13. Check the available "Visualization Options" as sometimes you need to modify the which or how much data is visible at a given moment to ease the work. You'll get explicative tooltips by hovering the mouse over each widget.
-14. When you are happy with the plan, lock it with the padlock button next to the update buttons so it is not changed by accident. While locked, you can play the animation of the plan or export it as a video.
+14. When you are happy with the plan, lock it with the padlock button next to the update buttons so it is not changed by accident. 
+15. While locked, you can play the animation of the plan or export it as a video. The animation has two modes: schematic or realistic. Realistic mode needs the CTs to be set in their corresponding selectors. Come back to the animation section when you have finished creating the guides so they are included in the animation.
 
 ## Personalized Fibula Guide Generation
 
@@ -269,7 +270,7 @@ As soon as the line has its two points the yellow miterBoxes appear, each one wi
   clearanceFitPrintingTolerance = 0.4mm
 ```
 
-5. Most distal miterBox will be labelled with a "D" and the most proximal miterBox will have a label that identifies laterality ("R" for right leg, "L" for left leg).
+5. Most distal miterBox will be labelled with a "D" and the most proximal miterBox will have a label that identifies laterality ("R" for right leg, "L" for left leg). You can choose to emboss the labels or engrave them on the miterBoxes.
 
 ## Create the Fibula Guide Base
 6. Set the "Guidebase thickness (mm)", "Guidebase angle" and "Guidebase margin" (hover the mouse over them for a descriptive tooltip) and click "Generate fibula guidebase". The guide base is created around the fibula segment you selected, spanning all the miterBoxes, and it is selected on the "Fibula surgical guide base" selector. Click the button again if you change these parameters or the miterBoxes.
@@ -288,7 +289,7 @@ As soon as the line has its two points the yellow miterBoxes appear, each one wi
 
 This part of the workflow has some similarities with the fibula guide creation. On the "Mandible Surgical Guide Generation" section:
 - Set the parameters of the saw boxes (the clearance of the Settings section also applies to them) and click "Create mandible resection boxes". There will be one sawBox per resection cut: two with "Segmental Mandibulectomy" and one with "Hemimandibulectomy".
-- One sawBox will have a label that indicates laterality (i.e. "R" or "L").
+- One sawBox will have a label that indicates laterality (i.e. "R" or "L"). You can choose to emboss the label or engrave it on the corresponding sawBox.
 - The sawBoxes are movable and you should only move them inside the cut plane, to correct automatic mispositioning.
 - By default ("Use guide bases from curves" checked) the guide bases are made from curves: click the place button of "Left side base" and "Right side base" and draw a closed curve over the mandible surface next to each resection cut. Each guidebase is the mandible surface enclosed by its curve extruded by the "Guidebase thickness (mm)". With "Hemimandibulectomy" you just need the guide base of the remaining side.
 - Alternatively, uncheck "Use guide bases from curves" and select a segmented guide base model on the "Mandible surgical guide bases" selector. If you are doing a "Segmental Mandibulectomy", you need to segment two guide bases, one for each planar cut, and copy them together to the same segment. Then export them as a unique model as explained on the earlier section.
