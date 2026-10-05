@@ -1393,6 +1393,9 @@ neomandible</string>
            </item>
            <item row="0" column="1">
             <widget class="ctkDoubleSpinBox" name="dentalImplantCylinderRadiusSpinBox">
+             <property name="toolTip">
+              <string>Radius of the dental implant cylinders. It is also the radius of the drill holes of the fibula guide</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1413,6 +1416,9 @@ neomandible</string>
            </item>
            <item row="1" column="1">
             <widget class="ctkDoubleSpinBox" name="dentalImplantCylinderHeightSpinBox">
+             <property name="toolTip">
+              <string>Height of the drill sleeves of the fibula guide</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1433,6 +1439,9 @@ neomandible</string>
            </item>
            <item row="2" column="1">
             <widget class="ctkDoubleSpinBox" name="dentalImplantDrillGuideWallSpinBox">
+             <property name="toolTip">
+              <string>Wall thickness of the drill sleeves around the drill holes of the fibula guide</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1472,6 +1481,9 @@ to create cylinders</string>
            </item>
            <item row="0" column="1">
             <widget class="qMRMLNodeComboBox" name="dentalImplantFiducialListSelector">
+             <property name="toolTip">
+              <string>Select the point list that marks the position of each dental implant on the reconstructed mandible</string>
+             </property>
              <property name="nodeTypes">
               <stringlist>
                <string>vtkMRMLMarkupsFiducialNode</string>
@@ -1502,6 +1514,9 @@ list and mandible reconstruction</string>
            </property>
            <item>
             <widget class="QCheckBox" name="makeAllDentalImplanCylindersParallelCheckBox">
+             <property name="toolTip">
+              <string>If checked, moving a dental implant cylinder orientation applies the same orientation to all the other dental implant cylinders</string>
+             </property>
              <property name="text">
               <string>Make all dental implant cylinders parallel</string>
              </property>
@@ -1509,6 +1524,9 @@ list and mandible reconstruction</string>
            </item>
            <item>
             <widget class="ctkCheckablePushButton" name="updateFibulaDentalImplantCylindersButton">
+             <property name="toolTip">
+              <string>Update the fibula drill guides according to the dental implants. Check the box to update them automatically when the dental implants are moved</string>
+             </property>
              <property name="text">
               <string>Update fibula dental implant cylinders</string>
              </property>
@@ -1592,6 +1610,9 @@ list and mandible reconstruction</string>
            </item>
            <item row="0" column="1">
             <widget class="qMRMLNodeComboBox" name="plateCurveSelector">
+             <property name="toolTip">
+              <string>Select the curve over the reconstructed mandible that the custom titanium plate will follow</string>
+             </property>
              <property name="nodeTypes">
               <stringlist>
                <string>vtkMRMLMarkupsCurveNode</string>
@@ -1607,6 +1628,9 @@ list and mandible reconstruction</string>
            </item>
            <item row="1" column="1">
             <widget class="ctkDoubleSpinBox" name="plateCrossSectionalWidthSpinBox">
+             <property name="toolTip">
+              <string>Thickness of the plate, measured perpendicular to the bone surface</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1623,6 +1647,9 @@ list and mandible reconstruction</string>
            </item>
            <item row="2" column="1">
             <widget class="ctkDoubleSpinBox" name="plateCrossSectionalLengthSpinBox">
+             <property name="toolTip">
+              <string>Height of the plate over the bone surface, measured perpendicular to the plate curve</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -1639,6 +1666,9 @@ list and mandible reconstruction</string>
            </item>
            <item row="3" column="1">
             <widget class="QDoubleSpinBox" name="plateCrossSectionalBevelRadiusPorcentageSpinBox">
+             <property name="toolTip">
+              <string>Rounding radius of the plate cross-section corners, as a percentage of the smaller of the plate width and length</string>
+             </property>
              <property name="decimals">
               <number>0</number>
              </property>
@@ -1655,6 +1685,9 @@ list and mandible reconstruction</string>
            </item>
            <item row="4" column="1">
             <widget class="ctkDoubleSpinBox" name="plateTipsBevelRadiusSpinBox">
+             <property name="toolTip">
+              <string>Rounding radius of the plate tips, as a percentage of the plate size</string>
+             </property>
              <property name="decimals">
               <number>0</number>
              </property>
@@ -2469,6 +2502,9 @@ because plan has changed</string>
            </item>
            <item row="5" column="1">
             <widget class="ctkDoubleSpinBox" name="sawBoxSlotWallSpinBox">
+             <property name="toolTip">
+              <string>If guide type is slot, it defines the wall thickness of the holed box where the saw will pass through</string>
+             </property>
              <property name="decimals">
               <number>1</number>
              </property>
@@ -2494,7 +2530,7 @@ distance to mandible (mm)</string>
            <item row="6" column="1">
             <widget class="ctkDoubleSpinBox" name="biggerSawBoxDistanceToMandibleSpinBox">
              <property name="toolTip">
-              <string>If guide type is slot, it defines the wall thickness of the holed box where the saw will pass through</string>
+              <string>Extra distance to the mandible bone of the saw boxes</string>
              </property>
              <property name="decimals">
               <number>1</number>
@@ -3023,7 +3059,7 @@ surgical guide</string>
            <item row="0" column="1">
             <widget class="QCheckBox" name="orientation3DCubeCheckBox">
              <property name="toolTip">
-              <UInt>0</UInt>
+              <string>Show or hide the orientation cube on the corner of the 3D views</string>
              </property>
              <property name="text">
               <string/>
@@ -3080,6 +3116,9 @@ p, li { white-space: pre-wrap; }
            </item>
            <item row="5" column="1">
             <widget class="QCheckBox" name="customTitaniumPlateDesingCheckBox">
+             <property name="toolTip">
+              <string>Shows the section to design a custom titanium plate from a curve over the reconstructed mandible</string>
+             </property>
              <property name="text">
               <string>Custom Titanium Plate
 Desing</string>
@@ -3111,6 +3150,9 @@ settings</string>
            </item>
            <item row="4" column="1">
             <widget class="QCheckBox" name="dentalImplantsPlanningAndFibulaDrillGuidesCheckBox">
+             <property name="toolTip">
+              <string>Shows the section to plan dental implants on the reconstruction and to add their drill guides to the fibula surgical guide</string>
+             </property>
              <property name="text">
               <string>Dental Implants Planning
 and Fibula Drill Guides</string>
@@ -3119,6 +3161,9 @@ and Fibula Drill Guides</string>
            </item>
            <item row="3" column="1">
             <widget class="QCheckBox" name="AISegmentationsCheckBox">
+             <property name="toolTip">
+              <string>Shows the AI section to install the AI segmentation dependencies and to segment the head and leg CTs automatically</string>
+             </property>
              <property name="text">
               <string>AI Segmentation</string>
              </property>
