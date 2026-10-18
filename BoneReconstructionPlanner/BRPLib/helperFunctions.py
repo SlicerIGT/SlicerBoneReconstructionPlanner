@@ -1469,16 +1469,16 @@ def createHollowWithMargin(
   return hollowSegmentID
 
 def createAdaptedBox(X, Y, Z, name, boxX, boxZ, referenceZ, highResolution = True):
-  import math
-
-  alpha = math.acos(boxZ @ referenceZ.T)
-  delta = Z*math.tan(alpha)
-
-  comparisonVector = np.cross(boxZ, referenceZ)
-  comparisonVector = comparisonVector/np.linalg.norm(comparisonVector)
+  # the -Y/2 face (the rectanglet) is sheared along boxY so it contains both boxX
+  # and referenceZ. The component of referenceZ along boxX already lies on that face,
+  # so only its components along boxY and boxZ set the shear. Using the full angle
+  # between boxZ and referenceZ is wrong when the plane is tilted around boxY
+  boxY = np.cross(boxZ, boxX)
+  referenceZOverBoxY = referenceZ @ boxY
+  delta = Z*abs(referenceZOverBoxY)/(referenceZ @ boxZ)
 
   points = []
-  if (comparisonVector @ boxX.T) > 0:
+  if referenceZOverBoxY < 0:
     points.append(np.array([X/2, Y/2 - delta, Z/2,], dtype=float))
     points.append(np.array([X/2, Y/2, -Z/2,], dtype=float))
     points.append(np.array([X/2, -Y/2, -Z/2,], dtype=float))

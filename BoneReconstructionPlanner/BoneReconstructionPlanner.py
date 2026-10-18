@@ -5761,6 +5761,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           fibulaZ,
           highResolution = True
         )
+      # lowResolutionBiggerMiterBoxModels are used by algorithm that creates fibula guidebase
       lowResolutionBiggerMiterBoxModel, __unusedVar = createBox(
         biggerMiterBoxLength,
         biggerMiterBoxHeight,
@@ -5911,8 +5912,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           enc.SetInputData(rect_polydata)
           enc.Update()
           pts = rect_polydata.GetPoints()
-          for i in range(pts.GetNumberOfPoints()):
-            if enc.IsInside(i):
+          for j in range(pts.GetNumberOfPoints()):
+            if enc.IsInside(j):
               touchingBone = True
               break
 
@@ -5988,14 +5989,12 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         yFaceCenterOffset = 0.0
         if miterBoxesBoxType == "Adapted":
           # the adapted box has one of its local Z faces shifted by -delta along its local Y axis (see createAdaptedBox)
-          comparisonVector = np.cross(info["miterBoxAxisZ"], info["fibulaZ"])
-          comparisonNorm = np.linalg.norm(comparisonVector)
-          if comparisonNorm > 1e-6:
-            alpha = np.arccos(np.clip(info["miterBoxAxisZ"] @ info["fibulaZ"], -1.0, 1.0))
-            delta = info["biggerMiterBoxWidth"]*np.tan(alpha)
-            shiftedFaceSign = 1.0 if (comparisonVector/comparisonNorm) @ info["miterBoxAxisX"] > 0 else -1.0
-            if faceSign == shiftedFaceSign:
-              yFaceCenterOffset = -delta
+          miterBoxAxisY = np.cross(info["miterBoxAxisZ"], info["miterBoxAxisX"])
+          fibulaZOverMiterBoxAxisY = info["fibulaZ"] @ miterBoxAxisY
+          delta = info["biggerMiterBoxWidth"]*abs(fibulaZOverMiterBoxAxisY)/(info["fibulaZ"] @ info["miterBoxAxisZ"])
+          shiftedFaceSign = 1.0 if fibulaZOverMiterBoxAxisY < 0 else -1.0
+          if faceSign == shiftedFaceSign:
+            yFaceCenterOffset = -delta
         faceCenter = np.array([0.0, yFaceCenterOffset, info["zCenterOffset"] + faceSign*info["biggerMiterBoxWidth"]/2])
         faceNormal = np.array([0.0, 0.0, faceSign])
         textUp = np.array([0.0, 1.0, 0.0])
