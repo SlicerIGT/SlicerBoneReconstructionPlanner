@@ -145,16 +145,16 @@ qualified technician
 
 <table>
 <tr>
-<td align ="center">Teaser</td>
-<td align ="center">NEW Tutorial</td>
+<td align ="center" width="50%">Teaser</td>
+<td align ="center" width="50%">NEW Tutorial</td>
 </tr>
 <tr>
-<td align ="center"><img src="https://img.youtube.com/vi/VcRCMlewAes/0.jpg" width="500"/></td>
-<td align ="center"><img src="https://img.youtube.com/vi/YttOe_4no7k/0.jpg" width="500"/></td>
+<td align ="center" width="50%"><img src="https://img.youtube.com/vi/VcRCMlewAes/0.jpg" width="500"/></td>
+<td align ="center" width="50%"><img src="https://img.youtube.com/vi/YttOe_4no7k/0.jpg" width="500"/></td>
 </tr>
 <tr>
-<td align ="center">https://www.youtube.com/watch?v=VcRCMlewAes</td>
-<td align ="center">https://www.youtube.com/watch?v=FAH2Tbp9GTc&list=PLK3OXBXiUtxE&pp=0gcJCVMDOCosWNinsAgC</td>
+<td align ="center" width="50%"><a href="https://www.youtube.com/watch?v=VcRCMlewAes">Watch on YouTube</a></td>
+<td align ="center" width="50%"><a href="https://www.youtube.com/watch?v=FAH2Tbp9GTc&list=PLK3OXBXiUtxE&pp=0gcJCVMDOCosWNinsAgC">Watch on YouTube</a></td>
 </tr>
 </table>
 
