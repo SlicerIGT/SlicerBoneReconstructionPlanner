@@ -146,15 +146,15 @@ qualified technician
 <table>
 <tr>
 <td align ="center">Teaser</td>
-<td align ="center">Tutorial (will be soon redone)</td>
+<td align ="center">NEW Tutorial</td>
 </tr>
 <tr>
-<td align ="center"><img src="https://img.youtube.com/vi/wsr_g_1E_pw/0.jpg" width="500"/></td>
-<td align ="center"><img src="https://img.youtube.com/vi/g9Vql5h6uHM/0.jpg" width="500"/></td>
+<td align ="center"><img src="https://img.youtube.com/vi/VcRCMlewAes/0.jpg" width="500"/></td>
+<td align ="center"><img src="https://img.youtube.com/vi/YttOe_4no7k/0.jpg" width="500"/></td>
 </tr>
 <tr>
-<td align ="center">https://www.youtube.com/watch?v=wsr_g_1E_pw</td>
-<td align ="center">https://www.youtube.com/watch?v=g9Vql5h6uHM</td>
+<td align ="center">https://www.youtube.com/watch?v=VcRCMlewAes</td>
+<td align ="center">https://www.youtube.com/watch?v=FAH2Tbp9GTc&list=PLK3OXBXiUtxE&pp=0gcJCVMDOCosWNinsAgC</td>
 </tr>
 </table>
 
