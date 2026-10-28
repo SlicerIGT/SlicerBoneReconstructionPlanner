@@ -21,6 +21,8 @@ set(MODULE_PYTHON_RESOURCES
   Resources/Icons/axes.svg
   Resources/Icons/bone_48.svg
   Resources/Icons/construction_48.svg
+  Resources/Icons/experiment_48.svg
+  Resources/Icons/fibula_normalization_transform.png
   Resources/Icons/iconCTFibula.png
   Resources/Icons/iconCTFibulaCropped.png
   Resources/Icons/iconCTMandible.png
@@ -51,9 +53,22 @@ slicerMacroBuildScriptedModule(
 #-----------------------------------------------------------------------------
 if(BUILD_TESTING)
 
+  # Modules of the extensions we depend on are not loaded by default during testing,
+  # but the test scene needs them (e.g. MarkupsToModel nodes)
+  set(_dependency_module_paths)
+  foreach(_dependency SurfaceWrapSolidify MarkupsToModel Sandbox Telemetry)
+    foreach(_modules_dir ${Slicer_QTLOADABLEMODULES_LIB_DIR} ${Slicer_QTSCRIPTEDMODULES_LIB_DIR})
+      if(EXISTS ${${_dependency}_DIR}/${_modules_dir})
+        list(APPEND _dependency_module_paths ${${_dependency}_DIR}/${_modules_dir})
+      endif()
+    endforeach()
+  endforeach()
+
   # Register the unittest subclass in the main script as a ctest.
   # Note that the test will also be available at runtime.
-  slicer_add_python_unittest(SCRIPT ${MODULE_NAME}.py)
+  slicer_add_python_unittest(SCRIPT ${MODULE_NAME}.py
+    SLICER_ARGS --additional-module-paths ${_dependency_module_paths}
+    )
 
   # Additional build-time testing
   add_subdirectory(Testing)
