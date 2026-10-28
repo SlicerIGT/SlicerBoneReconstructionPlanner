@@ -1,7 +1,5 @@
 import slicer
 import qt
-from DentalSegmentatorLib import PythonDependencyChecker
-from SlicerNNUNetLib import Parameter, InstallLogic, SegmentationLogic
 from typing import Optional
 from pathlib import Path
 
@@ -47,6 +45,8 @@ class DentalSegmentatorHelper:
         return
 
     def installAIDependenciesIfNeeded(self, forceReinstall=False):
+        from DentalSegmentatorLib import PythonDependencyChecker
+        from SlicerNNUNetLib import InstallLogic
         print("Installing AI dependencies, this may take a while...")
         NNUnetlogic = InstallLogic()
         if forceReinstall:
@@ -118,6 +118,7 @@ class DentalSegmentatorHelper:
             print("torch module is not available. Please install it to use the AI segmentation features.")
             return
         
+        from SlicerNNUNetLib import Parameter, SegmentationLogic
         parameter = Parameter(
             folds="0", 
             modelPath=destWeightFolder.resolve(), 
