@@ -390,7 +390,7 @@ def getLineNorm(line):
   return np.linalg.norm(lineEndPos-lineStartPos)
 
 def createBox(X, Y, Z, name, defaultVisible = True, highResolution = True):
-  miterBox = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+  miterBox = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "tempName")
   miterBox.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
   slicer.mrmlScene.AddNode(miterBox)
   miterBox.CreateDefaultDisplayNodes()
@@ -415,7 +415,7 @@ def createBox(X, Y, Z, name, defaultVisible = True, highResolution = True):
   else:
     miterBox.SetPolyDataConnection(triangleFilter.GetOutputPort())
 
-  rectanglet = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+  rectanglet = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "tempName")
   rectanglet.SetName(slicer.mrmlScene.GetUniqueNameByString(name + "_rectanglet"))
   slicer.mrmlScene.AddNode(rectanglet)
   rectanglet.CreateDefaultDisplayNodes()
@@ -432,7 +432,7 @@ def createBox(X, Y, Z, name, defaultVisible = True, highResolution = True):
   return miterBox, rectanglet
 
 def createCylinder(name,R,H=50):
-  cylinder = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+  cylinder = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "tempName")
   cylinder.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
   slicer.mrmlScene.AddNode(cylinder)
   cylinder.CreateDefaultDisplayNodes()
@@ -1558,6 +1558,7 @@ def createAdaptedBox(X, Y, Z, name, boxX, boxZ, referenceZ, highResolution = Tru
 
 
   adaptedBoxModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+  adaptedBoxModel.UnRegister(None) # CreateNodeByClass returns an owned reference, release it to prevent a memory leak
   slicer.mrmlScene.AddNode(adaptedBoxModel)
   adaptedBoxModel.SetName(slicer.mrmlScene.GetUniqueNameByString(name))
   adaptedBoxModel.CreateDefaultDisplayNodes()
@@ -1592,6 +1593,7 @@ def createAdaptedBox(X, Y, Z, name, boxX, boxZ, referenceZ, highResolution = Tru
   rectpolydata.SetPolys(rectCellArray)
 
   rectangletModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+  rectangletModel.UnRegister(None) # CreateNodeByClass returns an owned reference, release it to prevent a memory leak
   slicer.mrmlScene.AddNode(rectangletModel)
   rectangletModel.SetName(slicer.mrmlScene.GetUniqueNameByString(name + "_rectanglet"))
   rectangletModel.CreateDefaultDisplayNodes()
@@ -1692,6 +1694,7 @@ def extractEachRegionAsAModel(polydata, baseName):
     regionPolyData = geometryFilter.GetOutput()
 
     regionModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+    regionModel.UnRegister(None) # CreateNodeByClass returns an owned reference, release it to prevent a memory leak
     slicer.mrmlScene.AddNode(regionModel)
     regionModel.SetName(slicer.mrmlScene.GetUniqueNameByString(f"{baseName}_region_{i}"))
     regionModel.CreateDefaultDisplayNodes()
