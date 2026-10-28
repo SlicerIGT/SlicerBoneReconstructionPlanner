@@ -4875,6 +4875,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       return "mandible"
 
   def setRedSliceForModelsDisplayNodes(self):
+    redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+    if redSliceNode is None:
+      # no slice views (e.g. running without main window)
+      return
+
     parameterNode = self.getParameterNode()
     boneOfCurrentScalarVolume = self.getBoneOfCurrentScalarVolume()
 
@@ -4890,7 +4895,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibleBridgeTube = parameterNode.GetNodeReference("mandibleBridgeTube")
     biggerSawBoxesModelsList = createListFromFolderName("biggerSawBoxes Models")
     biggerMiterBoxesList = createListFromFolderName("biggerMiterBoxes Models")
-    redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
 
     fibulaModelsList = cutBonesList[0:-1] + transformedMandiblePiecesList + transformedFullMandiblesList + [fibulaSurgicalGuideBase] + biggerMiterBoxesList
     mandibleModelsList = cutBonesList[-1:] + transformedFibulaPiecesList + cutMandiblePiecesList + [interCondylarBeamBox, mandibleBridgeTube, mandibleSurgicalGuideBase, bothSidesMandibleGuideBaseModel] + biggerSawBoxesModelsList
@@ -4921,6 +4925,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         displayNode.AddViewNodeID(redSliceNode.GetID())
 
   def setRedSliceForMarkupsDisplayNodes(self):
+    redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
+    if redSliceNode is None:
+      # no slice views (e.g. running without main window)
+      return
+
     parameterNode = self.getParameterNode()
     boneOfCurrentScalarVolume = self.getBoneOfCurrentScalarVolume()
 
@@ -4940,7 +4949,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     mandibularPlanesList = []
     sawBoxesPlanesList = createListFromFolderName("sawBoxes Planes")
     dentalImplantsPlanesList = createListFromFolderName("dentalImplants Planes")
-    redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
 
     fibulaMarkupsList = [fibulaLine, fibulaFiducialList, miterBoxDirectionLine] + fibulaPlanesList
     mandibleMarkupsList = (
