@@ -238,6 +238,10 @@ def setLightingMode(renderingMode = "Lamp"):
   """
   Select rendering mode
   """
+  layoutManager = slicer.app.layoutManager()
+  if layoutManager is None:
+    # no views to light (e.g. running without main window)
+    return
   try:
     lightsLogic = slicer.modules.lights.widgetRepresentation().self().logic
   except:
@@ -247,9 +251,12 @@ def setLightingMode(renderingMode = "Lamp"):
       dontShowAgainSettingsKey = "BRP/MissingSandboxExtension"
     )
     return
+  layoutViewNodes = [layoutManager.threeDWidget(i).mrmlViewNode() for i in range(layoutManager.threeDViewCount)]
   viewNodesList = slicer.util.getNodesByClass("vtkMRMLViewNode")
   for viewNode in viewNodesList:
-    lightsLogic.addManagedView(viewNode)
+    # the Lights module can only light views that are shown in the layout
+    if viewNode.IsA("vtkMRMLVirtualRealityViewNode") or viewNode in layoutViewNodes:
+      lightsLogic.addManagedView(viewNode)
   if renderingMode == "Lamp":
     lightsLogic.setUseLightKit(False)
     lightsLogic.setSingleLightIntensity(1.0)
