@@ -2871,9 +2871,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     mandibularCurve = parameterNode.GetNodeReference("mandibleCurve")
     if mandibularCurve is None:
-      mandibularCurve = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
-      mandibularCurve.SetName("temp")
-      slicer.mrmlScene.AddNode(mandibularCurve)
+      mandibularCurve = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode", "temp")
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibularCurve)
       mandibularCurve.SetAttribute("isMandibleCurve","True")
       moveNodeToFolder(mandibularCurve, getFolder("BoneReconstructionPlanner"))
@@ -2910,9 +2908,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     if fibulaLine is None:
-      fibulaLine = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
-      fibulaLine.SetName("temp")
-      slicer.mrmlScene.AddNode(fibulaLine)
+      fibulaLine = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode", "temp")
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaLine)
       fibulaLine.SetAttribute("isFibulaLine","True")
       moveNodeToFolder(fibulaLine, getFolder("BoneReconstructionPlanner"))
@@ -2963,9 +2959,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     interCondylarBeamLine = parameterNode.GetNodeReference("interCondylarBeamLine")
     if interCondylarBeamLine is None:
-      interCondylarBeamLine = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+      interCondylarBeamLine = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode")
       interCondylarBeamLine.SetName("temp")
-      slicer.mrmlScene.AddNode(interCondylarBeamLine)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(interCondylarBeamLine)
       interCondylarBeamLine.SetAttribute("isInterCondylarBeamLine","True")
       moveNodeToFolder(interCondylarBeamLine, getFolder("BoneReconstructionPlanner"))
@@ -3003,9 +2998,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     miterBoxDirectionLine = parameterNode.GetNodeReference("miterBoxDirectionLine")
     if miterBoxDirectionLine is None:
-      miterBoxDirectionLine = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+      miterBoxDirectionLine = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode")
       miterBoxDirectionLine.SetName("temp")
-      slicer.mrmlScene.AddNode(miterBoxDirectionLine)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(miterBoxDirectionLine)
       miterBoxDirectionLine.SetAttribute("isMiterBoxDirectionLine","True")
       moveNodeToFolder(miterBoxDirectionLine, getFolder("BoneReconstructionPlanner"))
@@ -3043,9 +3037,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     fibulaFiducialList = parameterNode.GetNodeReference("fibulaFiducialList")
     if fibulaFiducialList is None:
-      fibulaFiducialList = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")
+      fibulaFiducialList = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
       fibulaFiducialList.SetName("temp")
-      slicer.mrmlScene.AddNode(fibulaFiducialList)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(fibulaFiducialList)
       fibulaFiducialList.SetAttribute("isFibulaFiducials","True")
       moveNodeToFolder(fibulaFiducialList, getFolder("BoneReconstructionPlanner"))
@@ -3083,9 +3076,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     mandibleFiducialList = parameterNode.GetNodeReference("mandibleFiducialList")
     if mandibleFiducialList is None:
-      mandibleFiducialList = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")
+      mandibleFiducialList = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
       mandibleFiducialList.SetName("temp")
-      slicer.mrmlScene.AddNode(mandibleFiducialList)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibleFiducialList)
       mandibleFiducialList.SetAttribute("isMandibleFiducials","True")
       moveNodeToFolder(mandibleFiducialList, getFolder("BoneReconstructionPlanner"))
@@ -3123,9 +3115,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     mandibleBridgeCurve = parameterNode.GetNodeReference("mandibleBridgeCurve")
     if mandibleBridgeCurve is None:
-      mandibleBridgeCurve = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
+      mandibleBridgeCurve = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
       mandibleBridgeCurve.SetName("temp")
-      slicer.mrmlScene.AddNode(mandibleBridgeCurve)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(mandibleBridgeCurve)
       mandibleBridgeCurve.SetAttribute("isMandibleBridgeCurve","True")
       moveNodeToFolder(mandibleBridgeCurve, getFolder("BoneReconstructionPlanner"))
@@ -3163,9 +3154,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     leftSideMandibleGuideBaseCurve = parameterNode.GetNodeReference("leftSideMandibleGuideBaseCurve")
     if leftSideMandibleGuideBaseCurve is None:
-      leftSideMandibleGuideBaseCurve = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsClosedCurveNode")
+      leftSideMandibleGuideBaseCurve = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsClosedCurveNode")
       leftSideMandibleGuideBaseCurve.SetName("temp")
-      slicer.mrmlScene.AddNode(leftSideMandibleGuideBaseCurve)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(leftSideMandibleGuideBaseCurve)
       leftSideMandibleGuideBaseCurve.SetAttribute("isLeftSideMandibleGuideBaseCurve","True")
       moveNodeToFolder(leftSideMandibleGuideBaseCurve, getFolder("BoneReconstructionPlanner"))
@@ -3203,9 +3193,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     parameterNode = self.getParameterNode()
     rightSideMandibleGuideBaseCurve = parameterNode.GetNodeReference("rightSideMandibleGuideBaseCurve")
     if rightSideMandibleGuideBaseCurve is None:
-      rightSideMandibleGuideBaseCurve = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsClosedCurveNode")
+      rightSideMandibleGuideBaseCurve = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsClosedCurveNode")
       rightSideMandibleGuideBaseCurve.SetName("temp")
-      slicer.mrmlScene.AddNode(rightSideMandibleGuideBaseCurve)
       slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(rightSideMandibleGuideBaseCurve)
       rightSideMandibleGuideBaseCurve.SetAttribute("isRightSideMandibleGuideBaseCurve","True")
       moveNodeToFolder(rightSideMandibleGuideBaseCurve, getFolder("BoneReconstructionPlanner"))
@@ -3261,9 +3250,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     if mandibleBridgeTube is None:
       # create the placeholder model
-      mandibleBridgeTube = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+      mandibleBridgeTube = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
       mandibleBridgeTube.SetName("temp")
-      slicer.mrmlScene.AddNode(mandibleBridgeTube)
       mandibleBridgeTube.CreateDefaultDisplayNodes()
       parentFolder = getFolder("Mandible reconstruction")
       moveNodeToFolder(mandibleBridgeTube, parentFolder)
@@ -3408,9 +3396,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       colorIndex = 0
       parameterNode.SetParameter("colorIndex", str(colorIndex))
 
-    planeNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsPlaneNode")
+    planeNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode")
     planeNode.SetName("temp")
-    slicer.mrmlScene.AddNode(planeNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeNode)
     parentFolder = getFolder("Mandibular planes")
     moveNodeToFolder(planeNode, parentFolder)
@@ -3483,9 +3470,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     if interCondylarBeamBox is None:
       # create the placeholder model
-      interCondylarBeamBox = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+      interCondylarBeamBox = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
       interCondylarBeamBox.SetName("temp")
-      slicer.mrmlScene.AddNode(interCondylarBeamBox)
       interCondylarBeamBox.CreateDefaultDisplayNodes()
       parentFolder = getFolder("Mandible reconstruction")
       moveNodeToFolder(interCondylarBeamBox, parentFolder)
@@ -3733,9 +3719,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     bothSidesMandibleGuideBaseModel = parameterNode.GetNodeReference("bothSidesMandibleGuideBaseModel")
     if bothSidesMandibleGuideBaseModel is None:
       # create the placeholder model
-      bothSidesMandibleGuideBaseModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+      bothSidesMandibleGuideBaseModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
       bothSidesMandibleGuideBaseModel.SetName("temp")
-      slicer.mrmlScene.AddNode(bothSidesMandibleGuideBaseModel)
       bothSidesMandibleGuideBaseModel.CreateDefaultDisplayNodes()
       parentFolder = getFolder("Mandible reconstruction")
       moveNodeToFolder(bothSidesMandibleGuideBaseModel, parentFolder)
@@ -4317,9 +4302,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           getIntersectionPointsOfEachModelByMode(intersectionA,intersectionB,mode)
         )
 
-        lineNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsLineNode")
+        lineNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode")
         lineNode.SetName("S%d" %i)
-        slicer.mrmlScene.AddNode(lineNode)
         slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(lineNode)
         moveNodeToFolder(lineNode, fibulaSegmentsLengthsFolders[mode])
 
@@ -4469,9 +4453,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       cutVesselsFolder = getFolder("Cut Vessels", reset = True)
 
       for i in range(0,len(fibulaPlanesList),2):
-        modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+        modelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
         modelNode.SetName("Fibula Segment {0}A-{1}B".format(i//2,i//2))
-        slicer.mrmlScene.AddNode(modelNode)
         modelNode.CreateDefaultDisplayNodes()
         modelDisplayNode = modelNode.GetDisplayNode()
         modelDisplayNode.SetVisibility2D(True)
@@ -4503,9 +4486,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       
       if vesselsModelNode:
         for i in range(0,len(fibulaPlanesList),2):
-          modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+          modelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
           modelNode.SetName("Vessels Segment {0}A-{1}B".format(i//2,i//2))
-          slicer.mrmlScene.AddNode(modelNode)
           modelNode.CreateDefaultDisplayNodes()
           modelDisplayNode = modelNode.GetDisplayNode()
           modelDisplayNode.SetVisibility2D(True)
@@ -4535,9 +4517,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
           moveNodeToFolder(dynamicModelerNode, vesselsPlaneCutsFolder)
           moveNodeToFolder(modelNode, cutVesselsFolder)
       
-      modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+      modelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
       modelNode.SetName("Resected mandible")
-      slicer.mrmlScene.AddNode(modelNode)
       modelNode.CreateDefaultDisplayNodes()
       modelDisplayNode = modelNode.GetDisplayNode()
       modelDisplayNode.SetVisibility2D(True)
@@ -4580,9 +4561,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         mandibleCentroidZ = parameterNode.GetParameter("mandibleCentroidZ")
         mandibleCentroid = np.array([float(mandibleCentroidX),float(mandibleCentroidY),float(mandibleCentroidZ)])
 
-        planeToFixCutGoesThroughTheMandibleTwice = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsPlaneNode")
+        planeToFixCutGoesThroughTheMandibleTwice = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode")
         planeToFixCutGoesThroughTheMandibleTwice.SetName("planeToFixCutGoesThroughTheMandibleTwice")
-        slicer.mrmlScene.AddNode(planeToFixCutGoesThroughTheMandibleTwice)
         slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(planeToFixCutGoesThroughTheMandibleTwice)
         parentFolder = getFolder("Mandible reconstruction")
         moveNodeToFolder(planeToFixCutGoesThroughTheMandibleTwice, parentFolder)
@@ -4656,16 +4636,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       qt.QTimer.singleShot(0, lambda: setFolderItemVisibility(fullMandiblesFolder, 0))
 
       for i in range(len(planeList)-1):
-        modelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+        modelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
         modelNode.SetName("Mandible Segment {0}".format(i))
-        slicer.mrmlScene.AddNode(modelNode)
         modelNode.CreateDefaultDisplayNodes()
         modelDisplayNode = modelNode.GetDisplayNode()
         modelDisplayNode.SetVisibility2D(True)
 
-        fullModelNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
+        fullModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
         fullModelNode.SetName("Mandible {0}".format(i))
-        slicer.mrmlScene.AddNode(fullModelNode)
         fullModelNode.CreateDefaultDisplayNodes()
         fullModelDisplayNode = fullModelNode.GetDisplayNode()
         fullModelDisplayNode.SetVisibility2D(True)
@@ -6184,9 +6162,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def createDentalImplantCylindersFiducialList(self):
     dentalImplantCylindersFiducialsListsFolder = getFolder("Dental Implants Cylinders Fiducials", reset = True)
     
-    dentalImplantFiducialListNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsFiducialNode")
+    dentalImplantFiducialListNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
     dentalImplantFiducialListNode.SetName("temp")
-    slicer.mrmlScene.AddNode(dentalImplantFiducialListNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(dentalImplantFiducialListNode)
     moveNodeToFolder(dentalImplantFiducialListNode, dentalImplantCylindersFiducialsListsFolder)
     dentalImplantFiducialListNode.SetName(slicer.mrmlScene.GetUniqueNameByString("dentalImplantCylindersFiducialsList"))
@@ -6376,9 +6353,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     #create noCapsTransformedFibulaPieces
     for i in range(len(transformedFibulaPiecesList)):
-      noCapsTransformedFibulaPiece = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+      noCapsTransformedFibulaPiece = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode')
       noCapsTransformedFibulaPiece.SetName(f"noCapsTransformedFibulaPiece {i}")
-      slicer.mrmlScene.AddNode(noCapsTransformedFibulaPiece)
       noCapsTransformedFibulaPiece.CreateDefaultDisplayNodes()
       noCapsTransformedFibulaPiece.GetDisplayNode().SetVisibility(False)
 
@@ -7473,17 +7449,15 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     textToBoxTransformFilter.SetTransform(textToBoxTransform)
     textToBoxTransformFilter.Update()
 
-    textLabelModel = slicer.mrmlScene.CreateNodeByClass('vtkMRMLModelNode')
+    textLabelModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode')
     textLabelModel.SetName(slicer.mrmlScene.GetUniqueNameByString(modelName))
-    slicer.mrmlScene.AddNode(textLabelModel)
     textLabelModel.CreateDefaultDisplayNodes()
     textLabelModel.SetAndObservePolyData(textToBoxTransformFilter.GetOutput())
     return textLabelModel
 
   def createPlateCurve(self):
-    curveNode = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
+    curveNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
     curveNode.SetName("temp")
-    slicer.mrmlScene.AddNode(curveNode)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(curveNode)
     moveNodeToFolder(curveNode, getFolder("BoneReconstructionPlanner"))
     curveNode.SetName(slicer.mrmlScene.GetUniqueNameByString("plateCurve"))
@@ -7584,9 +7558,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
 
     #Resample input curve
-    plateCurveResampled = slicer.mrmlScene.CreateNodeByClass("vtkMRMLMarkupsCurveNode")
+    plateCurveResampled = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
     plateCurveResampled.SetName("plateCurveResampled")
-    slicer.mrmlScene.AddNode(plateCurveResampled)
     slicer.modules.markups.logic().AddNewDisplayNodeForMarkupsNode(plateCurveResampled)
 
     points = vtk.vtkPoints()
@@ -7751,8 +7724,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     triangleFilter.SetInputData(polydata)
     triangleFilter.Update()
 
-    extrusionModel = slicer.mrmlScene.CreateNodeByClass("vtkMRMLModelNode")
-    slicer.mrmlScene.AddNode(extrusionModel)
+    extrusionModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
     extrusionModel.SetName(slicer.mrmlScene.GetUniqueNameByString('customTitaniumPlatePrototype'))
     extrusionModel.CreateDefaultDisplayNodes()
     extrusionModel.SetAndObservePolyData(triangleFilter.GetOutput())
