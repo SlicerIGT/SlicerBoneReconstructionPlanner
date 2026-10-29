@@ -15,9 +15,16 @@
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) 
 [![DOI: 10.1016/j.stlm.2023.100109](https://img.shields.io/badge/DOI-10.1016/j.stlm.2023.100109-blue.svg)](https://www.sciencedirect.com/science/article/pii/S2666964123000103)
 [![Citations on Semantic Scholar](https://img.shields.io/badge/dynamic/json?label=Citations&query=%24.citationCount&url=https%3A%2F%2Fapi.semanticscholar.org%2Fgraph%2Fv1%2Fpaper%2FDOI%3A10.1016%2Fj.stlm.2023.100109%3Ffields%3DcitationCount)](https://www.sciencedirect.com/science/article/pii/S2666964123000103#section-cited-by)
-[![forks - badge-generator](https://img.shields.io/github/forks/SlicerIGT/SlicerBoneReconstructionPlanner?style=social)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/fork)
-[![stars - badge-generator](https://img.shields.io/github/stars/SlicerIGT/SlicerBoneReconstructionPlanner?style=social)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/stargazers)
+[![Video tutorial](https://img.shields.io/badge/YouTube-Tutorial-red?logo=youtube)](https://www.youtube.com/playlist?list=PLK3OXBXiUtxE)
+[![GitHub forks](https://img.shields.io/github/forks/SlicerIGT/SlicerBoneReconstructionPlanner?style=social)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/fork)
+[![GitHub stars](https://img.shields.io/github/stars/SlicerIGT/SlicerBoneReconstructionPlanner?style=social)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/stargazers)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/SlicerIGT/SlicerBoneReconstructionPlanner/total)
+[![Tests pass?](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fslicer.cdash.org%2Fapi%2Fv1%2Findex.php%3Fproject%3DSlicerStable%26filtercount%3D2%26filtercombine%3Dand%26field1%3Dbuildname%26compare1%3D63%26value1%3DBoneReconstructionPlanner%26field2%3Dbuildstarttime%26compare2%3D83%26value2%3D-7%2520days&query=%24.buildgroups%5B0%5D.builds%5B-1%3A%5D.test.fail&label=Tests%20pass%3F&suffix=%20failed)](https://slicer.cdash.org/index.php?project=SlicerStable&filtercount=1&showfilters=1&field1=buildname&compare1=63&value1=BoneReconstructionPlanner)
+[![Last commit](https://img.shields.io/github/last-commit/SlicerIGT/SlicerBoneReconstructionPlanner)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/commits/main)
+[![Commit activity](https://img.shields.io/github/commit-activity/y/SlicerIGT/SlicerBoneReconstructionPlanner)](https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/graphs/commit-activity)
+[![Slicer Forum](https://img.shields.io/badge/Slicer_Forum-BRP_thread-blue?logo=discourse)](https://discourse.slicer.org/t/bone-reconstruction-planner/19289)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_a_Coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/mauigna06)
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub_Sponsors-mauigna06-EA4AAA?logo=githubsponsors)](https://github.com/sponsors/mauigna06)
 
 A [3D Slicer](https://www.slicer.org/) extension for virtual surgical planning of mandibular reconstruction with vascularized fibula free flap and generation of patient-specific surgical guides. 
 
