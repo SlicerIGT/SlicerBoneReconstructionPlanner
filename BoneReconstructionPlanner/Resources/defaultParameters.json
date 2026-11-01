@@ -74,6 +74,7 @@
     "kindOfMandibleResection": "Segmental Mandibulectomy",
     "lightingInterpolationMethod": "Gouraud",
     "lightingMode": "Lamp",
+    "booleanOperationsBackend": "kigumi",
     "mandibleSideToRemove": "Removing right side",
     "mandibularSegment": "",
     "vesselsSegment": "",

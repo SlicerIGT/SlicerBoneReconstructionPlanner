@@ -3066,6 +3066,39 @@ surgical guide</string>
              </property>
             </widget>
            </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_63">
+             <property name="text">
+              <string>Boolean operations backend</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="booleanOperationsBackendComboBox">
+             <property name="toolTip">
+              <string>Library that computes the boolean operations of the surgical guides and the reconstruction.
+kigumi: exact, from the Combine Models module of the Sandbox extension. It combines all the parts of a surgical guide or the reconstruction at once, rounding only the final result.
+CGAL: from the VESPA extension, runs in a separate process.
+vtkbool: from the Combine Models module of the Sandbox extension.
+If the selected backend is not installed or it fails, the others are tried in this order.</string>
+             </property>
+             <item>
+              <property name="text">
+               <string>kigumi</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>CGAL</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>vtkbool</string>
+              </property>
+             </item>
+            </widget>
+           </item>
            <item row="2" column="0">
             <widget class="QLabel" name="label_15">
              <property name="toolTip">

@@ -649,6 +649,13 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
     placeWidget.setDeleteAllControlPointsOptionVisible(False)
 
+    # booleanOperationsBackendComboBox
+    installedBackends = combineModelsRobustLogic.getInstalledBackends()
+    for i in range(self.ui.booleanOperationsBackendComboBox.count):
+      if self.ui.booleanOperationsBackendComboBox.itemText(i) not in installedBackends:
+        self.ui.booleanOperationsBackendComboBox.setItemData(
+          i, "Not installed, the next installed backend is used instead", qt.Qt.ToolTipRole)
+
     # Connections
 
     # These connections ensure that we update parameter node when scene is closed
@@ -778,6 +785,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.lightingModeComboBox.textActivated.connect(self.updateParameterNodeFromGUI)
     self.ui.lightingInterpolationMethodComboBox.textActivated.connect(self.updateParameterNodeFromGUI)
+    self.ui.booleanOperationsBackendComboBox.textActivated.connect(self.updateParameterNodeFromGUI)
+    self.ui.booleanOperationsBackendComboBox.textActivated.connect(self.onBooleanOperationsBackendComboBoxTextActivated)
     self.ui.restoreDefaultSettingsButton.connect('clicked(bool)', self.onRestoreDefaultSettingsButton)
     self.ui.overwriteDefaultSettingsButton.connect('clicked(bool)', self.onOverwriteDefaultSettingsButton)
 
@@ -797,6 +806,19 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     Install Head and Legs segmentation
     """
     self.logic.installAISegmentations()
+
+  def onBooleanOperationsBackendComboBoxTextActivated(self, backend):
+    """
+    Offer to install the VESPA extension if its CGAL backend is selected but not installed
+    """
+    if backend != "CGAL" or "CGAL" in combineModelsRobustLogic.getInstalledBackends():
+      return
+    if slicer.util.confirmYesNoDisplay(
+      "The CGAL backend is provided by the VESPA extension, which is not installed. "
+      "Until it is installed, the next installed backend is used instead.\n\n"
+      "Do you want to install the VESPA extension from the Extensions Manager now?",
+      windowTitle="Install VESPA extension"):
+      installVESPA()
 
   def onRunHeadSegmentationButton(self):
     """
@@ -1594,6 +1616,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     setLightingMode(self._parameterNode.GetParameter("lightingMode"))
     self.ui.lightingInterpolationMethodComboBox.currentText = self._parameterNode.GetParameter("lightingInterpolationMethod")
     setModelsLightingInterpolationMethod(self._parameterNode.GetParameter("lightingInterpolationMethod"))
+    self.ui.booleanOperationsBackendComboBox.currentText = self._parameterNode.GetParameter("booleanOperationsBackend")
 
     self.ui.makeModelsButton.enabled = (
       (self._parameterNode.GetNodeReference("mandibularSegmentation") is not None) and
@@ -1981,6 +2004,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     self._parameterNode.SetParameter("lightingInterpolationMethod", self.ui.lightingInterpolationMethodComboBox.currentText)
     self._parameterNode.SetParameter("lightingMode", self.ui.lightingModeComboBox.currentText)
+    self._parameterNode.SetParameter("booleanOperationsBackend", self.ui.booleanOperationsBackendComboBox.currentText)
+    self.logic.overwriteParameter("booleanOperationsBackend")
 
     self._parameterNode.EndModify(wasModified)
 
@@ -5676,7 +5701,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     enc.SetSurfaceData(fibulaModelNode.GetPolyData())
     enc.CheckSurfaceOff()   # skip surface-integrity check for speed
 
-    combineModelsLogic = combineModelsRobustLogic
+    booleanOperationsBackend = parameterNode.GetParameter("booleanOperationsBackend")
     biggerMiterBoxInfoList = []
     for i in range(len(fibulaPlanesList)):
       if useMoreExactVersionOfPositioningAlgorithmChecked:
@@ -5785,8 +5810,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if miterBoxesGuideType == "Slot":
         # previewMiterBoxes
         previewMiterBoxModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", previewMiterBoxName)
-        combineModelsLogic.process(
-          biggerMiterBoxModel, miterBoxModel, previewMiterBoxModel, 'difference'
+        combineModelsRobustLogic.makeBooleanOperation(
+          biggerMiterBoxModel, miterBoxModel, previewMiterBoxModel, 'difference',
+          backend = booleanOperationsBackend
         )
         previewMiterBoxDisplayNode = previewMiterBoxModel.GetDisplayNode()
         previewMiterBoxDisplayNode.AddViewNodeID(fibulaViewNode.GetID())
@@ -6590,7 +6616,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     fibulaTextLabelsModelsList = createListFromFolderName("fibulaTextLabels Models")
     fibulaTextLabelsMode = parameterNode.GetParameter("fibulaTextLabelsMode")
 
-    combineModelsLogic = combineModelsRobustLogic
+    booleanOperationsBackend = parameterNode.GetParameter("booleanOperationsBackend")
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(fibulaSurgicalGuideBaseModel.GetPolyData())
     surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('FibulaSurgicalGuidePrototype'))
@@ -6602,35 +6628,26 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     displayNode.AddViewNodeID(fibulaViewNode.GetID())
     displayNode.SetColor(slicer.THREE_D_PRINTABLE_OBJECT_COLOR)
 
-    for i in range(len(biggerMiterBoxesModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, biggerMiterBoxesModelsList[i], surgicalGuideModel, 'union')
-
+    modelsToUnite = list(biggerMiterBoxesModelsList)
     if fibulaTextLabelsMode == "Emboss":
-      for i in range(len(fibulaTextLabelsModelsList)):
-        combineModelsLogic.process(surgicalGuideModel, fibulaTextLabelsModelsList[i], surgicalGuideModel, 'union')
-
+      modelsToUnite += fibulaTextLabelsModelsList
     if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
-      for i in range(len(biggerFibulaDentalImplantsCylindersModelsList)):
-        combineModelsLogic.process(surgicalGuideModel, biggerFibulaDentalImplantsCylindersModelsList[i], surgicalGuideModel, 'union')
+      modelsToUnite += biggerFibulaDentalImplantsCylindersModelsList
 
-    for i in range(len(cylindersModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, cylindersModelsList[i], surgicalGuideModel, 'difference')
-
-    for i in range(len(miterBoxesModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, miterBoxesModelsList[i], surgicalGuideModel, 'difference')
-
+    modelsToSubtract = cylindersModelsList + miterBoxesModelsList
     if dentalImplantsPlanningAndFibulaDrillGuidesChecked:
-      for i in range(len(fibulaDentalImplantsCylindersModelsList)):
-        combineModelsLogic.process(surgicalGuideModel, fibulaDentalImplantsCylindersModelsList[i], surgicalGuideModel, 'difference')
-
+      modelsToSubtract += fibulaDentalImplantsCylindersModelsList
     if fibulaTextLabelsMode == "Engrave":
-      for i in range(len(fibulaTextLabelsModelsList)):
-        combineModelsLogic.process(surgicalGuideModel, fibulaTextLabelsModelsList[i], surgicalGuideModel, 'difference')
+      modelsToSubtract += fibulaTextLabelsModelsList
 
-    if (
-      surgicalGuideModel.GetPolyData().GetNumberOfPoints() <
-      fibulaSurgicalGuideBaseModel.GetPolyData().GetNumberOfPoints()
-    ):
+    combineModelsRobustLogic.makeMultiStepBooleanOperation(
+      [surgicalGuideModel] + modelsToUnite + modelsToSubtract,
+      ['union']*len(modelsToUnite) + ['difference']*len(modelsToSubtract),
+      surgicalGuideModel,
+      backend = booleanOperationsBackend
+    )
+
+    if surgicalGuideModel.GetPolyData().GetNumberOfPoints() == 0:
       slicer.mrmlScene.RemoveNode(surgicalGuideModel)
       slicer.util.errorDisplay("ERROR: Boolean operations to make fibula surgical guide failed")
       return
@@ -6719,7 +6736,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       bestFittingPlaneNormalOfCurvePoints *= -1
 
 
-    combineModelsLogic = combineModelsRobustLogic
+    booleanOperationsBackend = parameterNode.GetParameter("booleanOperationsBackend")
     for i in range(len(resectionPlanesList)):
       #sawBoxModel: the numbers are selected arbitrarily to make a box with the correct size then they'll be GUI set
       if i == 0:
@@ -6763,7 +6780,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if sawBoxesGuideType == "Slot":
         # previewSawBoxes
         previewSawBoxModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", previewSawBoxName)
-        combineModelsLogic.process(biggerSawBoxModel, sawBoxModel, previewSawBoxModel, 'difference')
+        combineModelsRobustLogic.makeBooleanOperation(biggerSawBoxModel, sawBoxModel, previewSawBoxModel, 'difference', backend = booleanOperationsBackend)
         previewSawBoxDisplayNode = previewSawBoxModel.GetDisplayNode()
         previewSawBoxDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
 
@@ -7051,7 +7068,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     sawBoxTextLabelsModelsList = createListFromFolderName("sawBoxTextLabels Models")
     mandibleTextLabelsMode = parameterNode.GetParameter("mandibleTextLabelsMode")
 
-    combineModelsLogic = combineModelsRobustLogic
+    booleanOperationsBackend = parameterNode.GetParameter("booleanOperationsBackend")
 
     surgicalGuideModel = slicer.modules.models.logic().AddModel(mandibleSurgicalGuideBaseModel.GetPolyData())
     surgicalGuideModel.SetName(slicer.mrmlScene.GetUniqueNameByString('MandibleSurgicalGuidePrototype'))
@@ -7065,28 +7082,25 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     self.filterOutUnconnectedModelPiecesAccordingToKindOfMandibleResection(surgicalGuideModel)
 
-    for i in range(len(biggerSawBoxesModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, biggerSawBoxesModelsList[i], surgicalGuideModel, 'union')
-
+    modelsToUnite = list(biggerSawBoxesModelsList)
     if mandibleTextLabelsMode == "Emboss":
-      for i in range(len(sawBoxTextLabelsModelsList)):
-        combineModelsLogic.process(surgicalGuideModel, sawBoxTextLabelsModelsList[i], surgicalGuideModel, 'union')
-
+      modelsToUnite += sawBoxTextLabelsModelsList
     if (
       mandibleBridgeModel and
       (kindOfMandibleResection == "Segmental Mandibulectomy")
     ):
-      combineModelsLogic.process(surgicalGuideModel, mandibleBridgeModel, surgicalGuideModel, 'union')
+      modelsToUnite.append(mandibleBridgeModel)
 
-    for i in range(len(cylindersModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, cylindersModelsList[i], surgicalGuideModel, 'difference')
-
-    for i in range(len(sawBoxesModelsList)):
-      combineModelsLogic.process(surgicalGuideModel, sawBoxesModelsList[i], surgicalGuideModel, 'difference')
-
+    modelsToSubtract = cylindersModelsList + sawBoxesModelsList
     if mandibleTextLabelsMode == "Engrave":
-      for i in range(len(sawBoxTextLabelsModelsList)):
-        combineModelsLogic.process(surgicalGuideModel, sawBoxTextLabelsModelsList[i], surgicalGuideModel, 'difference')
+      modelsToSubtract += sawBoxTextLabelsModelsList
+
+    combineModelsRobustLogic.makeMultiStepBooleanOperation(
+      [surgicalGuideModel] + modelsToUnite + modelsToSubtract,
+      ['union']*len(modelsToUnite) + ['difference']*len(modelsToSubtract),
+      surgicalGuideModel,
+      backend = booleanOperationsBackend
+    )
 
     if surgicalGuideModel.GetPolyData().GetNumberOfPoints() == 0:
       slicer.mrmlScene.RemoveNode(surgicalGuideModel)
@@ -7303,14 +7317,18 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     self.exportScaledFibulaPiecesForNeomandibleReconstructionToFolder(scaledFibulaPiecesFolder)
     scaledFibulaPiecesList = createListFromFolderName("Scaled Fibula Pieces")
 
-    combineModelsLogic = combineModelsRobustLogic
+    booleanOperationsBackend = parameterNode.GetParameter("booleanOperationsBackend")
     listOfObjectsToUnite = scaledFibulaPiecesList + [resectedMandible]
-    for i in range(len(listOfObjectsToUnite)):
-      combineModelsLogic.process(mandibleReconstructionModel, listOfObjectsToUnite[i], mandibleReconstructionModel, 'union')
     interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
     if interCondylarBeamBox is not None:
-      combineModelsLogic.process(mandibleReconstructionModel, interCondylarBeamBox, mandibleReconstructionModel, 'union')
-    
+      listOfObjectsToUnite.append(interCondylarBeamBox)
+    combineModelsRobustLogic.makeMultiStepBooleanOperation(
+      listOfObjectsToUnite,
+      ['union']*(len(listOfObjectsToUnite)-1),
+      mandibleReconstructionModel,
+      backend = booleanOperationsBackend
+    )
+
     removeFolder(scaledFibulaPiecesFolder)
 
     if mandibleReconstructionModel.GetPolyData().GetNumberOfPoints() == 0:

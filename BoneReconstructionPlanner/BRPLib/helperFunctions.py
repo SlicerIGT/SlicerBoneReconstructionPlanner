@@ -554,157 +554,160 @@ def getIntersectionPointsOfEachModelByMode(intersectionA,intersectionB,measureme
     return intersectionAtoBSimilarVectors[-1][2], intersectionAtoBSimilarVectors[-1][3]
   
 class combineModelsRobustLogic:
-  def process(
+  """
+  Boolean operations between model nodes with the CombineModels module (SlicerSandbox)
+  that fall back to the next installed backend when one fails.
+  """
+
+  def getInstalledBackends():
+    """
+    Return the backends installed in this Slicer, in order of priority: kigumi (exact),
+    CGAL (only if the VESPA extension is installed) and vtkbool (floating-point).
+    """
+    import CombineModels
+    return CombineModels.CombineModelsLogic.availableBackends()
+
+  def makeBooleanOperation(
       inputModelA,
       inputModelB,
       outputModel,
       operation,
-      numberOfRetries = 5,
-      translateRandomly = 3,
-      triangulateInputs = False
+      backend = "kigumi"
     ):
     """
     Run the processing algorithm.
     Can be used without GUI widget.
-    Primary implementation: the "BooleanOperation" (CGAL) CLI of the
-    SlicerVESPA extension. It is an executable-only CLI so it runs in a
-    separate process and exchanges data through files, keeping GPL-licensed
-    CGAL/VESPA code out of the Slicer process (and out of this extension's
-    BSD-3 licensing). Falls back to the CombineModels module (vtkbool, from
-    SlicerSandbox) when SlicerVESPA is not installed or its CLI fails.
+    Runs the selected backend first. If it is not installed or it fails, the other
+    installed backends are tried in order of priority (see getInstalledBackends()).
     :param inputModelA: first input model node
     :param inputModelB: second input model node
-    :param outputModel: result model node, if empty then a new output node will be created
+    :param outputModel: result model node, it may be one of the input models
     :param operation: union, intersection, difference, difference2
-    :param numberOfRetries: number of retries if operation fails (vtkbool fallback only)
-    :param translateRandomly: order of magnitude of the random translation (vtkbool fallback only)
-    :param triangulateInputs: triangulate input models before boolean operation
-      (vtkbool fallback only; the VESPA CLI repairs its inputs instead)
+    :param backend: kigumi, CGAL or vtkbool (empty to follow the order of priority)
     """
+    import CombineModels
+    logic = CombineModels.CombineModelsLogic()
+    backends = combineModelsRobustLogic.getBackendsInOrderOfFallback(backend)
 
-    if hasattr(slicer.modules, 'vespabooleanoperation'):
+    # The output model may be one of the inputs, so keep its polydata to undo failed attempts
+    originalOutputPolyData = outputModel.GetPolyData()
+    for backendIndex, currentBackend in enumerate(backends):
       try:
-        combineModelsRobustLogic.processWithVESPA(
-          inputModelA, inputModelB, outputModel, operation)
+        logic.process(
+          inputModelA,
+          inputModelB,
+          outputModel,
+          operation,
+          numberOfRetries = 5,
+          randomTranslationMagnitude = 3,
+          triangulateInputs = False,
+          backend = currentBackend
+        )
+        return
+      except Exception as e:
+        if backendIndex == len(backends) - 1:
+          raise
+        logging.exception(
+          f"{currentBackend} boolean operation failed, falling back to {backends[backendIndex+1]}: "
+          + str(e))
+        outputModel.SetAndObservePolyData(originalOutputPolyData)
+
+  def makeMultiStepBooleanOperation(
+      inputModels,
+      operations,
+      outputModel,
+      backend = "kigumi"
+    ):
+    """
+    Combine several models in order: the result is
+    (((inputModels[0] operations[0] inputModels[1]) operations[1] inputModels[2]) ...).
+    If kigumi is the backend that runs first, all the steps are computed at once by the
+    vtkKigumiBooleanSequenceFilter of the CombineModels module, which keeps intermediate
+    results exact and only rounds the final one. Otherwise, or if that fails, the steps
+    are run one by one with makeBooleanOperation(), which falls back to the other
+    installed backends.
+    :param inputModels: list of input model nodes, the first one may be outputModel
+    :param operations: list of len(inputModels)-1 operations, each of them union, intersection,
+      difference (result of the previous steps minus the model) or difference2 (the model
+      minus the result). Without operations, outputModel is left unchanged
+    :param outputModel: result model node
+    :param backend: kigumi, CGAL or vtkbool (empty to follow the order of priority)
+    """
+    if len(operations) != len(inputModels) - 1:
+      raise ValueError(
+        f"Expected {len(inputModels) - 1} operations for {len(inputModels)} input models, got {len(operations)}")
+    if not operations:
+      return
+
+    backends = combineModelsRobustLogic.getBackendsInOrderOfFallback(backend)
+
+    if backends[0] == "kigumi":
+      import CombineModels
+      # The output model may be the first input, so keep its polydata to undo a failed attempt
+      originalOutputPolyData = outputModel.GetPolyData()
+      try:
+        CombineModels.CombineModelsLogic().processSteps(inputModels, operations, outputModel)
         return
       except Exception as e:
         logging.exception(
-          "VESPA (CGAL) boolean operation failed, falling back to CombineModels (vtkbool): "
-          + str(e))
+          "kigumi multi-step boolean operation failed, running the steps one by one: " + str(e))
+        outputModel.SetAndObservePolyData(originalOutputPolyData)
 
-    logic = slicer.modules.combinemodels.widgetRepresentation().self().logic
-    logic.process(
-      inputModelA,
-      inputModelB,
-      outputModel,
-      operation,
-      numberOfRetries,
-      translateRandomly,
-      triangulateInputs
-    )
+    for stepIndex, operation in enumerate(operations):
+      combineModelsRobustLogic.makeBooleanOperation(
+        inputModels[0] if stepIndex == 0 else outputModel,
+        inputModels[stepIndex+1],
+        outputModel,
+        operation,
+        backend = backends[0]
+      )
 
-  # The VESPA CLI only implements difference, intersection and union, and its
-  # difference is firstPoly minus secondPoly (CGAL corefine_and_compute_difference),
-  # so difference2 is the same operation with the operands swapped
-  VESPA_OPERATIONS = {
-    "union": ("union", False),
-    "intersection": ("intersection", False),
-    "difference": ("difference", False),
-    "difference2": ("difference", True),
-  }
+  # Helpers
 
-  def processWithVESPA(
-      inputModelA,
-      inputModelB,
-      outputModel,
-      operation,
-      repairInputs = True
-    ):
+  def getBackendsInOrderOfFallback(backend):
     """
-    Run one boolean operation with the SlicerVESPA CLI (separate process).
-    Raises RuntimeError if the CLI does not complete successfully.
-    :param repairInputs: let the CLI rebuild both operands into closed,
-      non-self-intersecting 2-manifolds first. CGAL corefinement fails on
-      invalid inputs, so only disable this for meshes known to be valid.
+    Return the installed backends in the order they are tried: backend first,
+    then the others in order of priority.
+    :param backend: kigumi, CGAL or vtkbool (empty to follow the order of priority)
     """
-    if operation not in combineModelsRobustLogic.VESPA_OPERATIONS:
-      raise ValueError("Invalid operation: " + operation)
-    cliOperation, swapOperands = combineModelsRobustLogic.VESPA_OPERATIONS[operation]
+    backends = combineModelsRobustLogic.getInstalledBackends()
+    if not backends:
+      raise RuntimeError("No boolean operation backend is installed. Please install the Sandbox extension")
+    if backend in backends:
+      backends.remove(backend)
+      backends.insert(0, backend)
+    elif backend:
+      # An empty backend (plans saved before it could be selected) keeps the order of priority
+      logging.warning(
+        f"Boolean operation backend {backend} is not installed, using {backends[0]} instead")
+    return backends
 
-    # The CLI reads each node's stored mesh, ignoring parent transform nodes,
-    # so bake the transform of each input into the output model's frame first
-    # (same semantics as the CombineModels module)
-    temporaryInputModels = []
-    cliNode = None
-    try:
-      cliInputModels = []
-      for inputModel in [inputModelA, inputModelB]:
-        transformToOutput = vtk.vtkGeneralTransform()
-        slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(
-          inputModel.GetParentTransformNode(), outputModel.GetParentTransformNode(),
-          transformToOutput)
-        transformerToOutput = vtk.vtkTransformPolyDataFilter()
-        transformerToOutput.SetTransform(transformToOutput)
-        transformerToOutput.SetInputData(inputModel.GetPolyData())
-        transformerToOutput.Update()
-        temporaryInputModel = slicer.mrmlScene.AddNewNodeByClass(
-          'vtkMRMLModelNode', slicer.mrmlScene.GetUniqueNameByString('temp_' + inputModel.GetName()))
-        temporaryInputModel.SetHideFromEditors(True)
-        temporaryInputModel.SetAndObservePolyData(transformerToOutput.GetOutput())
-        temporaryInputModels.append(temporaryInputModel)
-        cliInputModels.append(temporaryInputModel)
-
-      # Empty inputs would make the CLI fail; resolve those cases directly
-      # (same rules as the CombineModels module)
-      polydataA = cliInputModels[0].GetPolyData()
-      polydataB = cliInputModels[1].GetPolyData()
-      modelAEmpty = polydataA.GetNumberOfPoints() == 0
-      modelBEmpty = polydataB.GetNumberOfPoints() == 0
-      if modelAEmpty or modelBEmpty:
-        if operation == "union":
-          result = vtk.vtkPolyData()
-          if not modelAEmpty:
-            result.DeepCopy(polydataA)
-          elif not modelBEmpty:
-            result.DeepCopy(polydataB)
-        elif operation == "intersection":
-          result = vtk.vtkPolyData()
-        elif operation == "difference":
-          result = vtk.vtkPolyData()
-          if not modelAEmpty and modelBEmpty:
-            result.DeepCopy(polydataA)
-        elif operation == "difference2":
-          result = vtk.vtkPolyData()
-          if not modelBEmpty and modelAEmpty:
-            result.DeepCopy(polydataB)
-        outputModel.SetAndObservePolyData(result)
-        if outputModel.GetDisplayNode() is None:
-          outputModel.CreateDefaultDisplayNodes()
-        return
-
-      if swapOperands:
-        cliInputModels.reverse()
-
-      parameters = {
-        "firstPoly": cliInputModels[0],
-        "secondPoly": cliInputModels[1],
-        "output": outputModel,
-        "operation": cliOperation,
-        "repairInputs": repairInputs,
-      }
-      cliNode = slicer.cli.runSync(slicer.modules.vespabooleanoperation, None, parameters)
-      if cliNode.GetStatus() & cliNode.ErrorsMask:
-        errorText = cliNode.GetErrorText()
-        raise RuntimeError("VESPA BooleanOperation CLI failed: " + errorText)
-    finally:
-      if cliNode is not None:
-        slicer.mrmlScene.RemoveNode(cliNode)
-      for temporaryInputModel in temporaryInputModels:
-        slicer.mrmlScene.RemoveNode(temporaryInputModel)
-    # Callers use the display node right after process(); the CombineModels
-    # module guaranteed one, so keep that behavior
-    if outputModel.GetDisplayNode() is None:
-      outputModel.CreateDefaultDisplayNodes()
+def installVESPA():
+  """
+  Install the VESPA extension, which provides the CGAL boolean operations backend,
+  and offer to restart Slicer. Ask for confirmation before calling it.
+  """
+  extensionsManagerModel = (
+    slicer.app.extensionsManagerModel() if hasattr(slicer.app, 'extensionsManagerModel') else None)
+  if extensionsManagerModel is None or not hasattr(extensionsManagerModel, 'installExtensionFromServer'):
+    slicer.util.infoDisplay("Please install the VESPA extension from the Extensions Manager and restart Slicer")
+    return
+  # The installation was already confirmed, so the Extensions Manager should not ask again
+  wasInteractive = extensionsManagerModel.interactive
+  extensionsManagerModel.interactive = False
+  try:
+    installed = extensionsManagerModel.installExtensionFromServer("VESPA", False)  # restart=False
+  finally:
+    extensionsManagerModel.interactive = wasInteractive
+  if not installed:
+    slicer.util.errorDisplay(
+      "Failed to install the VESPA extension. Please install it from the Extensions Manager and restart Slicer")
+    return
+  if slicer.util.confirmYesNoDisplay(
+    "The VESPA extension was installed. Slicer must be restarted to use the CGAL backend.\n\n"
+    "Do you want to restart Slicer now?",
+    windowTitle="Restart Slicer"):
+    slicer.util.restart()
 
 def saveExecutedMethodWithTelemetry(method):
     PREVIEW_RELEASE_OCTOBER_6TH_2024 = 33047
