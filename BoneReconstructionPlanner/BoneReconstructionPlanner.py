@@ -146,7 +146,7 @@ def registerSampleData():
     # Download URL and target file name
     uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP.mrb",
     fileNames='TestPlanBRP.mrb',
-    checksums = 'SHA256:92ace5d23218e74a7deb04f78afa22e49ed98be6951ef4202ac9f26a8f79190b',
+    checksums = 'SHA256:199a78c9f6bcb2bcd28808a55cf456bfb20009c930448fcef9ad7e500e2382af',
     # This node name will be used when the data set is loaded
     nodeNames='TestPlanBRP'
   )
