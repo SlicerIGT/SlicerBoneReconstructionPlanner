@@ -1124,7 +1124,7 @@ segments lengths</string>
             </sizepolicy>
            </property>
            <property name="toolTip">
-            <string>Play Virtual Surgical Plan animation</string>
+            <string>Lock the plan to enable this feature</string>
            </property>
            <property name="text">
             <string/>
@@ -1143,7 +1143,7 @@ segments lengths</string>
             </sizepolicy>
            </property>
            <property name="toolTip">
-            <string>Export Virtual Surgical Plan animation as a MP4 video</string>
+            <string>Lock the plan to enable this feature</string>
            </property>
            <property name="text">
             <string/>
@@ -1153,7 +1153,7 @@ segments lengths</string>
          <item>
           <widget class="QComboBox" name="vspAnimationModeComboBox">
            <property name="toolTip">
-            <string>Virtual Surgical Plan animation mode. Schematic: plain models. Realistic: operating room background, bone and vessel textures, and head and leg dissections from the CTs</string>
+            <string>Lock the plan to enable this feature</string>
            </property>
            <item>
             <property name="text">

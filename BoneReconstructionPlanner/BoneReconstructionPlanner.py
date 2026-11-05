@@ -1717,8 +1717,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     lockVSPChecked = self._parameterNode.GetParameter("lockVSP") == "True"
     if self.vspAnimation and self.vspAnimation.playing and not lockVSPChecked:
       self.vspAnimation.stop(restore=True)
-    self.ui.playVSPAnimationButton.enabled = lockVSPChecked
-    self.ui.exportVSPAnimationButton.enabled = lockVSPChecked
+    self.updateVSPAnimationWidgetsEnabledStateAndToolTips()
     self.ui.vspAnimationModeComboBox.currentText = self._parameterNode.GetParameter("vspAnimationMode")
 
     showMandiblePlanesChecked = self._parameterNode.GetParameter("showMandiblePlanes") == "True"
@@ -2219,10 +2218,43 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     button.checked = playing
     standardPixmap = qt.QStyle.SP_MediaStop if playing else qt.QStyle.SP_MediaPlay
     button.setIcon(button.style().standardIcon(standardPixmap))
-    button.toolTip = "Stop Virtual Surgical Plan animation" if playing else "Play Virtual Surgical Plan animation"
     button.blockSignals(wasBlockingSignals)
-    # The animation mode can only be changed while the animation is not playing
-    self.ui.vspAnimationModeComboBox.enabled = not playing
+    self.updateVSPAnimationWidgetsEnabledStateAndToolTips()
+
+  def updateVSPAnimationWidgetsEnabledStateAndToolTips(self):
+    """
+    Enable the VSP animation widgets only while the plan is locked and set their tooltips accordingly
+    """
+    lockVSPChecked = (
+      self._parameterNode is not None and
+      self._parameterNode.GetParameter("lockVSP") == "True"
+    )
+    playing = self.vspAnimation is not None and self.vspAnimation.playing
+    lockVSPToolTip = "Lock the plan to enable this feature"
+
+    self.ui.playVSPAnimationButton.enabled = lockVSPChecked
+    if not lockVSPChecked:
+      self.ui.playVSPAnimationButton.toolTip = lockVSPToolTip
+    elif playing:
+      self.ui.playVSPAnimationButton.toolTip = "Stop Virtual Surgical Plan animation"
+    else:
+      self.ui.playVSPAnimationButton.toolTip = "Play Virtual Surgical Plan animation"
+
+    self.ui.exportVSPAnimationButton.enabled = lockVSPChecked
+    if lockVSPChecked:
+      self.ui.exportVSPAnimationButton.toolTip = "Export Virtual Surgical Plan animation as a MP4 video"
+    else:
+      self.ui.exportVSPAnimationButton.toolTip = lockVSPToolTip
+
+    # The animation mode can only be changed while the plan is locked and the animation is not playing
+    self.ui.vspAnimationModeComboBox.enabled = lockVSPChecked and not playing
+    if lockVSPChecked:
+      self.ui.vspAnimationModeComboBox.toolTip = (
+        "Virtual Surgical Plan animation mode. Schematic: plain models. Realistic: operating room background, "
+        "bone and vessel textures, and head and leg dissections from the CTs"
+      )
+    else:
+      self.ui.vspAnimationModeComboBox.toolTip = lockVSPToolTip
 
   def onNeomandibleVisibilityButton(self,checked):
     """
