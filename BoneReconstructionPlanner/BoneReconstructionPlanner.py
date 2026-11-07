@@ -7271,7 +7271,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       fibulaNormalizationTransformNode.SetName("FibulaNormalizationTransform")
       slicer.mrmlScene.AddNode(fibulaNormalizationTransformNode)
       parameterNode.SetNodeReferenceID("fibulaNormalizationTransformNode", fibulaNormalizationTransformNode.GetID())
-    
+      moveNodeToFolder(fibulaNormalizationTransformNode, getFolder("BoneReconstructionPlanner"))
+
     currentScalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
     if currentScalarVolume is not None:
       currentScalarVolume.SetAndObserveTransformNodeID(fibulaNormalizationTransformNode.GetID())
