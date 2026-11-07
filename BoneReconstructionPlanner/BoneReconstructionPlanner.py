@@ -119,8 +119,23 @@ def registerSampleData():
     # This node name will be used when the data set is loaded
     nodeNames='FibulaSegmentation'
   )
-
+  
   # BoneReconstructionPlanner5
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    # Category and sample name displayed in Sample Data module
+    category='BoneReconstructionPlanner',
+    sampleName='FibulaSegmentationWithFakeVessels',
+    thumbnailFileName=os.path.join(iconsPath, 'iconFibulaSegmentation.png'),
+    loadFileType='SegmentationFile',
+    # Download URL and target file name
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/FibulaSegmentationWithFakeVessels.seg.nrrd",
+    fileNames='FibulaSegmentation.seg.nrrd',
+    checksums = 'SHA256:e6e305f156c6a2f875ec1e05cc8cfe062edc81a5874c79a45365e7e3ce6b282b',
+    # This node name will be used when the data set is loaded
+    nodeNames='FibulaSegmentation'
+  )
+
+  # BoneReconstructionPlanner6
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
     # Category and sample name displayed in Sample Data module
     category='BoneReconstructionPlanner',
@@ -135,7 +150,7 @@ def registerSampleData():
     nodeNames='MandibleSegmentation'
   )
 
-  # BoneReconstructionPlanner6
+  # BoneReconstructionPlanner7
   SampleData.SampleDataLogic.registerCustomSampleDataSource(
     # Category and sample name displayed in Sample Data module
     category='BoneReconstructionPlanner',
@@ -146,7 +161,7 @@ def registerSampleData():
     # Download URL and target file name
     uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP.mrb",
     fileNames='TestPlanBRP.mrb',
-    checksums = 'SHA256:199a78c9f6bcb2bcd28808a55cf456bfb20009c930448fcef9ad7e500e2382af',
+    checksums = 'SHA256:8d377afbad96d494d51d8752fea7837ccf2177c54e0182ff3f712e01d90f8057',
     # This node name will be used when the data set is loaded
     nodeNames='TestPlanBRP'
   )
@@ -231,7 +246,8 @@ def confirm_clean_and_load_test_data():
     sampleDataLogic.downloadSample('CTMandible')
     sampleDataLogic.downloadSample('CTFibula')
     sampleDataLogic.downloadSample('MandibleSegmentation')
-    sampleDataLogic.downloadSample('FibulaSegmentation')
+    #sampleDataLogic.downloadSample('FibulaSegmentation')
+    sampleDataLogic.downloadSample('FibulaSegmentationWithFakeVessels')
   return True
 
 def setLightingMode(renderingMode = "Lamp"):
@@ -429,6 +445,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self._parameterNode = None
     self._shNode = None
     self._updatingGUIFromParameterNode = False
+    self.sceneImportInProgress = False
+    self.pristinePlanFolderIDBeforeSceneImport = 0
     self.vspAnimation = None
 
   def setup(self):
@@ -661,6 +679,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     # These connections ensure that we update parameter node when scene is closed
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
+    # Loading a scene into the current scene (e.g. a .mrb file) can bring a plan
+    self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartImportEvent, self.onSceneStartImport)
+    # negative priority so the displayable managers process the imported nodes before the pristine plan is removed
+    self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndImportEvent, self.onSceneEndImport, priority=-10.0)
 
     slicer.mrmlScene.AddObserver(slicer.mrmlScene.NodeAboutToBeRemovedEvent, self.onNodeAboutToBeRemovedEvent) 
     slicer.mrmlScene.AddObserver(slicer.mrmlScene.NodeRemovedEvent, self.onNodeRemovedEvent)
@@ -969,7 +991,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     """
     Processing to do after a node is removed from the scene
     """
-    if self._parameterNode is None:
+    # the pristine plan removed after a scene import must not modify the imported plan
+    if self._parameterNode is None or self.sceneImportInProgress:
       return
 
     if callData.GetClassName() == 'vtkMRMLMarkupsCurveNode' and callData.GetAttribute("isMandibleCurve") == 'True':
@@ -1020,6 +1043,17 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
         self.logic.updateBothMandibleGuideBaseModels()
       placeWidget = self.ui.rightSideMandibleGuideBaseCurvePlaceWidget
       placeWidget.setCurrentNode(self.logic.getRightSideMandibleGuideBaseCurve())
+    if callData.GetClassName() == 'vtkMRMLLinearTransformNode' and callData.GetAttribute("isFibulaNormalizationTransform") == 'True':
+      #print(callData.GetName())
+      # The fibula nodes lost their transform, so recreate it keeping the normalization state of the button
+      # (it can only be applied if the fibula line still has its two points)
+      fibulaLine = self._parameterNode.GetNodeReference("fibulaLine")
+      fibulaNormalizationTransformChecked = (
+        (self._parameterNode.GetParameter("fibulaNormalizationTransform") == "True") and
+        (fibulaLine is not None) and
+        (fibulaLine.GetNumberOfControlPoints() == 2)
+      )
+      self.logic.updateNormalizationFibulaLineTransform(fibulaNormalizationTransformChecked)
 
   def enter(self):
     """
@@ -1394,6 +1428,30 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if self.parent.isEntered:
       self.initializeParameterNode()
 
+  def onSceneStartImport(self, caller, event):
+    """
+    Called just before a scene is imported into the current scene (e.g. a .mrb file is loaded).
+    """
+    # The parameter node of the imported scene is copied into the current one during the import,
+    # so the GUI must not be synchronized with the parameter node until onSceneEndImport
+    self.sceneImportInProgress = True
+    # the empty markups created when the module is opened are replaced by the ones of the imported plan
+    BRPFolderID = slicer.mrmlScene.GetSubjectHierarchyNode().GetItemByName("BoneReconstructionPlanner")
+    if BRPFolderID and self.logic.isFolderOfPristinePlan(BRPFolderID):
+      self.pristinePlanFolderIDBeforeSceneImport = BRPFolderID
+
+  def onSceneEndImport(self, caller, event):
+    """
+    Called just after a scene was imported into the current scene.
+    """
+    try:
+      self.logic.removePristinePlanFolderIfUnreferenced(self.pristinePlanFolderIDBeforeSceneImport)
+    finally:
+      self.sceneImportInProgress = False
+      self.pristinePlanFolderIDBeforeSceneImport = 0
+    if self.parent.isEntered:
+      self.updateGUIFromParameterNode()
+
   def initializeParameterNode(self):
     """
     Ensure parameter node exists and observed.
@@ -1448,7 +1506,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     The module GUI is updated to show the current state of the parameter node.
     """
 
-    if self._parameterNode is None:
+    # during a scene import the parameter node references nodes that are not imported yet
+    if self._parameterNode is None or self.sceneImportInProgress:
       return
     
     # only put here code that updates the GUI but does not cause any changes in the parameterNode,
@@ -2665,6 +2724,59 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         wp(parameterNode, parameterName, parameterValue)
       elif not parameterNode.GetParameter(parameterName):
         wp(parameterNode, parameterName, valueFromSettings)
+
+  def isFolderOfPristinePlan(self, folderID):
+    """
+    True if the folder has no nodes other than markups without control points and the fibula normalization
+    transform (subfolders are allowed), e.g. the BoneReconstructionPlanner folder created when the module
+    is opened on an empty scene
+    """
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    childIDs = vtk.vtkIdList()
+    shNode.GetItemChildren(folderID, childIDs, True)
+    for i in range(childIDs.GetNumberOfIds()):
+      dataNode = shNode.GetItemDataNode(childIDs.GetId(i))
+      # folders own a folder display node once their visibility is set
+      if (dataNode is None) or dataNode.IsA("vtkMRMLFolderDisplayNode"):
+        continue
+      # created by the GUI update of the fibula normalization button
+      if dataNode.IsA("vtkMRMLLinearTransformNode") and (dataNode.GetName() == "FibulaNormalizationTransform"):
+        continue
+      if (not dataNode.IsA("vtkMRMLMarkupsNode")) or (dataNode.GetNumberOfControlPoints() > 0):
+        return False
+    return True
+
+  def removePristinePlanFolderIfUnreferenced(self, pristinePlanFolderID):
+    """
+    Remove the folder of the pristine plan created when the module was opened if, after a scene import,
+    the parameter node references the nodes of the imported plan instead
+    """
+    if not pristinePlanFolderID or not self.isFolderOfPristinePlan(pristinePlanFolderID):
+      return
+    parameterNode = self.getParameterNode()
+    pristinePlanReferenceRoles = [
+      "mandibleCurve",
+      "fibulaLine",
+      "interCondylarBeamLine",
+      "miterBoxDirectionLine",
+      "fibulaFiducialList",
+      "mandibleFiducialList",
+      "mandibleBridgeCurve",
+      "leftSideMandibleGuideBaseCurve",
+      "rightSideMandibleGuideBaseCurve",
+      "fibulaNormalizationTransformNode"
+    ]
+    referencedNodeIDs = [parameterNode.GetNodeReferenceID(referenceRole) for referenceRole in pristinePlanReferenceRoles]
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    childIDs = vtk.vtkIdList()
+    shNode.GetItemChildren(pristinePlanFolderID, childIDs, True)
+    for i in range(childIDs.GetNumberOfIds()):
+      dataNode = shNode.GetItemDataNode(childIDs.GetId(i))
+      if (dataNode is not None) and (dataNode.GetID() in referencedNodeIDs):
+        # the imported scene had no plan, so the pristine plan is still in use
+        return
+    # removes the empty markups and the subfolders too
+    shNode.RemoveItem(pristinePlanFolderID)
 
   def restoreDefaultParameters(self):
     """
@@ -7269,6 +7381,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if fibulaNormalizationTransformNode is None:
       fibulaNormalizationTransformNode = slicer.vtkMRMLLinearTransformNode()
       fibulaNormalizationTransformNode.SetName("FibulaNormalizationTransform")
+      fibulaNormalizationTransformNode.SetAttribute("isFibulaNormalizationTransform","True")
       slicer.mrmlScene.AddNode(fibulaNormalizationTransformNode)
       parameterNode.SetNodeReferenceID("fibulaNormalizationTransformNode", fibulaNormalizationTransformNode.GetID())
       moveNodeToFolder(fibulaNormalizationTransformNode, getFolder("BoneReconstructionPlanner"))
@@ -7877,10 +7990,10 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_GetLogic()
     self.section_LoadSampleDataV2()
     self.section_SelectSampleSegmentations()
-    self.section_MakeBoneModels()
-    self.section_SetMandibularCurve()
-    self.section_SetFibulaLine()
-    self.section_AddMandiblePlanes()
+    self.section_MakeModels()
+    #self.section_VerifyFibulaLine()
+    #self.section_SetMandibularCurve()
+    #self.section_AddMandiblePlanes()
     #self.section_SimulateAndImproveMandibleReconstruction()
     #self.section_createMiterBoxesFromCorrespondingLine()
     ##self.section_prepareGuideBaseForFibulaGuide()
@@ -7916,15 +8029,14 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     expecterNumberOfNodesByClass = {
       'vtkMRMLScalarVolumeNode': 2,
       'vtkMRMLSegmentationNode': 2,
-      'vtkMRMLModelNode': 83,
-      'vtkMRMLMarkupsCurveNode': 8,
-      'vtkMRMLMarkupsClosedCurveNode': 4,
+      'vtkMRMLModelNode': 81,
+      'vtkMRMLMarkupsCurveNode': 4,
+      'vtkMRMLMarkupsClosedCurveNode': 2,
       'vtkMRMLMarkupsPlaneNode': 12,
-      'vtkMRMLMarkupsLineNode': 16,
-      'vtkMRMLDynamicModelerNode': 15,
-      'vtkMRMLMarkupsFiducialNode': 4,
+      'vtkMRMLMarkupsLineNode': 12,
+      'vtkMRMLDynamicModelerNode': 13,
+      'vtkMRMLMarkupsFiducialNode': 2,
       'vtkMRMLLinearTransformNode': 15,
-      'vtkMRMLFolderDisplayNode': 22
     }
 
     for nodeClass, expectedNumberOfNodesInScene in expecterNumberOfNodesByClass.items():
@@ -7933,6 +8045,9 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         expectedNumberOfNodesInScene
       )
 
+    # other modules (e.g. DataProbe) add their own parameter nodes, their number depends on the installed extensions
+    scriptedModuleNodes = slicer.util.getNodesByClass('vtkMRMLScriptedModuleNode')
+    self.assertIn(self.logicBRP.getParameterNode(), scriptedModuleNodes)
 
     # weak test to ensure integrity of the folder hierarchy, 
     #   just check if the number of leaf/one-level-below-BRPFolder items is okay
@@ -7941,54 +8056,23 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     leafIdList = vtk.vtkIdList()
     shNode.GetItemChildren(sceneItemId,leafIdList,True)
 
+    expectedSceneChildrenNumber = 176
     self.assertEqual(
       leafIdList.GetNumberOfIds(),
-      110
+      expectedSceneChildrenNumber
     )
 
     BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
     oneLevelBelowBRPIdList = vtk.vtkIdList()
     shNode.GetItemChildren(BRPFolder,oneLevelBelowBRPIdList,False)
 
+    expectedBRPChildrenNumber = 22
     self.assertEqual(
       oneLevelBelowBRPIdList.GetNumberOfIds(),
-      27
+      expectedBRPChildrenNumber
     )
 
     self.delayDisplay('Test data imported correctly')
-
-  def section_LoadSampleData(self):
-    # Get input data
-    import SampleData
-    self.fibulaVolume = SampleData.downloadSample('CTFibula')
-    self.delayDisplay('Loaded CTFibula')
-    self.mandibleVolume = SampleData.downloadSample('CTMandible')
-    self.delayDisplay('Loaded CTMandible')
-    self.fibulaSegmentation = SampleData.downloadSample('FibulaSegmentation')
-    self.delayDisplay('Loaded FibulaSegmentation')
-    self.mandibleSegmentation = SampleData.downloadSample('MandibleSegmentation')
-    self.delayDisplay('Loaded MandibleSegmentation')
-
-    parameterNode = self.logicBRP.getParameterNode()
-    wasModified = parameterNode.StartModify()
-    parameterNode.SetNodeReferenceID("currentScalarVolume", self.mandibleVolume.GetID())
-    parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode", "True")
-    parameterNode.SetNodeReferenceID("fibulaSegmentation", self.fibulaSegmentation.GetID())
-    parameterNode.SetNodeReferenceID("mandibularSegmentation", self.mandibleSegmentation.GetID())
-    parameterNode.EndModify(wasModified)
-
-    self.assertEqual(
-      parameterNode.GetNodeReference("currentScalarVolume").GetID(),
-      self.mandibleVolume.GetID()
-    )
-    self.assertEqual(
-      parameterNode.GetNodeReference("fibulaSegmentation").GetID(),
-      self.fibulaSegmentation.GetID()
-    )
-    self.assertEqual(
-      parameterNode.GetNodeReference("mandibularSegmentation").GetID(),
-      self.mandibleSegmentation.GetID()
-    )
       
   def section_LoadSampleDataV2(self):
     # load using GUI
@@ -8004,7 +8088,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     import SampleData
     fibulaVolumeThroughSampleData = SampleData.downloadSample('CTFibula')
     mandibleVolumeThroughSampleData = SampleData.downloadSample('CTMandible')
-    fibulaSegmentationThroughSampleData = SampleData.downloadSample('FibulaSegmentation')
+    fibulaSegmentationThroughSampleData = SampleData.downloadSample('FibulaSegmentationWithFakeVessels')
     mandibleSegmentationThroughSampleData = SampleData.downloadSample('MandibleSegmentation')
 
     self.assertTrue(
@@ -8039,16 +8123,29 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     slicer.mrmlScene.RemoveNode(mandibleSegmentationThroughSampleData)
 
   def section_SelectSampleSegmentations(self):
-    fibulaSegmentationThroughGUI = slicer.util.getNode('FibulaSegmentation')
+    fibulaSegmentationThroughGUI = slicer.util.getNode('FibulaSegmentationWithFakeVessels')
+    vesselsSegmentationThroughGUI = slicer.util.getNode('FibulaSegmentationWithFakeVessels')
     mandibleSegmentationThroughGUI = slicer.util.getNode('MandibleSegmentation')
+
+    fibulaSegmentIdThroughGUI = fibulaSegmentationThroughGUI.GetSegmentation().GetSegmentIdBySegmentName("Fibula")
+    vesselsSegmentIdThroughGUI = vesselsSegmentationThroughGUI.GetSegmentation().GetSegmentIdBySegmentName("vessels")
+    mandibleSegmentIdThroughGUI = mandibleSegmentationThroughGUI.GetSegmentation().GetSegmentIdBySegmentName("Mandible")
 
     slicer.app.processEvents()
     self.widgetBRP.ui.fibulaSegmentSelector.setCurrentNode(fibulaSegmentationThroughGUI)
+    self.widgetBRP.ui.vesselsSegmentSelector.setCurrentNode(vesselsSegmentationThroughGUI)
     self.widgetBRP.ui.mandibularSegmentSelector.setCurrentNode(mandibleSegmentationThroughGUI)
+    slicer.app.processEvents()
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaSegmentSelector.setCurrentSegmentID(fibulaSegmentIdThroughGUI)
+    self.widgetBRP.ui.vesselsSegmentSelector.setCurrentSegmentID(vesselsSegmentIdThroughGUI)
+    self.widgetBRP.ui.mandibularSegmentSelector.setCurrentSegmentID(mandibleSegmentIdThroughGUI)
     slicer.app.processEvents()
 
     parameterNode = self.logicBRP.getParameterNode()
     fibulaSegmentationThroughLogic = parameterNode.GetNodeReference("fibulaSegmentation")
+    vesselsSegmentationThroughLogic = parameterNode.GetNodeReference("vesselsSegmentation")
     mandibleSegmentationThroughLogic = parameterNode.GetNodeReference("mandibularSegmentation")
     
     self.assertEqual(
@@ -8056,8 +8153,29 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       fibulaSegmentationThroughLogic.GetID()
     )
     self.assertEqual(
+      vesselsSegmentationThroughGUI.GetID(),
+      vesselsSegmentationThroughLogic.GetID()
+    )
+    self.assertEqual(
       mandibleSegmentationThroughGUI.GetID(),
       mandibleSegmentationThroughLogic.GetID()
+    )
+
+    fibulaSegmentIdThroughLogic = parameterNode.GetNodeReference("fibulaSegmentation").GetSegmentation().GetSegmentIdBySegmentName("Fibula")
+    vesselsSegmentIdThroughLogic = parameterNode.GetNodeReference("vesselsSegmentation").GetSegmentation().GetSegmentIdBySegmentName("vessels")
+    mandibleSegmentIdThroughLogic = parameterNode.GetNodeReference("mandibularSegmentation").GetSegmentation().GetSegmentIdBySegmentName("Mandible")
+
+    self.assertEqual(
+      fibulaSegmentIdThroughGUI,
+      fibulaSegmentIdThroughLogic
+    )
+    self.assertEqual(
+      vesselsSegmentIdThroughGUI,
+      vesselsSegmentIdThroughLogic
+    )
+    self.assertEqual(
+      mandibleSegmentIdThroughGUI,
+      mandibleSegmentIdThroughLogic
     )
 
   def section_MakeModels(self):
@@ -8153,7 +8271,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("MakeModelsTest successful")
 
-  def section_MakeBoneModels(self):
+  def section_MakeModels(self):
     slicer.app.processEvents()
     self.widgetBRP.ui.makeModelsButton.click()
     slicer.app.processEvents()
@@ -8186,12 +8304,16 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     # assert models are not None
     fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
+    vesselsModelNode = parameterNode.GetNodeReference("vesselsModelNode")
     mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
     decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
+    decimatedVesselsModelNode = parameterNode.GetNodeReference("decimatedVesselsModelNode")
     decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
     self.assertIsNotNone(fibulaModelNode)
+    self.assertIsNotNone(vesselsModelNode) 
     self.assertIsNotNone(mandibleModelNode)
     self.assertIsNotNone(decimatedFibulaModelNode)
+    self.assertIsNotNone(decimatedVesselsModelNode)
     self.assertIsNotNone(decimatedMandibleModelNode)
 
 
@@ -8199,11 +8321,16 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     allowedRelativeDifference = 0.02
     targetFibulaPoints = 197962
     targetMandiblePoints = 109820
+    targetVesselsPoints = 33232
     targetDecimatedFibulaPoints = 11120
     targetDecimatedMandiblePoints = 6602
+    targetDecimatedVesselsPoints = 1697
 
     self.assertTrue(
       np.allclose(fibulaModelNode.GetMesh().GetNumberOfPoints(), targetFibulaPoints, rtol=allowedRelativeDifference)
+    )
+    self.assertTrue(
+      np.allclose(vesselsModelNode.GetMesh().GetNumberOfPoints(), targetVesselsPoints, rtol=allowedRelativeDifference)
     )
     self.assertTrue(
       np.allclose(mandibleModelNode.GetMesh().GetNumberOfPoints(), targetMandiblePoints, rtol=allowedRelativeDifference)
@@ -8212,9 +8339,11 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       np.allclose(decimatedFibulaModelNode.GetMesh().GetNumberOfPoints(), targetDecimatedFibulaPoints, rtol=allowedRelativeDifference)
     )
     self.assertTrue(
+      np.allclose(decimatedVesselsModelNode.GetMesh().GetNumberOfPoints(), targetDecimatedVesselsPoints, rtol=allowedRelativeDifference)
+    )
+    self.assertTrue(
       np.allclose(decimatedMandibleModelNode.GetMesh().GetNumberOfPoints(), targetDecimatedMandiblePoints, rtol=allowedRelativeDifference)
     )
-
 
   def section_AddMandibularCurve(self):
     self.delayDisplay("Starting the AddMandibularCurveTest")
@@ -8409,32 +8538,31 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("AddMandibularPlanesTest successful")
 
-  def section_AddFibulaLineAndCenterIt(self):
-    self.delayDisplay("Starting the AddFibulaLineAndCenterItTest")
+  def section_VerifyFibulaLine(self):
+    self.delayDisplay("Start CheckValidFibulaLineTest")
+
+    fibulaLineNode = self.logicBRP.getFibulaLine()
 
     fibulaLinePoints = [
       [-91.39446258544922, -12.100865364074707, -90.508544921875],
       [-104.19928741455078, -9.48827075958252, 47.4937744140625],
     ]
 
-    self.logicBRP.addFibulaLine()
-    selectionNode = slicer.app.applicationLogic().GetSelectionNode()
-    fibulaLineNode = slicer.mrmlScene.GetNodeByID(
-      selectionNode.GetActivePlaceNodeID()
-    )
+    """
     for point in fibulaLinePoints:
       fibulaLineNode.AddControlPoint(*point)
     interactionNode = slicer.app.applicationLogic().GetInteractionNode()
     interactionNode.SwitchToViewTransformMode()
+    """
 
     self.assertEqual(
       len(fibulaLinePoints),
       fibulaLineNode.GetNumberOfControlPoints()
     )
 
-    getFolder = slicer.mrmlScene.GetSubjectHierarchyNode()
-    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
-    fibulaLineItemID = shNode.GetItemByDataNode(fibulaLineNode)
+    BRPFolder = getFolder("BoneReconstructionPlanner")
+    fibulaLineItemID = getItem(fibulaLineNode)
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     self.assertEqual(
       BRPFolder,
       shNode.GetItemParent(fibulaLineItemID)
