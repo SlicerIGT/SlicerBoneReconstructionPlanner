@@ -8149,8 +8149,8 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     slicer.mrmlScene.RemoveNode(mandibleSegmentationThroughSampleData)
 
   def section_SelectSampleSegmentations(self):
-    fibulaSegmentationThroughGUI = slicer.util.getNode('FibulaSegmentationWithFakeVessels')
-    vesselsSegmentationThroughGUI = slicer.util.getNode('FibulaSegmentationWithFakeVessels')
+    fibulaSegmentationThroughGUI = slicer.util.getNode('FibulaSegmentation')
+    vesselsSegmentationThroughGUI = slicer.util.getNode('FibulaSegmentation')
     mandibleSegmentationThroughGUI = slicer.util.getNode('MandibleSegmentation')
 
     fibulaSegmentIdThroughGUI = fibulaSegmentationThroughGUI.GetSegmentation().GetSegmentIdBySegmentName("Fibula")
