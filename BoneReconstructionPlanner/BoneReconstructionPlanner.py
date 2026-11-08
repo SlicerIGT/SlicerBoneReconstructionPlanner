@@ -5324,16 +5324,17 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         viewUpDirection = np.array([0.,0.,1.])
         cameraDirection = np.array([0.,-1.,0.])
-      cameraNode.SetPosition(centroid-cameraDirection*300)
-      cameraNode.SetFocalPoint(centroid)
-      cameraNode.SetViewUp(viewUpDirection)
-      cameraNode.ResetClippingRange()
+      if (i==0) or (i==1):
+        cameraNode.SetPosition(centroid-cameraDirection*300)
+        cameraNode.SetFocalPoint(centroid)
+        cameraNode.SetViewUp(viewUpDirection)
+        cameraNode.ResetClippingRange()
 
-      if (i==0) or (i==2):
+      if (i==0):
         parameterNode.SetParameter("fibulaCentroidX",str(centroid[0]))
         parameterNode.SetParameter("fibulaCentroidY",str(centroid[1]))
         parameterNode.SetParameter("fibulaCentroidZ",str(centroid[2]))
-      else:
+      elif (i==1):
         parameterNode.SetParameter("mandibleCentroidX",str(centroid[0]))
         parameterNode.SetParameter("mandibleCentroidY",str(centroid[1]))
         parameterNode.SetParameter("mandibleCentroidZ",str(centroid[2]))
