@@ -166,6 +166,48 @@ def registerSampleData():
     nodeNames='TestPlanBRP'
   )
 
+  # BoneReconstructionPlanner8
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    # Category and sample name displayed in Sample Data module
+    category='BoneReconstructionPlanner',
+    sampleName='personalizedFibulaGuide',
+    thumbnailFileName=os.path.join(iconsPath, 'iconFibulaGuide.png'),
+    # Download URL and target file name
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/example_FibulaSurgicalGuidePrototype.stl",
+    fileNames='example_FibulaSurgicalGuidePrototype.stl',
+    checksums = 'SHA256:c737827f1c3f8f2ba3384a6946a0570cbc174485442d823c8a1490318db686ff',
+    # This node name will be used when the data set is loaded
+    nodeNames='personalizedFibulaGuide'
+  )
+
+  # BoneReconstructionPlanner9
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    # Category and sample name displayed in Sample Data module
+    category='BoneReconstructionPlanner',
+    sampleName='personalizedMandibleGuide',
+    thumbnailFileName=os.path.join(iconsPath, 'iconMandibleGuide.png'),
+    # Download URL and target file name
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/example_MandibleSurgicalGuidePrototype.stl",
+    fileNames='example_MandibleSurgicalGuidePrototype.stl',
+    checksums = 'SHA256:6fd8d2af393eaea704fe2f1c092db5d5d8727ec1169b8440b50756abf077f9d1',
+    # This node name will be used when the data set is loaded
+    nodeNames='personalizedMandibleGuide'
+  )
+
+  # BoneReconstructionPlanner10
+  SampleData.SampleDataLogic.registerCustomSampleDataSource(
+    # Category and sample name displayed in Sample Data module
+    category='BoneReconstructionPlanner',
+    sampleName='neoMandible',
+    thumbnailFileName=os.path.join(iconsPath, 'iconNeoMandible.png'),
+    # Download URL and target file name
+    uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/example_MandibleReconstructionModel.stl",
+    fileNames='example_MandibleReconstructionModel.stl',
+    checksums = 'SHA256:e1e5a355c6752802161185d087002645dc5f5d6a02892f690a02a412f333b7d8',
+    # This node name will be used when the data set is loaded
+    nodeNames='neoMandible'
+  )
+
 def readDefaultParameters():
   """
   Return default parameters as a dict

@@ -191,6 +191,11 @@ See more than 40 plans of other users:
 - Finished VSP and guides design (using data similar to the provided above) that can already be loaded to Slicer and modified further:
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TestPlanBRP_5.12.4.mrb" >Example Virtual Surgical Plan with Patient-Specific Surgical Guides</a>
 
+- Example **.stl** models created by BoneReconstructionPlanner
+  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/example_FibulaSurgicalGuidePrototype.stl" >Anatomic Surgical Guide for Fibula</a>
+  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/example_MandibleSurgicalGuidePrototype.stl" >Anatomic Surgical Guide for Mandible</a>
+  - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/example_MandibleReconstructionModel.stl" >Planned NeoMandible</a> for pre-operative titanium plate bending
+
 - Toy VSP using a rib because a user wondered if it could be possible:
   - <a href="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/TheoreticalPlanBRP_rib.mrb" >Theoretical Virtual Surgical Plan with a rib (Toy-example)</a>
 
