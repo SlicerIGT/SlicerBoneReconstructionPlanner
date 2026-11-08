@@ -56,7 +56,7 @@ if(BUILD_TESTING)
   # Modules of the extensions we depend on are not loaded by default during testing,
   # but the test scene needs them (e.g. MarkupsToModel nodes)
   set(_dependency_module_paths)
-  foreach(_dependency SurfaceWrapSolidify MarkupsToModel Sandbox Telemetry)
+  foreach(_dependency SurfaceWrapSolidify MarkupsToModel Sandbox Telemetry SlicerMOOSE NNUNet DentalSegmentator)
     foreach(_modules_dir ${Slicer_QTLOADABLEMODULES_LIB_DIR} ${Slicer_QTSCRIPTEDMODULES_LIB_DIR})
       if(EXISTS ${${_dependency}_DIR}/${_modules_dir})
         list(APPEND _dependency_module_paths ${${_dependency}_DIR}/${_modules_dir})
