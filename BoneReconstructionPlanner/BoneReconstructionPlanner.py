@@ -8015,6 +8015,89 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.test_FullWorkflow()
     #self.closeUp()
   
+  def test_CheckDependencies(self):
+    """CDash test that checks the modules and functions BoneReconstructionPlanner uses from the extensions in EXTENSION_DEPENDS are available.
+    AI segmentation dependencies are optional (nice to have), so if they are missing only a warning is logged.
+    """
+    self.section_CheckRequiredDependencies()
+    self.section_CheckOptionalAISegmentationDependencies()
+
+  def section_CheckRequiredDependencies(self):
+    # Keep in sync with EXTENSION_DEPENDS in CMakeLists.txt
+    moduleNameOfExtensionDict = {
+      "SurfaceWrapSolidify": "segmenteditorwrapsolidify",
+      "MarkupsToModel": "markupstomodel",
+      "Sandbox": "combinemodels",
+      "Telemetry": "telemetry",
+    }
+    # What BoneReconstructionPlanner.py and BRPLib/helperFunctions.py call
+    attributeNamesOfPythonModuleDict = {
+      "slicer": ["vtkMRMLMarkupsToModelNode"],
+      "CombineModels": [
+        "CombineModelsLogic.availableBackends",
+        "CombineModelsLogic.process",
+        "CombineModelsLogic.processSteps",
+      ],
+    }
+    missingDependenciesList = (
+      self.getMissingModulesList(moduleNameOfExtensionDict)
+      + self.getMissingAttributesList(attributeNamesOfPythonModuleDict)
+    )
+    registeredEffectNamesList = [
+      effect.name for effect in slicer.qSlicerSegmentEditorEffectFactory.instance().registeredEffects()
+    ]
+    if "Wrap Solidify" not in registeredEffectNamesList:
+      missingDependenciesList.append('"Wrap Solidify" segment editor effect')
+    self.assertEqual(missingDependenciesList, [])
+
+  def section_CheckOptionalAISegmentationDependencies(self):
+    # Keep in sync with EXTENSION_DEPENDS in CMakeLists.txt
+    moduleNameOfExtensionDict = {
+      "SlicerMOOSE": "moose",
+      "NNUNet": "slicernnunet",
+      "DentalSegmentator": "dentalsegmentator",
+    }
+    # What BRPLib/MOOSEHelper.py and BRPLib/DentalSegmentatorHelper.py call
+    attributeNamesOfPythonModuleDict = {
+      "MOOSE": ["DependencyManager", "MOOSELogic"],
+      "SlicerNNUNetLib": ["InstallLogic", "Parameter", "SegmentationLogic"],
+      "DentalSegmentatorLib": ["PythonDependencyChecker"],
+    }
+    missingDependenciesList = (
+      self.getMissingModulesList(moduleNameOfExtensionDict)
+      + self.getMissingAttributesList(attributeNamesOfPythonModuleDict)
+    )
+    if len(missingDependenciesList) > 0:
+      logging.warning(
+        "AI segmentation will not be available, missing optional dependencies: "
+        + ", ".join(missingDependenciesList)
+      )
+
+  def getMissingModulesList(self, moduleNameOfExtensionDict):
+    return [
+      f"{moduleName} module (from {extensionName})"
+      for extensionName, moduleName in moduleNameOfExtensionDict.items()
+      if not hasattr(slicer.modules, moduleName)
+    ]
+
+  def getMissingAttributesList(self, attributeNamesOfPythonModuleDict):
+    import importlib
+    missingAttributesList = []
+    for pythonModuleName, attributeNamesList in attributeNamesOfPythonModuleDict.items():
+      try:
+        pythonModule = importlib.import_module(pythonModuleName)
+      except Exception as e:
+        # Not only ImportError: a library can fail while being imported
+        missingAttributesList.append(f"{pythonModuleName} ({e})")
+        continue
+      for attributeName in attributeNamesList:
+        attributeOwner = pythonModule
+        for attributeNamePart in attributeName.split("."):
+          attributeOwner = getattr(attributeOwner, attributeNamePart, None)
+        if attributeOwner is None:
+          missingAttributesList.append(f"{pythonModuleName}.{attributeName}")
+    return missingAttributesList
+
   def test_FullWorkflow(self):
     """CDash test that checks full workflow from data loading, going through virtual surgical plan till getting neomandible and surgical guides 3D models.
     """
