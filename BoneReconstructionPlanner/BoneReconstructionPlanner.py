@@ -8009,9 +8009,15 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     slicer.app.processEvents()
     
   def runTest(self):
-    """Run as few or as many tests as needed here.
+    """Used only by 'Reload and Test' button. For cdash tests use test_* as function name.
     """
     self.setUp()
+    self.test_FullWorkflow()
+    #self.closeUp()
+  
+  def test_FullWorkflow(self):
+    """CDash test that checks full workflow from data loading, going through virtual surgical plan till getting neomandible and surgical guides 3D models.
+    """
     self.section_EnterBRP()
     self.section_GetWidget()
     self.section_GetLogic()
@@ -8025,7 +8031,6 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     #self.section_createMiterBoxesFromCorrespondingLine()
     ##self.section_prepareGuideBaseForFibulaGuide()
     #self.section_createAndUpdateSawBoxesFromMandiblePlanes()
-    #self.closeUp()
 
   def section_EnterBRP(self):
     self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
@@ -8040,6 +8045,9 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.logicBRP = self.widgetBRP.logic  
       
   def test_LoadFinishedPlanSampleData(self):
+    """CDash test that checks full plan is correctly detected by current BoneReconstructionPlanner.
+    """
+
     # this test should be updated with a new TestPlanBRP sample data.
     self.section_EnterBRP()
     self.section_GetWidget()
