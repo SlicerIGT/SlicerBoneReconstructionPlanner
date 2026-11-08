@@ -8213,7 +8213,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       mandibleSegmentIdThroughLogic
     )
 
-  def section_MakeModels(self):
+  def exampleTest(self):
     """ Ideally you should have several levels of tests.  At the lowest level
     tests should exercise the functionality of the logic with different inputs
     (both valid and invalid).  At higher levels your tests should emulate the
@@ -8224,89 +8224,15 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     module.  For example, if a developer removes a feature that you depend on,
     your test should break so they know that the feature is needed.
     """
-    self.delayDisplay("Starting the MakeModelsTest")
+    return
 
-    parameterNode = self.logicBRP.getParameterNode()
-
-    self.logicBRP.makeModels()
-
-    fibulaModelNode = parameterNode.GetNodeReference("fibulaModelNode")
-    mandibleModelNode = parameterNode.GetNodeReference("mandibleModelNode")
-    # NEED TO ADD VESSELS MODEL TESTS
-    decimatedFibulaModelNode = parameterNode.GetNodeReference("decimatedFibulaModelNode")
-    decimatedMandibleModelNode = parameterNode.GetNodeReference("decimatedMandibleModelNode")
-
-    allowedDifferenceFactor = 0.02
-    targetFibulaPoints = 197962
-    targetMandiblePoints = 109820
-    targetDecimatedFibulaPoints = 9872
-    targetDecimatedMandiblePoints = 5483
-    self.assertLess(
-      abs(fibulaModelNode.GetMesh().GetNumberOfPoints() - targetFibulaPoints), 
-      allowedDifferenceFactor*targetFibulaPoints
-    )
-    self.assertLess(
-      abs(mandibleModelNode.GetMesh().GetNumberOfPoints()-targetMandiblePoints), 
-      allowedDifferenceFactor*targetMandiblePoints
-    )
-    self.assertLess(
-      abs(decimatedFibulaModelNode.GetMesh().GetNumberOfPoints() - targetDecimatedFibulaPoints), 
-      allowedDifferenceFactor*targetDecimatedFibulaPoints
-    )
-    self.assertLess(
-      abs(decimatedMandibleModelNode.GetMesh().GetNumberOfPoints()-targetDecimatedMandiblePoints), 
-      allowedDifferenceFactor*targetDecimatedMandiblePoints
-    )
-    
-    fibulaCentroidX = float(parameterNode.GetParameter("fibulaCentroidX"))
-    fibulaCentroidY = float(parameterNode.GetParameter("fibulaCentroidY"))
-    fibulaCentroidZ = float(parameterNode.GetParameter("fibulaCentroidZ"))
-    mandibleCentroidX = float(parameterNode.GetParameter("mandibleCentroidX"))
-    mandibleCentroidY = float(parameterNode.GetParameter("mandibleCentroidY"))
-    mandibleCentroidZ = float(parameterNode.GetParameter("mandibleCentroidZ"))
-
-    #np.testing.assert_almost_equal(actual,desired)
-    np.testing.assert_almost_equal(fibulaCentroidX,-95.32889,decimal=1)
-    np.testing.assert_almost_equal(fibulaCentroidY,-8.86916,decimal=1)
-    np.testing.assert_almost_equal(fibulaCentroidZ,-18.44151,decimal=1)
-    np.testing.assert_almost_equal(mandibleCentroidX,0.1073946,decimal=1)
-    np.testing.assert_almost_equal(mandibleCentroidY,65.49171,decimal=1)
-    np.testing.assert_almost_equal(mandibleCentroidZ,-57.415688,decimal=1)
-
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    BRPFolder = getFolder("BoneReconstructionPlanner")
-    segmentationModelsFolder = getFolder("Segmentation Models")
-    fibulaModelItemID = getItem(fibulaModelNode)
-    mandibleModelItemID = getItem(mandibleModelNode)
-    decimatedFibulaModelItemID = getItem(decimatedFibulaModelNode)
-    decimatedMandibleModelItemID = getItem(decimatedMandibleModelNode)
-    self.assertNotEqual(BRPFolder,shNode.GetInvalidItemID())
-    self.assertNotEqual(segmentationModelsFolder,shNode.GetInvalidItemID())
-
-    self.assertEqual(
-      BRPFolder,
-      shNode.GetItemParent(segmentationModelsFolder)
-    )
-    self.assertEqual(
-      segmentationModelsFolder,
-      shNode.GetItemParent(fibulaModelItemID)
-    )
-    self.assertEqual(
-      segmentationModelsFolder,
-      shNode.GetItemParent(mandibleModelItemID)
-    )
-    self.assertEqual(
-      segmentationModelsFolder,
-      shNode.GetItemParent(decimatedFibulaModelItemID)
-    )
-    self.assertEqual(
-      segmentationModelsFolder,
-      shNode.GetItemParent(decimatedMandibleModelItemID)
-    )
-
-    self.delayDisplay("MakeModelsTest successful")
-
+  def test_checkDependencies(self):
+    return
+  
   def section_MakeModels(self):
+
+    # test both ways of creating 3D models
+    #self.logicBRP.makeModels()
     slicer.app.processEvents()
     self.widgetBRP.ui.makeModelsButton.click()
     slicer.app.processEvents()
@@ -8351,6 +8277,52 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.assertIsNotNone(decimatedVesselsModelNode)
     self.assertIsNotNone(decimatedMandibleModelNode)
 
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    BRPFolder = getFolder("BoneReconstructionPlanner")
+    segmentationModelsFolder = getFolder("Segmentation Models")
+    fibulaModelItemID = getItem(fibulaModelNode)
+    vesselsModelItemID = getItem(vesselsModelNode)
+    mandibleModelItemID = getItem(mandibleModelNode)
+    decimatedFibulaModelItemID = getItem(decimatedFibulaModelNode)
+    decimatedVesselsModelItemID = getItem(decimatedVesselsModelNode)
+    decimatedMandibleModelItemID = getItem(decimatedMandibleModelNode)
+    self.assertNotEqual(BRPFolder,shNode.GetInvalidItemID())
+    self.assertNotEqual(segmentationModelsFolder,shNode.GetInvalidItemID())
+    self.assertNotEqual(fibulaModelItemID,shNode.GetInvalidItemID())
+    self.assertNotEqual(vesselsModelItemID,shNode.GetInvalidItemID())
+    self.assertNotEqual(mandibleModelItemID,shNode.GetInvalidItemID())
+    self.assertNotEqual(decimatedFibulaModelItemID,shNode.GetInvalidItemID())
+    self.assertNotEqual(decimatedVesselsModelItemID,shNode.GetInvalidItemID())
+    self.assertNotEqual(decimatedMandibleModelItemID,shNode.GetInvalidItemID())
+
+    self.assertEqual(
+      BRPFolder,
+      shNode.GetItemParent(segmentationModelsFolder)
+    )
+    self.assertEqual(
+      segmentationModelsFolder,
+      shNode.GetItemParent(fibulaModelItemID)
+    )
+    self.assertEqual(
+      segmentationModelsFolder,
+      shNode.GetItemParent(vesselsModelItemID)
+    )
+    self.assertEqual(
+      segmentationModelsFolder,
+      shNode.GetItemParent(mandibleModelItemID)
+    )
+    self.assertEqual(
+      segmentationModelsFolder,
+      shNode.GetItemParent(decimatedFibulaModelItemID)
+    )
+    self.assertEqual(
+      segmentationModelsFolder,
+      shNode.GetItemParent(decimatedVesselsModelItemID)
+    )
+    self.assertEqual(
+      segmentationModelsFolder,
+      shNode.GetItemParent(decimatedMandibleModelItemID)
+    )
 
     # assertions on meshes number of points
     allowedRelativeDifference = 0.02
