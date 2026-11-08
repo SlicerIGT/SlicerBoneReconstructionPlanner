@@ -250,6 +250,26 @@ def confirm_clean_and_load_test_data():
     sampleDataLogic.downloadSample('FibulaSegmentationWithFakeVessels')
   return True
 
+def getLightsModuleLogic():
+  """
+  Get the logic of the Lights module (Sandbox extension), None if the module is not available
+  """
+  try:
+    return slicer.modules.lights.widgetRepresentation().self().logic
+  except:
+    return None
+
+def showMessageIfLightsModuleIsMissing():
+  """
+  Tell the user to install the Sandbox extension if the Lights module is not available
+  """
+  if getLightsModuleLogic() is None:
+    errorString = "BoneReconstructionPlanner: Lights module is not available. Install Sandbox extension"
+    slicer.util.messageBox(
+      errorString,
+      dontShowAgainSettingsKey = "BRP/MissingSandboxExtension"
+    )
+
 def setLightingMode(renderingMode = "Lamp"):
   """
   Select rendering mode
@@ -258,14 +278,10 @@ def setLightingMode(renderingMode = "Lamp"):
   if layoutManager is None:
     # no views to light (e.g. running without main window)
     return
-  try:
-    lightsLogic = slicer.modules.lights.widgetRepresentation().self().logic
-  except:
-    errorString = "BoneReconstructionPlanner: Lights module is not available. Install Sandbox extension"
-    slicer.util.messageBox(
-      errorString, 
-      dontShowAgainSettingsKey = "BRP/MissingSandboxExtension"
-    )
+  lightsLogic = getLightsModuleLogic()
+  if lightsLogic is None:
+    # the missing module is reported by showMessageIfLightsModuleIsMissing on enter and on lighting mode change,
+    # not here: exit() calls this while the application quits, after the Lights module was unloaded
     return
   layoutViewNodes = [layoutManager.threeDWidget(i).mrmlViewNode() for i in range(layoutManager.threeDViewCount)]
   viewNodesList = slicer.util.getNodesByClass("vtkMRMLViewNode")
@@ -806,6 +822,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.inCameraPlaneInteractionHandlesToolButton.connect('clicked(bool)', self.updateParameterNodeFromGUI)
     self.ui.orientation3DCubeCheckBox.connect('stateChanged(int)', self.updateParameterNodeFromGUI)
     self.ui.lightingModeComboBox.textActivated.connect(self.updateParameterNodeFromGUI)
+    self.ui.lightingModeComboBox.textActivated.connect(self.onLightingModeComboBoxTextActivated)
     self.ui.lightingInterpolationMethodComboBox.textActivated.connect(self.updateParameterNodeFromGUI)
     self.ui.booleanOperationsBackendComboBox.textActivated.connect(self.updateParameterNodeFromGUI)
     self.ui.booleanOperationsBackendComboBox.textActivated.connect(self.onBooleanOperationsBackendComboBoxTextActivated)
@@ -828,6 +845,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     Install Head and Legs segmentation
     """
     self.logic.installAISegmentations()
+
+  def onLightingModeComboBoxTextActivated(self, lightingMode):
+    """
+    The lighting mode is applied through the Lights module, tell the user if it is missing
+    """
+    showMessageIfLightsModuleIsMissing()
 
   def onBooleanOperationsBackendComboBoxTextActivated(self, backend):
     """
@@ -1277,6 +1300,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     
     if (self.ui.scalarVolumeSelector.nodeCount() != 0) and (self.ui.scalarVolumeSelector.currentNode() == None):
       self.ui.scalarVolumeSelector.setCurrentNodeIndex(0)#0 == first scalarVolume
+
+    # the lighting mode needs the Lights module of the Sandbox extension
+    showMessageIfLightsModuleIsMissing()
 
   def exit(self):
     """
