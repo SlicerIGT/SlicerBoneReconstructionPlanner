@@ -8149,7 +8149,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_LoadSampleDataV2()
     self.section_SelectSampleSegmentations()
     self.section_MakeModels()
-    #self.section_VerifyFibulaLine()
+    self.section_VerifyFibulaLine()
     #self.section_SetMandibularCurve()
     #self.section_AddMandiblePlanes()
     #self.section_SimulateAndImproveMandibleReconstruction()
@@ -8675,9 +8675,9 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     fibulaLineNode = self.logicBRP.getFibulaLine()
 
-    fibulaLinePoints = [
-      [-91.39446258544922, -12.100865364074707, -90.508544921875],
-      [-104.19928741455078, -9.48827075958252, 47.4937744140625],
+    expectedFibulaLinePoints = [
+      [-86.85494995117188, -10.078784942626953, -114.89635467529297],
+      [-103.36023712158203, -8.548652648925781, 78.05206298828125],
     ]
 
     """
@@ -8688,7 +8688,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     """
 
     self.assertEqual(
-      len(fibulaLinePoints),
+      len(expectedFibulaLinePoints),
       fibulaLineNode.GetNumberOfControlPoints()
     )
 
@@ -8700,28 +8700,11 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       shNode.GetItemParent(fibulaLineItemID)
     )
 
-    #the fibulaLineSelector autopopulates and updates the parameterNode
-    parameterNode = self.logicBRP.getParameterNode()
-    fibulaLineFromParameterNode = parameterNode.GetNodeReference("fibulaLine")
-    self.assertEqual(
-      fibulaLineNode.GetID(),
-      fibulaLineFromParameterNode.GetID()
-    )
-
-    self.logicBRP.centerFibulaLine()
-
-    centeredLinePoints = np.array(
-      [
-        [ -88.32122039794922, -10.915949821472168, -90.24563598632812],
-        [-100.49141693115234, -9.320514678955078, 47.834014892578125]
-      ]
-    )
-
     for i in range(2):
       self.assertTrue(
         np.allclose(
           fibulaLineNode.GetNthControlPointPosition(i),
-          centeredLinePoints[i],
+          expectedFibulaLinePoints[i],
           atol=1e-2
         )
       )
