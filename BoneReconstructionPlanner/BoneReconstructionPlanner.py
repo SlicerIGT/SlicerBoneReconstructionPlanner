@@ -8150,7 +8150,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_SelectSampleSegmentations()
     self.section_MakeModels()
     self.section_VerifyFibulaLine()
-    #self.section_SetMandibularCurve()
+    self.section_SetMandibularCurve()
     #self.section_AddMandiblePlanes()
     #self.section_SimulateAndImproveMandibleReconstruction()
     #self.section_createMiterBoxesFromCorrespondingLine()
@@ -8534,32 +8534,39 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       [-44.32816696,  47.25786209, -64.23408508],
     ]
 
-    mandibularCurveNode = self.logicBRP.getMandibularCurve()
+    mandibularCurveFromLogic = self.logicBRP.getMandibularCurve()
     for point in mandibularCurvePoints:
-      mandibularCurveNode.AddControlPoint(*point)
+      mandibularCurveFromLogic.AddControlPoint(*point)
     interactionNode = slicer.app.applicationLogic().GetInteractionNode()
     interactionNode.SwitchToViewTransformMode()
 
     self.assertEqual(
       len(mandibularCurvePoints),
-      mandibularCurveNode.GetNumberOfControlPoints()
+      mandibularCurveFromLogic.GetNumberOfControlPoints()
     )
+
+    for i in range(len(mandibularCurvePoints)):
+      self.assertTrue(
+        np.allclose(
+          mandibularCurveFromLogic.GetNthControlPointPosition(i),
+          mandibularCurvePoints[i],
+          atol=1e-2
+        )
+      )
 
     # check placement in the SH
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     BRPFolder = getFolder("BoneReconstructionPlanner")
-    mandibularCurveItemID = getItem(mandibularCurveNode)
+    mandibularCurveItemID = getItem(mandibularCurveFromLogic)
     self.assertEqual(
       BRPFolder,
       shNode.GetItemParent(mandibularCurveItemID)
     )
 
-    # the mandibleCurveSelector autopopulates and updates the parameterNode
-    parameterNode = self.logicBRP.getParameterNode()
-    mandibleCurveFromParameterNode = parameterNode.GetNodeReference("mandibleCurve")
+    mandibleCurveFromGUI = self.widgetBRP.ui.mandibleCurvePlaceWidget.currentNode()
     self.assertEqual(
-      mandibularCurveNode.GetID(),
-      mandibleCurveFromParameterNode.GetID()
+      mandibularCurveFromLogic.GetID(),
+      mandibleCurveFromGUI.GetID()
     )
 
   def section_AddMandiblePlanes(self):
@@ -8673,7 +8680,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def section_VerifyFibulaLine(self):
     self.delayDisplay("Start CheckValidFibulaLineTest")
 
-    fibulaLineNode = self.logicBRP.getFibulaLine()
+    fibulaLineFromLogic = self.logicBRP.getFibulaLine()
 
     expectedFibulaLinePoints = [
       [-86.85494995117188, -10.078784942626953, -114.89635467529297],
@@ -8689,11 +8696,11 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.assertEqual(
       len(expectedFibulaLinePoints),
-      fibulaLineNode.GetNumberOfControlPoints()
+      fibulaLineFromLogic.GetNumberOfControlPoints()
     )
 
     BRPFolder = getFolder("BoneReconstructionPlanner")
-    fibulaLineItemID = getItem(fibulaLineNode)
+    fibulaLineItemID = getItem(fibulaLineFromLogic)
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
     self.assertEqual(
       BRPFolder,
@@ -8703,64 +8710,19 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     for i in range(2):
       self.assertTrue(
         np.allclose(
-          fibulaLineNode.GetNthControlPointPosition(i),
+          fibulaLineFromLogic.GetNthControlPointPosition(i),
           expectedFibulaLinePoints[i],
           atol=1e-2
         )
       )
 
-    self.delayDisplay("AddFibulaLineAndCenterItTest successful")
-
-  def section_SetFibulaLine(self):
-    fibulaLinePoints = [
-      [-91.39446258544922, -12.100865364074707, -90.508544921875],
-      [-104.19928741455078, -9.48827075958252, 47.4937744140625],
-    ]
-
-    fibulaLineNode = self.logicBRP.getFibulaLine()
-    for point in fibulaLinePoints:
-      fibulaLineNode.AddControlPoint(*point)
-    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
-    interactionNode.SwitchToViewTransformMode()
-
+    fibulaLineFromGUI = self.widgetBRP.ui.fibulaLinePlaceWidget.currentNode()
     self.assertEqual(
-      len(fibulaLinePoints),
-      fibulaLineNode.GetNumberOfControlPoints()
+      fibulaLineFromLogic.GetID(),
+      fibulaLineFromGUI.GetID()
     )
 
-    # check placement in the SH
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
-    fibulaLineItemID = shNode.GetItemByDataNode(fibulaLineNode)
-    self.assertEqual(
-      BRPFolder,
-      shNode.GetItemParent(fibulaLineItemID)
-    )
-
-    #the fibulaLineSelector autopopulates and updates the parameterNode
-    parameterNode = self.logicBRP.getParameterNode()
-    fibulaLineFromParameterNode = parameterNode.GetNodeReference("fibulaLine")
-    self.assertEqual(
-      fibulaLineNode.GetID(),
-      fibulaLineFromParameterNode.GetID()
-    )
-
-    centeredLinePoints = np.array(
-      [
-        [ -88.32122039794922, -10.915949821472168, -90.24563598632812],
-        [-100.49141693115234, -9.320514678955078, 47.834014892578125]
-      ]
-    )
-
-    relativeTolerance = 0.01
-    for i in range(2):
-      self.assertTrue(
-        np.allclose(
-          fibulaLineNode.GetNthControlPointPosition(i),
-          centeredLinePoints[i],
-          rtol=relativeTolerance
-        )
-      )
+    self.delayDisplay("CheckValidFibulaLineTest successful")
 
   def section_SimulateAndImproveMandibleReconstruction(self):
     self.delayDisplay("Starting the SimulateAndImproveMandibleReconstruction")
