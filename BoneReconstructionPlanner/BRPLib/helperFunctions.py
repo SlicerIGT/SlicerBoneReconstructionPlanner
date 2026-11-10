@@ -1031,6 +1031,39 @@ def areVolumesEqual(vol1, vol2):
     
     return np.array_equal(array1, array2)
 
+def getVolumeAreaAndBoundsOfModel(modelNode):
+  """Volume, surface area and bounds of the model polydata (without applying its transform)"""
+  triangleFilter = vtk.vtkTriangleFilter()
+  triangleFilter.SetInputData(modelNode.GetPolyData())
+  triangleFilter.SetPassLines(0)
+  triangleFilter.Update()
+
+  massProperties = vtk.vtkMassProperties()
+  massProperties.SetInputData(triangleFilter.GetOutput())
+  massProperties.Update()
+  return massProperties.GetVolume(), massProperties.GetSurfaceArea(), list(modelNode.GetPolyData().GetBounds())
+
+def getGeometricDifferencesBetweenModels(modelNode1, modelNode2):
+  """Compare the polydata of two models (without applying their transforms),
+  e.g. a model created by BoneReconstructionPlanner and the same model saved as .stl.
+  The number of points is not compared because file formats like .stl merge points.
+  """
+  volume1, area1, bounds1 = getVolumeAreaAndBoundsOfModel(modelNode1)
+  volume2, area2, bounds2 = getVolumeAreaAndBoundsOfModel(modelNode2)
+
+  hausdorffDistanceFilter = vtk.vtkHausdorffDistancePointSetFilter()
+  hausdorffDistanceFilter.SetInputData(0, modelNode1.GetPolyData())
+  hausdorffDistanceFilter.SetInputData(1, modelNode2.GetPolyData())
+  hausdorffDistanceFilter.SetTargetDistanceMethodToPointToCell()
+  hausdorffDistanceFilter.Update()
+
+  return {
+    "relativeVolumeDifference": abs(volume1 - volume2)/abs(volume2),
+    "relativeAreaDifference": abs(area1 - area2)/abs(area2),
+    "maximumBoundsDifference_mm": float(np.max(np.abs(np.array(bounds1) - np.array(bounds2)))),
+    "hausdorffDistance_mm": hausdorffDistanceFilter.GetHausdorffDistance(),
+  }
+
 def ensureExplicitCellArraysStorage(polyData):
   # VTK >= 9.6 may store cell arrays with implicit ("fixed-size") offsets, and
   # vtkClipClosedSurface never finishes on such inputs (spins forever in
