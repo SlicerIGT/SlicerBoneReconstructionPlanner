@@ -8747,7 +8747,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       targetPlaneAxes, targetPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(
         mandibularPlanesPointsListOfTestPlanBRP[i]
       )
-      self.delayDisplay("Moving %s to its TestPlanBRP position and orientation" % planeNode.GetName())
+      self.delayDisplay(f"Moving {planeNode.GetName()} to its TestPlanBRP position and orientation")
       self.translateMandiblePlaneWithInteractionHandles(planeNode, targetPlaneOrigin)
       self.rotateMandiblePlaneWithInteractionHandles(planeNode, targetPlaneAxes)
 
@@ -8760,7 +8760,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
             mandibularPlanesPointsListOfTestPlanBRP[i][j],
             atol=1e-3
           ),
-          msg="%s control point %d %s" % (planeNode.GetName(), j, planePoints[j].tolist())
+          msg=f"{planeNode.GetName()} control point {j} {planePoints[j].tolist()}"
         )
 
       # the last moved plane is the one the other planes rotate together with
@@ -8774,7 +8774,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         break
 
       self.updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes()
-      self.delayDisplay("Reconstruction updated after moving %s" % planeNode.GetName())
+      self.delayDisplay(f"Reconstruction updated after moving {planeNode.GetName()}")
 
     self.delayDisplay("MoveMandiblePlanesAndUpdateVirtualSurgicalPlan test successful")
 
@@ -8860,7 +8860,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
             mandibularPlanesPointsListOfTestPlanBRP[i][j],
             atol=1e-3
           ),
-          msg="%s control point %d %s" % (mandibularPlanesList[i].GetName(), j, planePoints[j].tolist())
+          msg=f"{mandibularPlanesList[i].GetName()} control point {j} {planePoints[j].tolist()}"
         )
 
     # control points of the fibula planes of TestPlanBRP
@@ -8938,7 +8938,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         planePoint = np.array(fibulaPlane.GetNthControlPointPosition(j))
         self.assertTrue(
           np.allclose(planePoint, expectedPlanePoints[j], atol=1e-3),
-          msg="%s control point %d %s" % (expectedName, j, planePoint.tolist())
+          msg=f"{expectedName} control point {j} {planePoint.tolist()}"
         )
 
     # the registration transforms of TestPlanBRP place each fibula piece on the mandible
@@ -8955,12 +8955,12 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     for i in range(len(mandibleToFibulaTransformsList)):
       self.assertEqual(
         mandibleToFibulaTransformsList[i].GetName(),
-        "Mandible2Fibula Registration Transform%d" % i
+        f"Mandible2Fibula Registration Transform{i}"
       )
       registrationMatrix = slicer.util.arrayFromTransformMatrix(mandibleToFibulaTransformsList[i])
       self.assertTrue(
         np.allclose(registrationMatrix, expectedMandibleToFibulaRegistrationMatrices[i], atol=1e-2),
-        msg="Mandible2Fibula Registration Transform%d %s" % (i, registrationMatrix.tolist())
+        msg=f"Mandible2Fibula Registration Transform{i} {registrationMatrix.tolist()}"
       )
 
     # 3 fibula pieces and the resected mandible
@@ -8989,7 +8989,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       "distal2distal": [33.40267754818801, 28.341936469193854, 21.221807743721808],
     }
     for mode, expectedFibulaSegmentsLengths in expectedFibulaSegmentsLengthsByMode.items():
-      fibulaSegmentsLengthsList = createListFromFolderName("Fibula Segments Lengths %s" % mode)
+      fibulaSegmentsLengthsList = createListFromFolderName(f"Fibula Segments Lengths {mode}")
       self.assertEqual(
         [lineNode.GetName() for lineNode in fibulaSegmentsLengthsList],
         ["S0", "S1", "S2"]
@@ -8997,7 +8997,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       fibulaSegmentsLengths = [lineNode.GetLineLengthWorld() for lineNode in fibulaSegmentsLengthsList]
       self.assertTrue(
         np.allclose(fibulaSegmentsLengths, expectedFibulaSegmentsLengths, atol=1e-2),
-        msg="%s lengths %s" % (mode, fibulaSegmentsLengths)
+        msg=f"{mode} lengths {fibulaSegmentsLengths}"
       )
 
     self.delayDisplay("UpdateVirtualSurgicalPlan test successful")
@@ -9308,7 +9308,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       sawBoxMatrix = slicer.util.arrayFromTransformMatrix(sawBoxTransform)
       self.assertTrue(
         np.allclose(sawBoxMatrix, expectedSawBoxMatrix, atol=1e-2),
-        msg="%s %s" % (sawBoxTransform.GetName(), sawBoxMatrix.tolist())
+        msg=f"{sawBoxTransform.GetName()} {sawBoxMatrix.tolist()}"
       )
 
     self.delayDisplay("CreateSawBoxes test successful")
@@ -10037,13 +10037,13 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       # the update rotates the planes around their origins
       self.assertTrue(
         np.allclose(planeOrigin, planeOriginBeforeUpdate, atol=1e-6),
-        msg="%s origin %s before update %s" % (mandibularPlanesList[i].GetName(), planeOrigin.tolist(), planeOriginBeforeUpdate.tolist())
+        msg=f"{mandibularPlanesList[i].GetName()} origin {planeOrigin.tolist()} before update {planeOriginBeforeUpdate.tolist()}"
       )
       if i == 0 or i == len(mandibularPlanesList) - 1:
         # the first and last planes only rotate together with the plane of rotation, around their normals
         self.assertTrue(
           np.allclose(planeAxes[:,2], planeAxesBeforeUpdate[:,2], atol=1e-6),
-          msg="%s normal %s before update %s" % (mandibularPlanesList[i].GetName(), planeAxes[:,2].tolist(), planeAxesBeforeUpdate[:,2].tolist())
+          msg=f"{mandibularPlanesList[i].GetName()} normal {planeAxes[:,2].tolist()} before update {planeAxesBeforeUpdate[:,2].tolist()}"
         )
       else:
         # maximum bone contact: the normal of a middle plane bisects the directions to the origins of its neighbour planes
@@ -10054,7 +10054,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         expectedPlaneNormal = (directionFromPreviousPlane + directionToNextPlane)/np.linalg.norm(directionFromPreviousPlane + directionToNextPlane)
         self.assertTrue(
           np.allclose(planeAxes[:,2], expectedPlaneNormal, atol=1e-6),
-          msg="%s normal %s expected %s" % (mandibularPlanesList[i].GetName(), planeAxes[:,2].tolist(), expectedPlaneNormal.tolist())
+          msg=f"{mandibularPlanesList[i].GetName()} normal {planeAxes[:,2].tolist()} expected {expectedPlaneNormal.tolist()}"
         )
 
     # a fibula piece for each pair of consecutive mandibular planes
@@ -10114,7 +10114,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     relativeTolerance = 0.01
     boundsTolerance_mm = 0.5
     volume, area, bounds = getVolumeAreaAndBoundsOfModel(modelNode)
-    message = "%s volume %.4f area %.4f bounds %s" % (modelNode.GetName(), volume, area, bounds)
+    message = f"{modelNode.GetName()} volume {volume:.4f} area {area:.4f} bounds {bounds}"
     self.assertTrue(
       np.isclose(volume, expectedVolume, rtol=relativeTolerance),
       msg=message
@@ -10134,7 +10134,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     relativeTolerance = 0.01
     distanceTolerance_mm = 0.5
     differencesDict = getGeometricDifferencesBetweenModels(modelNode, referenceModelNode)
-    message = "%s differences with %s: %s" % (modelNode.GetName(), referenceModelNode.GetName(), differencesDict)
+    message = f"{modelNode.GetName()} differences with {referenceModelNode.GetName()}: {differencesDict}"
     self.assertLessEqual(differencesDict["relativeVolumeDifference"], relativeTolerance, msg=message)
     self.assertLessEqual(differencesDict["relativeAreaDifference"], relativeTolerance, msg=message)
     self.assertLessEqual(differencesDict["maximumBoundsDifference_mm"], distanceTolerance_mm, msg=message)
