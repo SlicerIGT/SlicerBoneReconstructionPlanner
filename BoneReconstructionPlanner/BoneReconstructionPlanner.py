@@ -8154,6 +8154,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_SetMandibularCurve()
     self.section_SetVirtualSurgicalPlanParameters()
     self.section_AddMandiblePlanes()
+    self.section_MoveMandiblePlanesAndUpdateVirtualSurgicalPlan()
     """
     self.section_UpdateVirtualSurgicalPlan()
     self.section_LockVirtualSurgicalPlan()
@@ -8724,6 +8725,59 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("AddMandiblePlanes test successful")
 
+  def section_MoveMandiblePlanesAndUpdateVirtualSurgicalPlan(self):
+    self.delayDisplay("Starting the MoveMandiblePlanesAndUpdateVirtualSurgicalPlan test")
+
+    mandibularPlanesList = createListFromFolderName("Mandibular planes")
+    mandibularPlanesPointsListOfTestPlanBRP = self.getmandibularPlanesPointsListOfTestPlanBRP()
+    self.assertEqual(
+      len(mandibularPlanesList),
+      len(mandibularPlanesPointsListOfTestPlanBRP)
+    )
+    parameterNode = self.logicBRP.getParameterNode()
+
+    # first preview of the reconstruction, with the planes straight over the mandibular curve
+    self.updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes()
+    self.delayDisplay("Reconstruction with the mandibular planes straight over the mandibular curve")
+
+    # move each plane with its interaction handles to its TestPlanBRP position and orientation, and update the plan after each movement,
+    #   the first plane is moved last so it is the plane the others rotate together with, as in TestPlanBRP
+    for i in reversed(range(len(mandibularPlanesList))):
+      planeNode = mandibularPlanesList[i]
+      targetPlaneAxes, targetPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(
+        mandibularPlanesPointsListOfTestPlanBRP[i]
+      )
+      self.delayDisplay("Moving %s to its TestPlanBRP position and orientation" % planeNode.GetName())
+      self.translateMandiblePlaneWithInteractionHandles(planeNode, targetPlaneOrigin)
+      self.rotateMandiblePlaneWithInteractionHandles(planeNode, targetPlaneAxes)
+
+      self.assertMandiblePlaneIsDefinedByThreePoints(planeNode)
+      planePoints = self.getControlPointsOfMandiblePlane(planeNode)
+      for j in range(3):
+        self.assertTrue(
+          np.allclose(
+            planePoints[j],
+            mandibularPlanesPointsListOfTestPlanBRP[i][j],
+            atol=1e-3
+          ),
+          msg="%s control point %d %s" % (planeNode.GetName(), j, planePoints[j].tolist())
+        )
+
+      # the last moved plane is the one the other planes rotate together with
+      self.assertEqual(
+        parameterNode.GetNodeReferenceID("mandiblePlaneOfRotation"),
+        planeNode.GetID()
+      )
+
+      if i == 0:
+        # section_UpdateVirtualSurgicalPlan makes the last update of the plan
+        break
+
+      self.updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes()
+      self.delayDisplay("Reconstruction updated after moving %s" % planeNode.GetName())
+
+    self.delayDisplay("MoveMandiblePlanesAndUpdateVirtualSurgicalPlan test successful")
+
   def section_VerifyFibulaLine(self):
     self.delayDisplay("Start CheckValidFibulaLineTest")
 
@@ -8774,14 +8828,15 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def section_UpdateVirtualSurgicalPlan(self):
     self.delayDisplay("Starting the UpdateVirtualSurgicalPlan test")
 
+    # the first plane was moved last, so the other planes rotate together with it, as in TestPlanBRP
     mandibularPlanesList = createListFromFolderName("Mandibular planes")
-    mandibularPlanesPointsBeforeUpdate = [
-      [planeNode.GetNthControlPointPosition(j) for j in range(3)] for planeNode in mandibularPlanesList
-    ]
+    parameterNode = self.logicBRP.getParameterNode()
+    self.assertEqual(
+      parameterNode.GetNodeReferenceID("mandiblePlaneOfRotation"),
+      mandibularPlanesList[0].GetID()
+    )
 
-    slicer.app.processEvents()
-    self.widgetBRP.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.click()
-    slicer.app.processEvents()
+    self.updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes()
 
     self.assertParameterNodeHasParameterValues({
       "virtualPlanWasSuccessful": "True",
@@ -8789,49 +8844,102 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       "sawBoxesNeedUpdate": "True",
     })
 
-    # the TestPlanBRP planes already give maximum bone contact and rotate together, so the update does not move them
+    # maximum bone contact and rotating together with the first plane bring the planes to their TestPlanBRP poses
+    mandibularPlanesPointsListOfTestPlanBRP = self.getmandibularPlanesPointsListOfTestPlanBRP()
     mandibularPlanesList = createListFromFolderName("Mandibular planes")
+    self.assertEqual(
+      len(mandibularPlanesList),
+      len(mandibularPlanesPointsListOfTestPlanBRP)
+    )
     for i in range(len(mandibularPlanesList)):
+      planePoints = self.getControlPointsOfMandiblePlane(mandibularPlanesList[i])
       for j in range(3):
         self.assertTrue(
           np.allclose(
-            mandibularPlanesList[i].GetNthControlPointPosition(j),
-            mandibularPlanesPointsBeforeUpdate[i][j],
+            planePoints[j],
+            mandibularPlanesPointsListOfTestPlanBRP[i][j],
             atol=1e-3
-          )
+          ),
+          msg="%s control point %d %s" % (mandibularPlanesList[i].GetName(), j, planePoints[j].tolist())
         )
 
-    # origin and normal of the fibula planes of TestPlanBRP
-    expectedFibulaPlanesNamesOriginsAndNormals = [
-      ["FibulaPlane0_A", [-88.55952100631913, -9.92076168671747, -94.96975270284052], [-0.10686369962727613, -0.11284572216418726, 0.9878491750723967]],
-      ["FibulaPlane0_B", [-91.28129917642909, -9.668437650705414, -63.15190029397988], [-0.2230677400531463, -0.4167101940703024, 0.8812453673668151]],
-      ["FibulaPlane1_A", [-91.72303312386867, -9.627486446935151, -57.987987342525344], [0.0833860840732216, 0.4262041554498086, 0.9007756540117239]],
-      ["FibulaPlane1_B", [-93.85963830216974, -9.429411215134962, -33.01086431106054], [-0.3891162235362515, -0.3587964425668851, 0.8484419116134196]],
-      ["FibulaPlane2_A", [-94.30165526755056, -9.388433774021138, -27.84364285225567], [0.27581447807814596, 0.3380749660188693, 0.8997953606425299]],
-      ["FibulaPlane2_B", [-95.8932003641365, -9.240888655658466, -9.238325364838404], [-0.20778266384444583, -0.3580356189715334, 0.9102949303129053]],
+    # control points of the fibula planes of TestPlanBRP
+    expectedFibulaPlanesNamesAndPoints = [
+      [
+        "FibulaPlane0_A",
+        [
+          [-88.55952100631913, -9.92076168671747, -94.96975270284052],
+          [-63.70384260246214, -9.983630271981582, -92.28809302550948],
+          [-88.80003014911502, 14.919471794658236, -92.15817735386484],
+        ],
+      ],
+      [
+        "FibulaPlane0_B",
+        [
+          [-91.28129917642909, -9.668437650705414, -63.15190029397988],
+          [-66.96181509943989, -10.591924061052438, -57.43264622732269],
+          [-92.85075252753867, 13.038776108331264, -52.81172333804221],
+        ],
+      ],
+      [
+        "FibulaPlane1_A",
+        [
+          [-91.72303312386867, -9.627486446935151, -57.987987342525344],
+          [-66.82709237450203, -11.352967232909036, -59.476224642575986],
+          [-90.80305496197536, 12.922269144435576, -68.74262182962354],
+        ],
+      ],
+      [
+        "FibulaPlane1_B",
+        [
+          [-93.85963830216974, -9.429411215134962, -33.01086431106054],
+          [-71.04586639636577, -10.03700370217635, -22.804854179787696],
+          [-97.00601149888472, 13.898073151391545, -24.58894001571918],
+        ],
+      ],
+      [
+        "FibulaPlane2_A",
+        [
+          [-94.30165526755056, -9.388433774021138, -27.84364285225567],
+          [-70.2837055843948, -12.56177988734791, -34.0135672814874],
+          [-93.5321901488177, 13.92456040925839, -36.83876517724002],
+        ],
+      ],
+      [
+        "FibulaPlane2_B",
+        [
+          [-95.8932003641365, -9.240888655658466, -9.238325364838404],
+          [-71.47173609268242, -12.34627852480304, -4.8853221947608745],
+          [-94.62490989399294, 13.894325055866034, 0.15067489106927923],
+        ],
+      ],
     ]
     fibulaPlanesList = createListFromFolderName("Fibula planes")
     self.assertEqual(
       len(fibulaPlanesList),
-      len(expectedFibulaPlanesNamesOriginsAndNormals)
+      len(expectedFibulaPlanesNamesAndPoints)
     )
-    for fibulaPlane, (expectedName, expectedOrigin, expectedNormal) in zip(fibulaPlanesList, expectedFibulaPlanesNamesOriginsAndNormals):
+    for fibulaPlane, (expectedName, expectedPlanePoints) in zip(fibulaPlanesList, expectedFibulaPlanesNamesAndPoints):
       self.assertEqual(
         fibulaPlane.GetName(),
         expectedName
       )
-      origin = [0,0,0]
-      fibulaPlane.GetOrigin(origin)
-      normal = [0,0,0]
-      fibulaPlane.GetNormal(normal)
-      self.assertTrue(
-        np.allclose(origin, expectedOrigin, atol=1e-2),
-        msg="%s origin %s" % (expectedName, origin)
+      self.assertEqual(
+        fibulaPlane.GetPlaneType(),
+        slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points,
+        msg=expectedName
       )
-      self.assertTrue(
-        np.allclose(normal, expectedNormal, atol=1e-3),
-        msg="%s normal %s" % (expectedName, normal)
+      self.assertEqual(
+        fibulaPlane.GetNumberOfControlPoints(),
+        3,
+        msg=expectedName
       )
+      for j in range(3):
+        planePoint = np.array(fibulaPlane.GetNthControlPointPosition(j))
+        self.assertTrue(
+          np.allclose(planePoint, expectedPlanePoints[j], atol=1e-3),
+          msg="%s control point %d %s" % (expectedName, j, planePoint.tolist())
+        )
 
     # the registration transforms of TestPlanBRP place each fibula piece on the mandible
     expectedMandibleToFibulaRegistrationMatrices = [
@@ -9790,6 +9898,181 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     )
 
     self.delayDisplay("VerifyPlanMatchesTestPlanBRP test successful")
+
+  def getmandibularPlanesPointsListOfTestPlanBRP(self):
+    """Control points of the mandibular planes of TestPlanBRP, in mandibular curve order
+    """
+    return [
+      [
+        [32.54102873923069, 74.0465056955266, -65.28580186587095],
+        [40.439023455028355, 85.92272551397735, -44.75345951792954],
+        [53.846417965586426, 80.00674508361615, -76.92865101675113],
+      ],
+      [
+        [22.83209800720215, 102.14715576171878, -76.94503021240234],
+        [28.916271978245124, 116.4772691949198, -57.38408248276329],
+        [39.64197795105282, 114.1893090077745, -90.99545659283068],
+      ],
+      [
+        [-0.8704084241075876, 109.79193095502887, -79.81026868970173],
+        [-5.810498315690872, 127.6992978180478, -63.079407268473965],
+        [-2.5824929378404073, 126.5654476322514, -98.26881426883044],
+      ],
+      [
+        [-15.19514165371224, 97.82707175601648, -80.40758469692383],
+        [-28.83325207809499, 109.81509990225511, -63.22360596039916],
+        [-31.898449592223713, 103.98463971599676, -97.95990251336856],
+      ],
+    ]
+
+  def getControlPointsOfMandiblePlane(self, planeNode):
+    return [np.array(planeNode.GetNthControlPointPosition(j)) for j in range(3)]
+
+  def getAxesAndOriginOfPlaneFromControlPoints(self, planePoints):
+    """Axes (as columns) and origin of a plane of type PlaneType3Points,
+    computed from its 3 control points as vtkMRMLMarkupsPlaneNode does
+    """
+    point0, point1, point2 = [np.array(point, dtype=float) for point in planePoints]
+    planeX = (point1 - point0)/np.linalg.norm(point1 - point0)
+    planeZ = np.cross(planeX, point2 - point0)
+    planeZ = planeZ/np.linalg.norm(planeZ)
+    planeY = np.cross(planeZ, planeX)
+    planeY = planeY/np.linalg.norm(planeY)
+    return np.column_stack([planeX, planeY, planeZ]), point0
+
+  def assertMandiblePlaneIsDefinedByThreePoints(self, planeNode):
+    self.assertEqual(
+      planeNode.GetPlaneType(),
+      slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points,
+      msg=planeNode.GetName()
+    )
+    self.assertEqual(
+      planeNode.GetNumberOfControlPoints(),
+      3,
+      msg=planeNode.GetName()
+    )
+
+  def moveMandiblePlaneWithInteractionHandle(self, planeNode, handleTransform):
+    """Move the plane as dragging one of its interaction handles in a view does
+    """
+    planeNode.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointStartInteractionEvent)
+    planeNode.ApplyTransform(handleTransform, False)
+    planeNode.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent)
+    slicer.app.processEvents()
+
+  def translateMandiblePlaneWithInteractionHandles(self, planeNode, targetPlaneOrigin):
+    """Drag the X, Y and Z translation handles of the plane till its origin is on the target origin
+    """
+    planeAxes, planeOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(
+      self.getControlPointsOfMandiblePlane(planeNode)
+    )
+    translationVector = np.array(targetPlaneOrigin) - planeOrigin
+    for axisIndex in range(3):
+      handleAxis = planeAxes[:,axisIndex]
+      translationTransform = vtk.vtkTransform()
+      translationTransform.Translate((np.dot(translationVector, handleAxis)*handleAxis).tolist())
+      self.moveMandiblePlaneWithInteractionHandle(planeNode, translationTransform)
+
+  def rotateMandiblePlaneWithInteractionHandles(self, planeNode, targetPlaneAxes):
+    """Drag the X, Y and Z rotation handles of the plane, one after the other, till its axes are the target axes.
+    The rotation handles turn the plane around its origin
+    """
+    planeAxes, planeOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(
+      self.getControlPointsOfMandiblePlane(planeNode)
+    )
+    # rotation from the plane axes to the target axes in plane coordinates, split as rotationAroundX*rotationAroundY*rotationAroundZ
+    rotationMatrix = planeAxes.T @ np.array(targetPlaneAxes)
+    angleAroundY = np.arcsin(np.clip(rotationMatrix[0,2], -1.0, 1.0))
+    angleAroundX = np.arctan2(-rotationMatrix[1,2], rotationMatrix[2,2])
+    angleAroundZ = np.arctan2(-rotationMatrix[0,1], rotationMatrix[0,0])
+    for axisIndex, angleRadians in [(0, angleAroundX), (1, angleAroundY), (2, angleAroundZ)]:
+      # each rotation is around an axis of the plane after the previous rotation
+      planeAxes, planeOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(
+        self.getControlPointsOfMandiblePlane(planeNode)
+      )
+      rotationTransform = vtk.vtkTransform()
+      rotationTransform.PostMultiply()
+      rotationTransform.Translate((-planeOrigin).tolist())
+      rotationTransform.RotateWXYZ(
+        vtk.vtkMath.DegreesFromRadians(angleRadians),
+        planeAxes[:,axisIndex].tolist()
+      )
+      rotationTransform.Translate(planeOrigin.tolist())
+      self.moveMandiblePlaneWithInteractionHandle(planeNode, rotationTransform)
+
+  def updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes(self):
+    """Click the "Update virtual plan" button and check how it positioned the mandibular planes:
+    it only rotates them around their origins, the middle planes get maximum bone contact and
+    the first and last planes keep their normals
+    """
+    mandibularPlanesList = createListFromFolderName("Mandibular planes")
+    planesAxesAndOriginsBeforeUpdate = [
+      self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(planeNode)) for planeNode in mandibularPlanesList
+    ]
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.click()
+    slicer.app.processEvents()
+
+    self.assertParameterNodeHasParameterValues({
+      "virtualPlanWasSuccessful": "True",
+    })
+
+    # the planes keep the mandibular curve order
+    self.assertEqual(
+      [planeNode.GetID() for planeNode in createListFromFolderName("Mandibular planes")],
+      [planeNode.GetID() for planeNode in mandibularPlanesList]
+    )
+
+    planesAxesAndOrigins = []
+    for planeNode in mandibularPlanesList:
+      self.assertMandiblePlaneIsDefinedByThreePoints(planeNode)
+      planesAxesAndOrigins.append(
+        self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(planeNode))
+      )
+
+    for i in range(len(mandibularPlanesList)):
+      planeAxes, planeOrigin = planesAxesAndOrigins[i]
+      planeAxesBeforeUpdate, planeOriginBeforeUpdate = planesAxesAndOriginsBeforeUpdate[i]
+      # the update rotates the planes around their origins
+      self.assertTrue(
+        np.allclose(planeOrigin, planeOriginBeforeUpdate, atol=1e-6),
+        msg="%s origin %s before update %s" % (mandibularPlanesList[i].GetName(), planeOrigin.tolist(), planeOriginBeforeUpdate.tolist())
+      )
+      if i == 0 or i == len(mandibularPlanesList) - 1:
+        # the first and last planes only rotate together with the plane of rotation, around their normals
+        self.assertTrue(
+          np.allclose(planeAxes[:,2], planeAxesBeforeUpdate[:,2], atol=1e-6),
+          msg="%s normal %s before update %s" % (mandibularPlanesList[i].GetName(), planeAxes[:,2].tolist(), planeAxesBeforeUpdate[:,2].tolist())
+        )
+      else:
+        # maximum bone contact: the normal of a middle plane bisects the directions to the origins of its neighbour planes
+        previousPlaneOrigin = planesAxesAndOrigins[i-1][1]
+        nextPlaneOrigin = planesAxesAndOrigins[i+1][1]
+        directionFromPreviousPlane = (planeOrigin - previousPlaneOrigin)/np.linalg.norm(planeOrigin - previousPlaneOrigin)
+        directionToNextPlane = (nextPlaneOrigin - planeOrigin)/np.linalg.norm(nextPlaneOrigin - planeOrigin)
+        expectedPlaneNormal = (directionFromPreviousPlane + directionToNextPlane)/np.linalg.norm(directionFromPreviousPlane + directionToNextPlane)
+        self.assertTrue(
+          np.allclose(planeAxes[:,2], expectedPlaneNormal, atol=1e-6),
+          msg="%s normal %s expected %s" % (mandibularPlanesList[i].GetName(), planeAxes[:,2].tolist(), expectedPlaneNormal.tolist())
+        )
+
+    # a fibula piece for each pair of consecutive mandibular planes
+    self.assertEqual(
+      len(createListFromFolderName("Fibula planes")),
+      2*len(mandibularPlanesList) - 2
+    )
+    transformedFibulaPiecesList = createListFromFolderName("Transformed Fibula Pieces")
+    self.assertEqual(
+      len(transformedFibulaPiecesList),
+      len(mandibularPlanesList) - 1
+    )
+    for transformedFibulaPiece in transformedFibulaPiecesList:
+      self.assertGreater(
+        transformedFibulaPiece.GetPolyData().GetNumberOfPoints(),
+        0,
+        msg=transformedFibulaPiece.GetName()
+      )
 
   def assertParameterNodeHasParameterValues(self, expectedParameterValuesDict):
     """Numbers are compared as numbers (e.g. "500" and "500.0" are equal), other values as text
