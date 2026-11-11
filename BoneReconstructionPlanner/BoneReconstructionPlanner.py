@@ -8155,8 +8155,8 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_SetVirtualSurgicalPlanParameters()
     self.section_AddMandiblePlanes()
     self.section_MoveMandiblePlanesAndUpdateVirtualSurgicalPlan()
+    self.section_LastVirtualSurgicalPlanUpdate()
     """
-    self.section_UpdateVirtualSurgicalPlan()
     self.section_LockVirtualSurgicalPlan()
     self.section_CreateMiterBoxes()
     self.section_GenerateFibulaGuideBase()
@@ -8770,7 +8770,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       )
 
       if i == 0:
-        # section_UpdateVirtualSurgicalPlan makes the last update of the plan
+        # section_LastVirtualSurgicalPlanUpdate makes the last update of the plan
         break
 
       self.updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes()
@@ -8825,7 +8825,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("CheckValidFibulaLineTest successful")
 
-  def section_UpdateVirtualSurgicalPlan(self):
+  def section_LastVirtualSurgicalPlanUpdate(self):
     self.delayDisplay("Starting the UpdateVirtualSurgicalPlan test")
 
     # the first plane was moved last, so the other planes rotate together with it, as in TestPlanBRP
