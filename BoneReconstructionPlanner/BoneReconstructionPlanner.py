@@ -420,6 +420,8 @@ slicer.FIBULA_SEGMENTS_MEASUREMENT_MODES = ["center2center", "proximal2proximal"
 
 TEXT_LABEL_OVERLAP_EPSILON = 0.3 # mm, overlap of text labels into the guide boxes so boolean operations are robust
 
+BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_STEP = 0.5 # mm, the bigger miter boxes move away from the fibula in steps of this size till their bottom face does not touch it
+
 TEST_DATA_SIZE_MB = 500 # approximate size of CTMandible, CTFibula and their segmentations
 RECOMMENDED_CACHE_SIZE_MB = 1024
 
@@ -6150,7 +6152,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
               break
 
         if touchingBone:
-          miterBoxAxisYTranslation += 0.5
+          miterBoxAxisYTranslation += BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_STEP
           miterBoxOrigin = pointOfIntersection + miterBoxAxisX*miterBoxAxisXTranslation + miterBoxAxisY*miterBoxAxisYTranslation + miterBoxAxisZ*miterBoxAxisZTranslation
           miterBoxToWorldChangeOfFrameMatrix = self.getAxes1ToWorldChangeOfFrameMatrix(miterBoxAxisX, miterBoxAxisY, miterBoxAxisZ, miterBoxOrigin)
 
@@ -8142,6 +8144,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
   def test_FullWorkflow(self):
     """CDash test that checks full workflow from data loading, going through virtual surgical plan till getting neomandible and surgical guides 3D models.
+    The sections follow the README instructions and the plan they create is compared with the TestPlanBRP sample data.
     """
     self.section_EnterBRP()
     self.section_GetWidget()
@@ -8151,11 +8154,26 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_MakeModels()
     self.section_VerifyFibulaLine()
     self.section_SetMandibularCurve()
-    #self.section_AddMandiblePlanes()
-    #self.section_SimulateAndImproveMandibleReconstruction()
-    #self.section_createMiterBoxesFromCorrespondingLine()
-    ##self.section_prepareGuideBaseForFibulaGuide()
-    #self.section_createAndUpdateSawBoxesFromMandiblePlanes()
+    self.section_SetVirtualSurgicalPlanParameters()
+    self.section_AddMandiblePlanes()
+    self.section_MoveMandiblePlanesAndUpdateVirtualSurgicalPlan()
+    self.section_LastVirtualSurgicalPlanUpdate()
+    self.section_LockVirtualSurgicalPlan()
+    self.section_CreateMiterBoxes()
+    self.section_GenerateFibulaGuideBase()
+    self.section_AddFibulaScrewHoles()
+    #checked till here
+    self.section_CreateFibulaSurgicalGuide()
+    self.section_CreateSawBoxes()
+    self.section_CreateMandibleGuideBasesFromCurves()
+    self.section_AddMandibleBridge()
+    self.section_AddMandibleScrewHoles()
+    self.section_CreateMandibleSurgicalGuide()
+    self.section_CreateNeomandible()
+    self.section_SetVisualizationOptionsAndFibulaNormalization()
+    self.section_PlayVirtualSurgicalPlanAnimation()
+    self.section_ExportPlanningOutputs()
+    self.section_VerifyPlanMatchesTestPlanBRP()
 
   def section_EnterBRP(self):
     self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
@@ -8477,52 +8495,6 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       np.allclose(decimatedMandibleModelNode.GetMesh().GetNumberOfPoints(), targetDecimatedMandiblePoints, rtol=allowedRelativeDifference)
     )
 
-  def section_AddMandibularCurve(self):
-    self.delayDisplay("Starting the AddMandibularCurveTest")
-
-    mandibularCurvePoints = [
-      [ 43.02632904,  61.06202698, -60.92616272],
-      [ 33.40823746,  83.49567413, -71.52266693],
-      [ 20.23157501, 103.01984406, -78.46653748],
-      [  3.63758111, 110.96538544, -82.94055939],
-      [-15.31359386, 103.96769714, -83.5898056 ],
-      [-31.47601509,  77.34331512, -76.59559631],
-      [-44.32816696,  47.25786209, -64.23408508],
-    ]
-
-    self.logicBRP.addMandibularCurve()
-    selectionNode = slicer.app.applicationLogic().GetSelectionNode()
-    mandibularCurveNode = slicer.mrmlScene.GetNodeByID(
-      selectionNode.GetActivePlaceNodeID()
-    )
-    for point in mandibularCurvePoints:
-      mandibularCurveNode.AddControlPoint(*point)
-    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
-    interactionNode.SwitchToViewTransformMode()
-
-    self.assertEqual(
-      len(mandibularCurvePoints),
-      mandibularCurveNode.GetNumberOfControlPoints()
-    )
-
-    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    BRPFolder = getFolder("BoneReconstructionPlanner")
-    mandibularCurveItemID = getItem(mandibularCurveNode)
-    self.assertEqual(
-      BRPFolder,
-      shNode.GetItemParent(mandibularCurveItemID)
-    )
-
-    #the mandibleCurveSelector autopopulates and updates the parameterNode
-    parameterNode = self.logicBRP.getParameterNode()
-    mandibleCurveFromParameterNode = parameterNode.GetNodeReference("mandibleCurve")
-    self.assertEqual(
-      mandibularCurveNode.GetID(),
-      mandibleCurveFromParameterNode.GetID()
-    )
-
-    self.delayDisplay("AddMandibularCurveTest successful")
-  
   def section_SetMandibularCurve(self):
     mandibularCurvePoints = [
       [ 38.67119598388672, 73.03700256347656, -64.94901275634766],
@@ -8568,17 +8540,66 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       mandibleCurveFromGUI.GetID()
     )
 
-  def section_AddMandiblePlanes(self):
-    self.delayDisplay("Starting the AddMandibularPlanesTest")
+  def section_SetVirtualSurgicalPlanParameters(self):
+    self.delayDisplay("Starting the SetVirtualSurgicalPlanParameters test")
 
-    planeOrigins = [
-      [38.89806365966797, 71.97505950927734, -65.15746307373047],
-      [-28.70669174194336, 81.52465057373047, -75.59122467041016],
-      [21.20140266418457, 100.38216400146484, -73.75139617919922],
-      [-9.514277458190918, 105.30805969238281, -79.4371337890625],
+    # set the virtual surgical plan parameters of TestPlanBRP through the GUI
+    slicer.app.processEvents()
+    self.widgetBRP.ui.donorLegComboBox.currentText = "Left"
+    self.widgetBRP.ui.initialSpinBox.value = 20.0
+    self.widgetBRP.ui.betweenSpinBox.value = 1.5
+    self.widgetBRP.ui.includeVesselsOnPlanCheckBox.checked = True
+    self.widgetBRP.ui.useNonDecimatedModelsForPreviewCheckBox.checked = True
+    self.widgetBRP.ui.mandiblePlanesPositioningForMaximumBoneContactCheckBox.checked = True
+    self.widgetBRP.ui.makeAllMandiblePlanesRotateTogetherCheckBox.checked = True
+    # the plan is updated with the "Update virtual plan" button, so it is not recomputed while the planes are placed
+    self.widgetBRP.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.checkState = qt.Qt.Unchecked
+    slicer.app.processEvents()
+
+    self.assertParameterNodeHasParameterValues({
+      "donorLeg": "Left",
+      "initialSpace_mm": "20.0",
+      "additionalBetweenSpaceOfFibulaPlanes_mm": "1.5",
+      "includeVesselsOnPlan": "True",
+      "useNonDecimatedModelsForPreview": "True",
+      "mandiblePlanesPositioningForMaximumBoneContact": "True",
+      "makeAllMandiblePlanesRotateTogether": "True",
+      "updateOnMandiblePlanesMovement": "False",
+      "kindOfMandibleResection": "Segmental Mandibulectomy",
+      "fibulaSegmentsMeasurementMode": "center2center",
+    })
+
+    self.delayDisplay("SetVirtualSurgicalPlanParameters test successful")
+
+  def section_AddMandiblePlanes(self):
+    self.delayDisplay("Starting the AddMandiblePlanes test")
+
+    # control points of the mandibular planes of TestPlanBRP, in mandibular curve order
+    mandibularPlanesPoints = [
+      [
+        [34.2412223815918, 81.95752716064453, -68.43669128417969],
+        [17.681754479693335, 68.3501932858761, -81.30620905395546],
+        [18.90018628448042, 81.95752716064453, -48.69707093658623],
+      ],
+      [
+        [24.273244857788086, 100.03739166259766, -75.95537567138672],
+        [8.404696192370164, 84.08617011136023, -86.85251723587977],
+        [10.121037165756377, 100.03739166259766, -55.34676054465881],
+      ],
+      [
+        [6.518194198608398, 110.56795501708984, -82.14813232421875],
+        [4.705286916383013, 85.63426641034704, -82.3047836824589],
+        [4.365990999129225, 110.56795501708984, -57.240944177257006],
+      ],
+      [
+        [-14.227987289428711, 105.87507629394531, -82.04802703857422],
+        [2.7540218400726317, 87.7760003881611, -85.05382431753264],
+        [-9.870741176329117, 105.87507629394531, -57.4306671819633],
+      ],
     ]
 
-    for origin in planeOrigins:
+    # click where each plane goes, the plane is created straight over the mandibular curve
+    for planePoints in mandibularPlanesPoints:
       slicer.app.processEvents()
       self.widgetBRP.ui.addCutPlaneButton.click()
       slicer.app.processEvents()
@@ -8586,26 +8607,43 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       mandibularPlaneNode = slicer.mrmlScene.GetNodeByID(
         selectionNode.GetActivePlaceNodeID()
       )
-      mandibularPlaneNode.AddControlPoint(*origin)
+      mandibularPlaneNode.AddControlPoint(*planePoints[0])
       interactionNode = slicer.app.applicationLogic().GetInteractionNode()
       interactionNode.SwitchToViewTransformMode()
-    
+
+    mandibularPlanesList = createListFromFolderName("Mandibular planes")
+    self.assertEqual(
+      len(mandibularPlanesList),
+      len(mandibularPlanesPoints)
+    )
 
     shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    BRPFolder = shNode.GetItemByName("BoneReconstructionPlanner")
+    BRPFolder = getFolder("BoneReconstructionPlanner")
     mandibularPlanesFolderItemID = shNode.GetItemByName("Mandibular planes")
-
     self.assertEqual(
       BRPFolder,
       shNode.GetItemParent(mandibularPlanesFolderItemID)
     )
 
+    # the planes keep the mandibular curve order
     mandibularPlanesList = createListFromFolderName("Mandibular planes")
     self.assertEqual(
       len(mandibularPlanesList),
-      4
+      len(mandibularPlanesPoints)
     )
-
+    #WORKAROUND, fixed on new Slicer Preview release, uncomment code below when fixed
+    """
+    for i in range(len(mandibularPlanesList)):
+      for j in range(3):
+        self.assertTrue(
+          np.allclose(
+            mandibularPlanesList[i].GetNthControlPointPosition(j),
+            mandibularPlanesPoints[i][j],
+            atol=1e-3
+          )
+        )
+    """
+        
     colorArray = []
 
     for planeNode in mandibularPlanesList:
@@ -8626,7 +8664,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         planeNode.GetPlaneType(),
         slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points
       )
-      
+
       displayNode = planeNode.GetDisplayNode()
       self.assertEqual(
         displayNode.GetGlyphScale(),
@@ -8646,7 +8684,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       )
 
       colorArray.append(displayNode.GetSelectedColor())
-    
+
     colorArray = np.array(colorArray)
 
     # check that plane colors do not repeat
@@ -8659,7 +8697,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
               colorArray[j]
             )
           )
-    
+
     # check planes order
     mandibleCurve = self.logicBRP.getMandibularCurve()
     closestCurvePoint = [0,0,0]
@@ -8674,7 +8712,72 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       if smallerCurvePointIndex <= curvePointIndex:
         smallerCurvePointIndex = curvePointIndex
 
-    self.delayDisplay("AddMandibularPlanesTest successful")
+    
+    parameterNode = self.logicBRP.getParameterNode()
+
+    # mandiblePlaneOfRotation is not set because no plane has moved yet (appart to its snapping to the mandibular curve after creation)
+    self.assertIsNone(
+      parameterNode.GetNodeReferenceID("mandiblePlaneOfRotation")
+    )
+    
+    self.assertParameterNodeHasParameterValues({
+      "colorIndex": "3",
+    })
+
+    self.delayDisplay("AddMandiblePlanes test successful")
+
+  def section_MoveMandiblePlanesAndUpdateVirtualSurgicalPlan(self):
+    self.delayDisplay("Starting the MoveMandiblePlanesAndUpdateVirtualSurgicalPlan test")
+
+    mandibularPlanesList = createListFromFolderName("Mandibular planes")
+    mandibularPlanesPointsListOfTestPlanBRP = self.getmandibularPlanesPointsListOfTestPlanBRP()
+    self.assertEqual(
+      len(mandibularPlanesList),
+      len(mandibularPlanesPointsListOfTestPlanBRP)
+    )
+    parameterNode = self.logicBRP.getParameterNode()
+
+    # first preview of the reconstruction, with the planes straight over the mandibular curve
+    self.updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes()
+    self.delayDisplay("Reconstruction with the mandibular planes straight over the mandibular curve")
+
+    # move each plane with its interaction handles to its TestPlanBRP position and orientation, and update the plan after each movement,
+    #   the first plane is moved last so it is the plane the others rotate together with, as in TestPlanBRP
+    for i in reversed(range(len(mandibularPlanesList))):
+      planeNode = mandibularPlanesList[i]
+      targetPlaneAxes, targetPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(
+        mandibularPlanesPointsListOfTestPlanBRP[i]
+      )
+      self.delayDisplay(f"Moving {planeNode.GetName()} to its TestPlanBRP position and orientation")
+      self.translateMandiblePlaneWithInteractionHandles(planeNode, targetPlaneOrigin)
+      self.rotateMandiblePlaneWithInteractionHandles(planeNode, targetPlaneAxes)
+
+      self.assertMandiblePlaneIsDefinedByThreePoints(planeNode)
+      planePoints = self.getControlPointsOfMandiblePlane(planeNode)
+      for j in range(3):
+        self.assertTrue(
+          np.allclose(
+            planePoints[j],
+            mandibularPlanesPointsListOfTestPlanBRP[i][j],
+            atol=1e-3
+          ),
+          msg=f"{planeNode.GetName()} control point {j} {planePoints[j].tolist()}"
+        )
+
+      # the last moved plane is the one the other planes rotate together with
+      self.assertEqual(
+        parameterNode.GetNodeReferenceID("mandiblePlaneOfRotation"),
+        planeNode.GetID()
+      )
+
+      if i == 0:
+        # section_LastVirtualSurgicalPlanUpdate makes the last update of the plan
+        break
+
+      self.updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes()
+      self.delayDisplay(f"Reconstruction updated after moving {planeNode.GetName()}")
+
+    self.delayDisplay("MoveMandiblePlanesAndUpdateVirtualSurgicalPlan test successful")
 
   def section_VerifyFibulaLine(self):
     self.delayDisplay("Start CheckValidFibulaLineTest")
@@ -8723,263 +8826,1707 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("CheckValidFibulaLineTest successful")
 
-  def section_SimulateAndImproveMandibleReconstruction(self):
-    self.delayDisplay("Starting the SimulateAndImproveMandibleReconstruction")
-    self.delayDisplay("Create the reconstruction for first time")
-    self.logicBRP.onGenerateFibulaPlanesTimerTimeout()
-    self.delayDisplay("Reconstruction successful")
-    #
+  def section_LastVirtualSurgicalPlanUpdate(self):
+    self.delayDisplay("Starting the UpdateVirtualSurgicalPlan test")
 
-    # # generate mandibular plane movements with this code:
-    # def createListFromFolderName(folderID):
-    #   createdList = []
-    #   shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    #   myList = vtk.vtkIdList()
-    #   shNode.GetItemChildren(folderID,myList)
-    #   for i in range(myList.GetNumberOfIds()):
-    #     createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
-    #   return createdList
-    # def updateMandibularPlaneMovementsList(caller=None,event=None,movementsList=[]):
-    #   plane = caller
-    #   planeMatrix = vtk.vtkMatrix4x4()
-    #   plane.GetObjectToWorldMatrix(planeMatrix)
-    #   movementsList.append([plane.GetID(),slicer.util.arrayFromVTKMatrix(planeMatrix).tolist()])
-    # shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
-    # mandiblePlanesFolder = shNode.GetItemByName("Mandibular planes")
-    # mandiblePlanes = createListFromFolderName(mandiblePlanesFolder)
-    # # list to save the movements for the test
-    # movementsList = []
-    # # set observers
-    # planesAndObserversList = []
-    # for plane in mandiblePlanes:
-    #   planesAndObserversList.append(
-    #     [
-    #         plane.GetID(),
-    #         plane.AddObserver(
-    #             slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
-    #             lambda caller,event,movementsList=movementsList: updateMandibularPlaneMovementsList(caller,event,movementsList)
-    #         )
-    #     ]
-    #  )
-    # 
-    # 
-
-    if USING_GUI:
-      layoutManager = slicer.app.layoutManager()
-      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-      if int(slicer.app.revision) >= 31524:
-        layoutManager.addMaximizedViewNode(mandibleViewNode)
-      else:
-        layoutManager.setMaximizedViewNode(mandibleViewNode)
-
-    # 8 movements below
-    # movementsList = [['vtkMRMLMarkupsPlaneNode4', [[0.5161781920883237, -0.04134258142560255, -0.8554828256449669, -9.862711906433127], [-0.8468593163756161, 0.12466280634486007, -0.5169994999823967, 107.90783691406249], [0.12802098374975024, 0.991337468108258, 0.02933687175645767, -83.94944763183594], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode4', [[0.516178231664674, -0.041342429710410605, -0.8554828090973949, -7.397708892822266], [-0.8468592958433797, 0.12466287181842768, -0.5169995178272775, 103.8636703491211], [0.12802095999946736, 0.9913374662019095, 0.029337039816463184, -83.33809661865234], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode2', [[0.8922376682835299, 0.18524939419545736, -0.41181865577725557, -28.11571121215824], [-0.4465787117400004, 0.22681900255851603, -0.8655175297467994, 84.53712463378889], [-0.06692830131275733, 0.9561567873673105, 0.2851048937756292, -79.05013275146474], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode2', [[0.8922376766572847, 0.1852491791773996, -0.41181873435688954, -24.693025588989258], [-0.4465787239770117, 0.22681897690359318, -0.8655175301560744, 82.82402038574219], [-0.06692810802850067, 0.9561568351115349, 0.2851047790290762, -79.30686950683594], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode3', [[-0.708383352772158, -0.24065112649761564, -0.6635360282838488, 22.992961883544925], [-0.6972025285352179, 0.09205350357255149, 0.7109393692039546, 100.19924163818364], [-0.11000754392029201, 0.9662366106681359, -0.23299174338413398, -77.51470947265622], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode3', [[-0.7083834009232749, -0.240651176447713, -0.6635359587623766, 20.943126678466797], [-0.6972024658214877, 0.09205345939667467, 0.7109394364258759, 98.18177032470703], [-0.11000763132079507, 0.9662366024361924, -0.23299173625635644, -77.8330307006836], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode1', [[-0.8984010895060554, -0.2612400933848085, -0.35302846341708666, 39.90895843505858], [-0.42656108809295407, 0.32777755218344756, 0.8429753937153698, 68.75823974609365], [-0.1045041649853625, 0.9079182176236601, -0.4059105684849661, -64.72950744628893], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode1', [[-0.8984010923061703, -0.2612399980002971, -0.3530285268754991, 36.00282287597656], [-0.4265610935556299, 0.32777742996859105, 0.8429754384724448, 66.90361022949219], [-0.10450411861599232, 0.9079182891912633, -0.4059104203445687, -65.18387603759766], [0.0, 0.0, 0.0, 1.0]]]]
-    # 4 movements below
-    movementsList = [['vtkMRMLMarkupsPlaneNode4', [[0.516178231664674, -0.041342429710410605, -0.8554828090973949, -7.397708892822266], [-0.8468592958433797, 0.12466287181842768, -0.5169995178272775, 103.8636703491211], [0.12802095999946736, 0.9913374662019095, 0.029337039816463184, -83.33809661865234], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode2', [[0.8922376766572847, 0.1852491791773996, -0.41181873435688954, -24.693025588989258], [-0.4465787239770117, 0.22681897690359318, -0.8655175301560744, 82.82402038574219], [-0.06692810802850067, 0.9561568351115349, 0.2851047790290762, -79.30686950683594], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode3', [[-0.7083834009232749, -0.240651176447713, -0.6635359587623766, 20.943126678466797], [-0.6972024658214877, 0.09205345939667467, 0.7109394364258759, 98.18177032470703], [-0.11000763132079507, 0.9662366024361924, -0.23299173625635644, -77.8330307006836], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode1', [[-0.8984010923061703, -0.2612399980002971, -0.3530285268754991, 36.00282287597656], [-0.4265610935556299, 0.32777742996859105, 0.8429754384724448, 66.90361022949219], [-0.10450411861599232, 0.9079182891912633, -0.4059104203445687, -65.18387603759766], [0.0, 0.0, 0.0, 1.0]]]]
-    for item in movementsList:
-      self.delayDisplay("Update mandibular plane and reconstruction")
-      self.delayDisplay("Move mandibular plane")
-      nodeID = item[0]
-      newPlaneToWorldMatrix = slicer.util.vtkMatrixFromArray(np.array(item[1]))
-      planeNode = slicer.mrmlScene.GetNodeByID(nodeID)
-      oldPlaneToWorld = vtk.vtkMatrix4x4()
-      planeNode.GetObjectToWorldMatrix(oldPlaneToWorld)
-      worldToOldPlane = vtk.vtkMatrix4x4()
-      vtk.vtkMatrix4x4.Invert(oldPlaneToWorld, worldToOldPlane)
-      transform = vtk.vtkTransform()
-      transform.PostMultiply()
-      transform.Concatenate(worldToOldPlane)
-      transform.Concatenate(newPlaneToWorldMatrix)
-      wasModified = planeNode.StartModify()
-      for i in range(3):
-        oldPos = planeNode.GetNthControlPointPosition(i)
-        newPos = [0,0,0]
-        transform.TransformPoint(oldPos,newPos)
-        planeNode.SetNthControlPointPosition(i,newPos)
-      planeNode.EndModify(wasModified)
-      self.delayDisplay("Mandibular plane moved")
-      #
-      self.delayDisplay("Update reconstruction")
-      self.logicBRP.onGenerateFibulaPlanesTimerTimeout()
-      self.delayDisplay("Update successful")
-    
-    if USING_GUI:
-      # hide original mandible
-      self.widgetBRP.ui.setOriginalMandibleVisibility(False)
-      # hide mandible plane handles
-      self.widgetBRP.ui.setMandiblePlanesInteractionHandlesVisibility(False)
-
-    self.delayDisplay("Optimize bones contact in reconstruction")
+    # the first plane was moved last, so the other planes rotate together with it, as in TestPlanBRP
+    mandibularPlanesList = createListFromFolderName("Mandibular planes")
     parameterNode = self.logicBRP.getParameterNode()
-    parameterNode.SetParameter("mandiblePlanesPositioningForMaximumBoneContact","True")
-    self.logicBRP.onGenerateFibulaPlanesTimerTimeout()
-    self.delayDisplay("Bones contact optimized")
+    self.assertEqual(
+      parameterNode.GetNodeReferenceID("mandiblePlaneOfRotation"),
+      mandibularPlanesList[0].GetID()
+    )
 
-    if USING_GUI:
-      fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-      layoutManager = slicer.app.layoutManager()
-      if int(slicer.app.revision) >= 31524:
-        layoutManager.removeMaximizedViewNode(mandibleViewNode)
-        layoutManager.addMaximizedViewNode(fibulaViewNode)
-      else:
-        layoutManager.setMaximizedViewNode(None)
-        layoutManager.setMaximizedViewNode(fibulaViewNode)
+    self.updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes()
 
-    # solve rotation about the anatomical axis of the grafted bone-pieces
-    self.delayDisplay("Make between-bone-pieces relative rotation zero")
-    parameterNode = self.logicBRP.getParameterNode()
-    parameterNode.SetParameter("makeAllMandiblePlanesRotateTogether","True")
-    self.logicBRP.onGenerateFibulaPlanesTimerTimeout()
-    self.delayDisplay("Achieved zero relative rotation")
+    self.assertParameterNodeHasParameterValues({
+      "virtualPlanWasSuccessful": "True",
+      "miterBoxesNeedUpdate": "True",
+      "sawBoxesNeedUpdate": "True",
+    })
 
-    if USING_GUI:
-      layoutManager = slicer.app.layoutManager()
-      if int(slicer.app.revision) >= 31524:
-        layoutManager.removeMaximizedViewNode(fibulaViewNode)
-      else:
-        layoutManager.setMaximizedViewNode(None)
+    # maximum bone contact and rotating together with the first plane bring the planes to their TestPlanBRP poses
+    mandibularPlanesPointsListOfTestPlanBRP = self.getmandibularPlanesPointsListOfTestPlanBRP()
+    mandibularPlanesList = createListFromFolderName("Mandibular planes")
+    self.assertEqual(
+      len(mandibularPlanesList),
+      len(mandibularPlanesPointsListOfTestPlanBRP)
+    )
+    for i in range(len(mandibularPlanesList)):
+      planePoints = self.getControlPointsOfMandiblePlane(mandibularPlanesList[i])
+      for j in range(3):
+        self.assertTrue(
+          np.allclose(
+            planePoints[j],
+            mandibularPlanesPointsListOfTestPlanBRP[i][j],
+            atol=1e-3
+          ),
+          msg=f"{mandibularPlanesList[i].GetName()} control point {j} {planePoints[j].tolist()}"
+        )
 
-    self.delayDisplay("SimulateAndImproveMandibleReconstruction test successful")
-    
-  def section_createMiterBoxesFromCorrespondingLine(self):
-    self.delayDisplay("Starting the createMiterBoxesFromCorrespondingLine test")
-
-    parameterNode = self.logicBRP.getParameterNode()
-    wasModified = parameterNode.StartModify()
-    parameterNode.SetNodeReferenceID("currentScalarVolume", self.fibulaVolume.GetID())
-    parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode", "True")
-    parameterNode.EndModify(wasModified)
-
-    sliceOffset = -38.08869552612305
-    if USING_GUI:
-      redSliceNode = slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode")
-      redSliceNode.SetSliceOffset(sliceOffset)
-
-    miterBoxLinePoints = [
-      [-92.47185918150018, -10.999045106771323, sliceOffset],
-      [-104.08360013902106, -12.657865243560021, sliceOffset],
+    # control points of the fibula planes of TestPlanBRP
+    expectedFibulaPlanesNamesAndPoints = [
+      [
+        "FibulaPlane0_A",
+        [
+          [-88.55952100631913, -9.92076168671747, -94.96975270284052],
+          [-63.70384260246214, -9.983630271981582, -92.28809302550948],
+          [-88.80003014911502, 14.919471794658236, -92.15817735386484],
+        ],
+      ],
+      [
+        "FibulaPlane0_B",
+        [
+          [-91.28129917642909, -9.668437650705414, -63.15190029397988],
+          [-66.96181509943989, -10.591924061052438, -57.43264622732269],
+          [-92.85075252753867, 13.038776108331264, -52.81172333804221],
+        ],
+      ],
+      [
+        "FibulaPlane1_A",
+        [
+          [-91.72303312386867, -9.627486446935151, -57.987987342525344],
+          [-66.82709237450203, -11.352967232909036, -59.476224642575986],
+          [-90.80305496197536, 12.922269144435576, -68.74262182962354],
+        ],
+      ],
+      [
+        "FibulaPlane1_B",
+        [
+          [-93.85963830216974, -9.429411215134962, -33.01086431106054],
+          [-71.04586639636577, -10.03700370217635, -22.804854179787696],
+          [-97.00601149888472, 13.898073151391545, -24.58894001571918],
+        ],
+      ],
+      [
+        "FibulaPlane2_A",
+        [
+          [-94.30165526755056, -9.388433774021138, -27.84364285225567],
+          [-70.2837055843948, -12.56177988734791, -34.0135672814874],
+          [-93.5321901488177, 13.92456040925839, -36.83876517724002],
+        ],
+      ],
+      [
+        "FibulaPlane2_B",
+        [
+          [-95.8932003641365, -9.240888655658466, -9.238325364838404],
+          [-71.47173609268242, -12.34627852480304, -4.8853221947608745],
+          [-94.62490989399294, 13.894325055866034, 0.15067489106927923],
+        ],
+      ],
     ]
-    
-    miterBoxLine = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode", "miterBoxLine")
-    miterBoxLine.CreateDefaultDisplayNodes()
-    
-    for point in miterBoxLinePoints:
-      miterBoxLine.AddControlPoint(*point)
-
+    fibulaPlanesList = createListFromFolderName("Fibula planes")
     self.assertEqual(
-      len(miterBoxLinePoints),
-      miterBoxLine.GetNumberOfControlPoints()
+      len(fibulaPlanesList),
+      len(expectedFibulaPlanesNamesAndPoints)
+    )
+    for fibulaPlane, (expectedName, expectedPlanePoints) in zip(fibulaPlanesList, expectedFibulaPlanesNamesAndPoints):
+      self.assertEqual(
+        fibulaPlane.GetName(),
+        expectedName
+      )
+      self.assertEqual(
+        fibulaPlane.GetPlaneType(),
+        slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points,
+        msg=expectedName
+      )
+      self.assertEqual(
+        fibulaPlane.GetNumberOfControlPoints(),
+        3,
+        msg=expectedName
+      )
+      for j in range(3):
+        planePoint = np.array(fibulaPlane.GetNthControlPointPosition(j))
+        self.assertTrue(
+          np.allclose(planePoint, expectedPlanePoints[j], atol=1e-3),
+          msg=f"{expectedName} control point {j} {planePoint.tolist()}"
+        )
+
+    # the registration transforms of TestPlanBRP place each fibula piece on the mandible
+    expectedMandibleToFibulaRegistrationMatrices = [
+      [[0.350464, 0.379494, 0.856247, -72.1634], [0.893036, 0.140106, -0.427618, -77.2728], [-0.282243, 0.914524, -0.2898, -172.422], [0.0, 0.0, 0.0, 1.0]],
+      [[0.208807, 0.64382, 0.736136, -105.613], [0.291763, 0.677438, -0.675242, -137.444], [-0.933421, 0.355773, -0.0463888, -76.5866], [0.0, 0.0, 0.0, 1.0]],
+      [[-0.461665, 0.655926, 0.597183, -119.058], [-0.369379, 0.469924, -0.801705, -125.288], [-0.806489, -0.590705, 0.0253376, 38.3313], [0.0, 0.0, 0.0, 1.0]],
+    ]
+    mandibleToFibulaTransformsList = createListFromFolderName("Mandible2Fibula transforms")
+    self.assertEqual(
+      len(mandibleToFibulaTransformsList),
+      len(expectedMandibleToFibulaRegistrationMatrices)
+    )
+    for i in range(len(mandibleToFibulaTransformsList)):
+      self.assertEqual(
+        mandibleToFibulaTransformsList[i].GetName(),
+        f"Mandible2Fibula Registration Transform{i}"
+      )
+      registrationMatrix = slicer.util.arrayFromTransformMatrix(mandibleToFibulaTransformsList[i])
+      self.assertTrue(
+        np.allclose(registrationMatrix, expectedMandibleToFibulaRegistrationMatrices[i], atol=1e-2),
+        msg=f"Mandible2Fibula Registration Transform{i} {registrationMatrix.tolist()}"
+      )
+
+    # 3 fibula pieces and the resected mandible
+    cutBonesList = createListFromFolderName("Cut Bones")
+    self.assertEqual(
+      [cutBone.GetName() for cutBone in cutBonesList],
+      ["Fibula Segment 0A-0B", "Fibula Segment 1A-1B", "Fibula Segment 2A-2B", "Resected mandible"]
+    )
+    transformedFibulaPiecesList = createListFromFolderName("Transformed Fibula Pieces")
+    self.assertEqual(
+      len(transformedFibulaPiecesList),
+      3
+    )
+    for transformedFibulaPiece in transformedFibulaPiecesList:
+      self.assertGreater(transformedFibulaPiece.GetPolyData().GetNumberOfPoints(), 0)
+    transformedVesselsPiecesList = createListFromFolderName("Transformed Vessels Pieces")
+    self.assertEqual(
+      len(transformedVesselsPiecesList),
+      3
     )
 
-    wasModified = parameterNode.StartModify()
-    parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","False")
-    parameterNode.SetNodeReferenceID("miterBoxDirectionLine",miterBoxLine.GetID())
-    parameterNode.EndModify(wasModified)
-    self.logicBRP.createMiterBoxesFromFibulaPlanes()
+    # lengths of the fibula segments of TestPlanBRP for each measurement mode
+    expectedFibulaSegmentsLengthsByMode = {
+      "center2center": [31.646541485361844, 24.24446790640224, 17.802852336152966],
+      "proximal2proximal": [29.53724525007719, 18.34510340496193, 12.376725670033606],
+      "distal2distal": [33.40267754818801, 28.341936469193854, 21.221807743721808],
+    }
+    for mode, expectedFibulaSegmentsLengths in expectedFibulaSegmentsLengthsByMode.items():
+      fibulaSegmentsLengthsList = createListFromFolderName(f"Fibula Segments Lengths {mode}")
+      self.assertEqual(
+        [lineNode.GetName() for lineNode in fibulaSegmentsLengthsList],
+        ["S0", "S1", "S2"]
+      )
+      fibulaSegmentsLengths = [lineNode.GetLineLengthWorld() for lineNode in fibulaSegmentsLengthsList]
+      self.assertTrue(
+        np.allclose(fibulaSegmentsLengths, expectedFibulaSegmentsLengths, atol=1e-2),
+        msg=f"{mode} lengths {fibulaSegmentsLengths}"
+      )
 
-    # asserts below
+    self.delayDisplay("UpdateVirtualSurgicalPlan test successful")
 
-    self.delayDisplay("CreateMiterBoxesFromCorrespondingLine test successful")
+  def section_LockVirtualSurgicalPlan(self):
+    self.delayDisplay("Starting the LockVirtualSurgicalPlan test")
 
-  def loadFibulaGuideBase(self):
-    import SampleData
-    self.fibulaSurgicalGuideBaseModel = SampleData.downloadSample('FibulaGuideBase')
-    self.delayDisplay('Loaded FibulaGuideBase')
+    slicer.app.processEvents()
+    self.widgetBRP.ui.lockVSPButton.checked = True
+    slicer.app.processEvents()
+
+    self.assertParameterNodeHasParameterValues({
+      "lockVSP": "True",
+    })
+
+    planningObjectsList = (
+      createListFromFolderName("Mandibular planes") +
+      [self.logicBRP.getFibulaLine(), self.logicBRP.getMandibularCurve()]
+    )
+    for planningObject in planningObjectsList:
+      self.assertTrue(
+        planningObject.GetLocked(),
+        msg=planningObject.GetName()
+      )
+    self.assertFalse(self.widgetBRP.ui.parametersOfVSPFrame.enabled)
+    self.assertFalse(self.widgetBRP.ui.updateVSPButtonsFrame.enabled)
+    # the animation can only be played while the plan is locked
+    self.assertTrue(self.widgetBRP.ui.playVSPAnimationButton.enabled)
+
+    self.delayDisplay("LockVirtualSurgicalPlan test successful")
+
+  def section_CreateMiterBoxes(self):
+    self.delayDisplay("Starting the CreateMiterBoxes test")
+
+    # show the fibula CT to draw the miter box direction line over it
+    fibulaVolume = slicer.util.getNode("CTFibula")
+    slicer.app.processEvents()
+    self.widgetBRP.ui.scalarVolumeSelector.setCurrentNode(fibulaVolume)
+    slicer.app.processEvents()
+    parameterNode = self.logicBRP.getParameterNode()
+    self.assertEqual(
+      parameterNode.GetNodeReferenceID("currentScalarVolume"),
+      fibulaVolume.GetID()
+    )
+
+    # miter boxes parameters of TestPlanBRP (default ones)
+    self.assertParameterNodeHasParameterValues({
+      "checkSecurityMarginOnMiterBoxCreation": "True",
+      "securityMarginOfFibulaPieces_mm": "1.0",
+      "miterBoxSlotWidth_mm": "1.0",
+      "miterBoxSlotLength_mm": "20.0",
+      "miterBoxSlotHeight_mm": "15.0",
+      "miterBoxSlotWall_mm": "3.0",
+      "clearanceFitPrintingTolerance_mm": "0.25",
+      "biggerMiterBoxDistanceToFibula_mm": "1.5",
+      "miterBoxesGuideType": "Slot",
+      "miterBoxesBoxType": "Adapted",
+      "fibulaTextLabelsMode": "Emboss",
+      "fibulaTextLabelsDepth_mm": "1.0",
+      # the miter boxes axes depend on it
+      "useMoreExactVersionOfPositioningAlgorithm": "False",
+    })
+
+    miterBoxDirectionLinePoints = [
+      [-92.20835344724804, -8.772122434188056, -61.5539968799553],
+      [-99.88485941683058, -6.4014367671111, -61.5539968799553],
+    ]
+
+    # the miter boxes are created as soon as the line has its two points
+    miterBoxDirectionLine = self.logicBRP.getMiterBoxDirectionLine()
+    for point in miterBoxDirectionLinePoints:
+      miterBoxDirectionLine.AddControlPoint(*point)
+    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+    interactionNode.SwitchToViewTransformMode()
+    slicer.app.processEvents()
+
+    self.assertEqual(
+      len(miterBoxDirectionLinePoints),
+      miterBoxDirectionLine.GetNumberOfControlPoints()
+    )
+    self.assertNodeIsInsideFolder(miterBoxDirectionLine, "BoneReconstructionPlanner")
+    self.assertEqual(
+      miterBoxDirectionLine.GetID(),
+      self.widgetBRP.ui.miterBoxDirectionLinePlaceWidget.currentNode().GetID()
+    )
+
+    self.assertParameterNodeHasParameterValues({
+      "miterBoxesNeedUpdate": "False",
+    })
+
+    expectedMiterBoxesNames = ["miterBox0_A", "miterBox0_B", "miterBox1_A", "miterBox1_B", "miterBox2_A", "miterBox2_B"]
+    self.assertEqual(
+      [miterBox.GetName() for miterBox in createListFromFolderName("miterBoxes Models")],
+      expectedMiterBoxesNames
+    )
+    self.assertEqual(
+      [miterBox.GetName() for miterBox in createListFromFolderName("biggerMiterBoxes Models")],
+      ["bigger" + miterBoxName[0].upper() + miterBoxName[1:] for miterBoxName in expectedMiterBoxesNames]
+    )
+    self.assertEqual(
+      [miterBox.GetName() for miterBox in createListFromFolderName("previewMiterBoxes Models")],
+      ["preview" + miterBoxName[0].upper() + miterBoxName[1:] for miterBoxName in expectedMiterBoxesNames]
+    )
+    # distal label and laterality label of the left leg
+    self.assertEqual(
+      [textLabel.GetName() for textLabel in createListFromFolderName("fibulaTextLabels Models")],
+      ["fibulaTextLabel_D", "fibulaTextLabel_L"]
+    )
+    self.assertEqual(
+      [miterBox.GetName() for miterBox in createListFromFolderName("lowResolutionBiggerMiterBoxes Models")],
+      ["bigger" + miterBoxName[0].upper() + miterBoxName[1:] + "_lowRes" for miterBoxName in expectedMiterBoxesNames]
+    )
+    self.assertEqual(
+      [rectanglet.GetName() for rectanglet in createListFromFolderName("rectanglet Models")],
+      ["bigger" + miterBoxName[0].upper() + miterBoxName[1:] + "_rectanglet" for miterBoxName in expectedMiterBoxesNames]
+    )
+
+    # geometry of the miter boxes, measured along the axes of the miter box of each fibula plane (see getMiterBoxAxesFromFibulaPlane)
+    miterBoxSlotWidth = float(parameterNode.GetParameter("miterBoxSlotWidth_mm"))
+    miterBoxSlotLength = float(parameterNode.GetParameter("miterBoxSlotLength_mm"))
+    miterBoxSlotHeight = float(parameterNode.GetParameter("miterBoxSlotHeight_mm"))
+    miterBoxSlotWall = float(parameterNode.GetParameter("miterBoxSlotWall_mm"))
+    clearanceFitPrintingTolerance = float(parameterNode.GetParameter("clearanceFitPrintingTolerance_mm"))
+    biggerMiterBoxDistanceToFibula = float(parameterNode.GetParameter("biggerMiterBoxDistanceToFibula_mm"))
+    fibulaTextLabelsDepth = float(parameterNode.GetParameter("fibulaTextLabelsDepth_mm"))
+
+    # the miter box is the slot of the saw blade, createMiterBoxesFromFibulaPlanes makes it 70mm tall so it goes through its bigger miter box
+    miterBoxDimensions = np.array([
+      miterBoxSlotLength,
+      70.0,
+      miterBoxSlotWidth + 2*clearanceFitPrintingTolerance,
+    ])
+    biggerMiterBoxDimensions = np.array([
+      miterBoxSlotLength + 2*miterBoxSlotWall,
+      miterBoxSlotHeight,
+      miterBoxSlotWidth + 2*clearanceFitPrintingTolerance + 2*miterBoxSlotWall,
+    ])
+
+    fibulaLine = self.logicBRP.getFibulaLine()
+    fibulaLineStartPoint = np.array(fibulaLine.GetNthControlPointPosition(0))
+    fibulaLineEndPoint = np.array(fibulaLine.GetNthControlPointPosition(1))
+    fibulaZ = (fibulaLineEndPoint - fibulaLineStartPoint)/np.linalg.norm(fibulaLineEndPoint - fibulaLineStartPoint)
+    miterBoxDirectionLineStartPoint = np.array(miterBoxDirectionLine.GetNthControlPointPosition(0))
+    miterBoxDirectionLineEndPoint = np.array(miterBoxDirectionLine.GetNthControlPointPosition(1))
+    miterBoxDirection = (
+      (miterBoxDirectionLineEndPoint - miterBoxDirectionLineStartPoint)/
+      np.linalg.norm(miterBoxDirectionLineEndPoint - miterBoxDirectionLineStartPoint)
+    )
+
+    fibulaModel = parameterNode.GetNodeReference("fibulaModelNode")
+
+    fibulaPlanesList = createListFromFolderName("Fibula planes")
+    miterBoxesList = createListFromFolderName("miterBoxes Models")
+    biggerMiterBoxesList = createListFromFolderName("biggerMiterBoxes Models")
+    previewMiterBoxesList = createListFromFolderName("previewMiterBoxes Models")
+    lowResolutionBiggerMiterBoxesList = createListFromFolderName("lowResolutionBiggerMiterBoxes Models")
+    rectangletsList = createListFromFolderName("rectanglet Models")
+    self.assertEqual(
+      len(fibulaPlanesList),
+      len(expectedMiterBoxesNames)
+    )
+
+    for i in range(len(fibulaPlanesList)):
+      miterBox = miterBoxesList[i]
+      biggerMiterBox = biggerMiterBoxesList[i]
+      previewMiterBox = previewMiterBoxesList[i]
+      lowResolutionBiggerMiterBox = lowResolutionBiggerMiterBoxesList[i]
+      rectanglet = rectangletsList[i]
+      miterBoxAxes, fibulaPlaneOrigin = self.getMiterBoxAxesFromFibulaPlane(fibulaPlanesList[i], fibulaZ, miterBoxDirection)
+      # the fibula piece is after its plane A and before its plane B along the fibula axis,
+      #   the slot is on the other side of the plane
+      sideOfSlot = -1.0 if i%2 == 0 else 1.0
+
+      # closed surfaces, the slot goes through the preview miter box
+      for model in [miterBox, biggerMiterBox, lowResolutionBiggerMiterBox]:
+        self.assertModelIsClosedSurfaceWithEulerCharacteristic(model, 2)
+      self.assertModelIsClosedSurfaceWithEulerCharacteristic(previewMiterBox, 0)
+
+      # the Adapted bigger miter box is a sheared box, so it keeps the volume of the regular box and
+      #   any line along the miter box direction that goes through it crosses miterBoxSlotHeight of it
+      expectedVolumesList = [
+        (miterBox, np.prod(miterBoxDimensions)),
+        (biggerMiterBox, np.prod(biggerMiterBoxDimensions)),
+        (lowResolutionBiggerMiterBox, np.prod(biggerMiterBoxDimensions)),
+        (previewMiterBox, np.prod(biggerMiterBoxDimensions) - miterBoxSlotLength*miterBoxSlotHeight*miterBoxDimensions[2]),
+      ]
+      for model, expectedVolume in expectedVolumesList:
+        volume, area, bounds = getVolumeAreaAndBoundsOfModel(model)
+        self.assertTrue(
+          np.isclose(volume, expectedVolume, rtol=1e-5),
+          msg=f"{model.GetName()} volume {volume:.4f} expected {expectedVolume:.4f}"
+        )
+
+      miterBoxRanges = self.getRangesOfModelPointsAlongAxes(miterBox, miterBoxAxes, fibulaPlaneOrigin)
+      biggerMiterBoxPointsCoordinates = self.getCoordinatesOfModelPointsAlongAxes(biggerMiterBox, miterBoxAxes, fibulaPlaneOrigin)
+      biggerMiterBoxRanges = self.getRangesOfPointsCoordinates(biggerMiterBoxPointsCoordinates)
+      lowResolutionBiggerMiterBoxRanges = self.getRangesOfModelPointsAlongAxes(lowResolutionBiggerMiterBox, miterBoxAxes, fibulaPlaneOrigin)
+      message = (
+        f"{miterBox.GetName()} ranges {np.round(miterBoxRanges, 4).tolist()}, " +
+        f"bigger miter box ranges {np.round(biggerMiterBoxRanges, 4).tolist()}, " +
+        f"low resolution bigger miter box ranges {np.round(lowResolutionBiggerMiterBoxRanges, 4).tolist()}"
+      )
+
+      # the slot is perpendicular to the fibula plane and has the expected size
+      self.assertTrue(
+        np.allclose(miterBoxRanges[:,1] - miterBoxRanges[:,0], miterBoxDimensions, atol=1e-3),
+        msg=message
+      )
+      # the saw blade cuts on the side of the fibula plane away from the fibula piece,
+      #   the slot only overlaps the fibula piece by the clearance
+      expectedMiterBoxRangeAlongZ = sideOfSlot*miterBoxSlotWidth/2 + np.array([-1.0, 1.0])*miterBoxDimensions[2]/2
+      self.assertTrue(
+        np.allclose(miterBoxRanges[2], expectedMiterBoxRangeAlongZ, atol=1e-3),
+        msg=message
+      )
+      # the slot is centered on its bigger miter box along X and Z, and it goes through it along Y
+      self.assertTrue(
+        np.allclose(biggerMiterBoxRanges[[0,2],1] - biggerMiterBoxRanges[[0,2],0], biggerMiterBoxDimensions[[0,2]], atol=1e-3),
+        msg=message
+      )
+      self.assertTrue(
+        np.allclose(biggerMiterBoxRanges[[0,2]].mean(axis=1), miterBoxRanges[[0,2]].mean(axis=1), atol=1e-3),
+        msg=message
+      )
+      # createAdaptedBox shears one Z face of the Adapted bigger miter box along Y so its rectanglet contains the fibula axis,
+      #   that makes the box longer along Y than its height by the shear
+      expectedShearAlongY = (
+        biggerMiterBoxDimensions[2]*abs(np.dot(fibulaZ, miterBoxAxes[:,1]))/
+        np.dot(fibulaZ, miterBoxAxes[:,2])
+      )
+      self.assertAlmostEqual(
+        biggerMiterBoxRanges[1,1] - biggerMiterBoxRanges[1,0],
+        biggerMiterBoxDimensions[1] + expectedShearAlongY,
+        delta=1e-3,
+        msg=message + f", expected shear along Y {expectedShearAlongY:.4f}"
+      )
+      self.assertLess(miterBoxRanges[1,0], biggerMiterBoxRanges[1,0], msg=message)
+      self.assertGreater(miterBoxRanges[1,1], biggerMiterBoxRanges[1,1], msg=message)
+      # the low resolution bigger miter box, used to create the fibula guide base, is a regular box at the same place
+      self.assertTrue(
+        np.allclose(lowResolutionBiggerMiterBoxRanges[:,1] - lowResolutionBiggerMiterBoxRanges[:,0], biggerMiterBoxDimensions, atol=1e-3),
+        msg=message
+      )
+      self.assertTrue(
+        np.allclose(lowResolutionBiggerMiterBoxRanges[[0,2]], biggerMiterBoxRanges[[0,2]], atol=1e-3),
+        msg=message
+      )
+
+      # the Adapted bigger miter box rests parallel to the fibula: its bottom face (the rectanglet) contains the fibula axis direction
+      rectangletPoints = slicer.util.arrayFromModelPoints(rectanglet).astype(float)
+      rectangletNormal = np.cross(rectangletPoints[1] - rectangletPoints[0], rectangletPoints[2] - rectangletPoints[0])
+      rectangletNormal = rectangletNormal/np.linalg.norm(rectangletNormal)
+      self.assertAlmostEqual(
+        np.dot(rectangletNormal, fibulaZ),
+        0.0,
+        delta=1e-5,
+        msg=f"{rectanglet.GetName()} normal {rectangletNormal.tolist()} fibula axis {fibulaZ.tolist()}"
+      )
+      # and the rectanglet is a face of the bigger miter box
+      biggerMiterBoxPoints = slicer.util.arrayFromModelPoints(biggerMiterBox).astype(float)
+      for rectangletPoint in rectangletPoints:
+        self.assertLess(
+          np.min(np.linalg.norm(biggerMiterBoxPoints - rectangletPoint, axis=1)),
+          1e-3,
+          msg=f"{rectanglet.GetName()} point {rectangletPoint.tolist()} is not a point of {biggerMiterBox.GetName()}"
+        )
+      distancesToRectangletPlane = (biggerMiterBoxPoints - rectangletPoints[0]) @ rectangletNormal
+      self.assertTrue(
+        np.all(distancesToRectangletPlane >= -1e-3) or np.all(distancesToRectangletPlane <= 1e-3),
+        msg=f"{biggerMiterBox.GetName()} is on both sides of {rectanglet.GetName()}: distances range [{distancesToRectangletPlane.min():.4f}, {distancesToRectangletPlane.max():.4f}]"
+      )
+
+      # the bigger miter box rests over the fibula, outside it: createMiterBoxesFromFibulaPlanes moves it along Y in
+      #   BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_STEP steps till its bottom face (the rectanglet) does not touch the bone,
+      #   then by biggerMiterBoxDistanceToFibula. So the bottom face moved back along Y by biggerMiterBoxDistanceToFibula
+      #   does not touch the bone, and moved back by one more step it does.
+      #   The euclidean distance to the bone is not checked: it is smaller than the gap along Y when the bottom face is tilted
+      #   from Y (Adapted box) or the bone is beside the bottom face
+      for distanceAlongY, expectedTouchingFibula in [
+        (biggerMiterBoxDistanceToFibula, False),
+        (biggerMiterBoxDistanceToFibula + BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_STEP, True),
+      ]:
+        self.assertEqual(
+          self.isModelTouchingOtherModelAfterTranslation(rectanglet, fibulaModel, -distanceAlongY*miterBoxAxes[:,1]),
+          expectedTouchingFibula,
+          msg=f"{rectanglet.GetName()} moved back {distanceAlongY:.4f} along Y touches the fibula"
+        )
+
+    # the distal label is over the outer face of the distal bigger miter box (the first one, the fibula line goes from distal to proximal)
+    #   and the laterality label (left leg) over the outer face of the proximal one (the last one), embossed by fibulaTextLabelsDepth
+    fibulaTextLabelsList = createListFromFolderName("fibulaTextLabels Models")
+    for fibulaTextLabel, boxIndex, outerFaceSign, eulerCharacteristic in [
+      (fibulaTextLabelsList[0], 0, -1.0, 0), # the D has a hole
+      (fibulaTextLabelsList[1], len(biggerMiterBoxesList) - 1, 1.0, 2),
+    ]:
+      self.assertModelIsClosedSurfaceWithEulerCharacteristic(fibulaTextLabel, eulerCharacteristic)
+
+      miterBoxAxes, fibulaPlaneOrigin = self.getMiterBoxAxesFromFibulaPlane(fibulaPlanesList[boxIndex], fibulaZ, miterBoxDirection)
+      fibulaTextLabelRanges = self.getRangesOfModelPointsAlongAxes(fibulaTextLabel, miterBoxAxes, fibulaPlaneOrigin)
+      biggerMiterBoxPointsCoordinates = self.getCoordinatesOfModelPointsAlongAxes(biggerMiterBoxesList[boxIndex], miterBoxAxes, fibulaPlaneOrigin)
+      if outerFaceSign < 0:
+        outerFaceZ = biggerMiterBoxPointsCoordinates[:,2].min()
+      else:
+        outerFaceZ = biggerMiterBoxPointsCoordinates[:,2].max()
+      outerFaceRanges = self.getRangesOfPointsCoordinates(
+        biggerMiterBoxPointsCoordinates[np.abs(biggerMiterBoxPointsCoordinates[:,2] - outerFaceZ) < 1e-3]
+      )
+      message = (
+        f"{fibulaTextLabel.GetName()} ranges {np.round(fibulaTextLabelRanges, 4).tolist()}, " +
+        f"outer face of {biggerMiterBoxesList[boxIndex].GetName()} ranges {np.round(outerFaceRanges, 4).tolist()}"
+      )
+
+      # the label goes out of the face by fibulaTextLabelsDepth and into the box by TEXT_LABEL_OVERLAP_EPSILON
+      expectedFibulaTextLabelRangeAlongZ = sorted([
+        outerFaceZ - outerFaceSign*TEXT_LABEL_OVERLAP_EPSILON,
+        outerFaceZ + outerFaceSign*fibulaTextLabelsDepth,
+      ])
+      self.assertTrue(
+        np.allclose(fibulaTextLabelRanges[2], expectedFibulaTextLabelRangeAlongZ, atol=1e-3),
+        msg=message
+      )
+      # the label is centered on the face and inside it
+      self.assertTrue(
+        np.allclose(fibulaTextLabelRanges[:2].mean(axis=1), outerFaceRanges[:2].mean(axis=1), atol=1e-3),
+        msg=message
+      )
+      self.assertTrue(
+        np.all(fibulaTextLabelRanges[:2,0] >= outerFaceRanges[:2,0]) and np.all(fibulaTextLabelRanges[:2,1] <= outerFaceRanges[:2,1]),
+        msg=message
+      )
+
+    # previewMiterBoxes and fibulaTextLabels of TestPlanBRP
+    expectedVolumesAreasAndBoundsList = [
+      [2475.0, 1980.0403, [-113.2999, -90.5347, -21.2313, 8.7316, -102.5289, -90.4742]],
+      [2475.0, 1980.0021, [-115.3033, -92.729, -21.3705, 8.7378, -74.1814, -54.2646]],
+      [2475.0, 1980.3750, [-115.2805, -93.6755, -22.0364, 7.7958, -67.8506, -49.2466]],
+      [2475.0, 1985.1075, [-118.1184, -96.3612, -20.5609, 10.6071, -47.9386, -25.4116]],
+      [2475.0, 1991.2211, [-118.8105, -97.7229, -21.1591, 10.0647, -35.533, -15.5907]],
+      [2475.0, 1980.0007, [-121.8476, -99.1859, -20.7594, 9.5893, -19.9073, -1.2709]],
+      [33.5665, 99.0946, [-104.8864, -97.0963, -8.8863, -1.846, -101.676, -99.2488]],
+      [18.7566, 58.8822, [-115.4475, -107.2755, -10.3912, -5.6618, -8.6443, -5.0682]],
+    ]
+    modelsList = previewMiterBoxesList + fibulaTextLabelsList
+    self.assertEqual(
+      len(modelsList),
+      len(expectedVolumesAreasAndBoundsList)
+    )
+    for model, (expectedVolume, expectedArea, expectedBounds) in zip(modelsList, expectedVolumesAreasAndBoundsList):
+      self.assertModelHasVolumeAreaAndBounds(model, expectedVolume, expectedArea, expectedBounds)
+
+    self.delayDisplay("CreateMiterBoxes test successful")
+
+  def section_GenerateFibulaGuideBase(self):
+    self.delayDisplay("Starting the GenerateFibulaGuideBase test")
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaGuidebaseThicknessSpinBox.value = 4.0
+    self.widgetBRP.ui.fibulaGuidebaseAngleSpinBox.value = 120.0
+    self.widgetBRP.ui.fibulaGuidebaseMarginSpinBox.value = 0.5
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaGuidebaseThickness_mm": "4.0",
+      "fibulaGuidebaseAngle_mm": "120.0",
+      "fibulaGuidebaseMargin_mm": "0.5",
+    })
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.generateFibulaGuidebaseButton.click()
+    slicer.app.processEvents()
 
     parameterNode = self.logicBRP.getParameterNode()
-    parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", self.fibulaSurgicalGuideBaseModel.GetID())
+    fibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
+    self.assertIsNotNone(fibulaSurgicalGuideBaseModel)
+    self.assertEqual(
+      fibulaSurgicalGuideBaseModel.GetID(),
+      self.widgetBRP.ui.fibulaSurgicalGuideBaseSelector.currentNodeID
+    )
+    self.assertNodeIsInsideFolder(fibulaSurgicalGuideBaseModel, "BoneReconstructionPlanner")
+
+    # fibulaSurgicalGuideBaseModel of TestPlanBRP
+    self.assertModelHasVolumeAreaAndBounds(
+      fibulaSurgicalGuideBaseModel,
+      5806.0821,
+      3959.9915,
+      [-105.5741, -88.9078, -16.2738, 0.0033, -101.4610, -0.9477]
+    )
+
+    self.delayDisplay("GenerateFibulaGuideBase test successful")
+
+  def section_AddFibulaScrewHoles(self):
+    self.delayDisplay("Starting the AddFibulaScrewHoles test")
+
+    self.assertParameterNodeHasParameterValues({
+      "fibulaScrewHoleCylinderRadius_mm": "1.5",
+    })
+
+    fibulaScrewHolesPoints = [
+      [-96.80113220214844, -4.2820725440979, -79.77377319335938],
+      [-99.53946685791016, -3.1816823482513428, -46.18998336791992],
+      [-103.43215942382812, -3.046214818954468, -18.31334114074707],
+    ]
+
+    # a cylinder perpendicular to the guide base is created for each point
+    fibulaFiducialList = self.logicBRP.getFibulaFiducials()
+    for point in fibulaScrewHolesPoints:
+      fibulaFiducialList.AddControlPoint(*point)
+    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+    interactionNode.SwitchToViewTransformMode()
+    slicer.app.processEvents()
 
     self.assertEqual(
-      parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel").GetID(),
-      self.fibulaSurgicalGuideBaseModel.GetID()
+      len(fibulaScrewHolesPoints),
+      fibulaFiducialList.GetNumberOfControlPoints()
     )
-  
-  def section_prepareGuideBaseForFibulaGuide(self):
-    self.loadFibulaGuideBase()
+    self.assertNodeIsInsideFolder(fibulaFiducialList, "BoneReconstructionPlanner")
+    self.assertEqual(
+      fibulaFiducialList.GetID(),
+      self.widgetBRP.ui.fibulaFiducialsPlaceWidget.currentNode().GetID()
+    )
 
-  def section_createAndUpdateSawBoxesFromMandiblePlanes(self):
-    self.delayDisplay("Starting the createAndUpdateSawBoxesFromMandiblePlanes test")
+    fibulaCylindersList = createListFromFolderName("Fibula Cylinders Models")
+    self.assertEqual(
+      len(fibulaCylindersList),
+      len(fibulaScrewHolesPoints)
+    )
 
-    if USING_GUI:
-      layoutManager = slicer.app.layoutManager()
-      mandibleViewNode = slicer.mrmlScene.GetSingletonNode(slicer.MANDIBLE_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
-      if int(slicer.app.revision) >= 31524:
-        layoutManager.addMaximizedViewNode(mandibleViewNode)
+    # the cylinders are in the order of their points
+    parameterNode = self.logicBRP.getParameterNode()
+    fibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
+    fibulaScrewHoleCylinderRadius = float(parameterNode.GetParameter("fibulaScrewHoleCylinderRadius_mm"))
+    for i in range(len(fibulaCylindersList)):
+      self.assertScrewHoleCylinderGoesThroughGuideBaseAlongItsNormalAtPoint(
+        fibulaCylindersList[i],
+        fibulaSurgicalGuideBaseModel,
+        fibulaFiducialList.GetNthControlPointPosition(i),
+        fibulaScrewHoleCylinderRadius,
+        slicer.FIBULA_VIEW_ID
+      )
+
+    self.delayDisplay("AddFibulaScrewHoles test successful")
+
+  def section_CreateFibulaSurgicalGuide(self):
+    self.delayDisplay("Starting the CreateFibulaSurgicalGuide test")
+
+    self.assertParameterNodeHasParameterValues({
+      "booleanOperationsBackend": "kigumi",
+    })
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.click()
+    slicer.app.processEvents()
+
+    parameterNode = self.logicBRP.getParameterNode()
+    fibulaSurgicalGuide = parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel")
+    self.assertIsNotNone(fibulaSurgicalGuide)
+    self.assertEqual(
+      fibulaSurgicalGuide.GetName(),
+      "FibulaSurgicalGuidePrototype"
+    )
+    self.assertNodeIsInsideFolder(fibulaSurgicalGuide, "Mandible reconstruction")
+    self.assertParameterNodeHasParameterValues({
+      "fibulaSurgicalGuideElementsVisible": "False",
+      "fibulaSurgicalGuideVisible": "True",
+    })
+    self.assertFalse(self.widgetBRP.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked)
+    self.assertTrue(self.widgetBRP.ui.fibulaSurgicalGuideVisibleCheckBox.checked)
+
+    # FibulaSurgicalGuidePrototype of TestPlanBRP
+    import SampleData
+    exampleFibulaSurgicalGuide = SampleData.downloadSample('personalizedFibulaGuide')
+    self.assertModelsAreGeometricallyEqual(fibulaSurgicalGuide, exampleFibulaSurgicalGuide)
+    slicer.mrmlScene.RemoveNode(exampleFibulaSurgicalGuide)
+
+    self.delayDisplay("CreateFibulaSurgicalGuide test successful")
+
+  def section_CreateSawBoxes(self):
+    self.delayDisplay("Starting the CreateSawBoxes test")
+
+    # show the mandible CT for the mandible surgical guide
+    mandibleVolume = slicer.util.getNode("CTMandible")
+    slicer.app.processEvents()
+    self.widgetBRP.ui.scalarVolumeSelector.setCurrentNode(mandibleVolume)
+    slicer.app.processEvents()
+    parameterNode = self.logicBRP.getParameterNode()
+    self.assertEqual(
+      parameterNode.GetNodeReferenceID("currentScalarVolume"),
+      mandibleVolume.GetID()
+    )
+
+    # saw boxes parameters of TestPlanBRP (default ones)
+    self.assertParameterNodeHasParameterValues({
+      "sawBoxSlotWidth_mm": "1.0",
+      "sawBoxSlotLength_mm": "20.0",
+      "sawBoxSlotHeight_mm": "15.0",
+      "sawBoxSlotWall_mm": "3.0",
+      "biggerSawBoxDistanceToMandible_mm": "3.0",
+      "sawBoxesGuideType": "Slot",
+      "mandibleTextLabelsMode": "Emboss",
+      "mandibleTextLabelsDepth_mm": "1.0",
+    })
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.createSawBoxesFromFirstAndLastMandiblePlanesButton.click()
+    slicer.app.processEvents()
+
+    self.assertParameterNodeHasParameterValues({
+      "sawBoxesNeedUpdate": "False",
+    })
+
+    # one saw box for each resection plane of the segmental mandibulectomy
+    self.assertEqual(
+      [sawBox.GetName() for sawBox in createListFromFolderName("sawBoxes Models")],
+      ["sawBox_0", "sawBox_3"]
+    )
+    self.assertEqual(
+      [sawBox.GetName() for sawBox in createListFromFolderName("biggerSawBoxes Models")],
+      ["biggerSawBox0", "biggerSawBox3"]
+    )
+    self.assertEqual(
+      [textLabel.GetName() for textLabel in createListFromFolderName("sawBoxTextLabels Models")],
+      ["sawBoxTextLabel_R"]
+    )
+
+    # move the saw boxes inside their cut planes to their TestPlanBRP position
+    sawBoxesPlanesPoints = [
+      [
+        [41.740839374516995, 81.88722654659472, -58.29159947692982],
+        [20.6508065921236, 88.9261222352835, -13.506954064452463],
+        [81.99505952230638, 107.51397332494618, -43.362848361999],
+      ],
+      [
+        [-25.53522701764169, 104.92003590875116, -79.10475848016888],
+        [-12.318084763622997, 107.61361804853362, -30.958608417123592],
+        [-66.58764909944618, 131.739030359017, -69.33540958200865],
+      ],
+    ]
+    sawBoxesPlanesList = createListFromFolderName("sawBoxes Planes")
+    self.assertEqual(
+      len(sawBoxesPlanesList),
+      len(sawBoxesPlanesPoints)
+    )
+    for sawBoxPlane, sawBoxPlanePoints in zip(sawBoxesPlanesList, sawBoxesPlanesPoints):
+      wasModified = sawBoxPlane.StartModify()
+      for j in range(3):
+        sawBoxPlane.SetNthControlPointPosition(j, sawBoxPlanePoints[j])
+      sawBoxPlane.EndModify(wasModified)
+    slicer.app.processEvents()
+
+    # the saw boxes transforms follow their planes
+    expectedSawBoxesMatrices = [
+      [[-0.421801, 0.805084, -0.417041, 41.7408], [0.140778, 0.512535, 0.847048, 81.8872], [0.895693, 0.298575, -0.329526, -58.2916], [0.0, 0.0, 0.0, 1.0]],
+      [[0.264343, -0.821048, -0.505967, -25.5352], [0.0538716, 0.53638, -0.842256, 104.92], [0.962923, 0.195387, 0.186019, -79.1048], [0.0, 0.0, 0.0, 1.0]],
+    ]
+    sawBoxesTransformsList = createListFromFolderName("sawBoxes Transforms")
+    self.assertEqual(
+      [transformNode.GetName() for transformNode in sawBoxesTransformsList],
+      ["sawBoxTransform0", "sawBoxTransform1"]
+    )
+    for sawBoxTransform, expectedSawBoxMatrix in zip(sawBoxesTransformsList, expectedSawBoxesMatrices):
+      sawBoxMatrix = slicer.util.arrayFromTransformMatrix(sawBoxTransform)
+      self.assertTrue(
+        np.allclose(sawBoxMatrix, expectedSawBoxMatrix, atol=1e-2),
+        msg=f"{sawBoxTransform.GetName()} {sawBoxMatrix.tolist()}"
+      )
+
+    self.delayDisplay("CreateSawBoxes test successful")
+
+  def section_CreateMandibleGuideBasesFromCurves(self):
+    self.delayDisplay("Starting the CreateMandibleGuideBasesFromCurves test")
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.useMandibleGuideBasesFromCurvesCheckBox.checked = True
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "useMandibleGuideBasesFromCurves": "True",
+      "mandibleGuidebaseThickness_mm": "4.0",
+      "mandibleGuidebaseMargin_mm": "0.3",
+    })
+
+    leftSideMandibleGuideBaseCurvePoints = [
+      [-18.76785659790039, 98.6606216430664, -77.97579956054688],
+      [-15.944913864135742, 97.193115234375, -73.44181823730469],
+      [-24.895193099975586, 94.31151580810547, -76.98101806640625],
+      [-20.633953094482425, 96.13446044921876, -84.90292358398438],
+    ]
+    rightSideMandibleGuideBaseCurvePoints = [
+      [41.02055740356445, 67.37428283691406, -65.9588394165039],
+      [38.337276458740234, 66.54925537109375, -57.59656524658203],
+      [34.85908508300781, 71.0242691040039, -57.73741912841797],
+      [38.1411018371582, 74.52709197998047, -64.6688232421875],
+    ]
+
+    # the guide bases are the mandible surface inside each closed curve extruded by the guide base thickness
+    leftSideMandibleGuideBaseCurve = self.logicBRP.getLeftSideMandibleGuideBaseCurve()
+    for point in leftSideMandibleGuideBaseCurvePoints:
+      leftSideMandibleGuideBaseCurve.AddControlPoint(*point)
+    rightSideMandibleGuideBaseCurve = self.logicBRP.getRightSideMandibleGuideBaseCurve()
+    for point in rightSideMandibleGuideBaseCurvePoints:
+      rightSideMandibleGuideBaseCurve.AddControlPoint(*point)
+    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+    interactionNode.SwitchToViewTransformMode()
+    slicer.app.processEvents()
+
+    self.assertEqual(
+      len(leftSideMandibleGuideBaseCurvePoints),
+      leftSideMandibleGuideBaseCurve.GetNumberOfControlPoints()
+    )
+    self.assertEqual(
+      len(rightSideMandibleGuideBaseCurvePoints),
+      rightSideMandibleGuideBaseCurve.GetNumberOfControlPoints()
+    )
+    self.assertNodeIsInsideFolder(leftSideMandibleGuideBaseCurve, "BoneReconstructionPlanner")
+    self.assertNodeIsInsideFolder(rightSideMandibleGuideBaseCurve, "BoneReconstructionPlanner")
+    self.assertEqual(
+      leftSideMandibleGuideBaseCurve.GetID(),
+      self.widgetBRP.ui.leftSideMandibleGuideBaseCurvePlaceWidget.currentNode().GetID()
+    )
+    self.assertEqual(
+      rightSideMandibleGuideBaseCurve.GetID(),
+      self.widgetBRP.ui.rightSideMandibleGuideBaseCurvePlaceWidget.currentNode().GetID()
+    )
+
+    parameterNode = self.logicBRP.getParameterNode()
+    leftSideMandibleGuideBaseModel = parameterNode.GetNodeReference("leftSideMandibleGuideBaseModel")
+    rightSideMandibleGuideBaseModel = parameterNode.GetNodeReference("rightSideMandibleGuideBaseModel")
+    bothSidesMandibleGuideBaseModel = parameterNode.GetNodeReference("bothSidesMandibleGuideBaseModel")
+    self.assertIsNotNone(leftSideMandibleGuideBaseModel)
+    self.assertIsNotNone(rightSideMandibleGuideBaseModel)
+    self.assertIsNotNone(bothSidesMandibleGuideBaseModel)
+
+    # mandible guide bases of TestPlanBRP
+    self.assertModelHasVolumeAreaAndBounds(
+      leftSideMandibleGuideBaseModel,
+      214.6802,
+      272.3743,
+      [-25.8097, -15.3982, 93.0585, 101.4784, -85.0455, -72.2309]
+    )
+    self.assertModelHasVolumeAreaAndBounds(
+      rightSideMandibleGuideBaseModel,
+      336.5020,
+      337.9618,
+      [34.8597, 44.4189, 66.3528, 77.3131, -66.8327, -54.2666]
+    )
+    self.assertModelHasVolumeAreaAndBounds(
+      bothSidesMandibleGuideBaseModel,
+      551.1822,
+      610.3361,
+      [-25.8097, 44.4189, 66.3528, 101.4784, -85.0455, -54.2666]
+    )
+
+    self.delayDisplay("CreateMandibleGuideBasesFromCurves test successful")
+
+  def section_AddMandibleBridge(self):
+    self.delayDisplay("Starting the AddMandibleBridge test")
+
+    self.assertParameterNodeHasParameterValues({
+      "mandibleBridgeRadius_mm": "3.0",
+    })
+
+    mandibleBridgeCurvePoints = [
+      [45.18038284891739, 80.50115984324941, -68.80426025390625],
+      [41.96454688677228, 98.67063302936928, -68.80426025390625],
+      [34.71068134010402, 114.3398037362694, -68.80426025390625],
+      [20.5140971810942, 126.0706653834512, -68.80426025390625],
+      [4.001228238245929, 127.49032379935215, -68.80426025390625],
+      [-9.89648046478473, 122.33472218371176, -68.80426025390625],
+      [-19.08690073614372, 113.06958304835798, -68.80426025390625],
+      [-23.868908031810193, 106.04600983284786, -68.80426025390625],
+    ]
+
+    # the bridge joins both mandible guide bases
+    mandibleBridgeCurve = self.logicBRP.getMandibleBridgeCurve()
+    for point in mandibleBridgeCurvePoints:
+      mandibleBridgeCurve.AddControlPoint(*point)
+    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+    interactionNode.SwitchToViewTransformMode()
+    slicer.app.processEvents()
+
+    self.assertEqual(
+      len(mandibleBridgeCurvePoints),
+      mandibleBridgeCurve.GetNumberOfControlPoints()
+    )
+    self.assertNodeIsInsideFolder(mandibleBridgeCurve, "BoneReconstructionPlanner")
+    self.assertEqual(
+      mandibleBridgeCurve.GetID(),
+      self.widgetBRP.ui.mandibleBridgeCurvePlaceWidget.currentNode().GetID()
+    )
+
+    parameterNode = self.logicBRP.getParameterNode()
+    mandibleBridgeTube = parameterNode.GetNodeReference("mandibleBridgeTube")
+    self.assertIsNotNone(mandibleBridgeTube)
+    self.assertNodeIsInsideFolder(mandibleBridgeTube, "Mandible reconstruction")
+
+    # mandibleBridgeTube of TestPlanBRP
+    self.assertModelHasVolumeAreaAndBounds(
+      mandibleBridgeTube,
+      2742.0418,
+      2030.4229,
+      [-26.4025, 48.1503, 80.0777, 131.0776, -71.8043, -65.8043]
+    )
+
+    self.delayDisplay("AddMandibleBridge test successful")
+
+  def section_AddMandibleScrewHoles(self):
+    self.delayDisplay("Starting the AddMandibleScrewHoles test")
+
+    self.assertParameterNodeHasParameterValues({
+      "mandibleScrewHoleCylinderRadius_mm": "1.5",
+    })
+
+    mandibleScrewHolesPoints = [
+      [42.213417053222656, 71.67859649658203, -59.11856842041016],
+      [-25.22905921936035, 98.1306381225586, -78.51023864746094],
+    ]
+
+    # a cylinder perpendicular to the mandible is created for each point
+    mandibleFiducialList = self.logicBRP.getMandibleFiducials()
+    for point in mandibleScrewHolesPoints:
+      mandibleFiducialList.AddControlPoint(*point)
+    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+    interactionNode.SwitchToViewTransformMode()
+    slicer.app.processEvents()
+
+    self.assertEqual(
+      len(mandibleScrewHolesPoints),
+      mandibleFiducialList.GetNumberOfControlPoints()
+    )
+    self.assertNodeIsInsideFolder(mandibleFiducialList, "BoneReconstructionPlanner")
+    self.assertEqual(
+      mandibleFiducialList.GetID(),
+      self.widgetBRP.ui.mandibleFiducialsPlaceWidget.currentNode().GetID()
+    )
+
+    mandibleCylindersList = createListFromFolderName("Mandible Cylinders Models")
+    self.assertEqual(
+      len(mandibleCylindersList),
+      len(mandibleScrewHolesPoints)
+    )
+    for mandibleCylinder in mandibleCylindersList:
+      self.assertGreater(mandibleCylinder.GetPolyData().GetNumberOfPoints(), 0)
+
+    self.delayDisplay("AddMandibleScrewHoles test successful")
+
+  def section_CreateMandibleSurgicalGuide(self):
+    self.delayDisplay("Starting the CreateMandibleSurgicalGuide test")
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.click()
+    slicer.app.processEvents()
+
+    parameterNode = self.logicBRP.getParameterNode()
+    mandibleSurgicalGuide = parameterNode.GetNodeReference("mandibleSurgicalGuidePrototypeModel")
+    self.assertIsNotNone(mandibleSurgicalGuide)
+    self.assertEqual(
+      mandibleSurgicalGuide.GetName(),
+      "MandibleSurgicalGuidePrototype"
+    )
+    self.assertNodeIsInsideFolder(mandibleSurgicalGuide, "Mandible reconstruction")
+    self.assertParameterNodeHasParameterValues({
+      "mandibleSurgicalGuideElementsVisible": "False",
+      "mandibleSurgicalGuideVisible": "True",
+    })
+
+    # MandibleSurgicalGuidePrototype of TestPlanBRP
+    import SampleData
+    exampleMandibleSurgicalGuide = SampleData.downloadSample('personalizedMandibleGuide')
+    self.assertModelsAreGeometricallyEqual(mandibleSurgicalGuide, exampleMandibleSurgicalGuide)
+    slicer.mrmlScene.RemoveNode(exampleMandibleSurgicalGuide)
+
+    # TestPlanBRP was saved showing the guide elements instead of the guide
+    slicer.app.processEvents()
+    self.widgetBRP.ui.mandibleSurgicalGuideElementsVisibleCheckBox.checked = True
+    self.widgetBRP.ui.mandibleSurgicalGuideVisibleCheckBox.checked = False
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "mandibleSurgicalGuideElementsVisible": "True",
+      "mandibleSurgicalGuideVisible": "False",
+    })
+    self.assertFalse(mandibleSurgicalGuide.GetDisplayNode().GetVisibility())
+
+    self.delayDisplay("CreateMandibleSurgicalGuide test successful")
+
+  def section_CreateNeomandible(self):
+    self.delayDisplay("Starting the CreateNeomandible test")
+
+    self.assertParameterNodeHasParameterValues({
+      "interCondylarBeamBoxSize_mm": "6.0",
+    })
+
+    interCondylarBeamLinePoints = [
+      [49.12575938295235, 20.268077392253005, -25.295671463012695],
+      [-48.719208021868354, 29.620222499804058, -21.86989974975586],
+    ]
+
+    # the beam goes from one condyle to the other
+    interCondylarBeamLine = self.logicBRP.getInterCondylarBeamLine()
+    for point in interCondylarBeamLinePoints:
+      interCondylarBeamLine.AddControlPoint(*point)
+    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+    interactionNode.SwitchToViewTransformMode()
+    slicer.app.processEvents()
+
+    self.assertEqual(
+      len(interCondylarBeamLinePoints),
+      interCondylarBeamLine.GetNumberOfControlPoints()
+    )
+    self.assertNodeIsInsideFolder(interCondylarBeamLine, "BoneReconstructionPlanner")
+    self.assertEqual(
+      interCondylarBeamLine.GetID(),
+      self.widgetBRP.ui.interCondylarBeamLinePlaceWidget.currentNode().GetID()
+    )
+
+    parameterNode = self.logicBRP.getParameterNode()
+    interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
+    self.assertIsNotNone(interCondylarBeamBox)
+
+    # interCondylarBeamBox of TestPlanBRP
+    self.assertModelHasVolumeAreaAndBounds(
+      interCondylarBeamBox,
+      1770.3108,
+      1705.0648,
+      [-49.0047, 49.4112, 17.2817, 32.6066, -28.2939, -18.8717]
+    )
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.create3DModelOfTheReconstructionButton.click()
+    slicer.app.processEvents()
+
+    neomandible = parameterNode.GetNodeReference("mandibleReconstructionModel")
+    self.assertIsNotNone(neomandible)
+    self.assertParameterNodeHasParameterValues({
+      "neomandibleVisible": "True",
+    })
+    self.assertTrue(self.widgetBRP.ui.neomandibleVisibilityButton.checked)
+
+    # MandibleReconstructionModel of TestPlanBRP
+    import SampleData
+    exampleNeomandible = SampleData.downloadSample('neoMandible')
+    self.assertModelsAreGeometricallyEqual(neomandible, exampleNeomandible)
+    slicer.mrmlScene.RemoveNode(exampleNeomandible)
+
+    # the beam is part of the neomandible, so it is hidden
+    slicer.app.processEvents()
+    self.widgetBRP.ui.interCondylarBeamVisibilityToolButton.click()
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "showInterCondylarBeamBox": "False",
+    })
+
+    self.delayDisplay("CreateNeomandible test successful")
+
+  def section_SetVisualizationOptionsAndFibulaNormalization(self):
+    self.delayDisplay("Starting the SetVisualizationOptionsAndFibulaNormalization test")
+
+    mandibleVolume = slicer.util.getNode("CTMandible")
+    fibulaVolume = slicer.util.getNode("CTFibula")
+
+    # the CTs are needed by the realistic mode of the animation
+    slicer.app.processEvents()
+    self.widgetBRP.ui.headCTSelector.setCurrentNode(mandibleVolume)
+    self.widgetBRP.ui.legsCTSelector.setCurrentNode(fibulaVolume)
+    slicer.app.processEvents()
+    parameterNode = self.logicBRP.getParameterNode()
+    self.assertEqual(
+      parameterNode.GetNodeReferenceID("headCT"),
+      mandibleVolume.GetID()
+    )
+    self.assertEqual(
+      parameterNode.GetNodeReferenceID("legsCT"),
+      fibulaVolume.GetID()
+    )
+
+    # align the fibula line with the superior direction
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaNormalizationTransformButton.checked = True
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "True",
+    })
+
+    fibulaNormalizationTransform = parameterNode.GetNodeReference("fibulaNormalizationTransformNode")
+    self.assertIsNotNone(fibulaNormalizationTransform)
+    self.assertNodeIsInsideFolder(fibulaNormalizationTransform, "BoneReconstructionPlanner")
+    # FibulaNormalizationTransform of TestPlanBRP
+    expectedFibulaNormalizationMatrix = [
+      [0.996361, 0.000337321, 0.0852286, 1.22717],
+      [0.000337321, 0.999969, -0.00790116, -0.113766],
+      [-0.0852286, 0.00790116, 0.99633, -8.0999],
+      [0.0, 0.0, 0.0, 1.0]
+    ]
+    fibulaNormalizationMatrix = slicer.util.arrayFromTransformMatrix(fibulaNormalizationTransform)
+    self.assertTrue(
+      np.allclose(fibulaNormalizationMatrix, expectedFibulaNormalizationMatrix, atol=1e-3),
+      msg=str(fibulaNormalizationMatrix.tolist())
+    )
+
+    fibulaLinkedNodesList = (
+      [
+        self.logicBRP.getFibulaLine(),
+        self.logicBRP.getMiterBoxDirectionLine(),
+        parameterNode.GetNodeReference("fibulaModelNode"),
+        parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel"),
+        parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel"),
+      ] +
+      createListFromFolderName("Fibula planes") +
+      createListFromFolderName("miterBoxes Models") +
+      createListFromFolderName("Fibula Cylinders Models")
+    )
+    for fibulaLinkedNode in fibulaLinkedNodesList:
+      self.assertEqual(
+        fibulaLinkedNode.GetTransformNodeID(),
+        fibulaNormalizationTransform.GetID(),
+        msg=fibulaLinkedNode.GetName()
+      )
+    # the normalization goes with the shown CT, the fibula CT gave it to the mandible CT when the shown CT changed
+    self.assertEqual(
+      mandibleVolume.GetTransformNodeID(),
+      fibulaNormalizationTransform.GetID()
+    )
+    self.assertIsNone(fibulaVolume.GetTransformNodeID())
+
+    # the transformed fibula pieces keep their place on the mandible
+    fibulaSegmentsTransformsList = createListFromFolderName("Bone Pieces Transforms")
+    self.assertEqual(
+      len(fibulaSegmentsTransformsList),
+      3
+    )
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.showOriginalMandibleCheckBox.checked = False
+    if self.widgetBRP.ui.showMandiblePlanesToolButton.checked:
+      self.widgetBRP.ui.showMandiblePlanesToolButton.click()
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "showOriginalMandible": "False",
+      "showMandiblePlanes": "False",
+    })
+    self.assertFalse(parameterNode.GetNodeReference("mandibleModelNode").GetDisplayNode().GetVisibility())
+
+    self.delayDisplay("SetVisualizationOptionsAndFibulaNormalization test successful")
+
+  def section_PlayVirtualSurgicalPlanAnimation(self):
+    self.delayDisplay("Starting the PlayVirtualSurgicalPlanAnimation test")
+
+    self.assertParameterNodeHasParameterValues({
+      "vspAnimationMode": "Schematic",
+    })
+    self.assertTrue(self.widgetBRP.ui.playVSPAnimationButton.enabled)
+
+    sceneStateBeforeAnimation = self.getModelsAndMarkupsDisplayState()
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.playVSPAnimationButton.checked = True
+    slicer.app.processEvents()
+    self.assertTrue(self.widgetBRP.vspAnimation.playing)
+
+    self.delayDisplay("Playing the virtual surgical plan animation", 2000)
+
+    # stopping the animation restores the scene
+    slicer.app.processEvents()
+    self.widgetBRP.ui.playVSPAnimationButton.checked = False
+    slicer.app.processEvents()
+    self.assertFalse(self.widgetBRP.vspAnimation.playing)
+    self.assertFalse(self.widgetBRP.ui.playVSPAnimationButton.checked)
+
+    sceneStateAfterAnimation = self.getModelsAndMarkupsDisplayState()
+    self.assertEqual(
+      sceneStateBeforeAnimation,
+      sceneStateAfterAnimation
+    )
+
+    self.delayDisplay("PlayVirtualSurgicalPlanAnimation test successful")
+
+  def section_ExportPlanningOutputs(self):
+    self.delayDisplay("Starting the ExportPlanningOutputs test")
+
+    import shutil
+    exportFolderPath = os.path.join(slicer.app.temporaryPath, "BoneReconstructionPlannerExportTest")
+    if os.path.exists(exportFolderPath):
+      shutil.rmtree(exportFolderPath)
+    os.makedirs(exportFolderPath)
+
+    # 3D printable models in the format used by 3D printers
+    parameterNode = self.logicBRP.getParameterNode()
+    planningOutputsList = [
+      parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel"),
+      parameterNode.GetNodeReference("mandibleSurgicalGuidePrototypeModel"),
+      parameterNode.GetNodeReference("mandibleReconstructionModel"),
+    ]
+    for planningOutput in planningOutputsList:
+      stlFilePath = os.path.join(exportFolderPath, planningOutput.GetName() + ".stl")
+      self.assertTrue(
+        slicer.util.exportNode(planningOutput, stlFilePath, {})
+      )
+      self.assertTrue(os.path.exists(stlFilePath))
+      exportedPlanningOutput = slicer.util.loadModel(stlFilePath)
+      self.assertModelsAreGeometricallyEqual(planningOutput, exportedPlanningOutput)
+      slicer.mrmlScene.RemoveNode(exportedPlanningOutput)
+
+    shutil.rmtree(exportFolderPath)
+
+    self.delayDisplay("ExportPlanningOutputs test successful")
+
+  def section_VerifyPlanMatchesTestPlanBRP(self):
+    self.delayDisplay("Starting the VerifyPlanMatchesTestPlanBRP test")
+
+    # parameters of TestPlanBRP, except the bone models centroids, the informative text and the processing flags
+    self.assertParameterNodeHasParameterValues({
+      "additionalBetweenSpaceOfFibulaPlanes_mm": "1.5",
+      "AISegmentations": "False",
+      "biggerMiterBoxDistanceToFibula_mm": "1.5",
+      "biggerSawBoxDistanceToMandible_mm": "3.0",
+      "booleanOperationsBackend": "kigumi",
+      "checkSecurityMarginOnMiterBoxCreation": "True",
+      "clearanceFitPrintingTolerance_mm": "0.25",
+      "colorIndex": "3",
+      "customTitaniumPlateDesing": "False",
+      "dentalImplantCylinderHeight_mm": "14.0",
+      "dentalImplantCylinderRadius_mm": "2.0",
+      "dentalImplantDrillGuideWall_mm": "3.0",
+      "dentalImplantsPlanningAndFibulaDrillGuides": "False",
+      "displayOrientation3DCube": "False",
+      "donorLeg": "Left",
+      "fibulaGuidebaseAngle_mm": "120.0",
+      "fibulaGuidebaseMargin_mm": "0.5",
+      "fibulaGuidebaseThickness_mm": "4.0",
+      "fibulaNormalizationTransform": "True",
+      "fibulaScrewHoleCylinderRadius_mm": "1.5",
+      "fibulaSegment": "Segment_1",
+      "fibulaSegmentsMeasurementMode": "center2center",
+      "fibulaSurgicalGuideElementsVisible": "False",
+      "fibulaSurgicalGuideVisible": "True",
+      "fibulaTextLabelsDepth_mm": "1.0",
+      "fibulaTextLabelsMode": "Emboss",
+      "fixCutGoesThroughTheMandibleTwice": "False",
+      "growShrinkIterations": "4",
+      "headCTCorticalBoneThreshold": "500.0",
+      "inCameraPlaneInteractionHandles": "False",
+      "includeVesselsOnPlan": "True",
+      "initialSpace_mm": "20.0",
+      "interCondylarBeamBoxSize_mm": "6.0",
+      "interCondylarBeamBoxSizeStep_mm": "1.0",
+      "kindOfMandibleResection": "Segmental Mandibulectomy",
+      "legsCTCorticalBoneThreshold": "500.0",
+      "lightingInterpolationMethod": "Gouraud",
+      "lightingMode": "Lamp",
+      "lockVSP": "True",
+      "makeAllDentalImplanCylindersParallel": "False",
+      "makeAllMandiblePlanesRotateTogether": "True",
+      "mandibleBridgeRadius_mm": "3.0",
+      "mandibleGuidebaseMargin_mm": "0.3",
+      "mandibleGuidebaseThickness_mm": "4.0",
+      "mandiblePlanesPositioningForMaximumBoneContact": "True",
+      "mandibleScrewHoleCylinderRadius_mm": "1.5",
+      "mandibleSideToRemove": "Removing right side",
+      "mandibleSurgicalGuideElementsVisible": "True",
+      "mandibleSurgicalGuideVisible": "False",
+      "mandibleTextLabelsDepth_mm": "1.0",
+      "mandibleTextLabelsMode": "Emboss",
+      "mandibularSegment": "Segment_2",
+      "miterBoxesBoxType": "Adapted",
+      "miterBoxesGuideType": "Slot",
+      "miterBoxSlotHeight_mm": "15.0",
+      "miterBoxSlotLength_mm": "20.0",
+      "miterBoxSlotWall_mm": "3.0",
+      "miterBoxSlotWidth_mm": "1.0",
+      "neomandibleVisible": "True",
+      "plateCrossSectionalBevelRadiusPorcentage": "30.0",
+      "plateCrossSectionalLength_mm": "7.0",
+      "plateCrossSectionalWidth_mm": "2.5",
+      "plateTipsBevelRadius": "49.0",
+      "safeDistanceToFibulaTip_mm": "75.0",
+      "sawBoxesBoxType": "Regular",
+      "sawBoxesGuideType": "Slot",
+      "sawBoxSlotHeight_mm": "15.0",
+      "sawBoxSlotLength_mm": "20.0",
+      "sawBoxSlotWall_mm": "3.0",
+      "sawBoxSlotWidth_mm": "1.0",
+      "scalarVolumeChangedThroughParameterNode": "True",
+      "securityMarginOfFibulaPieces_mm": "1.0",
+      "showBiggerSawBoxesInteractionHandles": "False",
+      "showFibulaSegmentsLengths": "True",
+      "showInterCondylarBeamBox": "False",
+      "showMandiblePlanes": "False",
+      "showMandiblePlanesInteractionHandles": "True",
+      "showOriginalMandible": "False",
+      "updateOnDentalImplantPlanesMovement": "True",
+      "updateOnMandiblePlanesMovement": "False",
+      "useMandibleGuideBasesFromCurves": "True",
+      "useMoreExactVersionOfPositioningAlgorithm": "False",
+      "useNonDecimatedModelsForPreview": "True",
+      "vesselsSegment": "2.25.178440348611415292844993760580138142491",
+      "virtualPlanWasSuccessful": "True",
+      "vspAnimationMode": "Schematic",
+    })
+
+    # node references of TestPlanBRP
+    parameterNode = self.logicBRP.getParameterNode()
+    referenceRolesList = [
+      "bothSidesMandibleGuideBaseModel",
+      "currentScalarVolume",
+      "decimatedFibulaModelNode",
+      "decimatedMandibleModelNode",
+      "decimatedVesselsModelNode",
+      "fibulaFiducialList",
+      "fibulaLine",
+      "fibulaModelNode",
+      "fibulaNormalizationTransformNode",
+      "fibulaSegmentation",
+      "fibulaSurgicalGuideBaseModel",
+      "fibulaSurgicalGuidePrototypeModel",
+      "headCT",
+      "interCondylarBeamBox",
+      "interCondylarBeamLine",
+      "leftSideMandibleGuideBaseCurve",
+      "leftSideMandibleGuideBaseModel",
+      "legsCT",
+      "mandibleBridgeCurve",
+      "mandibleBridgeTube",
+      "mandibleCurve",
+      "mandibleFiducialList",
+      "mandibleModelNode",
+      "mandiblePlaneOfRotation",
+      "mandibleReconstructionModel",
+      "mandibleSurgicalGuidePrototypeModel",
+      "mandibularSegmentation",
+      "miterBoxDirectionLine",
+      "rightSideMandibleGuideBaseCurve",
+      "rightSideMandibleGuideBaseModel",
+      "vesselsModelNode",
+      "vesselsSegmentation",
+    ]
+    for referenceRole in referenceRolesList:
+      self.assertIsNotNone(
+        parameterNode.GetNodeReference(referenceRole),
+        msg=referenceRole
+      )
+    mandibleVolume = slicer.util.getNode("CTMandible")
+    fibulaVolume = slicer.util.getNode("CTFibula")
+    self.assertEqual(parameterNode.GetNodeReferenceID("currentScalarVolume"), mandibleVolume.GetID())
+    self.assertEqual(parameterNode.GetNodeReferenceID("headCT"), mandibleVolume.GetID())
+    self.assertEqual(parameterNode.GetNodeReferenceID("legsCT"), fibulaVolume.GetID())
+    self.assertEqual(
+      parameterNode.GetNodeReferenceID("fibulaSegmentation"),
+      parameterNode.GetNodeReferenceID("vesselsSegmentation")
+    )
+    self.assertEqual(
+      parameterNode.GetNodeReferenceID("mandiblePlaneOfRotation"),
+      createListFromFolderName("Mandibular planes")[0].GetID()
+    )
+
+    self.delayDisplay("VerifyPlanMatchesTestPlanBRP test successful")
+
+  def getmandibularPlanesPointsListOfTestPlanBRP(self):
+    """Control points of the mandibular planes of TestPlanBRP, in mandibular curve order
+    """
+    return [
+      [
+        [32.54102873923069, 74.0465056955266, -65.28580186587095],
+        [40.439023455028355, 85.92272551397735, -44.75345951792954],
+        [53.846417965586426, 80.00674508361615, -76.92865101675113],
+      ],
+      [
+        [22.83209800720215, 102.14715576171878, -76.94503021240234],
+        [28.916271978245124, 116.4772691949198, -57.38408248276329],
+        [39.64197795105282, 114.1893090077745, -90.99545659283068],
+      ],
+      [
+        [-0.8704084241075876, 109.79193095502887, -79.81026868970173],
+        [-5.810498315690872, 127.6992978180478, -63.079407268473965],
+        [-2.5824929378404073, 126.5654476322514, -98.26881426883044],
+      ],
+      [
+        [-15.19514165371224, 97.82707175601648, -80.40758469692383],
+        [-28.83325207809499, 109.81509990225511, -63.22360596039916],
+        [-31.898449592223713, 103.98463971599676, -97.95990251336856],
+      ],
+    ]
+
+  def getControlPointsOfMandiblePlane(self, planeNode):
+    return [np.array(planeNode.GetNthControlPointPosition(j)) for j in range(3)]
+
+  def getAxesAndOriginOfPlaneFromControlPoints(self, planePoints):
+    """Axes (as columns) and origin of a plane of type PlaneType3Points,
+    computed from its 3 control points as vtkMRMLMarkupsPlaneNode does
+    """
+    point0, point1, point2 = [np.array(point, dtype=float) for point in planePoints]
+    planeX = (point1 - point0)/np.linalg.norm(point1 - point0)
+    planeZ = np.cross(planeX, point2 - point0)
+    planeZ = planeZ/np.linalg.norm(planeZ)
+    planeY = np.cross(planeZ, planeX)
+    planeY = planeY/np.linalg.norm(planeY)
+    return np.column_stack([planeX, planeY, planeZ]), point0
+
+  def assertMandiblePlaneIsDefinedByThreePoints(self, planeNode):
+    self.assertEqual(
+      planeNode.GetPlaneType(),
+      slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points,
+      msg=planeNode.GetName()
+    )
+    self.assertEqual(
+      planeNode.GetNumberOfControlPoints(),
+      3,
+      msg=planeNode.GetName()
+    )
+
+  def moveMandiblePlaneWithInteractionHandle(self, planeNode, handleTransform):
+    """Move the plane as dragging one of its interaction handles in a view does
+    """
+    planeNode.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointStartInteractionEvent)
+    planeNode.ApplyTransform(handleTransform, False)
+    planeNode.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent)
+    slicer.app.processEvents()
+
+  def translateMandiblePlaneWithInteractionHandles(self, planeNode, targetPlaneOrigin):
+    """Drag the X, Y and Z translation handles of the plane till its origin is on the target origin
+    """
+    planeAxes, planeOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(
+      self.getControlPointsOfMandiblePlane(planeNode)
+    )
+    translationVector = np.array(targetPlaneOrigin) - planeOrigin
+    for axisIndex in range(3):
+      handleAxis = planeAxes[:,axisIndex]
+      translationTransform = vtk.vtkTransform()
+      translationTransform.Translate((np.dot(translationVector, handleAxis)*handleAxis).tolist())
+      self.moveMandiblePlaneWithInteractionHandle(planeNode, translationTransform)
+
+  def rotateMandiblePlaneWithInteractionHandles(self, planeNode, targetPlaneAxes):
+    """Drag the X, Y and Z rotation handles of the plane, one after the other, till its axes are the target axes.
+    The rotation handles turn the plane around its origin
+    """
+    planeAxes, planeOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(
+      self.getControlPointsOfMandiblePlane(planeNode)
+    )
+    # rotation from the plane axes to the target axes in plane coordinates, split as rotationAroundX*rotationAroundY*rotationAroundZ
+    rotationMatrix = planeAxes.T @ np.array(targetPlaneAxes)
+    angleAroundY = np.arcsin(np.clip(rotationMatrix[0,2], -1.0, 1.0))
+    angleAroundX = np.arctan2(-rotationMatrix[1,2], rotationMatrix[2,2])
+    angleAroundZ = np.arctan2(-rotationMatrix[0,1], rotationMatrix[0,0])
+    for axisIndex, angleRadians in [(0, angleAroundX), (1, angleAroundY), (2, angleAroundZ)]:
+      # each rotation is around an axis of the plane after the previous rotation
+      planeAxes, planeOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(
+        self.getControlPointsOfMandiblePlane(planeNode)
+      )
+      rotationTransform = vtk.vtkTransform()
+      rotationTransform.PostMultiply()
+      rotationTransform.Translate((-planeOrigin).tolist())
+      rotationTransform.RotateWXYZ(
+        vtk.vtkMath.DegreesFromRadians(angleRadians),
+        planeAxes[:,axisIndex].tolist()
+      )
+      rotationTransform.Translate(planeOrigin.tolist())
+      self.moveMandiblePlaneWithInteractionHandle(planeNode, rotationTransform)
+
+  def updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes(self):
+    """Click the "Update virtual plan" button and check how it positioned the mandibular planes:
+    it only rotates them around their origins, the middle planes get maximum bone contact and
+    the first and last planes keep their normals
+    """
+    mandibularPlanesList = createListFromFolderName("Mandibular planes")
+    planesAxesAndOriginsBeforeUpdate = [
+      self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(planeNode)) for planeNode in mandibularPlanesList
+    ]
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.generateFibulaPlanesFibulaBonePiecesAndTransformThemToMandibleButton.click()
+    slicer.app.processEvents()
+
+    self.assertParameterNodeHasParameterValues({
+      "virtualPlanWasSuccessful": "True",
+    })
+
+    # the planes keep the mandibular curve order
+    self.assertEqual(
+      [planeNode.GetID() for planeNode in createListFromFolderName("Mandibular planes")],
+      [planeNode.GetID() for planeNode in mandibularPlanesList]
+    )
+
+    planesAxesAndOrigins = []
+    for planeNode in mandibularPlanesList:
+      self.assertMandiblePlaneIsDefinedByThreePoints(planeNode)
+      planesAxesAndOrigins.append(
+        self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(planeNode))
+      )
+
+    for i in range(len(mandibularPlanesList)):
+      planeAxes, planeOrigin = planesAxesAndOrigins[i]
+      planeAxesBeforeUpdate, planeOriginBeforeUpdate = planesAxesAndOriginsBeforeUpdate[i]
+      # the update rotates the planes around their origins
+      self.assertTrue(
+        np.allclose(planeOrigin, planeOriginBeforeUpdate, atol=1e-6),
+        msg=f"{mandibularPlanesList[i].GetName()} origin {planeOrigin.tolist()} before update {planeOriginBeforeUpdate.tolist()}"
+      )
+      if i == 0 or i == len(mandibularPlanesList) - 1:
+        # the first and last planes only rotate together with the plane of rotation, around their normals
+        self.assertTrue(
+          np.allclose(planeAxes[:,2], planeAxesBeforeUpdate[:,2], atol=1e-6),
+          msg=f"{mandibularPlanesList[i].GetName()} normal {planeAxes[:,2].tolist()} before update {planeAxesBeforeUpdate[:,2].tolist()}"
+        )
       else:
-        layoutManager.setMaximizedViewNode(mandibleViewNode)
+        # maximum bone contact: the normal of a middle plane bisects the directions to the origins of its neighbour planes
+        previousPlaneOrigin = planesAxesAndOrigins[i-1][1]
+        nextPlaneOrigin = planesAxesAndOrigins[i+1][1]
+        directionFromPreviousPlane = (planeOrigin - previousPlaneOrigin)/np.linalg.norm(planeOrigin - previousPlaneOrigin)
+        directionToNextPlane = (nextPlaneOrigin - planeOrigin)/np.linalg.norm(nextPlaneOrigin - planeOrigin)
+        expectedPlaneNormal = (directionFromPreviousPlane + directionToNextPlane)/np.linalg.norm(directionFromPreviousPlane + directionToNextPlane)
+        self.assertTrue(
+          np.allclose(planeAxes[:,2], expectedPlaneNormal, atol=1e-6),
+          msg=f"{mandibularPlanesList[i].GetName()} normal {planeAxes[:,2].tolist()} expected {expectedPlaneNormal.tolist()}"
+        )
 
-    self.logicBRP.createSawBoxesFromFirstAndLastMandiblePlanes()
+    # a fibula piece for each pair of consecutive mandibular planes
+    self.assertEqual(
+      len(createListFromFolderName("Fibula planes")),
+      2*len(mandibularPlanesList) - 2
+    )
+    transformedFibulaPiecesList = createListFromFolderName("Transformed Fibula Pieces")
+    self.assertEqual(
+      len(transformedFibulaPiecesList),
+      len(mandibularPlanesList) - 1
+    )
+    for transformedFibulaPiece in transformedFibulaPiecesList:
+      self.assertGreater(
+        transformedFibulaPiece.GetPolyData().GetNumberOfPoints(),
+        0,
+        msg=transformedFibulaPiece.GetName()
+      )
 
-    # # generate saw boxes movements with this code:
-    # def createListFromFolderName(folderID):
-    #   createdList = []
-    #   shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
-    #   myList = vtk.vtkIdList()
-    #   shNode.GetItemChildren(folderID,myList)
-    #   for i in range(myList.GetNumberOfIds()):
-    #     createdList.append(shNode.GetItemDataNode(myList.GetId(i)))
-    #   return createdList
-    # def updateSawBoxesMovementsList(caller=None,event=None,movementsList=[]):
-    #   plane = caller
-    #   planeMatrix = vtk.vtkMatrix4x4()
-    #   plane.GetObjectToWorldMatrix(planeMatrix)
-    #   movementsList.append([plane.GetID(),slicer.util.arrayFromVTKMatrix(planeMatrix).tolist()])
-    # shNode = slicer.vtkMRMLSubjectHierarchyNode.GetSubjectHierarchyNode(slicer.mrmlScene)
-    # sawBoxesPlanesFolder = shNode.GetItemByName("sawBoxes Planes")
-    # sawBoxesPlanes = createListFromFolderName(mandiblePlanesFolder)
-    # # list to save the movements for the test
-    # movementsList = []
-    # # set observers
-    # planesAndObserversList = []
-    # for plane in sawBoxesPlanes:
-    #   planesAndObserversList.append(
-    #     [
-    #         plane.GetID(),
-    #         plane.AddObserver(
-    #             slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent,
-    #             lambda caller,event,movementsList=movementsList: updateSawBoxesMovementsList(caller,event,movementsList)
-    #         )
-    #     ]
-    #  )
-    # 
-    # 
+  def assertParameterNodeHasParameterValues(self, expectedParameterValuesDict):
+    """Numbers are compared as numbers (e.g. "500" and "500.0" are equal), other values as text
+    """
+    parameterNode = self.logicBRP.getParameterNode()
+    for parameterName, expectedParameterValue in expectedParameterValuesDict.items():
+      parameterValue = parameterNode.GetParameter(parameterName)
+      try:
+        self.assertAlmostEqual(
+          float(parameterValue),
+          float(expectedParameterValue),
+          places=6,
+          msg=parameterName
+        )
+      except ValueError:
+        self.assertEqual(
+          parameterValue,
+          expectedParameterValue,
+          msg=parameterName
+        )
 
-    movementsList = [['vtkMRMLMarkupsPlaneNode11', [[-0.10858201072394683, 0.9292904853485047, -0.3530285268754998, 42.21461987204822], [0.39399905998699103, 0.3662746931765254, 0.8429754384724443, 76.13834598713792], [0.9126744697188107, -0.04756093963730036, -0.40591042034456926, -52.639932827421404], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode11', [[-0.10858201072394683, 0.9292904853485047, -0.3530285268754998, 43.024681091308594], [0.39399905998699103, 0.3662746931765254, 0.8429754384724443, 73.1989517211914], [0.9126744697188107, -0.04756093963730036, -0.40591042034456926, -59.4488639831543], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode11', [[-0.10858201072394683, 0.9292904853485047, -0.3530285268754998, 47.28470993041992], [0.39399905998699103, 0.3662746931765254, 0.8429754384724443, 74.87801361083984], [0.9126744697188107, -0.04756093963730036, -0.40591042034456926, -59.66689682006836], [0.0, 0.0, 0.0, 1.0]]], ['vtkMRMLMarkupsPlaneNode12', [[0.1458282507662034, -0.8995217903481598, -0.4118187343568899, -35.072343539111024], [0.24624056084596485, 0.4361708279869181, -0.8655175301560744, 90.12325764191597], [0.9581751966486786, 0.024810431315229024, 0.28510477902907616, -73.89405603129094], [0.0, 0.0, 0.0, 1.0]]]]
+  def assertNodeIsInsideFolder(self, dataNode, folderName):
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    folderItemID = shNode.GetItemByName(folderName)
+    self.assertNotEqual(
+      folderItemID,
+      shNode.GetInvalidItemID(),
+      msg=folderName
+    )
+    self.assertEqual(
+      shNode.GetItemParent(getItem(dataNode)),
+      folderItemID,
+      msg=dataNode.GetName()
+    )
 
-    for item in movementsList:
-      self.delayDisplay("Move saw box")
-      nodeID = item[0]
-      newPlaneToWorldMatrix = slicer.util.vtkMatrixFromArray(np.array(item[1]))
-      planeNode = slicer.mrmlScene.GetNodeByID(nodeID)
-      oldPlaneToWorld = vtk.vtkMatrix4x4()
-      planeNode.GetObjectToNodeMatrix(oldPlaneToWorld)
-      worldToOldPlane = vtk.vtkMatrix4x4()
-      vtk.vtkMatrix4x4.Invert(oldPlaneToWorld, worldToOldPlane)
-      transform = vtk.vtkTransform()
-      transform.PostMultiply()
-      transform.Concatenate(worldToOldPlane)
-      transform.Concatenate(newPlaneToWorldMatrix)
-      wasModified = planeNode.StartModify()
-      for i in range(3):
-        oldPos = planeNode.GetNthControlPointPosition(i)
-        newPos = [0,0,0]
-        transform.TransformPoint(oldPos,newPos)
-        planeNode.SetNthControlPointPosition(i,newPos)
-      planeNode.EndModify(wasModified)
-      self.delayDisplay("Saw box moved")
+  def assertModelHasVolumeAreaAndBounds(self, modelNode, expectedVolume, expectedArea, expectedBounds):
+    """Compare the model with precomputed values of the TestPlanBRP model
+    """
+    relativeTolerance = 0.01
+    boundsTolerance_mm = 0.5
+    volume, area, bounds = getVolumeAreaAndBoundsOfModel(modelNode)
+    message = f"{modelNode.GetName()} volume {volume:.4f} area {area:.4f} bounds {bounds}"
+    self.assertTrue(
+      np.isclose(volume, expectedVolume, rtol=relativeTolerance),
+      msg=message
+    )
+    self.assertTrue(
+      np.isclose(area, expectedArea, rtol=relativeTolerance),
+      msg=message
+    )
+    self.assertTrue(
+      np.allclose(bounds, expectedBounds, atol=boundsTolerance_mm),
+      msg=message
+    )
 
-    if USING_GUI:
-      layoutManager = slicer.app.layoutManager()
-      if int(slicer.app.revision) >= 31524:
-        layoutManager.removeMaximizedViewNode(mandibleViewNode)
-      else:
-        layoutManager.setMaximizedViewNode(None)
-      # show mandible plane handles
-      self.widgetBRP.ui.setMandiblePlanesInteractionHandlesVisibility(True)
-      # hide saw boxes handles
-      self.widgetBRP.ui.setBiggerSawBoxesInteractionHandlesVisibility(False)
+  def assertModelsAreGeometricallyEqual(self, modelNode, referenceModelNode):
+    """Compare the model with a reference model (e.g. one created with TestPlanBRP)
+    """
+    relativeTolerance = 0.01
+    distanceTolerance_mm = 0.5
+    differencesDict = getGeometricDifferencesBetweenModels(modelNode, referenceModelNode)
+    message = f"{modelNode.GetName()} differences with {referenceModelNode.GetName()}: {differencesDict}"
+    self.assertLessEqual(differencesDict["relativeVolumeDifference"], relativeTolerance, msg=message)
+    self.assertLessEqual(differencesDict["relativeAreaDifference"], relativeTolerance, msg=message)
+    self.assertLessEqual(differencesDict["maximumBoundsDifference_mm"], distanceTolerance_mm, msg=message)
+    self.assertLessEqual(differencesDict["hausdorffDistance_mm"], distanceTolerance_mm, msg=message)
 
-    # asserts below
+  def assertModelIsClosedSurfaceWithEulerCharacteristic(self, modelNode, expectedEulerCharacteristic):
+    """The model is one closed manifold surface, with as many through holes as the Euler characteristic says
+    (2 for no holes, 0 for one hole)
+    """
+    topologyDict = getTopologyOfModel(modelNode)
+    message = f"{modelNode.GetName()} topology {topologyDict}"
+    self.assertEqual(topologyDict["numberOfBoundaryEdges"], 0, msg=message)
+    self.assertEqual(topologyDict["numberOfNonManifoldEdges"], 0, msg=message)
+    self.assertEqual(topologyDict["numberOfRegions"], 1, msg=message)
+    self.assertEqual(topologyDict["eulerCharacteristic"], expectedEulerCharacteristic, msg=message)
 
+  def assertScrewHoleCylinderGoesThroughGuideBaseAlongItsNormalAtPoint(self, cylinderModel, guideBaseModel, point, expectedRadius, viewNodeID):
+    """The cylinder is a closed surface of the expected radius, shown only in the view and without transform (its polydata is
+    subtracted from the guide base). It is centered at the point and its axis is the guide base normal at the closest guide base point
+    (the 'Normals' point data of the guide base). Both ends are outside the guide base and the axis crosses it, so the screw hole goes through it.
+    """
+    self.assertIsNone(cylinderModel.GetParentTransformNode(), msg=cylinderModel.GetName())
+    cylinderDisplayNode = cylinderModel.GetDisplayNode()
+    self.assertTrue(cylinderDisplayNode.GetVisibility(), msg=cylinderModel.GetName())
+    self.assertEqual(cylinderDisplayNode.GetViewNodeIDs(), (viewNodeID,), msg=cylinderModel.GetName())
+    self.assertModelIsClosedSurfaceWithEulerCharacteristic(cylinderModel, 2)
 
-    self.delayDisplay("CreateAndUpdateSawBoxesFromMandiblePlanes test successful")
+    closestGuideBasePointID = guideBaseModel.GetPolyData().FindPoint(point)
+    guideBaseNormal = slicer.util.arrayFromModelPointData(guideBaseModel, "Normals")[closestGuideBasePointID].astype(float)
+    guideBaseNormal = guideBaseNormal/np.linalg.norm(guideBaseNormal)
+
+    # cylinder points measured from the point, along the guide base normal and away from it
+    cylinderPointsFromPoint = slicer.util.arrayFromModelPoints(cylinderModel).astype(float) - np.array(point)
+    coordinatesAlongNormal = cylinderPointsFromPoint @ guideBaseNormal
+    distancesToNormal = np.linalg.norm(cylinderPointsFromPoint - np.outer(coordinatesAlongNormal, guideBaseNormal), axis=1)
+    cylinderHeight = float(cylinderModel.GetAttribute("height"))
+    message = (
+      f"{cylinderModel.GetName()} range along the guide base normal [{coordinatesAlongNormal.min():.4f}, {coordinatesAlongNormal.max():.4f}], " +
+      f"distance to the normal [{distancesToNormal.min():.4f}, {distancesToNormal.max():.4f}], " +
+      f"expected height {cylinderHeight} and radius {expectedRadius}"
+    )
+    self.assertTrue(
+      np.allclose([coordinatesAlongNormal.min(), coordinatesAlongNormal.max()], [-cylinderHeight/2, cylinderHeight/2], atol=1e-3),
+      msg=message
+    )
+    self.assertTrue(
+      np.allclose(distancesToNormal, expectedRadius, atol=1e-3),
+      msg=message
+    )
+
+    cylinderAxisEndPoints = [np.array(point) + side*cylinderHeight/2*guideBaseNormal for side in [-1.0, 1.0]]
+    enclosedPointsSelector = vtk.vtkSelectEnclosedPoints()
+    enclosedPointsSelector.Initialize(guideBaseModel.GetPolyData())
+    for cylinderAxisEndPoint in cylinderAxisEndPoints:
+      self.assertFalse(
+        enclosedPointsSelector.IsInsideSurface(*cylinderAxisEndPoint),
+        msg=f"{cylinderModel.GetName()} end {cylinderAxisEndPoint} is inside {guideBaseModel.GetName()}"
+      )
+    enclosedPointsSelector.Complete()
+    guideBaseOBBTree = vtk.vtkOBBTree()
+    guideBaseOBBTree.SetDataSet(guideBaseModel.GetPolyData())
+    guideBaseOBBTree.BuildLocator()
+    intersectionPoints = vtk.vtkPoints()
+    guideBaseOBBTree.IntersectWithLine(*cylinderAxisEndPoints, intersectionPoints, None)
+    self.assertGreater(
+      intersectionPoints.GetNumberOfPoints(),
+      0,
+      msg=f"{cylinderModel.GetName()} axis does not cross {guideBaseModel.GetName()}"
+    )
+
+  def getMiterBoxAxesFromFibulaPlane(self, fibulaPlane, fibulaZ, miterBoxDirection):
+    """Axes (as columns) of the miter box of the fibula plane and origin of the plane, as createMiterBoxesFromFibulaPlanes computes them:
+    Z is the plane normal pointing along the fibula axis, X is perpendicular to the miter box direction and Z,
+    and Y is the miter box direction over the plane
+    """
+    planeAxes, planeOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(
+      [fibulaPlane.GetNthControlPointPosition(j) for j in range(3)]
+    )
+    miterBoxZ = planeAxes[:,2]
+    if np.dot(miterBoxZ, fibulaZ) < 0:
+      miterBoxZ = -miterBoxZ
+    miterBoxX = np.cross(miterBoxDirection, miterBoxZ)
+    miterBoxX = miterBoxX/np.linalg.norm(miterBoxX)
+    miterBoxY = np.cross(miterBoxZ, miterBoxX)
+    miterBoxY = miterBoxY/np.linalg.norm(miterBoxY)
+    return np.column_stack([miterBoxX, miterBoxY, miterBoxZ]), planeOrigin
+
+  def getCoordinatesOfModelPointsAlongAxes(self, modelNode, axes, origin):
+    """Coordinates of the model points (one row per point) along the axes (as columns), measured from the origin
+    """
+    return (slicer.util.arrayFromModelPoints(modelNode).astype(float) - np.array(origin)) @ np.array(axes)
+
+  def getRangesOfPointsCoordinates(self, pointsCoordinates):
+    """Minimum and maximum of the points coordinates along each axis (one [min, max] row per axis)
+    """
+    return np.column_stack([pointsCoordinates.min(axis=0), pointsCoordinates.max(axis=0)])
+
+  def getRangesOfModelPointsAlongAxes(self, modelNode, axes, origin):
+    """Minimum and maximum coordinates of the model points along each axis (one [min, max] row per axis),
+    measured from the origin
+    """
+    return self.getRangesOfPointsCoordinates(
+      self.getCoordinatesOfModelPointsAlongAxes(modelNode, axes, origin)
+    )
+
+  def isModelTouchingOtherModelAfterTranslation(self, modelNode, otherModelNode, translation):
+    """Whether the surface of the model, translated, intersects the surface of the other model (vtkCollisionDetectionFilter)
+    """
+    translationMatrix = vtk.vtkMatrix4x4()
+    for i in range(3):
+      translationMatrix.SetElement(i, 3, translation[i])
+    collisionDetection = vtk.vtkCollisionDetectionFilter()
+    collisionDetection.SetInputData(0, modelNode.GetPolyData())
+    collisionDetection.SetInputData(1, otherModelNode.GetPolyData())
+    collisionDetection.SetMatrix(0, translationMatrix)
+    collisionDetection.SetMatrix(1, vtk.vtkMatrix4x4())
+    collisionDetection.SetBoxTolerance(0.0)
+    collisionDetection.SetCellTolerance(0.0)
+    collisionDetection.SetCollisionModeToFirstContact()
+    collisionDetection.Update()
+    return collisionDetection.GetNumberOfContacts() > 0
+
+  def getModelsAndMarkupsDisplayState(self):
+    """Visibility, transform and color of every model and markups node, and number of nodes of each class
+    """
+    displayStateDict = {}
+    for nodeClass in ["vtkMRMLModelNode", "vtkMRMLMarkupsNode", "vtkMRMLTransformNode", "vtkMRMLScalarVolumeNode"]:
+      displayStateDict[nodeClass] = slicer.mrmlScene.GetNumberOfNodesByClass(nodeClass)
+    for nodeClass in ["vtkMRMLModelNode", "vtkMRMLMarkupsNode"]:
+      for node in slicer.util.getNodesByClass(nodeClass):
+        displayNode = node.GetDisplayNode()
+        if displayNode is None:
+          continue
+        displayStateDict[node.GetID()] = (
+          node.GetTransformNodeID(),
+          displayNode.GetVisibility(),
+          displayNode.GetVisibility3D(),
+          displayNode.GetVisibility2D(),
+          round(displayNode.GetOpacity(), 6),
+          tuple(np.round(displayNode.GetColor(), 6)),
+        )
+    return displayStateDict
