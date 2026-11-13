@@ -8149,7 +8149,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_EnterBRP()
     self.section_GetWidget()
     self.section_GetLogic()
-    self.section_LoadSampleDataV2()
+    self.section_LoadSampleData()
     self.section_SelectSampleSegmentations()
     self.section_MakeModels()
     self.section_VerifyFibulaLine()
@@ -8162,9 +8162,9 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_CreateMiterBoxes()
     self.section_GenerateFibulaGuideBase()
     self.section_AddFibulaScrewHoles()
-    #checked till here
     self.section_CreateFibulaSurgicalGuide()
     self.section_CreateSawBoxes()
+    #checked till here
     self.section_CreateMandibleGuideBasesFromCurves()
     self.section_AddMandibleBridge()
     self.section_AddMandibleScrewHoles()
@@ -8252,7 +8252,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay('Test data imported correctly')
       
-  def section_LoadSampleDataV2(self):
+  def section_LoadSampleData(self):
     # load using GUI
     slicer.app.processEvents()
     self.widgetBRP.ui.loadTestCaseButton.click()
@@ -9508,18 +9508,179 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       "sawBoxesNeedUpdate": "False",
     })
 
-    # one saw box for each resection plane of the segmental mandibulectomy
+    sawBoxSlotWidth = float(parameterNode.GetParameter("sawBoxSlotWidth_mm"))
+    sawBoxSlotLength = float(parameterNode.GetParameter("sawBoxSlotLength_mm"))
+    sawBoxSlotHeight = float(parameterNode.GetParameter("sawBoxSlotHeight_mm"))
+    sawBoxSlotWall = float(parameterNode.GetParameter("sawBoxSlotWall_mm"))
+    clearanceFitPrintingTolerance = float(parameterNode.GetParameter("clearanceFitPrintingTolerance_mm"))
+    biggerSawBoxDistanceToMandible = float(parameterNode.GetParameter("biggerSawBoxDistanceToMandible_mm"))
+    mandibleTextLabelsDepth = float(parameterNode.GetParameter("mandibleTextLabelsDepth_mm"))
+
+    # the saw box is the slot of the saw blade, createSawBoxesFromFirstAndLastMandiblePlanes makes it 70mm tall so it goes through its bigger saw box
+    sawBoxDimensions = np.array([
+      sawBoxSlotLength,
+      70.0,
+      sawBoxSlotWidth + 2*clearanceFitPrintingTolerance,
+    ])
+    biggerSawBoxDimensions = np.array([
+      sawBoxSlotLength + 2*sawBoxSlotWall,
+      sawBoxSlotHeight,
+      sawBoxSlotWidth + 2*clearanceFitPrintingTolerance + 2*sawBoxSlotWall,
+    ])
+
+    # the resection planes of the segmental mandibulectomy are the first and the last mandible planes,
+    #   the mandible plane next to each one is inside the resected segment
+    mandiblePlanesList = createListFromFolderName("Mandibular planes")
+    resectionPlanesList = [mandiblePlanesList[0], mandiblePlanesList[-1]]
+    planesInsideResectedSegmentList = [mandiblePlanesList[1], mandiblePlanesList[-2]]
+
+    # one saw box for each resection plane, the lists are in the order of the resection planes
+    sawBoxesList = createListFromFolderName("sawBoxes Models")
+    biggerSawBoxesList = createListFromFolderName("biggerSawBoxes Models")
+    previewSawBoxesList = createListFromFolderName("previewSawBoxes Models")
+    sawBoxesPlanesList = createListFromFolderName("sawBoxes Planes")
+    sawBoxesTransformsList = createListFromFolderName("sawBoxes Transforms")
+    for nodesList in [sawBoxesList, biggerSawBoxesList, previewSawBoxesList, sawBoxesPlanesList, sawBoxesTransformsList]:
+      self.assertEqual(
+        len(nodesList),
+        len(resectionPlanesList),
+        msg=[node.GetName() for node in nodesList]
+      )
+
+    mandibleModel = parameterNode.GetNodeReference("mandibleModelNode")
+    mandibleCurve = parameterNode.GetNodeReference("mandibleCurve")
+    mandibleCurvePlaneNormal = getBestFittingPlaneNormalFromPoints(slicer.util.arrayFromMarkupsCurvePoints(mandibleCurve))
+    mandibleCellLocator = vtk.vtkCellLocator()
+    mandibleCellLocator.SetDataSet(mandibleModel.GetPolyData())
+    mandibleCellLocator.BuildLocator()
+    mandibleOBBTree = vtk.vtkOBBTree()
+    mandibleOBBTree.SetDataSet(mandibleModel.GetPolyData())
+    mandibleOBBTree.BuildLocator()
+    mandibleBounds = np.array(mandibleModel.GetPolyData().GetBounds())
+    mandibleBoundsDiagonalLength = np.linalg.norm(mandibleBounds[1::2] - mandibleBounds[0::2])
+
+    for i in range(len(resectionPlanesList)):
+      sawBox = sawBoxesList[i]
+      biggerSawBox = biggerSawBoxesList[i]
+      previewSawBox = previewSawBoxesList[i]
+      sawBoxPlane = sawBoxesPlanesList[i]
+      sawBoxTransform = sawBoxesTransformsList[i]
+      self.assertMandiblePlaneIsDefinedByThreePoints(sawBoxPlane)
+
+      # the saw box models are shown in the mandible view, and the bigger saw box also in the red slice because it shows the mandible CT,
+      #   they move with their plane: they observe the transform of the plane
+      self.assertIsNone(sawBoxTransform.GetParentTransformNode(), msg=sawBoxTransform.GetName())
+      for model, expectedViewNodeIDs in [
+        (sawBox, {slicer.MANDIBLE_VIEW_ID}),
+        (biggerSawBox, {slicer.MANDIBLE_VIEW_ID, slicer.mrmlScene.GetSingletonNode("Red", "vtkMRMLSliceNode").GetID()}),
+        (previewSawBox, {slicer.MANDIBLE_VIEW_ID}),
+      ]:
+        self.assertEqual(
+          model.GetTransformNodeID(),
+          sawBoxTransform.GetID(),
+          msg=model.GetName()
+        )
+        self.assertEqual(
+          set(model.GetDisplayNode().GetViewNodeIDs()),
+          expectedViewNodeIDs,
+          msg=model.GetName()
+        )
+
+      # closed surfaces, the slot goes through the preview saw box
+      for model in [sawBox, biggerSawBox]:
+        self.assertModelIsClosedSurfaceWithEulerCharacteristic(model, 2)
+      self.assertModelIsClosedSurfaceWithEulerCharacteristic(previewSawBox, 0)
+      expectedVolumesList = [
+        (sawBox, np.prod(sawBoxDimensions)),
+        (biggerSawBox, np.prod(biggerSawBoxDimensions)),
+        (previewSawBox, np.prod(biggerSawBoxDimensions) - sawBoxSlotLength*sawBoxSlotHeight*sawBoxDimensions[2]),
+      ]
+      for model, expectedVolume in expectedVolumesList:
+        volume, area, bounds = getVolumeAreaAndBoundsOfModel(model)
+        self.assertTrue(
+          np.isclose(volume, expectedVolume, rtol=1e-5),
+          msg=f"{model.GetName()} volume {volume:.4f} expected {expectedVolume:.4f}"
+        )
+
+      self.assertSawBoxPlaneIsOverResectionPlaneOnResectedSide(sawBoxPlane, resectionPlanesList[i], planesInsideResectedSegmentList[i], sawBoxSlotWidth)
+      self.assertSawBoxModelsAreCenteredOnSawBoxPlaneWithDimensions(
+        sawBoxPlane,
+        sawBoxTransform,
+        [(sawBox, sawBoxDimensions), (biggerSawBox, biggerSawBoxDimensions), (previewSawBox, biggerSawBoxDimensions)]
+      )
+
+      # the saw box Y axis is parallel to the plane of the mandible curve and points out of the mandible,
+      #   the bottom face of the bigger saw box is biggerSawBoxDistanceToMandible along Y from the mandible:
+      #   the contact point (the bottom face center moved back by biggerSawBoxDistanceToMandible along Y, over the resection plane)
+      #   is a point of the mandible surface and there is no mandible after it along Y
+      sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
+      self.assertAlmostEqual(
+        np.dot(sawBoxPlaneAxes[:,1], mandibleCurvePlaneNormal),
+        0.0,
+        delta=1e-6,
+        msg=f"{sawBoxPlane.GetName()} Y axis {sawBoxPlaneAxes[:,1].tolist()} mandible curve plane normal {mandibleCurvePlaneNormal.tolist()}"
+      )
+      resectionPlaneAxes, resectionPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(resectionPlanesList[i]))
+      contactPoint = sawBoxPlaneOrigin - (biggerSawBoxDimensions[1]/2 + biggerSawBoxDistanceToMandible)*sawBoxPlaneAxes[:,1]
+      contactPoint = contactPoint - np.dot(contactPoint - resectionPlaneOrigin, resectionPlaneAxes[:,2])*resectionPlaneAxes[:,2]
+      closestMandiblePoint = np.zeros(3)
+      closestMandibleCellId = vtk.reference(0)
+      closestMandibleSubId = vtk.reference(0)
+      squaredDistanceToMandible = vtk.reference(0.0)
+      mandibleCellLocator.FindClosestPoint(contactPoint, closestMandiblePoint, closestMandibleCellId, closestMandibleSubId, squaredDistanceToMandible)
+      self.assertLess(
+        np.sqrt(squaredDistanceToMandible.get()),
+        1e-3,
+        msg=f"{biggerSawBox.GetName()} contact point {contactPoint.tolist()} is {np.sqrt(squaredDistanceToMandible.get()):.4f} from the mandible"
+      )
+      intersectionPoints = vtk.vtkPoints()
+      mandibleOBBTree.IntersectWithLine(
+        contactPoint + 1e-3*sawBoxPlaneAxes[:,1],
+        contactPoint + mandibleBoundsDiagonalLength*sawBoxPlaneAxes[:,1],
+        intersectionPoints,
+        None
+      )
+      self.assertEqual(
+        intersectionPoints.GetNumberOfPoints(),
+        0,
+        msg=f"{biggerSawBox.GetName()} Y axis from the contact point {contactPoint.tolist()} crosses the mandible at " +
+          f"{[np.dot(np.array(intersectionPoints.GetPoint(j)) - contactPoint, sawBoxPlaneAxes[:,1]) for j in range(intersectionPoints.GetNumberOfPoints())]} mm"
+      )
+
+    # the laterality label goes over the saw box of the right resection plane (the patient's right is +X in RAS)
+    sawBoxTextLabelsList = createListFromFolderName("sawBoxTextLabels Models")
     self.assertEqual(
-      [sawBox.GetName() for sawBox in createListFromFolderName("sawBoxes Models")],
-      ["sawBox_0", "sawBox_3"]
+      len(sawBoxTextLabelsList),
+      1,
+      msg=[textLabel.GetName() for textLabel in sawBoxTextLabelsList]
+    )
+    sawBoxTextLabel = sawBoxTextLabelsList[0]
+    # index of plane most to the right (largest X coordinate)
+    rightResectionPlaneIndex = int(np.argmax([resectionPlane.GetNthControlPointPosition(0)[0] for resectionPlane in resectionPlanesList]))
+    self.assertEqual(
+      sawBoxTextLabel.GetTransformNodeID(),
+      sawBoxesTransformsList[rightResectionPlaneIndex].GetID(),
+      msg=sawBoxTextLabel.GetName()
     )
     self.assertEqual(
-      [sawBox.GetName() for sawBox in createListFromFolderName("biggerSawBoxes Models")],
-      ["biggerSawBox0", "biggerSawBox3"]
+      set(sawBoxTextLabel.GetDisplayNode().GetViewNodeIDs()),
+      {slicer.MANDIBLE_VIEW_ID},
+      msg=sawBoxTextLabel.GetName()
     )
-    self.assertEqual(
-      [textLabel.GetName() for textLabel in createListFromFolderName("sawBoxTextLabels Models")],
-      ["sawBoxTextLabel_R"]
+    self.assertModelIsClosedSurfaceWithEulerCharacteristic(sawBoxTextLabel, 0) # the R has a hole
+    self.assertTextLabelIsEmbossedOnBiggerSawBoxFaceLookingToSide(
+      sawBoxTextLabel,
+      sawBoxesPlanesList[rightResectionPlaneIndex],
+      biggerSawBoxDimensions,
+      np.array([1.0, 0.0, 0.0]),
+      mandibleTextLabelsDepth
+    )
+    self.assertTextLabelIsUprightOnBiggerSawBoxFaceLookingToSide(
+      sawBoxTextLabel,
+      "R",
+      sawBoxesPlanesList[rightResectionPlaneIndex],
+      biggerSawBoxDimensions,
+      np.array([1.0, 0.0, 0.0])
     )
 
     # move the saw boxes inside their cut planes to their TestPlanBRP position
@@ -9535,7 +9696,6 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         [-66.58764909944618, 131.739030359017, -69.33540958200865],
       ],
     ]
-    sawBoxesPlanesList = createListFromFolderName("sawBoxes Planes")
     self.assertEqual(
       len(sawBoxesPlanesList),
       len(sawBoxesPlanesPoints)
@@ -9547,22 +9707,22 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       sawBoxPlane.EndModify(wasModified)
     slicer.app.processEvents()
 
-    # the saw boxes transforms follow their planes
-    expectedSawBoxesMatrices = [
-      [[-0.421801, 0.805084, -0.417041, 41.7408], [0.140778, 0.512535, 0.847048, 81.8872], [0.895693, 0.298575, -0.329526, -58.2916], [0.0, 0.0, 0.0, 1.0]],
-      [[0.264343, -0.821048, -0.505967, -25.5352], [0.0538716, 0.53638, -0.842256, 104.92], [0.962923, 0.195387, 0.186019, -79.1048], [0.0, 0.0, 0.0, 1.0]],
-    ]
-    sawBoxesTransformsList = createListFromFolderName("sawBoxes Transforms")
-    self.assertEqual(
-      [transformNode.GetName() for transformNode in sawBoxesTransformsList],
-      ["sawBoxTransform0", "sawBoxTransform1"]
-    )
-    for sawBoxTransform, expectedSawBoxMatrix in zip(sawBoxesTransformsList, expectedSawBoxesMatrices):
-      sawBoxMatrix = slicer.util.arrayFromTransformMatrix(sawBoxTransform)
-      self.assertTrue(
-        np.allclose(sawBoxMatrix, expectedSawBoxMatrix, atol=1e-2),
-        msg=f"{sawBoxTransform.GetName()} {sawBoxMatrix.tolist()}"
+    # the saw box planes stay over their resection planes (their handles only translate along X and Y and rotate around Z),
+    #   and the saw box models and the label follow their planes
+    for i in range(len(resectionPlanesList)):
+      self.assertSawBoxPlaneIsOverResectionPlaneOnResectedSide(sawBoxesPlanesList[i], resectionPlanesList[i], planesInsideResectedSegmentList[i], sawBoxSlotWidth)
+      self.assertSawBoxModelsAreCenteredOnSawBoxPlaneWithDimensions(
+        sawBoxesPlanesList[i],
+        sawBoxesTransformsList[i],
+        [(sawBoxesList[i], sawBoxDimensions), (biggerSawBoxesList[i], biggerSawBoxDimensions), (previewSawBoxesList[i], biggerSawBoxDimensions)]
       )
+    self.assertTextLabelIsEmbossedOnBiggerSawBoxFaceLookingToSide(
+      sawBoxTextLabel,
+      sawBoxesPlanesList[rightResectionPlaneIndex],
+      biggerSawBoxDimensions,
+      np.array([1.0, 0.0, 0.0]),
+      mandibleTextLabelsDepth
+    )
 
     self.delayDisplay("CreateSawBoxes test successful")
 
@@ -10457,6 +10617,122 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       0,
       msg=f"{cylinderModel.GetName()} axis does not cross {guideBaseModel.GetName()}"
     )
+
+  def assertSawBoxPlaneIsOverResectionPlaneOnResectedSide(self, sawBoxPlane, resectionPlane, planeInsideResectedSegment, sawBoxSlotWidth):
+    """The saw box plane has the normal of the resection plane and its origin (the center of the slot) is sawBoxSlotWidth/2 from
+    the resection plane, on the side of the resected segment: one face of the saw blade is over the resection plane and the saw blade
+    cuts the resected segment
+    """
+    sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
+    resectionPlaneAxes, resectionPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(resectionPlane))
+    sideOfResectedSegment = np.sign(np.dot(np.array(planeInsideResectedSegment.GetNthControlPointPosition(0)) - resectionPlaneOrigin, resectionPlaneAxes[:,2]))
+    distanceToResectionPlane = np.dot(sawBoxPlaneOrigin - resectionPlaneOrigin, resectionPlaneAxes[:,2])
+    message = (
+      f"{sawBoxPlane.GetName()} normal {sawBoxPlaneAxes[:,2].tolist()} and distance {distanceToResectionPlane:.6f} to {resectionPlane.GetName()} " +
+      f"of normal {resectionPlaneAxes[:,2].tolist()}, the resected segment is on the side {sideOfResectedSegment}"
+    )
+    self.assertLess(np.linalg.norm(np.cross(sawBoxPlaneAxes[:,2], resectionPlaneAxes[:,2])), 1e-6, msg=message)
+    self.assertGreater(np.dot(sawBoxPlaneAxes[:,2], resectionPlaneAxes[:,2]), 0.0, msg=message)
+    self.assertAlmostEqual(distanceToResectionPlane, sideOfResectedSegment*sawBoxSlotWidth/2, delta=1e-4, msg=message)
+
+  def assertSawBoxModelsAreCenteredOnSawBoxPlaneWithDimensions(self, sawBoxPlane, sawBoxTransform, modelsAndDimensionsList):
+    """The saw box transform is the frame of the saw box plane, and each model in world coordinates, measured along the axes of
+    the plane from its origin, is a box centered on the origin with its dimensions
+    """
+    sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
+    sawBoxPlaneToWorldMatrix = np.eye(4)
+    sawBoxPlaneToWorldMatrix[:3,:3] = sawBoxPlaneAxes
+    sawBoxPlaneToWorldMatrix[:3,3] = sawBoxPlaneOrigin
+    sawBoxTransformMatrix = slicer.util.arrayFromTransformMatrix(sawBoxTransform, toWorld=True)
+    self.assertTrue(
+      np.allclose(sawBoxTransformMatrix, sawBoxPlaneToWorldMatrix, atol=1e-6),
+      msg=f"{sawBoxTransform.GetName()} {sawBoxTransformMatrix.tolist()} frame of {sawBoxPlane.GetName()} {sawBoxPlaneToWorldMatrix.tolist()}"
+    )
+    for model, dimensions in modelsAndDimensionsList:
+      modelRanges = self.getRangesOfPointsCoordinates(
+        self.getWorldCoordinatesOfModelPointsAlongAxes(model, sawBoxPlaneAxes, sawBoxPlaneOrigin)
+      )
+      self.assertTrue(
+        np.allclose(modelRanges, np.column_stack([-dimensions/2, dimensions/2]), atol=1e-3),
+        msg=f"{model.GetName()} ranges {np.round(modelRanges, 4).tolist()} along the axes of {sawBoxPlane.GetName()}, expected dimensions {dimensions.tolist()}"
+      )
+
+  def getBiggerSawBoxFaceLookingToSide(self, sawBoxPlane, biggerSawBoxDimensions, sideDirection):
+    """Sign along the Z axis of the saw box plane, outward normal and center (in world coordinates) of the face of the bigger
+    saw box perpendicular to Z whose outward normal looks to the side direction
+    """
+    sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
+    faceSign = 1.0 if np.dot(sawBoxPlaneAxes[:,2], sideDirection) > 0 else -1.0
+    faceNormal = faceSign*sawBoxPlaneAxes[:,2]
+    faceCenter = sawBoxPlaneOrigin + faceSign*biggerSawBoxDimensions[2]/2*sawBoxPlaneAxes[:,2]
+    return faceSign, faceNormal, faceCenter
+
+  def assertTextLabelIsEmbossedOnBiggerSawBoxFaceLookingToSide(self, textLabel, sawBoxPlane, biggerSawBoxDimensions, sideDirection, textLabelsDepth):
+    """The text label is inside the face of the bigger saw box that looks to the side direction, it goes out of the face
+    by textLabelsDepth and into the box by TEXT_LABEL_OVERLAP_EPSILON
+    """
+    sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
+    faceSign, faceNormal, faceCenter = self.getBiggerSawBoxFaceLookingToSide(sawBoxPlane, biggerSawBoxDimensions, sideDirection)
+    faceZ = faceSign*biggerSawBoxDimensions[2]/2
+    textLabelRanges = self.getRangesOfPointsCoordinates(
+      self.getWorldCoordinatesOfModelPointsAlongAxes(textLabel, sawBoxPlaneAxes, sawBoxPlaneOrigin)
+    )
+    message = (
+      f"{textLabel.GetName()} ranges {np.round(textLabelRanges, 4).tolist()} along the axes of {sawBoxPlane.GetName()}, " +
+      f"bigger saw box dimensions {biggerSawBoxDimensions.tolist()}, face at Z {faceZ}"
+    )
+    expectedTextLabelRangeAlongZ = sorted([
+      faceZ - faceSign*TEXT_LABEL_OVERLAP_EPSILON,
+      faceZ + faceSign*textLabelsDepth,
+    ])
+    self.assertTrue(
+      np.allclose(textLabelRanges[2], expectedTextLabelRangeAlongZ, atol=1e-3),
+      msg=message
+    )
+    self.assertTrue(
+      np.all(textLabelRanges[:2,0] >= -biggerSawBoxDimensions[:2]/2) and np.all(textLabelRanges[:2,1] <= biggerSawBoxDimensions[:2]/2),
+      msg=message
+    )
+
+  def assertTextLabelIsUprightOnBiggerSawBoxFaceLookingToSide(self, textLabel, text, sawBoxPlane, biggerSawBoxDimensions, sideDirection):
+    """Seen from outside the face of the bigger saw box that looks to the side direction, the text label is the text upright
+    (its up direction is the world superior direction projected onto the face) and centered on the face: its points, measured
+    along the right and up directions of the face from the face center, are the points of the flat text centered on its bounds
+    (the extrusion puts each point of the flat text at both ends of the label)
+    """
+    from vtk.util.numpy_support import vtk_to_numpy
+    faceSign, faceNormal, faceCenter = self.getBiggerSawBoxFaceLookingToSide(sawBoxPlane, biggerSawBoxDimensions, sideDirection)
+    superiorDirection = np.array([0.0, 0.0, 1.0])
+    textUp = superiorDirection - np.dot(superiorDirection, faceNormal)*faceNormal
+    textUp = textUp/np.linalg.norm(textUp)
+    textRight = np.cross(textUp, faceNormal)
+    textLabelPointsOverFace = self.getWorldCoordinatesOfModelPointsAlongAxes(textLabel, np.column_stack([textRight, textUp]), faceCenter)
+
+    flatTextPolyData = self.logicBRP.t2pd(text)
+    flatTextBounds = np.array(flatTextPolyData.GetBounds())
+    flatTextPoints = vtk_to_numpy(flatTextPolyData.GetPoints().GetData()).astype(float)[:,:2]
+    flatTextPoints = flatTextPoints - (flatTextBounds[[0,2]] + flatTextBounds[[1,3]])/2
+
+    distancesBetweenPoints = np.linalg.norm(textLabelPointsOverFace[:,np.newaxis,:] - flatTextPoints[np.newaxis,:,:], axis=2)
+    maximumDistanceOfTextLabelPointsToFlatText = distancesBetweenPoints.min(axis=1).max()
+    maximumDistanceOfFlatTextPointsToTextLabel = distancesBetweenPoints.min(axis=0).max()
+    message = (
+      f"{textLabel.GetName()} points over the face are up to {maximumDistanceOfTextLabelPointsToFlatText:.4f} from the flat text '{text}' " +
+      f"and the flat text points are up to {maximumDistanceOfFlatTextPointsToTextLabel:.4f} from them"
+    )
+    self.assertLess(maximumDistanceOfTextLabelPointsToFlatText, 1e-3, msg=message)
+    self.assertLess(maximumDistanceOfFlatTextPointsToTextLabel, 1e-3, msg=message)
+
+  def getWorldCoordinatesOfModelPointsAlongAxes(self, modelNode, axes, origin):
+    """Coordinates of the model points in world coordinates (its linear parent transform applied, one row per point)
+    along the axes (as columns), measured from the origin
+    """
+    modelToWorldMatrix = np.eye(4)
+    if modelNode.GetParentTransformNode() is not None:
+      modelToWorldMatrix = slicer.util.arrayFromTransformMatrix(modelNode.GetParentTransformNode(), toWorld=True)
+    modelPoints = slicer.util.arrayFromModelPoints(modelNode).astype(float)
+    worldPoints = modelPoints @ modelToWorldMatrix[:3,:3].T + modelToWorldMatrix[:3,3]
+    return (worldPoints - np.array(origin)) @ np.array(axes)
 
   def getMiterBoxAxesFromFibulaPlane(self, fibulaPlane, fibulaZ, miterBoxDirection):
     """Axes (as columns) of the miter box of the fibula plane and origin of the plane, as createMiterBoxesFromFibulaPlanes computes them:
