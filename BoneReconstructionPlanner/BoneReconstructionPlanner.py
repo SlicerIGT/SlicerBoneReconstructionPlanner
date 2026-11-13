@@ -282,15 +282,22 @@ def confirm_clean_and_load_test_data():
     return False
   if result_code == qt.QMessageBox.AcceptRole:
     confirm_cache_size_is_enough_for_test_data()
-    slicer.mrmlScene.Clear()
-    import SampleData
-    sampleDataLogic = SampleData.SampleDataLogic()
-    sampleDataLogic.downloadSample('CTMandible')
-    sampleDataLogic.downloadSample('CTFibula')
-    sampleDataLogic.downloadSample('MandibleSegmentation')
-    #sampleDataLogic.downloadSample('FibulaSegmentation')
-    sampleDataLogic.downloadSample('FibulaSegmentationWithFakeVessels')
+    cleanSceneAndLoadTestData()
   return True
+
+def cleanSceneAndLoadTestData():
+  """
+  Clean the scene and load the test data without asking for confirmation.
+  The CDash test calls this directly because nobody can click the modal confirmation dialog there.
+  """
+  slicer.mrmlScene.Clear()
+  import SampleData
+  sampleDataLogic = SampleData.SampleDataLogic()
+  sampleDataLogic.downloadSample('CTMandible')
+  sampleDataLogic.downloadSample('CTFibula')
+  sampleDataLogic.downloadSample('MandibleSegmentation')
+  #sampleDataLogic.downloadSample('FibulaSegmentation')
+  sampleDataLogic.downloadSample('FibulaSegmentationWithFakeVessels')
 
 def getLightsModuleLogic():
   """
@@ -8253,7 +8260,8 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.delayDisplay('Test data imported correctly')
       
   def section_LoadSampleData(self):
-    # load using GUI
+    # load with the function behind the 'Load test data' button, clicking the button
+    #   opens a modal confirmation dialog that blocks unattended runs till the CDash timeout
     slicer.app.processEvents()
     cleanSceneAndLoadTestData()
     slicer.app.processEvents()
