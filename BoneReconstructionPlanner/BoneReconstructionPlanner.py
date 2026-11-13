@@ -8192,11 +8192,10 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_AddMandibleScrewHoles()
     self.section_CreateMandibleSurgicalGuide()
     self.section_CreateNeomandible()
-    #checked till here
-    self.section_SetVisualizationOptionsAndFibulaNormalization() # probably needs fix
-    self.section_PlayVirtualSurgicalPlanAnimation() #good
-    self.section_ExportPlanningOutputs() #good
-    self.section_VerifyPlanMatchesTestPlanBRP() #good
+    self.section_SetVisualizationOptionsAndFibulaNormalization()
+    self.section_PlayVirtualSurgicalPlanAnimation()
+    self.section_ExportPlanningOutputs()
+    self.section_VerifyPlanMatchesTestPlanBRP()
 
   def section_EnterBRP(self):
     self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
