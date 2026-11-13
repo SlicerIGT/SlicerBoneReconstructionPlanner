@@ -1966,11 +1966,8 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     )
     if currentScalarVolumeChanged == "True":
       self._parameterNode.SetParameter("scalarVolumeChangedThroughParameterNode", "True")
-      if (previousScalarVolume is not None) and (self.ui.scalarVolumeSelector.currentNode() is not None):
-        self.ui.scalarVolumeSelector.currentNode().SetAndObserveTransformNodeID(
-          previousScalarVolume.GetTransformNodeID()
-        )
-        previousScalarVolume.SetAndObserveTransformNodeID("")
+      # the normalization stays on the fibula CT, it is not handed to the newly shown CT
+      self.logic.updateFibulaNormalizationTransformOfCurrentScalarVolume()
 
     self._parameterNode.SetNodeReferenceID("headCT", self.ui.headCTSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID("legsCT", self.ui.legsCTSelector.currentNodeID)
@@ -7451,6 +7448,27 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     return nodes
 
+  def updateFibulaNormalizationTransformOfCurrentScalarVolume(self):
+    """
+    The fibula normalization only goes on the fibula CT. The currentScalarVolume observes the
+    fibulaNormalizationTransformNode when it is the fibula CT. When it is the mandible CT it stops
+    observing it (scenes saved when the normalization went with the shown CT). Other CTs keep their transform
+    """
+    parameterNode = self.getParameterNode()
+    currentScalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
+    fibulaNormalizationTransformNode = parameterNode.GetNodeReference("fibulaNormalizationTransformNode")
+    if (currentScalarVolume is None) or (fibulaNormalizationTransformNode is None):
+      return
+
+    boneOfCurrentScalarVolume = self.getBoneOfCurrentScalarVolume()
+    if boneOfCurrentScalarVolume == "fibula":
+      currentScalarVolume.SetAndObserveTransformNodeID(fibulaNormalizationTransformNode.GetID())
+    elif (
+      (boneOfCurrentScalarVolume == "mandible") and
+      (currentScalarVolume.GetTransformNodeID() == fibulaNormalizationTransformNode.GetID())
+    ):
+      currentScalarVolume.SetAndObserveTransformNodeID("")
+
   def updateNormalizationFibulaLineTransform(self, fibulaNormalizationTransformChecked):
     parameterNode = self.getParameterNode()
     fibulaLine = parameterNode.GetNodeReference("fibulaLine")
@@ -7464,10 +7482,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetNodeReferenceID("fibulaNormalizationTransformNode", fibulaNormalizationTransformNode.GetID())
       moveNodeToFolder(fibulaNormalizationTransformNode, getFolder("BoneReconstructionPlanner"))
 
-    currentScalarVolume = parameterNode.GetNodeReference("currentScalarVolume")
-    if currentScalarVolume is not None:
-      currentScalarVolume.SetAndObserveTransformNodeID(fibulaNormalizationTransformNode.GetID())
-    
+    self.updateFibulaNormalizationTransformOfCurrentScalarVolume()
+
     if fibulaNormalizationTransformChecked is not None:
       parameterNode.SetParameter("fibulaNormalizationTransform", str(fibulaNormalizationTransformChecked))
       if not fibulaNormalizationTransformChecked:
@@ -10193,12 +10209,32 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         fibulaNormalizationTransform.GetID(),
         msg=fibulaLinkedNode.GetName()
       )
-    # the normalization goes with the shown CT, the fibula CT gave it to the mandible CT when the shown CT changed
+    # the normalization only goes on the fibula CT: the fibula CT got it while it was shown (CreateMiterBoxes)
+    # and kept it, the shown mandible CT never gets it
     self.assertEqual(
-      mandibleVolume.GetTransformNodeID(),
+      fibulaVolume.GetTransformNodeID(),
       fibulaNormalizationTransform.GetID()
     )
-    self.assertIsNone(fibulaVolume.GetTransformNodeID())
+    self.assertIsNone(mandibleVolume.GetTransformNodeID())
+
+    # changing the shown CT does not hand the normalization to the other CT
+    for shownVolume in [fibulaVolume, mandibleVolume]:
+      slicer.app.processEvents()
+      self.widgetBRP.ui.scalarVolumeSelector.setCurrentNode(shownVolume)
+      slicer.app.processEvents()
+      self.assertEqual(
+        parameterNode.GetNodeReferenceID("currentScalarVolume"),
+        shownVolume.GetID()
+      )
+      self.assertEqual(
+        fibulaVolume.GetTransformNodeID(),
+        fibulaNormalizationTransform.GetID(),
+        msg=shownVolume.GetName()
+      )
+      self.assertIsNone(
+        mandibleVolume.GetTransformNodeID(),
+        msg=shownVolume.GetName()
+      )
 
     # the transformed fibula pieces keep their place on the mandible
     fibulaSegmentsTransformsList = createListFromFolderName("Bone Pieces Transforms")
