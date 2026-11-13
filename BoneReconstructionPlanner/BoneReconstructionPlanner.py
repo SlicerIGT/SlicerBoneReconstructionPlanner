@@ -8164,12 +8164,12 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_AddFibulaScrewHoles()
     self.section_CreateFibulaSurgicalGuide()
     self.section_CreateSawBoxes()
-    #checked till here
     self.section_CreateMandibleGuideBasesFromCurves()
     self.section_AddMandibleBridge()
     self.section_AddMandibleScrewHoles()
     self.section_CreateMandibleSurgicalGuide()
     self.section_CreateNeomandible()
+    #checked till here
     self.section_SetVisualizationOptionsAndFibulaNormalization()
     self.section_PlayVirtualSurgicalPlanAnimation()
     self.section_ExportPlanningOutputs()
@@ -8255,7 +8255,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
   def section_LoadSampleData(self):
     # load using GUI
     slicer.app.processEvents()
-    self.widgetBRP.ui.loadTestCaseButton.click()
+    cleanSceneAndLoadTestData()
     slicer.app.processEvents()
     fibulaVolumeThroughGUI = slicer.util.getNode('CTFibula')
     mandibleVolumeThroughGUI = slicer.util.getNode('CTMandible')
@@ -9430,13 +9430,27 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     fibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
     fibulaScrewHoleCylinderRadius = float(parameterNode.GetParameter("fibulaScrewHoleCylinderRadius_mm"))
     for i in range(len(fibulaCylindersList)):
-      self.assertScrewHoleCylinderGoesThroughGuideBaseAlongItsNormalAtPoint(
+      self.assertScrewHoleCylinderGoesThroughGuideBaseAlongNormalOfModelAtPoint(
         fibulaCylindersList[i],
+        fibulaSurgicalGuideBaseModel,
         fibulaSurgicalGuideBaseModel,
         fibulaFiducialList.GetNthControlPointPosition(i),
         fibulaScrewHoleCylinderRadius,
         slicer.FIBULA_VIEW_ID
       )
+
+    # fibula cylinders of TestPlanBRP
+    expectedVolumesAreasAndBoundsList = [
+      [352.4997, 485.0289, [-118.4198, -75.1825, -19.3346, 10.7705, -82.8462, -76.7014]],
+      [352.4997, 485.0289, [-119.277, -79.802, -20.5226, 14.1592, -51.0257, -41.3543]],
+      [352.4997, 485.0289, [-124.6637, -82.2006, -18.5756, 12.4831, -22.2395, -14.3872]],
+    ]
+    self.assertEqual(
+      len(fibulaCylindersList),
+      len(expectedVolumesAreasAndBoundsList)
+    )
+    for model, (expectedVolume, expectedArea, expectedBounds) in zip(fibulaCylindersList, expectedVolumesAreasAndBoundsList):
+      self.assertModelHasVolumeAreaAndBounds(model, expectedVolume, expectedArea, expectedBounds)
 
     self.delayDisplay("AddFibulaScrewHoles test successful")
 
@@ -9897,8 +9911,41 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       len(mandibleCylindersList),
       len(mandibleScrewHolesPoints)
     )
-    for mandibleCylinder in mandibleCylindersList:
-      self.assertGreater(mandibleCylinder.GetPolyData().GetNumberOfPoints(), 0)
+
+    # the guide bases from curves leave mandibleSurgicalGuideBaseModel empty, so the cylinders read the normal of the mandible
+    #   (not decimated, because useNonDecimatedModelsForPreview is True) and the screw holes go through bothSidesMandibleGuideBaseModel
+    self.assertParameterNodeHasParameterValues({
+      "useMandibleGuideBasesFromCurves": "True",
+      "useNonDecimatedModelsForPreview": "True",
+    })
+    parameterNode = self.logicBRP.getParameterNode()
+    self.assertIsNone(parameterNode.GetNodeReference("mandibleSurgicalGuideBaseModel"))
+    mandibleModel = parameterNode.GetNodeReference("mandibleModelNode")
+    bothSidesMandibleGuideBaseModel = parameterNode.GetNodeReference("bothSidesMandibleGuideBaseModel")
+    mandibleScrewHoleCylinderRadius = float(parameterNode.GetParameter("mandibleScrewHoleCylinderRadius_mm"))
+
+    # the cylinders are in the order of their points
+    for i in range(len(mandibleCylindersList)):
+      self.assertScrewHoleCylinderGoesThroughGuideBaseAlongNormalOfModelAtPoint(
+        mandibleCylindersList[i],
+        bothSidesMandibleGuideBaseModel,
+        mandibleModel,
+        mandibleFiducialList.GetNthControlPointPosition(i),
+        mandibleScrewHoleCylinderRadius,
+        slicer.MANDIBLE_VIEW_ID
+      )
+
+    # mandible cylinders of TestPlanBRP
+    expectedVolumesAreasAndBoundsList = [
+      [352.4997, 485.0289, [26.9197, 57.5071, 52.0293, 91.3279, -69.4429, -48.7942]],
+      [352.4998, 485.0289, [-46.8728, -3.5853, 83.6332, 112.6281, -84.1037, -72.9168]],
+    ]
+    self.assertEqual(
+      len(mandibleCylindersList),
+      len(expectedVolumesAreasAndBoundsList)
+    )
+    for model, (expectedVolume, expectedArea, expectedBounds) in zip(mandibleCylindersList, expectedVolumesAreasAndBoundsList):
+      self.assertModelHasVolumeAreaAndBounds(model, expectedVolume, expectedArea, expectedBounds)
 
     self.delayDisplay("AddMandibleScrewHoles test successful")
 
@@ -10564,10 +10611,11 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.assertEqual(topologyDict["numberOfRegions"], 1, msg=message)
     self.assertEqual(topologyDict["eulerCharacteristic"], expectedEulerCharacteristic, msg=message)
 
-  def assertScrewHoleCylinderGoesThroughGuideBaseAlongItsNormalAtPoint(self, cylinderModel, guideBaseModel, point, expectedRadius, viewNodeID):
+  def assertScrewHoleCylinderGoesThroughGuideBaseAlongNormalOfModelAtPoint(self, cylinderModel, guideBaseModel, normalsModel, point, expectedRadius, viewNodeID):
     """The cylinder is a closed surface of the expected radius, shown only in the view and without transform (its polydata is
-    subtracted from the guide base). It is centered at the point and its axis is the guide base normal at the closest guide base point
-    (the 'Normals' point data of the guide base). Both ends are outside the guide base and the axis crosses it, so the screw hole goes through it.
+    subtracted from the guide base). It is centered at the point and its axis is the normal of the normals model at its closest point
+    to the point (the 'Normals' point data of the normals model, the guide base itself or the bone when there is no guide base model to read it from).
+    Both ends are outside the guide base and the axis crosses it, so the screw hole goes through it.
     """
     self.assertIsNone(cylinderModel.GetParentTransformNode(), msg=cylinderModel.GetName())
     cylinderDisplayNode = cylinderModel.GetDisplayNode()
@@ -10575,17 +10623,17 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.assertEqual(cylinderDisplayNode.GetViewNodeIDs(), (viewNodeID,), msg=cylinderModel.GetName())
     self.assertModelIsClosedSurfaceWithEulerCharacteristic(cylinderModel, 2)
 
-    closestGuideBasePointID = guideBaseModel.GetPolyData().FindPoint(point)
-    guideBaseNormal = slicer.util.arrayFromModelPointData(guideBaseModel, "Normals")[closestGuideBasePointID].astype(float)
-    guideBaseNormal = guideBaseNormal/np.linalg.norm(guideBaseNormal)
+    closestPointIDOfNormalsModel = normalsModel.GetPolyData().FindPoint(point)
+    normalOfModel = slicer.util.arrayFromModelPointData(normalsModel, "Normals")[closestPointIDOfNormalsModel].astype(float)
+    normalOfModel = normalOfModel/np.linalg.norm(normalOfModel)
 
-    # cylinder points measured from the point, along the guide base normal and away from it
+    # cylinder points measured from the point, along the normal and away from it
     cylinderPointsFromPoint = slicer.util.arrayFromModelPoints(cylinderModel).astype(float) - np.array(point)
-    coordinatesAlongNormal = cylinderPointsFromPoint @ guideBaseNormal
-    distancesToNormal = np.linalg.norm(cylinderPointsFromPoint - np.outer(coordinatesAlongNormal, guideBaseNormal), axis=1)
+    coordinatesAlongNormal = cylinderPointsFromPoint @ normalOfModel
+    distancesToNormal = np.linalg.norm(cylinderPointsFromPoint - np.outer(coordinatesAlongNormal, normalOfModel), axis=1)
     cylinderHeight = float(cylinderModel.GetAttribute("height"))
     message = (
-      f"{cylinderModel.GetName()} range along the guide base normal [{coordinatesAlongNormal.min():.4f}, {coordinatesAlongNormal.max():.4f}], " +
+      f"{cylinderModel.GetName()} range along the normal of {normalsModel.GetName()} [{coordinatesAlongNormal.min():.4f}, {coordinatesAlongNormal.max():.4f}], " +
       f"distance to the normal [{distancesToNormal.min():.4f}, {distancesToNormal.max():.4f}], " +
       f"expected height {cylinderHeight} and radius {expectedRadius}"
     )
@@ -10598,7 +10646,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       msg=message
     )
 
-    cylinderAxisEndPoints = [np.array(point) + side*cylinderHeight/2*guideBaseNormal for side in [-1.0, 1.0]]
+    cylinderAxisEndPoints = [np.array(point) + side*cylinderHeight/2*normalOfModel for side in [-1.0, 1.0]]
     enclosedPointsSelector = vtk.vtkSelectEnclosedPoints()
     enclosedPointsSelector.Initialize(guideBaseModel.GetPolyData())
     for cylinderAxisEndPoint in cylinderAxisEndPoints:
