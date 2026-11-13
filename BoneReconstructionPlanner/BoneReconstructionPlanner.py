@@ -8177,10 +8177,10 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_CreateMandibleSurgicalGuide()
     self.section_CreateNeomandible()
     #checked till here
-    self.section_SetVisualizationOptionsAndFibulaNormalization()
-    self.section_PlayVirtualSurgicalPlanAnimation()
-    self.section_ExportPlanningOutputs()
-    self.section_VerifyPlanMatchesTestPlanBRP()
+    self.section_SetVisualizationOptionsAndFibulaNormalization() # probably needs fix
+    self.section_PlayVirtualSurgicalPlanAnimation() #good
+    self.section_ExportPlanningOutputs() #good
+    self.section_VerifyPlanMatchesTestPlanBRP() #good
 
   def section_EnterBRP(self):
     self.assertIsNotNone(slicer.modules.bonereconstructionplanner)
@@ -8978,18 +8978,83 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       [cutBone.GetName() for cutBone in cutBonesList],
       ["Fibula Segment 0A-0B", "Fibula Segment 1A-1B", "Fibula Segment 2A-2B", "Resected mandible"]
     )
+    # each fibula piece (and its vessels piece) is moved to the mandible with the inverse of its registration transform,
+    # so it fills the space between its two mandibular planes
+    mandibularPlanesList = createListFromFolderName("Mandibular planes")
     transformedFibulaPiecesList = createListFromFolderName("Transformed Fibula Pieces")
-    self.assertEqual(
-      len(transformedFibulaPiecesList),
-      3
-    )
-    for transformedFibulaPiece in transformedFibulaPiecesList:
-      self.assertGreater(transformedFibulaPiece.GetPolyData().GetNumberOfPoints(), 0)
+    cutVesselsList = createListFromFolderName("Cut Vessels")
     transformedVesselsPiecesList = createListFromFolderName("Transformed Vessels Pieces")
+    for piecesList in [transformedFibulaPiecesList, cutVesselsList, transformedVesselsPiecesList]:
+      self.assertEqual(
+        len(piecesList),
+        len(mandibleToFibulaTransformsList)
+      )
+    for i in range(len(mandibleToFibulaTransformsList)):
+      for transformedPiece, cutPiece in [(transformedFibulaPiecesList[i], cutBonesList[i]), (transformedVesselsPiecesList[i], cutVesselsList[i])]:
+        self.assertTransformedPieceIsCutPieceMovedToMandibleWithInverseOfTransform(
+          transformedPiece,
+          cutPiece,
+          mandibleToFibulaTransformsList[i]
+        )
+        self.assertModelIsClosedSurfaceWithEulerCharacteristic(transformedPiece, 2)
+        self.assertModelIsBetweenPlanesAndReachesBoth(
+          transformedPiece,
+          mandibularPlanesList[i],
+          mandibularPlanesList[i+1]
+        )
+
+    # the fibula pieces are in contact over the mandibular plane between them: moved a bit toward the next piece
+    # they overlap it and moved a bit apart they don't touch it. The first and the last pieces reach the resected mandible
+    contactTranslation_mm = 1e-3
+    for i in range(len(transformedFibulaPiecesList) - 1):
+      directionToNextPiece = self.getNormalOfPlanePointingAwayFromOtherPlane(mandibularPlanesList[i+1], mandibularPlanesList[i])
+      message = f"{transformedFibulaPiecesList[i].GetName()} and {transformedFibulaPiecesList[i+1].GetName()} over {mandibularPlanesList[i+1].GetName()}"
+      self.assertTrue(
+        self.isModelTouchingOtherModelAfterTranslation(
+          transformedFibulaPiecesList[i],
+          transformedFibulaPiecesList[i+1],
+          contactTranslation_mm*directionToNextPiece
+        ),
+        msg=message
+      )
+      self.assertFalse(
+        self.isModelTouchingOtherModelAfterTranslation(
+          transformedFibulaPiecesList[i],
+          transformedFibulaPiecesList[i+1],
+          -contactTranslation_mm*directionToNextPiece
+        ),
+        msg=message
+      )
+    resectedMandible = cutBonesList[-1]
+    for transformedFibulaPiece, resectionPlane, otherPlaneOfPiece in [
+      (transformedFibulaPiecesList[0], mandibularPlanesList[0], mandibularPlanesList[1]),
+      (transformedFibulaPiecesList[-1], mandibularPlanesList[-1], mandibularPlanesList[-2]),
+    ]:
+      self.assertTrue(
+        self.isModelTouchingOtherModelAfterTranslation(
+          transformedFibulaPiece,
+          resectedMandible,
+          contactTranslation_mm*self.getNormalOfPlanePointingAwayFromOtherPlane(resectionPlane, otherPlaneOfPiece)
+        ),
+        msg=f"{transformedFibulaPiece.GetName()} and {resectedMandible.GetName()} over {resectionPlane.GetName()}"
+      )
+
+    # transformed fibula pieces and transformed vessels pieces of TestPlanBRP
+    expectedVolumesAreasAndBoundsList = [
+      [1794.7218, 1027.2784, [17.8653, 35.4865, 72.353, 105.3067, -81.2848, -60.585]],
+      [1482.2676, 911.0092, [-1.9568, 25.7211, 98.0076, 113.5042, -85.3309, -71.4286]],
+      [1122.9993, 728.9384, [-17.7383, 0.1765, 94.9655, 113.9107, -86.4301, -74.4709]],
+      [216.1215, 309.649, [18.8077, 31.2333, 69.2734, 97.8405, -85.2393, -70.5423]],
+      [139.5694, 205.3182, [0.5067, 21.2678, 95.5226, 104.838, -86.3284, -81.5229]],
+      [96.654, 147.0499, [-8.9227, 1.286, 91.1557, 104.3925, -87.9011, -82.602]],
+    ]
+    modelsList = transformedFibulaPiecesList + transformedVesselsPiecesList
     self.assertEqual(
-      len(transformedVesselsPiecesList),
-      3
+      len(modelsList),
+      len(expectedVolumesAreasAndBoundsList)
     )
+    for model, (expectedVolume, expectedArea, expectedBounds) in zip(modelsList, expectedVolumesAreasAndBoundsList):
+      self.assertModelHasVolumeAreaAndBounds(model, expectedVolume, expectedArea, expectedBounds)
 
     # lengths of the fibula segments of TestPlanBRP for each measurement mode
     expectedFibulaSegmentsLengthsByMode = {
@@ -10824,6 +10889,56 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     return self.getRangesOfPointsCoordinates(
       self.getCoordinatesOfModelPointsAlongAxes(modelNode, axes, origin)
     )
+
+  def getNormalOfPlanePointingAwayFromOtherPlane(self, planeNode, otherPlaneNode):
+    """Normal of the plane (computed from its control points) pointing to the side of the plane where the other plane origin is not
+    """
+    planeAxes, planeOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(planeNode))
+    otherPlaneAxes, otherPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(otherPlaneNode))
+    return -planeAxes[:,2]*np.sign(np.dot(otherPlaneOrigin - planeOrigin, planeAxes[:,2]))
+
+  def assertModelIsBetweenPlanesAndReachesBoth(self, modelNode, planeNode, otherPlaneNode):
+    """No point of the model is past any of the planes (on the side of a plane where the other plane origin is not)
+    and the closest points to each plane are over it, e.g. a bone piece cut by both planes with capped cut faces
+    """
+    distanceTolerance_mm = 1e-6
+    for plane, otherPlane in [(planeNode, otherPlaneNode), (otherPlaneNode, planeNode)]:
+      planeAxes, planeOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(plane))
+      directionToOtherPlane = -self.getNormalOfPlanePointingAwayFromOtherPlane(plane, otherPlane)
+      distancesToPlane = self.getCoordinatesOfModelPointsAlongAxes(modelNode, directionToOtherPlane.reshape(3,1), planeOrigin)[:,0]
+      self.assertAlmostEqual(
+        distancesToPlane.min(),
+        0.0,
+        delta=distanceTolerance_mm,
+        msg=f"{modelNode.GetName()} points are from {distancesToPlane.min()} to {distancesToPlane.max()} mm from {plane.GetName()} toward {otherPlane.GetName()}"
+      )
+
+  def assertTransformedPieceIsCutPieceMovedToMandibleWithInverseOfTransform(self, transformedPiece, cutPiece, mandibleToFibulaTransform):
+    """The transformed piece is a copy of the cut piece (same cells and color) moved from the fibula to the mandible with the inverse
+    of the mandible to fibula registration transform. The transform is hardened, and the piece is shown in the mandible view and not in the fibula view
+    """
+    message = f"{transformedPiece.GetName()} from {cutPiece.GetName()} with the inverse of {mandibleToFibulaTransform.GetName()}"
+    # GetUniqueNameByString adds a counter to the name after the first virtual surgical plan update
+    self.assertTrue(transformedPiece.GetName().startswith("Transformed " + cutPiece.GetName()), msg=message)
+    self.assertIsNone(transformedPiece.GetParentTransformNode(), msg=message)
+    self.assertIsNone(mandibleToFibulaTransform.GetParentTransformNode(), msg=message)
+    transformedPieceDisplayNode = transformedPiece.GetDisplayNode()
+    self.assertTrue(
+      np.allclose(transformedPieceDisplayNode.GetColor(), cutPiece.GetDisplayNode().GetColor()),
+      msg=message
+    )
+    self.assertIn(slicer.MANDIBLE_VIEW_ID, transformedPieceDisplayNode.GetViewNodeIDs(), msg=message)
+    self.assertNotIn(slicer.FIBULA_VIEW_ID, transformedPieceDisplayNode.GetViewNodeIDs(), msg=message)
+    self.assertTrue(
+      np.array_equal(slicer.util.arrayFromModelPolyIds(transformedPiece), slicer.util.arrayFromModelPolyIds(cutPiece)),
+      msg=message
+    )
+    fibulaToMandibleMatrix = np.linalg.inv(slicer.util.arrayFromTransformMatrix(mandibleToFibulaTransform))
+    expectedPoints = slicer.util.arrayFromModelPoints(cutPiece).astype(float) @ fibulaToMandibleMatrix[:3,:3].T + fibulaToMandibleMatrix[:3,3]
+    points = slicer.util.arrayFromModelPoints(transformedPiece).astype(float)
+    self.assertEqual(points.shape, expectedPoints.shape, msg=message)
+    maximumDistance = np.max(np.linalg.norm(points - expectedPoints, axis=1))
+    self.assertLess(maximumDistance, 1e-6, msg=f"{message}: points are up to {maximumDistance} mm from the moved cut piece points")
 
   def isModelTouchingOtherModelAfterTranslation(self, modelNode, otherModelNode, translation):
     """Whether the surface of the model, translated, intersects the surface of the other model (vtkCollisionDetectionFilter)
