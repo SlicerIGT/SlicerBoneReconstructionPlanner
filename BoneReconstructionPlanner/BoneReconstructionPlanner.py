@@ -1522,6 +1522,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     Called just after a scene was imported into the current scene.
     """
     try:
+      # plans saved with an older BRP version lack the parameters added since then
+      if self._parameterNode is not None:
+        self.logic.setDefaultParameters(self._parameterNode)
       self.logic.removePristinePlanFolderIfUnreferenced(self.pristinePlanFolderIDBeforeSceneImport)
     finally:
       self.sceneImportInProgress = False
@@ -1596,6 +1599,18 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
 
     # Make sure GUI changes do not call updateParameterNodeFromGUI (it could cause infinite loop)
     self._updatingGUIFromParameterNode = True
+    try:
+      self.updateWidgetsFromParameterNode()
+    finally:
+      # All the GUI updates are done. Reset the flag also after an error (e.g. a parameter that is not a number),
+      # otherwise the GUI would stop following the parameter node and stop saving the user's changes into it
+      self._updatingGUIFromParameterNode = False
+
+  def updateWidgetsFromParameterNode(self):
+    """
+    Show the parameter node values in the widgets. Only call it from updateGUIFromParameterNode,
+    that blocks the widget signals from writing back into the parameter node meanwhile.
+    """
 
     # The line below is for selector updates
     currentScalarVolume = self._parameterNode.GetNodeReference("currentScalarVolume")
@@ -1941,9 +1956,6 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.planningInformativeLabel.text = self._parameterNode.GetParameter("planningInformativeText")
     self.ui.planningInformativeLabel.hide() # hide until new BRP version supports it fully
 
-    # All the GUI updates are done
-    self._updatingGUIFromParameterNode = False
-
   def updateParameterNodeFromGUI(self, caller=None, event=None):
     """
     This method is called when the user makes any change in the GUI.
@@ -1953,6 +1965,9 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if (
       self._parameterNode is None or 
       self._updatingGUIFromParameterNode or
+      # the node selectors react to the imported nodes, but the widgets still show the values from before the import,
+      # writing them would overwrite the parameters of the imported plan
+      self.sceneImportInProgress or
       not USING_GUI
     ):
       return
@@ -8336,6 +8351,101 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       f'({len(parameterNamesWithNonDefaultValueOnLoadedPlan)} with non-default values, '
       f'{len(parameterNamesMissingOnLoadedPlan)} missing on the plan got the default)'
     )
+
+  def test_LoadOlderPlanWithBRPOpen(self):
+    """CDash test that checks a plan saved with an older BoneReconstructionPlanner version, loaded while BRP is open,
+    keeps its parameters and the parameters added to BRP since then get the default value.
+    During the scene import the widgets still show the values from before the load, they must not overwrite the plan.
+    """
+    self.section_EnterBRP()
+    self.section_GetWidget()
+    self.section_GetLogic()
+
+    parameterNode = self.logicBRP.getParameterNode()
+    defaultParametersDict = readDefaultParameters()
+    # parameters added to BRP after the older plan was saved, the GUI reads the first three as numbers
+    parameterNamesMissingOnOlderPlan = [
+      "fibulaTextLabelsDepth_mm",
+      "mandibleTextLabelsDepth_mm",
+      "mandibleGuidebaseMargin_mm",
+      "booleanOperationsBackend",
+    ]
+    parameterValuesChangedOnOlderPlan = {
+      "sawBoxSlotWidth_mm": "1.7",
+      "securityMarginOfFibulaPieces_mm": "2.5",
+      "initialSpace_mm": "20.0",
+    }
+    # values the widgets show before the load, different from the older plan and from the defaults
+    parameterValuesShownBeforeLoad = {
+      "sawBoxSlotWidth_mm": "3.3",
+      "securityMarginOfFibulaPieces_mm": "4.4",
+      "initialSpace_mm": "5.0",
+      "fibulaTextLabelsDepth_mm": "2.7",
+      "mandibleTextLabelsDepth_mm": "2.8",
+      "mandibleGuidebaseMargin_mm": "1.25",
+    }
+    for parameterName in list(parameterValuesShownBeforeLoad.keys()) + parameterNamesMissingOnOlderPlan:
+      self.assertIn(parameterName, defaultParametersDict)
+
+    # set through the parameter node, setting the widgets would start updating the miter boxes and guide bases
+    wasModified = parameterNode.StartModify()
+    for parameterName, parameterValue in parameterValuesShownBeforeLoad.items():
+      parameterNode.SetParameter(parameterName, parameterValue)
+    parameterNode.EndModify(wasModified)
+    slicer.app.processEvents()
+    self.assertAlmostEqual(self.widgetBRP.ui.sawBoxSlotWidthSpinBox.value, 3.3)
+    self.assertAlmostEqual(self.widgetBRP.ui.fibulaTextLabelsDepthSpinBox.value, 2.7)
+
+    # the older plan is a scene with only the BRP parameter node, saved without the newer parameters
+    parameterValuesOfOlderPlan = {
+      parameterName: parameterValuesChangedOnOlderPlan.get(parameterName, str(parameterValue))
+      for parameterName, parameterValue in defaultParametersDict.items()
+      if parameterName not in parameterNamesMissingOnOlderPlan
+    }
+    olderPlanScene = slicer.vtkMRMLScene()
+    olderPlanParameterNode = olderPlanScene.CreateNodeByClass("vtkMRMLScriptedModuleNode")
+    olderPlanParameterNode.UnRegister(None)
+    olderPlanParameterNode.SetSingletonTag(parameterNode.GetSingletonTag())
+    olderPlanParameterNode.SetName(parameterNode.GetName())
+    olderPlanParameterNode.SetAttribute("ModuleName", parameterNode.GetAttribute("ModuleName"))
+    for parameterName, parameterValue in parameterValuesOfOlderPlan.items():
+      olderPlanParameterNode.SetParameter(parameterName, parameterValue)
+    olderPlanScene.AddNode(olderPlanParameterNode)
+    olderPlanPath = os.path.join(slicer.app.temporaryPath, "BRPOlderPlan.mrml")
+    olderPlanScene.Commit(olderPlanPath)
+
+    self.delayDisplay('Loading an older plan while BRP is open')
+    try:
+      slicer.util.loadScene(olderPlanPath)
+      slicer.app.processEvents()
+    finally:
+      os.remove(olderPlanPath)
+
+    # an error while updating the GUI would leave it frozen
+    self.assertFalse(self.widgetBRP._updatingGUIFromParameterNode)
+    # as {parameterName: (saved on the plan, after the load)}, to list all the changed parameters on failure
+    parameterValuesChangedByLoad = {
+      parameterName: (parameterValue, parameterNode.GetParameter(parameterName))
+      for parameterName, parameterValue in parameterValuesOfOlderPlan.items()
+      if parameterNode.GetParameter(parameterName) != parameterValue
+    }
+    self.assertEqual(parameterValuesChangedByLoad, {})
+    # as {parameterName: (default from settings, after the load)}
+    parameterValuesMissingOnOlderPlanWithoutDefault = {
+      parameterName: (rs(parameterName), parameterNode.GetParameter(parameterName))
+      for parameterName in parameterNamesMissingOnOlderPlan
+      if rs(parameterName) is None or parameterNode.GetParameter(parameterName) != rs(parameterName)
+    }
+    self.assertEqual(parameterValuesMissingOnOlderPlanWithoutDefault, {})
+
+    # the GUI shows the loaded plan and keeps following the parameter node
+    self.assertAlmostEqual(self.widgetBRP.ui.sawBoxSlotWidthSpinBox.value, 1.7)
+    self.assertAlmostEqual(self.widgetBRP.ui.fibulaTextLabelsDepthSpinBox.value, float(rs("fibulaTextLabelsDepth_mm")))
+    parameterNode.SetParameter("sawBoxSlotWidth_mm", "1.9")
+    slicer.app.processEvents()
+    self.assertAlmostEqual(self.widgetBRP.ui.sawBoxSlotWidthSpinBox.value, 1.9)
+
+    self.delayDisplay('Older plan loaded while BRP is open keeps its parameters')
 
   def section_LoadSampleData(self):
     # load with the function behind the 'Load test data' button, clicking the button
