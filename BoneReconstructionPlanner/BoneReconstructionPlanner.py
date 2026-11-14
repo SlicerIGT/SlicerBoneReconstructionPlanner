@@ -2789,14 +2789,16 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   def setDefaultParameters(self, parameterNode):
     """
     Initialize parameter node with default settings.
+    Parameters the parameter node already has (e.g. of a loaded plan) are kept, even if the settings are empty
+    (e.g. on a fresh install).
     """
     defaultParametersDict = readDefaultParameters()
     for parameterName, parameterValue in defaultParametersDict.items():
       valueFromSettings = rs(parameterName)
       if valueFromSettings is None:
-        ws(parameterName, parameterValue)
-        wp(parameterNode, parameterName, parameterValue)
-      elif not parameterNode.GetParameter(parameterName):
+        valueFromSettings = str(parameterValue)
+        ws(parameterName, valueFromSettings)
+      if not parameterNode.HasParameter(parameterName):
         wp(parameterNode, parameterName, valueFromSettings)
 
   def isFolderOfPristinePlan(self, folderID):
@@ -8273,7 +8275,68 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     )
 
     self.delayDisplay('Test data imported correctly')
-      
+
+    self.section_VerifyLoadedPlanParametersAreKeptWithEmptySettings()
+
+  def section_VerifyLoadedPlanParametersAreKeptWithEmptySettings(self):
+    """
+    On a fresh install the settings have no BoneReconstructionPlanner values. Opening BRP after a plan
+    was loaded must fill the empty settings with the defaults, not replace the plan's parameters with them.
+    """
+    self.delayDisplay('Checking loaded plan parameters are kept when opening BRP with empty settings')
+    parameterNode = self.logicBRP.getParameterNode()
+    defaultParametersDict = readDefaultParameters()
+    parameterValuesOfLoadedPlan = {
+      parameterName: parameterNode.GetParameter(parameterName)
+      for parameterName in defaultParametersDict.keys()
+      if parameterNode.HasParameter(parameterName)
+    }
+    parameterNamesMissingOnLoadedPlan = [
+      parameterName for parameterName in defaultParametersDict.keys()
+      if parameterName not in parameterValuesOfLoadedPlan
+    ]
+    parameterNamesWithNonDefaultValueOnLoadedPlan = [
+      parameterName for parameterName, parameterValue in parameterValuesOfLoadedPlan.items()
+      if parameterValue != str(defaultParametersDict[parameterName])
+    ]
+    # otherwise the check would pass even if the defaults replaced the plan's parameters
+    self.assertGreater(len(parameterNamesWithNonDefaultValueOnLoadedPlan), 0)
+
+    # empty the settings, the ones of the user (e.g. when run from the Python console) are restored at the end
+    settings = slicer.app.settings()
+    settings.beginGroup("BoneReconstructionPlanner")
+    settingsValuesBeforeCheck = {settingName: settings.value(settingName) for settingName in settings.allKeys()}
+    settings.remove("")
+    settings.endGroup()
+    try:
+      for parameterName in defaultParametersDict.keys():
+        self.assertIsNone(rs(parameterName), parameterName)
+
+      # open BRP with the plan loaded, as on a fresh install
+      slicer.util.selectModule('Data')
+      slicer.util.selectModule('BoneReconstructionPlanner')
+      slicer.app.processEvents()
+
+      for parameterName, parameterValue in parameterValuesOfLoadedPlan.items():
+        self.assertEqual(parameterNode.GetParameter(parameterName), parameterValue, parameterName)
+      # parameters added to BRP after the plan was saved get the default value
+      for parameterName in parameterNamesMissingOnLoadedPlan:
+        self.assertEqual(parameterNode.GetParameter(parameterName), str(defaultParametersDict[parameterName]), parameterName)
+      for parameterName, parameterValue in defaultParametersDict.items():
+        self.assertEqual(rs(parameterName), str(parameterValue), parameterName)
+    finally:
+      settings.beginGroup("BoneReconstructionPlanner")
+      settings.remove("")
+      for settingName, settingValue in settingsValuesBeforeCheck.items():
+        settings.setValue(settingName, settingValue)
+      settings.endGroup()
+
+    self.delayDisplay(
+      f'Loaded plan parameters kept with empty settings '
+      f'({len(parameterNamesWithNonDefaultValueOnLoadedPlan)} with non-default values, '
+      f'{len(parameterNamesMissingOnLoadedPlan)} missing on the plan got the default)'
+    )
+
   def section_LoadSampleData(self):
     # load with the function behind the 'Load test data' button, clicking the button
     #   opens a modal confirmation dialog that blocks unattended runs till the CDash timeout
