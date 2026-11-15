@@ -1757,31 +1757,8 @@ because plan has changed</string>
           </widget>
          </item>
          <item>
-          <widget class="QCheckBox" name="checkSecurityMarginOnMiterBoxCreationCheckBox">
-           <property name="toolTip">
-            <string>If enabled, it verifies that the fibula pieces are actually separated by the set amount</string>
-           </property>
-           <property name="text">
-            <string>Check security margin
-on miter box creation</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QFrame" name="securityMarginOfFibulaPiecesFrame">
-           <property name="frameShape">
-            <enum>QFrame::NoFrame</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Plain</enum>
-           </property>
-           <property name="lineWidth">
-            <number>1</number>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <widget class="QFrame" name="fibulaSurgicalGuideElementsFrame">
+           <layout class="QVBoxLayout" name="fibulaSurgicalGuideElementsFrameLayout">
             <property name="leftMargin">
              <number>0</number>
             </property>
@@ -1795,509 +1772,550 @@ on miter box creation</string>
              <number>0</number>
             </property>
             <item>
-             <widget class="QLabel" name="label_33">
+             <widget class="QCheckBox" name="checkSecurityMarginOnMiterBoxCreationCheckBox">
+              <property name="toolTip">
+               <string>If enabled, it verifies that the fibula pieces are actually separated by the set amount</string>
+              </property>
               <property name="text">
-               <string>Security margin (mm)</string>
+               <string>Check security margin
+on miter box creation</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="ctkDoubleSpinBox" name="securityMarginOfFibulaPiecesSpinBox">
-              <property name="toolTip">
-               <string>Value of the security margin</string>
+             <widget class="QFrame" name="securityMarginOfFibulaPiecesFrame">
+              <property name="frameShape">
+               <enum>QFrame::NoFrame</enum>
               </property>
-              <property name="decimals">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
+              </property>
+              <property name="lineWidth">
                <number>1</number>
               </property>
-              <property name="maximum">
-               <double>30.000000000000000</double>
+              <layout class="QHBoxLayout" name="horizontalLayout_5">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="label_33">
+                 <property name="text">
+                  <string>Security margin (mm)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="ctkDoubleSpinBox" name="securityMarginOfFibulaPiecesSpinBox">
+                 <property name="toolTip">
+                  <string>Value of the security margin</string>
+                 </property>
+                 <property name="decimals">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <double>30.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.100000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>1.000000000000000</double>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <layout class="QFormLayout" name="formLayout_3">
+              <property name="topMargin">
+               <number>0</number>
               </property>
-              <property name="singleStep">
-               <double>0.100000000000000</double>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_16">
+                <property name="text">
+                 <string>Slot width (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="ctkDoubleSpinBox" name="miterBoxSlotWidthSpinBox">
+                <property name="toolTip">
+                 <string>Width of the slot where the saw will go through. Should be at least as thick as the saw</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <double>60.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>1.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_17">
+                <property name="text">
+                 <string>Slot length (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="ctkDoubleSpinBox" name="miterBoxSlotLengthSpinBox">
+                <property name="toolTip">
+                 <string>This parameter controls how easy it is to maneuver the saw inside the slot</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>20.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_20">
+                <property name="text">
+                 <string>Slot height (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="ctkDoubleSpinBox" name="miterBoxSlotHeightSpinBox">
+                <property name="toolTip">
+                 <string>Depth of the slot. It's how much you'll need to push the saw until you contact bone</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>15.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_19">
+                <property name="text">
+                 <string>Slot wall (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="ctkDoubleSpinBox" name="miterBoxSlotWallSpinBox">
+                <property name="toolTip">
+                 <string>If guide type is slot, it defines the wall thickness of the holed box where the saw will pass through</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <double>20.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>3.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QLabel" name="label_21">
+                <property name="text">
+                 <string>Bigger miter box
+distance to fibula (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="1">
+               <widget class="ctkDoubleSpinBox" name="biggerMiterBoxDistanceToFibulaSpinBox">
+                <property name="toolTip">
+                 <string>Extra distance to the fibula bone of the miter boxes</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <double>50.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>3.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <widget class="QLabel" name="label_22">
+                <property name="toolTip">
+                 <string>This line controls the position and orientation of boxes according to the leg anatomical axis. Should be drawn perpendicular to the fibula line. After it is defined miter boxes will be automatically created</string>
+                </property>
+                <property name="text">
+                 <string>Miter box direction line</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="1">
+               <widget class="qSlicerMarkupsPlaceWidget" name="miterBoxDirectionLinePlaceWidget">
+                <property name="toolTip">
+                 <string>This line controls the position and orientation of boxes according to the leg anatomical axis. Should be drawn orthogonal to the fibula line</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QComboBox" name="miterBoxesGuideTypeComboBox">
+                <property name="toolTip">
+                 <string>Kind of saw guide</string>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Slot</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Border</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="miterBoxesGuideTypeLabel">
+                <property name="text">
+                 <string>Guide type</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="miterBoxesBoxTypeLabel">
+                <property name="text">
+                 <string>Box type</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QComboBox" name="miterBoxesBoxTypeComboBox">
+                <property name="toolTip">
+                 <string>Adapted option makes the distal face of the miter boxes parallel to the guide base; regular option just creates a normal box</string>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Adapted</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Regular</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="10" column="0">
+               <widget class="QLabel" name="fibulaTextLabelsModeLabel">
+                <property name="toolTip">
+                 <string>Identification letters are embossed (raised) or engraved (recessed) on the fibula surgical guide</string>
+                </property>
+                <property name="text">
+                 <string>Text labels relief</string>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="1">
+               <widget class="QComboBox" name="fibulaTextLabelsModeComboBox">
+                <property name="toolTip">
+                 <string>Controls if the distal and side labels on the surgical guide are carved or extruded out</string>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Emboss</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Engrave</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="11" column="0">
+               <widget class="QLabel" name="fibulaTextLabelsDepthLabel">
+                <property name="text">
+                 <string>Text labels depth (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="1">
+               <widget class="ctkDoubleSpinBox" name="fibulaTextLabelsDepthSpinBox">
+                <property name="toolTip">
+                 <string>Height of embossed or depth of engraved letters. Values near to slot wall size may thin it too much when engraving.</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="minimum">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>3.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>1.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QFormLayout" name="formLayout_2">
+              <property name="topMargin">
+               <number>0</number>
               </property>
-              <property name="value">
-               <double>1.000000000000000</double>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_13">
+                <property name="text">
+                 <string>Fibula surgical
+guide base</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="qMRMLNodeComboBox" name="fibulaSurgicalGuideBaseSelector">
+                <property name="toolTip">
+                 <string>Select the fibula guidebase</string>
+                </property>
+                <property name="nodeTypes">
+                 <stringlist>
+                  <string>vtkMRMLModelNode</string>
+                 </stringlist>
+                </property>
+                <property name="noneEnabled">
+                 <bool>true</bool>
+                </property>
+                <property name="addEnabled">
+                 <bool>false</bool>
+                </property>
+                <property name="removeEnabled">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_59">
+                <property name="text">
+                 <string>Guidebase thickness (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="ctkDoubleSpinBox" name="fibulaGuidebaseThicknessSpinBox">
+                <property name="toolTip">
+                 <string>Size of the extruded out wall from the fibula</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <double>50.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_60">
+                <property name="text">
+                 <string>Guidebase angle</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="ctkDoubleSpinBox" name="fibulaGuidebaseAngleSpinBox">
+                <property name="toolTip">
+                 <string>Angle measured from the middle point of the fibula line. The two arms of the angle are symmetric to the miter box direction line</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <double>360.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_61">
+                <property name="text">
+                 <string>Guidebase margin</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="ctkDoubleSpinBox" name="fibulaGuidebaseMarginSpinBox">
+                <property name="toolTip">
+                 <string>Approximate separation of the bone touching face of the guide base from the bone. Useful to account for rests of periosteum during surgical guide use</string>
+                </property>
+                <property name="decimals">
+                 <number>2</number>
+                </property>
+                <property name="maximum">
+                 <double>15.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QPushButton" name="generateFibulaGuidebaseButton">
+              <property name="toolTip">
+               <string>Click to create the fibula guidebase according to the bone and the set parameters</string>
+              </property>
+              <property name="text">
+               <string>Generate fibula guidebase</string>
               </property>
              </widget>
             </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <layout class="QFormLayout" name="formLayout_3">
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_16">
-             <property name="text">
-              <string>Slot width (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="ctkDoubleSpinBox" name="miterBoxSlotWidthSpinBox">
-             <property name="toolTip">
-              <string>Width of the slot where the saw will go through. Should be at least as thick as the saw</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <double>60.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>1.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_17">
-             <property name="text">
-              <string>Slot length (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="ctkDoubleSpinBox" name="miterBoxSlotLengthSpinBox">
-             <property name="toolTip">
-              <string>This parameter controls how easy it is to maneuver the saw inside the slot</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>20.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="label_20">
-             <property name="text">
-              <string>Slot height (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="1">
-            <widget class="ctkDoubleSpinBox" name="miterBoxSlotHeightSpinBox">
-             <property name="toolTip">
-              <string>Depth of the slot. It's how much you'll need to push the saw until you contact bone</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>15.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QLabel" name="label_19">
-             <property name="text">
-              <string>Slot wall (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="1">
-            <widget class="ctkDoubleSpinBox" name="miterBoxSlotWallSpinBox">
-             <property name="toolTip">
-              <string>If guide type is slot, it defines the wall thickness of the holed box where the saw will pass through</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <double>20.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>3.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="0">
-            <widget class="QLabel" name="label_21">
-             <property name="text">
-              <string>Bigger miter box
-distance to fibula (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="1">
-            <widget class="ctkDoubleSpinBox" name="biggerMiterBoxDistanceToFibulaSpinBox">
-             <property name="toolTip">
-              <string>Extra distance to the fibula bone of the miter boxes</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <double>50.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>3.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="0">
-            <widget class="QLabel" name="label_22">
-             <property name="toolTip">
-              <string>This line controls the position and orientation of boxes according to the leg anatomical axis. Should be drawn perpendicular to the fibula line. After it is defined miter boxes will be automatically created</string>
-             </property>
-             <property name="text">
-              <string>Miter box direction line</string>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="1">
-            <widget class="qSlicerMarkupsPlaceWidget" name="miterBoxDirectionLinePlaceWidget">
-             <property name="toolTip">
-              <string>This line controls the position and orientation of boxes according to the leg anatomical axis. Should be drawn orthogonal to the fibula line</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QComboBox" name="miterBoxesGuideTypeComboBox">
-             <property name="toolTip">
-              <string>Kind of saw guide</string>
-             </property>
-             <item>
-              <property name="text">
-               <string>Slot</string>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_9">
+              <property name="leftMargin">
+               <number>0</number>
               </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Border</string>
+              <property name="topMargin">
+               <number>0</number>
               </property>
-             </item>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="miterBoxesGuideTypeLabel">
-             <property name="text">
-              <string>Guide type</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="miterBoxesBoxTypeLabel">
-             <property name="text">
-              <string>Box type</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QComboBox" name="miterBoxesBoxTypeComboBox">
-             <property name="toolTip">
-              <string>Adapted option makes the distal face of the miter boxes parallel to the guide base; regular option just creates a normal box</string>
-             </property>
-             <item>
-              <property name="text">
-               <string>Adapted</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Regular</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="10" column="0">
-            <widget class="QLabel" name="fibulaTextLabelsModeLabel">
-             <property name="toolTip">
-              <string>Identification letters are embossed (raised) or engraved (recessed) on the fibula surgical guide</string>
-             </property>
-             <property name="text">
-              <string>Text labels relief</string>
-             </property>
-            </widget>
-           </item>
-           <item row="10" column="1">
-            <widget class="QComboBox" name="fibulaTextLabelsModeComboBox">
-             <property name="toolTip">
-              <string>Controls if the distal and side labels on the surgical guide are carved or extruded out</string>
-             </property>
-             <item>
-              <property name="text">
-               <string>Emboss</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Engrave</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="11" column="0">
-            <widget class="QLabel" name="fibulaTextLabelsDepthLabel">
-             <property name="text">
-              <string>Text labels depth (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="11" column="1">
-            <widget class="ctkDoubleSpinBox" name="fibulaTextLabelsDepthSpinBox">
-             <property name="toolTip">
-              <string>Height of embossed or depth of engraved letters. Values near to slot wall size may thin it too much when engraving.</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="minimum">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>3.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>1.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QFormLayout" name="formLayout_2">
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_13">
-             <property name="text">
-              <string>Fibula surgical
-guide base</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="qMRMLNodeComboBox" name="fibulaSurgicalGuideBaseSelector">
-             <property name="toolTip">
-              <string>Select the fibula guidebase</string>
-             </property>
-             <property name="nodeTypes">
-              <stringlist>
-               <string>vtkMRMLModelNode</string>
-              </stringlist>
-             </property>
-             <property name="noneEnabled">
-              <bool>true</bool>
-             </property>
-             <property name="addEnabled">
-              <bool>false</bool>
-             </property>
-             <property name="removeEnabled">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_59">
-             <property name="text">
-              <string>Guidebase thickness (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="ctkDoubleSpinBox" name="fibulaGuidebaseThicknessSpinBox">
-             <property name="toolTip">
-              <string>Size of the extruded out wall from the fibula</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <double>50.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_60">
-             <property name="text">
-              <string>Guidebase angle</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="ctkDoubleSpinBox" name="fibulaGuidebaseAngleSpinBox">
-             <property name="toolTip">
-              <string>Angle measured from the middle point of the fibula line. The two arms of the angle are symmetric to the miter box direction line</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <double>360.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_61">
-             <property name="text">
-              <string>Guidebase margin</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="ctkDoubleSpinBox" name="fibulaGuidebaseMarginSpinBox">
-             <property name="toolTip">
-              <string>Approximate separation of the bone touching face of the guide base from the bone. Useful to account for rests of periosteum during surgical guide use</string>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="maximum">
-              <double>15.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QPushButton" name="generateFibulaGuidebaseButton">
-           <property name="toolTip">
-            <string>Click to create the fibula guidebase according to the bone and the set parameters</string>
-           </property>
-           <property name="text">
-            <string>Generate fibula guidebase</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_9">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <spacer name="horizontalSpacer">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_23">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-               <horstretch>1</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="toolTip">
-              <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
-             </property>
-             <property name="text">
-              <string>Screw
+              <item>
+               <spacer name="horizontalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_23">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                  <horstretch>1</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
+                </property>
+                <property name="text">
+                 <string>Screw
 holes
 cylinders</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QFormLayout" name="formLayout_14">
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_50">
-               <property name="text">
-                <string>Radius (mm)</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="ctkDoubleSpinBox" name="fibulaScrewHoleCylinderRadiusSpinBox">
-               <property name="toolTip">
-                <string>Set the radius of the cylinders</string>
-               </property>
-               <property name="decimals">
-                <number>1</number>
-               </property>
-               <property name="maximum">
-                <double>5.000000000000000</double>
-               </property>
-               <property name="singleStep">
-                <double>0.100000000000000</double>
-               </property>
-               <property name="value">
-                <double>1.500000000000000</double>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_49">
-               <property name="toolTip">
-                <string>Location of the screw holes. The holes will made as if drilling perpendicular to the guidebase</string>
-               </property>
-               <property name="text">
-                <string>Points</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="qSlicerMarkupsPlaceWidget" name="fibulaFiducialsPlaceWidget">
-               <property name="toolTip">
-                <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_48">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <spacer name="horizontalSpacer_2">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-          </layout>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QFormLayout" name="formLayout_14">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_50">
+                  <property name="text">
+                   <string>Radius (mm)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="ctkDoubleSpinBox" name="fibulaScrewHoleCylinderRadiusSpinBox">
+                  <property name="toolTip">
+                   <string>Set the radius of the cylinders</string>
+                  </property>
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <double>5.000000000000000</double>
+                  </property>
+                  <property name="singleStep">
+                   <double>0.100000000000000</double>
+                  </property>
+                  <property name="value">
+                   <double>1.500000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="label_49">
+                  <property name="toolTip">
+                   <string>Location of the screw holes. The holes will made as if drilling perpendicular to the guidebase</string>
+                  </property>
+                  <property name="text">
+                   <string>Points</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="qSlicerMarkupsPlaceWidget" name="fibulaFiducialsPlaceWidget">
+                  <property name="toolTip">
+                   <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_48">
+                  <property name="text">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_14">
@@ -2393,583 +2411,601 @@ because plan has changed</string>
           </widget>
          </item>
          <item>
-          <layout class="QFormLayout" name="formLayout_5">
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item row="1" column="0">
-            <widget class="QLabel" name="sawBoxesGuideTypeLabel">
-             <property name="text">
-              <string>Guide type</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QComboBox" name="sawBoxesGuideTypeComboBox">
-             <property name="toolTip">
-              <string>Kind of saw guide</string>
-             </property>
-             <item>
-              <property name="text">
-               <string>Slot</string>
+          <widget class="QFrame" name="mandibleSurgicalGuideElementsFrame">
+           <layout class="QVBoxLayout" name="mandibleSurgicalGuideElementsFrameLayout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <layout class="QFormLayout" name="formLayout_5">
+              <property name="topMargin">
+               <number>0</number>
               </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Border</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_28">
-             <property name="text">
-              <string>Slot width (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="ctkDoubleSpinBox" name="sawBoxSlotWidthSpinBox">
-             <property name="toolTip">
-              <string>Width of the slot where the saw will go through. Should be at least as thick as the saw</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <double>60.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>1.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_27">
-             <property name="text">
-              <string>Slot length (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="ctkDoubleSpinBox" name="sawBoxSlotLengthSpinBox">
-             <property name="toolTip">
-              <string>This parameter controls how easy it is to maneuver the saw inside the slot</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>20.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_26">
-             <property name="text">
-              <string>Slot height (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="ctkDoubleSpinBox" name="sawBoxSlotHeightSpinBox">
-             <property name="toolTip">
-              <string>Depth of the slot. It's how much you'll need to push the saw until you contact bone</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>15.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="label_25">
-             <property name="text">
-              <string>Slot wall (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="1">
-            <widget class="ctkDoubleSpinBox" name="sawBoxSlotWallSpinBox">
-             <property name="toolTip">
-              <string>If guide type is slot, it defines the wall thickness of the holed box where the saw will pass through</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <double>20.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>3.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QLabel" name="label_24">
-             <property name="text">
-              <string>Bigger saw box
+              <item row="1" column="0">
+               <widget class="QLabel" name="sawBoxesGuideTypeLabel">
+                <property name="text">
+                 <string>Guide type</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QComboBox" name="sawBoxesGuideTypeComboBox">
+                <property name="toolTip">
+                 <string>Kind of saw guide</string>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Slot</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Border</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_28">
+                <property name="text">
+                 <string>Slot width (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="ctkDoubleSpinBox" name="sawBoxSlotWidthSpinBox">
+                <property name="toolTip">
+                 <string>Width of the slot where the saw will go through. Should be at least as thick as the saw</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <double>60.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>1.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_27">
+                <property name="text">
+                 <string>Slot length (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="ctkDoubleSpinBox" name="sawBoxSlotLengthSpinBox">
+                <property name="toolTip">
+                 <string>This parameter controls how easy it is to maneuver the saw inside the slot</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>20.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_26">
+                <property name="text">
+                 <string>Slot height (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="ctkDoubleSpinBox" name="sawBoxSlotHeightSpinBox">
+                <property name="toolTip">
+                 <string>Depth of the slot. It's how much you'll need to push the saw until you contact bone</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>15.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_25">
+                <property name="text">
+                 <string>Slot wall (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="ctkDoubleSpinBox" name="sawBoxSlotWallSpinBox">
+                <property name="toolTip">
+                 <string>If guide type is slot, it defines the wall thickness of the holed box where the saw will pass through</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <double>20.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>3.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_24">
+                <property name="text">
+                 <string>Bigger saw box
 distance to mandible (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="1">
-            <widget class="ctkDoubleSpinBox" name="biggerSawBoxDistanceToMandibleSpinBox">
-             <property name="toolTip">
-              <string>Extra distance to the mandible bone of the saw boxes</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <double>50.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>3.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="0">
-            <widget class="QLabel" name="mandibleTextLabelsModeLabel">
-             <property name="toolTip">
-              <string>Identification letters are embossed (raised) or engraved (recessed) on the mandible surgical guide</string>
-             </property>
-             <property name="text">
-              <string>Text labels relief</string>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="1">
-            <widget class="QComboBox" name="mandibleTextLabelsModeComboBox">
-             <property name="toolTip">
-              <string>Controls if the side label on the surgical guide is carved or extruded out</string>
-             </property>
-             <item>
-              <property name="text">
-               <string>Emboss</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="ctkDoubleSpinBox" name="biggerSawBoxDistanceToMandibleSpinBox">
+                <property name="toolTip">
+                 <string>Extra distance to the mandible bone of the saw boxes</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <double>50.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>3.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QLabel" name="mandibleTextLabelsModeLabel">
+                <property name="toolTip">
+                 <string>Identification letters are embossed (raised) or engraved (recessed) on the mandible surgical guide</string>
+                </property>
+                <property name="text">
+                 <string>Text labels relief</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="1">
+               <widget class="QComboBox" name="mandibleTextLabelsModeComboBox">
+                <property name="toolTip">
+                 <string>Controls if the side label on the surgical guide is carved or extruded out</string>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Emboss</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Engrave</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QLabel" name="mandibleTextLabelsDepthLabel">
+                <property name="text">
+                 <string>Text labels depth (mm)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <widget class="ctkDoubleSpinBox" name="mandibleTextLabelsDepthSpinBox">
+                <property name="toolTip">
+                 <string>Height of embossed or depth of engraved letters. Values near to slot wall size may thin it too much when engraving.</string>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+                <property name="minimum">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>3.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>1.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QPushButton" name="createSawBoxesFromFirstAndLastMandiblePlanesButton">
+              <property name="toolTip">
+               <string>Create mandible resection boxes from mandible planes</string>
               </property>
-             </item>
-             <item>
               <property name="text">
-               <string>Engrave</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="8" column="0">
-            <widget class="QLabel" name="mandibleTextLabelsDepthLabel">
-             <property name="text">
-              <string>Text labels depth (mm)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="1">
-            <widget class="ctkDoubleSpinBox" name="mandibleTextLabelsDepthSpinBox">
-             <property name="toolTip">
-              <string>Height of embossed or depth of engraved letters. Values near to slot wall size may thin it too much when engraving.</string>
-             </property>
-             <property name="decimals">
-              <number>1</number>
-             </property>
-             <property name="minimum">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>3.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
-             </property>
-             <property name="value">
-              <double>1.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QPushButton" name="createSawBoxesFromFirstAndLastMandiblePlanesButton">
-           <property name="toolTip">
-            <string>Create mandible resection boxes from mandible planes</string>
-           </property>
-           <property name="text">
-            <string>Create mandible
+               <string>Create mandible
 resection boxes</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_12">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <spacer name="horizontalSpacer_5">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_31">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>1</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="toolTip">
-              <string>The mandible bridge function is to join the left and right parts of the surgical guide</string>
-             </property>
-             <property name="text">
-              <string>Mandible
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_12">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <spacer name="horizontalSpacer_5">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_31">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>1</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>The mandible bridge function is to join the left and right parts of the surgical guide</string>
+                </property>
+                <property name="text">
+                 <string>Mandible
 bridge</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QFormLayout" name="formLayout_17">
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_32">
-               <property name="text">
-                <string>Radius (mm)</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="ctkDoubleSpinBox" name="mandibleBridgeRadiusSpinBox">
-               <property name="toolTip">
-                <string>Set the radius of the bridge</string>
-               </property>
-               <property name="decimals">
-                <number>1</number>
-               </property>
-               <property name="value">
-                <double>3.000000000000000</double>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_52">
-               <property name="toolTip">
-                <string>Pass-by points that will be used to create the bridge</string>
-               </property>
-               <property name="text">
-                <string>Points</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="qSlicerMarkupsPlaceWidget" name="mandibleBridgeCurvePlaceWidget">
-               <property name="toolTip">
-                <string>The mandible bridge function is to join the left and right parts of the surgical guide</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <spacer name="horizontalSpacer_6">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_23">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <layout class="QFormLayout" name="formLayout_21">
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_29">
-               <property name="text">
-                <string>Guidebase thickness (mm)</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="ctkDoubleSpinBox" name="mandibleGuidebaseThicknessSpinBox">
-               <property name="toolTip">
-                <string>Size of the extruded out walls from the mandible</string>
-               </property>
-               <property name="decimals">
-                <number>1</number>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="mandibleGuidebaseMarginLabel">
-               <property name="text">
-                <string>Guidebase margin (mm)</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="ctkDoubleSpinBox" name="mandibleGuidebaseMarginSpinBox">
-               <property name="toolTip">
-                <string>Approximate separation of the bone touching face of the guide base from the bone. Useful to account for rests of periosteum during surgical guide use</string>
-               </property>
-               <property name="decimals">
-                <number>2</number>
-               </property>
-               <property name="maximum">
-                <double>15.000000000000000</double>
-               </property>
-               <property name="singleStep">
-                <double>0.100000000000000</double>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QGridLayout" name="gridLayout_2">
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_46">
-               <property name="toolTip">
-                <string>Curve that marks the outline of the left guide base</string>
-               </property>
-               <property name="text">
-                <string>Left side base</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="qSlicerMarkupsPlaceWidget" name="leftSideMandibleGuideBaseCurvePlaceWidget"/>
-             </item>
-             <item row="1" column="1">
-              <widget class="qSlicerMarkupsPlaceWidget" name="rightSideMandibleGuideBaseCurvePlaceWidget">
-               <property name="toolTip">
-                <string>Curve that marks the outline of the right guide base</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_62">
-               <property name="toolTip">
-                <string>Curve that marks the outline of the right guide base</string>
-               </property>
-               <property name="text">
-                <string>Right side base</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="useMandibleGuideBasesFromCurvesCheckBox">
-           <property name="toolTip">
-            <string>If checked, the guide bases from the curves will be used otherwise the guide base will be the one selected on the widget below</string>
-           </property>
-           <property name="text">
-            <string>Use guide bases from curves</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <layout class="QFormLayout" name="formLayout_16">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_30">
-             <property name="text">
-              <string>Mandible surgical
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QFormLayout" name="formLayout_17">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_32">
+                  <property name="text">
+                   <string>Radius (mm)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="ctkDoubleSpinBox" name="mandibleBridgeRadiusSpinBox">
+                  <property name="toolTip">
+                   <string>Set the radius of the bridge</string>
+                  </property>
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="value">
+                   <double>3.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_52">
+                  <property name="toolTip">
+                   <string>Pass-by points that will be used to create the bridge</string>
+                  </property>
+                  <property name="text">
+                   <string>Points</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="qSlicerMarkupsPlaceWidget" name="mandibleBridgeCurvePlaceWidget">
+                  <property name="toolTip">
+                   <string>The mandible bridge function is to join the left and right parts of the surgical guide</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_6">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_23">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <layout class="QFormLayout" name="formLayout_21">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_29">
+                  <property name="text">
+                   <string>Guidebase thickness (mm)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="ctkDoubleSpinBox" name="mandibleGuidebaseThicknessSpinBox">
+                  <property name="toolTip">
+                   <string>Size of the extruded out walls from the mandible</string>
+                  </property>
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="mandibleGuidebaseMarginLabel">
+                  <property name="text">
+                   <string>Guidebase margin (mm)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="ctkDoubleSpinBox" name="mandibleGuidebaseMarginSpinBox">
+                  <property name="toolTip">
+                   <string>Approximate separation of the bone touching face of the guide base from the bone. Useful to account for rests of periosteum during surgical guide use</string>
+                  </property>
+                  <property name="decimals">
+                   <number>2</number>
+                  </property>
+                  <property name="maximum">
+                   <double>15.000000000000000</double>
+                  </property>
+                  <property name="singleStep">
+                   <double>0.100000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QGridLayout" name="gridLayout_2">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_46">
+                  <property name="toolTip">
+                   <string>Curve that marks the outline of the left guide base</string>
+                  </property>
+                  <property name="text">
+                   <string>Left side base</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="qSlicerMarkupsPlaceWidget" name="leftSideMandibleGuideBaseCurvePlaceWidget"/>
+                </item>
+                <item row="1" column="1">
+                 <widget class="qSlicerMarkupsPlaceWidget" name="rightSideMandibleGuideBaseCurvePlaceWidget">
+                  <property name="toolTip">
+                   <string>Curve that marks the outline of the right guide base</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="label_62">
+                  <property name="toolTip">
+                   <string>Curve that marks the outline of the right guide base</string>
+                  </property>
+                  <property name="text">
+                   <string>Right side base</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="useMandibleGuideBasesFromCurvesCheckBox">
+              <property name="toolTip">
+               <string>If checked, the guide bases from the curves will be used otherwise the guide base will be the one selected on the widget below</string>
+              </property>
+              <property name="text">
+               <string>Use guide bases from curves</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QFormLayout" name="formLayout_16">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_30">
+                <property name="text">
+                 <string>Mandible surgical
 guide bases</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="qMRMLNodeComboBox" name="mandibleSurgicalGuideBaseSelector">
-             <property name="toolTip">
-              <string>The selected 3D model will be used as surgical guide base if the widget above is turned off</string>
-             </property>
-             <property name="nodeTypes">
-              <stringlist>
-               <string>vtkMRMLModelNode</string>
-              </stringlist>
-             </property>
-             <property name="noneEnabled">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_11">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <spacer name="horizontalSpacer_3">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Minimum</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_12">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>1</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="toolTip">
-              <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
-             </property>
-             <property name="text">
-              <string>Screw
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="qMRMLNodeComboBox" name="mandibleSurgicalGuideBaseSelector">
+                <property name="toolTip">
+                 <string>The selected 3D model will be used as surgical guide base if the widget above is turned off</string>
+                </property>
+                <property name="nodeTypes">
+                 <stringlist>
+                  <string>vtkMRMLModelNode</string>
+                 </stringlist>
+                </property>
+                <property name="noneEnabled">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_11">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <spacer name="horizontalSpacer_3">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Minimum</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_12">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>1</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
+                </property>
+                <property name="text">
+                 <string>Screw
 holes
 cylinders</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QFormLayout" name="formLayout_15">
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_14">
-               <property name="text">
-                <string>Radius (mm)</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="ctkDoubleSpinBox" name="mandibleScrewHoleCylinderRadiusSpinBox">
-               <property name="toolTip">
-                <string>Set the radius of the cylinders</string>
-               </property>
-               <property name="decimals">
-                <number>1</number>
-               </property>
-               <property name="maximum">
-                <double>5.000000000000000</double>
-               </property>
-               <property name="singleStep">
-                <double>0.100000000000000</double>
-               </property>
-               <property name="value">
-                <double>1.500000000000000</double>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_51">
-               <property name="toolTip">
-                <string>Location of the screw holes. The holes will made as if drilling perpendicular to the guidebase</string>
-               </property>
-               <property name="text">
-                <string>Points</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="qSlicerMarkupsPlaceWidget" name="mandibleFiducialsPlaceWidget">
-               <property name="toolTip">
-                <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <spacer name="horizontalSpacer_4">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Maximum</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-          </layout>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QFormLayout" name="formLayout_15">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_14">
+                  <property name="text">
+                   <string>Radius (mm)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="ctkDoubleSpinBox" name="mandibleScrewHoleCylinderRadiusSpinBox">
+                  <property name="toolTip">
+                   <string>Set the radius of the cylinders</string>
+                  </property>
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <double>5.000000000000000</double>
+                  </property>
+                  <property name="singleStep">
+                   <double>0.100000000000000</double>
+                  </property>
+                  <property name="value">
+                   <double>1.500000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="label_51">
+                  <property name="toolTip">
+                   <string>Location of the screw holes. The holes will made as if drilling perpendicular to the guidebase</string>
+                  </property>
+                  <property name="text">
+                   <string>Points</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="qSlicerMarkupsPlaceWidget" name="mandibleFiducialsPlaceWidget">
+                  <property name="toolTip">
+                   <string>Creates cylinders that point away from the guidebase to achieve screw holes</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_4">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Maximum</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_15">

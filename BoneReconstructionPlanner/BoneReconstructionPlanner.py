@@ -1354,6 +1354,10 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     if (self.ui.scalarVolumeSelector.nodeCount() != 0) and (self.ui.scalarVolumeSelector.currentNode() == None):
       self.ui.scalarVolumeSelector.setCurrentNodeIndex(0)#0 == first scalarVolume
 
+    # the markups were unlocked above, lock (and hide) again the ones that can't be modified at the moment
+    # (e.g. the planning objects of a locked plan or the elements of a visible surgical guide)
+    self.updateLockedStateAndVisibilityOfMarkupsFromParameterNode()
+
     # the lighting mode needs the Lights module of the Sandbox extension
     showMessageIfLightsModuleIsMissing()
 
@@ -1721,9 +1725,20 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.useNonDecimatedModelsForPreviewCheckBox.checked = useNonDecimatedModelsForPreviewChecked
     self.showInputModelsAsNonDecimated(useNonDecimatedModelsForPreviewChecked)
 
-    fibulaSurgicalGuideElementsVisible = self._parameterNode.GetParameter("fibulaSurgicalGuideElementsVisible") == "True"
+    # While a surgical guide is visible its elements are hidden and they can't be modified:
+    # the frame of the elements widgets and the button that creates the guide are disabled.
+    # The elements checkbox is disabled and shown unchecked, but its parameter is kept,
+    # so the elements come back when the guide is hidden.
+    fibulaSurgicalGuideIsShown = self.logic.isFibulaSurgicalGuideVisible()
+    fibulaSurgicalGuideElementsVisible = (
+      (self._parameterNode.GetParameter("fibulaSurgicalGuideElementsVisible") == "True") and
+      (not fibulaSurgicalGuideIsShown)
+    )
     self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked = fibulaSurgicalGuideElementsVisible
+    self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.enabled = not fibulaSurgicalGuideIsShown
     self.setFibulaGuideBaseElementsVisibility(fibulaSurgicalGuideElementsVisible)
+    self.ui.fibulaSurgicalGuideElementsFrame.enabled = not fibulaSurgicalGuideIsShown
+    self.ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton.enabled = not fibulaSurgicalGuideIsShown
 
     fibulaSurgicalGuideVisible = self._parameterNode.GetParameter("fibulaSurgicalGuideVisible") == "True"
     self.ui.fibulaSurgicalGuideVisibleCheckBox.checked = fibulaSurgicalGuideVisible
@@ -1732,15 +1747,28 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel") is not None
     )
 
-    mandibleSurgicalGuideElementsVisible = self._parameterNode.GetParameter("mandibleSurgicalGuideElementsVisible") == "True"
+    mandibleSurgicalGuideIsShown = self.logic.isMandibleSurgicalGuideVisible()
+    mandibleSurgicalGuideElementsVisible = (
+      (self._parameterNode.GetParameter("mandibleSurgicalGuideElementsVisible") == "True") and
+      (not mandibleSurgicalGuideIsShown)
+    )
     self.ui.mandibleSurgicalGuideElementsVisibleCheckBox.checked = mandibleSurgicalGuideElementsVisible
+    self.ui.mandibleSurgicalGuideElementsVisibleCheckBox.enabled = not mandibleSurgicalGuideIsShown
     self.setMandibleGuideBaseElementsVisibility(mandibleSurgicalGuideElementsVisible)
+    self.ui.mandibleSurgicalGuideElementsFrame.enabled = not mandibleSurgicalGuideIsShown
+    self.ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton.enabled = not mandibleSurgicalGuideIsShown
 
     mandibleSurgicalGuideVisible = self._parameterNode.GetParameter("mandibleSurgicalGuideVisible") == "True"
     self.ui.mandibleSurgicalGuideVisibleCheckBox.checked = mandibleSurgicalGuideVisible
     self.setMandibleSurgicalGuideVisibility(mandibleSurgicalGuideVisible)
     self.ui.mandibleSurgicalGuideVisibleCheckBox.enabled = (
       self._parameterNode.GetNodeReference("mandibleSurgicalGuidePrototypeModel") is not None
+    )
+
+    # the clearance changes the miterBoxes and it is used by the sawBoxes
+    self.ui.clearanceFitPrintingToleranceSpinBox.enabled = (
+      (not fibulaSurgicalGuideIsShown) and
+      (not mandibleSurgicalGuideIsShown)
     )
 
     if self._parameterNode.GetParameter("miterBoxesNeedUpdate") == "True":
@@ -1863,9 +1891,20 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self.ui.customTitaniumPlateGenerationCollapsibleButton.hide()
 
+    # While the neomandible is visible its components (transformed fibula pieces, resected mandible and
+    # intercondylar beam) are hidden and they can't be modified, neither can the plan they come from
+    neomandibleIsShown = self.logic.isNeomandibleVisible()
+    self.ui.neomandibleVisibilityButton.checked = self._parameterNode.GetParameter("neomandibleVisible") == "True"
+    self.ui.create3DModelOfTheReconstructionButton.enabled = not neomandibleIsShown
+    self.setNeomandibleComponentsVisibility(not neomandibleIsShown)
+
+    # the beam button is disabled and shown unchecked while the neomandible is visible, but its parameter is kept
     showInterCondylarBeamBoxChecked = self._parameterNode.GetParameter("showInterCondylarBeamBox") == "True"
-    self.ui.interCondylarBeamVisibilityToolButton.checked = showInterCondylarBeamBoxChecked
-    self.setInterCondylarBeamVisibility(showInterCondylarBeamBoxChecked)
+    showInterCondylarBeamBox = showInterCondylarBeamBoxChecked and (not neomandibleIsShown)
+    self.ui.interCondylarBeamVisibilityToolButton.checked = showInterCondylarBeamBox
+    self.ui.interCondylarBeamVisibilityToolButton.enabled = not neomandibleIsShown
+    self.setInterCondylarBeamVisibility(showInterCondylarBeamBox)
+    self.setInterCondylarBeamWidgetsEnabled(not neomandibleIsShown)
 
     lockVSPChecked = self._parameterNode.GetParameter("lockVSP") == "True"
     if self.vspAnimation and self.vspAnimation.playing and not lockVSPChecked:
@@ -1873,14 +1912,20 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.updateVSPAnimationWidgetsEnabledStateAndToolTips()
     self.ui.vspAnimationModeComboBox.currentText = self._parameterNode.GetParameter("vspAnimationMode")
 
+    # the plan can't be edited while it is locked or while the neomandible made from it is visible
+    vspCanBeEdited = (not lockVSPChecked) and (not neomandibleIsShown)
+
+    # the mandible planes are hidden while the plan can't be edited, their button is disabled and
+    # shown unchecked, but its parameter is kept so they come back when the plan can be edited again
     showMandiblePlanesChecked = self._parameterNode.GetParameter("showMandiblePlanes") == "True"
-    self.ui.showMandiblePlanesToolButton.checked = showMandiblePlanesChecked
-    self.setMandiblePlanesVisibility(showMandiblePlanesChecked)
+    self.ui.showMandiblePlanesToolButton.checked = showMandiblePlanesChecked and vspCanBeEdited
+    self.ui.showMandiblePlanesToolButton.enabled = vspCanBeEdited
+    self.setMandiblePlanesVisibility(showMandiblePlanesChecked and vspCanBeEdited)
     
     showMandiblePlanesInteractionHandlesChecked = self._parameterNode.GetParameter("showMandiblePlanesInteractionHandles") == "True"
     showMandiblePlanesInteractionHandles = (
       showMandiblePlanesChecked and showMandiblePlanesInteractionHandlesChecked and
-      (not lockVSPChecked)
+      vspCanBeEdited
     )
     self.ui.showMandiblePlanesInteractionHandlesToolButton.checked = (
       showMandiblePlanesInteractionHandles
@@ -1888,7 +1933,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.setMandiblePlanesInteractionHandlesVisibility(showMandiblePlanesInteractionHandles)
     self.ui.showMandiblePlanesInteractionHandlesToolButton.enabled = (
       showMandiblePlanesChecked and
-      (not lockVSPChecked)
+      vspCanBeEdited
     )
     
     inCameraPlaneInteractionHandlesChecked = self._parameterNode.GetParameter("inCameraPlaneInteractionHandles") == "True"
@@ -1896,7 +1941,7 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       showMandiblePlanesChecked and 
       showMandiblePlanesInteractionHandlesChecked and 
       inCameraPlaneInteractionHandlesChecked and
-      (not lockVSPChecked)
+      vspCanBeEdited
     )
     self.ui.inCameraPlaneInteractionHandlesToolButton.checked = (
       inCameraPlaneInteractionHandles
@@ -1905,34 +1950,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.ui.inCameraPlaneInteractionHandlesToolButton.enabled = (
       showMandiblePlanesChecked and
       showMandiblePlanesInteractionHandlesChecked and 
-      (not lockVSPChecked)
+      vspCanBeEdited
     )
 
-
-    mandibularPlanesList = createListFromFolderName("Mandibular planes")
-    fibulaLine = self._parameterNode.GetNodeReference("fibulaLine")
-    mandibularCurve = self._parameterNode.GetNodeReference("mandibleCurve")
-    planningObjectsList = mandibularPlanesList + [fibulaLine,mandibularCurve]
-    if lockVSPChecked:
-      self.setMandiblePlanesVisibility(showMandiblePlanesChecked)
-      self.logic.setMarkupsListLocked(planningObjectsList,locked=True)
-      #self.logic.removeMandiblePlaneObservers()
-      #
-      self.ui.lockVSPButton.checked = True
-      self.ui.parametersOfVSPFrame.enabled = False
-      self.ui.updateVSPButtonsFrame.enabled = False
-    else:
-      #self.setMandiblePlanesVisibility(True)
-      self.logic.setMarkupsListLocked(planningObjectsList,locked=False)
-      #self.logic.removeMandiblePlaneObservers() # in case they already exist
-      #self.logic.addMandiblePlaneObservers()
-      #
-      self.ui.lockVSPButton.checked = False
-      self.ui.parametersOfVSPFrame.enabled = True
-      self.ui.updateVSPButtonsFrame.enabled = True
-    
-
-    self.ui.neomandibleVisibilityButton.checked = self._parameterNode.GetParameter("neomandibleVisible") == "True"
+    self.ui.lockVSPButton.checked = lockVSPChecked
+    self.ui.parametersOfVSPFrame.enabled = vspCanBeEdited
+    self.ui.updateVSPButtonsFrame.enabled = vspCanBeEdited
 
 
     if self._parameterNode.GetParameter("updateOnMandiblePlanesMovement") == "True":
@@ -1945,9 +1968,14 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self.ui.updateFibulaDentalImplantCylindersButton.checkState = 0
 
+    # the fibula segments lengths are hidden while the plan is locked, the checkbox is disabled and
+    # shown unchecked, but its parameter is kept so they come back when the plan is unlocked
     showFibulaSegmentsLengthsChecked = self._parameterNode.GetParameter("showFibulaSegmentsLengths") == "True"
-    self.ui.showFibulaSegmentsLengthsCheckBox.checked = showFibulaSegmentsLengthsChecked
-    self.setFibulaSegmentsLengthsVisibility(showFibulaSegmentsLengthsChecked)
+    showFibulaSegmentsLengths = showFibulaSegmentsLengthsChecked and (not lockVSPChecked)
+    self.ui.showFibulaSegmentsLengthsCheckBox.checked = showFibulaSegmentsLengths
+    self.ui.showFibulaSegmentsLengthsCheckBox.enabled = not lockVSPChecked
+    self.ui.fibulaSegmentsMeasurementModeComboBox.enabled = not lockVSPChecked
+    self.setFibulaSegmentsLengthsVisibility(showFibulaSegmentsLengths)
     
     showOriginalMandibleChecked = self._parameterNode.GetParameter("showOriginalMandible") == "True"
     self.ui.showOriginalMandibleCheckBox.checked = showOriginalMandibleChecked
@@ -1957,6 +1985,72 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     self.logic.setPlanningInformativeText()
     self.ui.planningInformativeLabel.text = self._parameterNode.GetParameter("planningInformativeText")
     self.ui.planningInformativeLabel.hide() # hide until new BRP version supports it fully
+
+    self.updateLockedStateAndVisibilityOfMarkupsFromParameterNode()
+
+  def updateLockedStateAndVisibilityOfMarkupsFromParameterNode(self):
+    """
+    Lock and hide the markups that can't be modified at the moment, and unlock and show the others:
+    - the planning objects while the plan is locked or while the neomandible made from it is visible
+      (the visibility of the mandible planes also depends on their button, so it is set in updateWidgetsFromParameterNode)
+    - the fibula surgical guide markups while the fibula surgical guide is visible
+    - the mandible surgical guide markups while the mandible surgical guide is visible
+      (the sawBoxes planes are hidden with the other guide elements, see setMandibleGuideBaseElementsVisibility)
+    - the intercondylar beam line while the neomandible is visible
+    The nodes are read from the parameter node, so missing ones are not created.
+    """
+    if self._parameterNode is None:
+      return
+
+    lockVSPChecked = self._parameterNode.GetParameter("lockVSP") == "True"
+    neomandibleIsShown = self.logic.isNeomandibleVisible()
+    vspCanBeEdited = (not lockVSPChecked) and (not neomandibleIsShown)
+
+    planningMarkupsList = [
+      self._parameterNode.GetNodeReference("fibulaLine"),
+      self._parameterNode.GetNodeReference("mandibleCurve")
+    ]
+    self.logic.setMarkupsListLocked(
+      createListFromFolderName("Mandibular planes") + planningMarkupsList,
+      locked=not vspCanBeEdited
+    )
+    self.setMarkupsListVisibility(planningMarkupsList, vspCanBeEdited)
+
+    fibulaSurgicalGuideIsShown = self.logic.isFibulaSurgicalGuideVisible()
+    fibulaSurgicalGuideMarkupsList = [
+      self._parameterNode.GetNodeReference("fibulaFiducialList"),
+      self._parameterNode.GetNodeReference("miterBoxDirectionLine")
+    ]
+    self.logic.setMarkupsListLocked(fibulaSurgicalGuideMarkupsList, locked=fibulaSurgicalGuideIsShown)
+    self.setMarkupsListVisibility(fibulaSurgicalGuideMarkupsList, not fibulaSurgicalGuideIsShown)
+
+    mandibleSurgicalGuideIsShown = self.logic.isMandibleSurgicalGuideVisible()
+    mandibleSurgicalGuideMarkupsList = [
+      self._parameterNode.GetNodeReference("mandibleFiducialList"),
+      self._parameterNode.GetNodeReference("mandibleBridgeCurve"),
+      self._parameterNode.GetNodeReference("leftSideMandibleGuideBaseCurve"),
+      self._parameterNode.GetNodeReference("rightSideMandibleGuideBaseCurve")
+    ]
+    self.logic.setMarkupsListLocked(
+      createListFromFolderName("sawBoxes Planes") + mandibleSurgicalGuideMarkupsList,
+      locked=mandibleSurgicalGuideIsShown
+    )
+    self.setMarkupsListVisibility(mandibleSurgicalGuideMarkupsList, not mandibleSurgicalGuideIsShown)
+
+    interCondylarBeamMarkupsList = [self._parameterNode.GetNodeReference("interCondylarBeamLine")]
+    self.logic.setMarkupsListLocked(interCondylarBeamMarkupsList, locked=neomandibleIsShown)
+    self.setMarkupsListVisibility(interCondylarBeamMarkupsList, not neomandibleIsShown)
+
+  def setMarkupsListVisibility(self, markupsList, visibility):
+    """
+    Set visibility of the markups of the list, missing ones are skipped
+    """
+    if not USING_GUI:
+      return
+
+    for markupsNode in markupsList:
+      if (markupsNode is not None) and (markupsNode.GetDisplayNode() is not None):
+        markupsNode.GetDisplayNode().SetVisibility(visibility)
 
   def updateParameterNodeFromGUI(self, caller=None, event=None):
     """
@@ -2068,14 +2162,18 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("useNonDecimatedModelsForPreview","True")
     else:
       self._parameterNode.SetParameter("useNonDecimatedModelsForPreview","False")
-    if self.ui.interCondylarBeamVisibilityToolButton.checked:
-      self._parameterNode.SetParameter("showInterCondylarBeamBox","True")
-    else:
-      self._parameterNode.SetParameter("showInterCondylarBeamBox","False")
-    if self.ui.showMandiblePlanesToolButton.checked:
-      self._parameterNode.SetParameter("showMandiblePlanes","True")
-    else:
-      self._parameterNode.SetParameter("showMandiblePlanes","False")
+    # disabled while the neomandible is visible and shown unchecked, don't save that
+    if self.ui.interCondylarBeamVisibilityToolButton.enabled:
+      if self.ui.interCondylarBeamVisibilityToolButton.checked:
+        self._parameterNode.SetParameter("showInterCondylarBeamBox","True")
+      else:
+        self._parameterNode.SetParameter("showInterCondylarBeamBox","False")
+    # disabled while the plan can't be edited and shown unchecked, don't save that
+    if self.ui.showMandiblePlanesToolButton.enabled:
+      if self.ui.showMandiblePlanesToolButton.checked:
+        self._parameterNode.SetParameter("showMandiblePlanes","True")
+      else:
+        self._parameterNode.SetParameter("showMandiblePlanes","False")
     # disabled buttons are shown unchecked, don't save that so the previous
     # interaction state is restored when the mandible planes are shown again
     if self.ui.showMandiblePlanesInteractionHandlesToolButton.enabled:
@@ -2092,18 +2190,22 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
       self._parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","True")
     else:
       self._parameterNode.SetParameter("checkSecurityMarginOnMiterBoxCreation","False")
-    if self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked:
-      self._parameterNode.SetParameter("fibulaSurgicalGuideElementsVisible","True")
-    else:
-      self._parameterNode.SetParameter("fibulaSurgicalGuideElementsVisible","False")
+    # disabled while the guide is visible and shown unchecked, don't save that so the elements come back when the guide is hidden
+    if self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.enabled:
+      if self.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked:
+        self._parameterNode.SetParameter("fibulaSurgicalGuideElementsVisible","True")
+      else:
+        self._parameterNode.SetParameter("fibulaSurgicalGuideElementsVisible","False")
     if self.ui.fibulaSurgicalGuideVisibleCheckBox.checked:
       self._parameterNode.SetParameter("fibulaSurgicalGuideVisible","True")
     else:
       self._parameterNode.SetParameter("fibulaSurgicalGuideVisible","False")
-    if self.ui.mandibleSurgicalGuideElementsVisibleCheckBox.checked:
-      self._parameterNode.SetParameter("mandibleSurgicalGuideElementsVisible","True")
-    else:
-      self._parameterNode.SetParameter("mandibleSurgicalGuideElementsVisible","False")
+    # disabled while the guide is visible and shown unchecked, don't save that so the elements come back when the guide is hidden
+    if self.ui.mandibleSurgicalGuideElementsVisibleCheckBox.enabled:
+      if self.ui.mandibleSurgicalGuideElementsVisibleCheckBox.checked:
+        self._parameterNode.SetParameter("mandibleSurgicalGuideElementsVisible","True")
+      else:
+        self._parameterNode.SetParameter("mandibleSurgicalGuideElementsVisible","False")
     if self.ui.mandibleSurgicalGuideVisibleCheckBox.checked:
       self._parameterNode.SetParameter("mandibleSurgicalGuideVisible","True")
     else:
@@ -2138,10 +2240,12 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     else:
       self._parameterNode.SetParameter("makeAllDentalImplanCylindersParallel","False")
 
-    if self.ui.showFibulaSegmentsLengthsCheckBox.checked:
-      self._parameterNode.SetParameter("showFibulaSegmentsLengths", "True")
-    else:
-      self._parameterNode.SetParameter("showFibulaSegmentsLengths", "False")
+    # disabled while the plan is locked and shown unchecked, don't save that
+    if self.ui.showFibulaSegmentsLengthsCheckBox.enabled:
+      if self.ui.showFibulaSegmentsLengthsCheckBox.checked:
+        self._parameterNode.SetParameter("showFibulaSegmentsLengths", "True")
+      else:
+        self._parameterNode.SetParameter("showFibulaSegmentsLengths", "False")
     if self.ui.showOriginalMandibleCheckBox.checked:
       self._parameterNode.SetParameter("showOriginalMandible", "True")
     else:
@@ -2411,7 +2515,39 @@ class BoneReconstructionPlannerWidget(ScriptedLoadableModuleWidget, VTKObservati
     Callback function to avoid GUI modification of VSP parameters
     """
     self.logic.setNeomandibleVisibility(checked)
-  
+
+  def setNeomandibleComponentsVisibility(self, visibility):
+    """
+    Set visibility of the models the neomandible is made from: the transformed fibula pieces and the resected mandible
+    (the intercondylar beam has its own visibility button). The visibility is set on each model, not on their folders,
+    so the Virtual Surgical Plan animation can still show them.
+    """
+    if not USING_GUI:
+      return
+
+    neomandibleComponentsList = createListFromFolderName("Transformed Fibula Pieces")
+    cutBonesList = createListFromFolderName("Cut Bones")
+    if len(cutBonesList) > 0:
+      resectedMandible = cutBonesList[-1]
+      neomandibleComponentsList.append(resectedMandible)
+
+    for neomandibleComponent in neomandibleComponentsList:
+      displayNode = neomandibleComponent.GetDisplayNode()
+      if displayNode is not None:
+        displayNode.SetVisibility(visibility)
+
+  def setInterCondylarBeamWidgetsEnabled(self, enabled):
+    """
+    Enable the widgets that modify the intercondylar beam (it is a component of the neomandible)
+    """
+    interCondylarBeamWidgetsList = [
+      self.ui.interCondylarBeamLinePlaceWidget,
+      self.ui.interCondylarBeamIncreaseSizeButton,
+      self.ui.interCondylarBeamDecreaseSizeButton,
+    ]
+    for widget in interCondylarBeamWidgetsList:
+      widget.enabled = enabled
+
   def setBiggerSawBoxesInteractionHandlesVisibility(self, visibility):
     """
     Set bigger sawBoxes interactive handles visibility
@@ -3128,6 +3264,40 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     
     if mandibleReconstructionModel is not None:
       mandibleReconstructionModel.GetDisplayNode().SetVisibility(visibility)
+
+  def isFibulaSurgicalGuideVisible(self):
+    """
+    The fibula surgical guide is visible if it exists and its "Guide visible" option is checked.
+    While it is visible its elements are hidden and can't be modified.
+    """
+    parameterNode = self.getParameterNode()
+    return (
+      (parameterNode.GetParameter("fibulaSurgicalGuideVisible") == "True") and
+      (parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel") is not None)
+    )
+
+  def isMandibleSurgicalGuideVisible(self):
+    """
+    The mandible surgical guide is visible if it exists and its "Guide visible" option is checked.
+    While it is visible its elements are hidden and can't be modified.
+    """
+    parameterNode = self.getParameterNode()
+    return (
+      (parameterNode.GetParameter("mandibleSurgicalGuideVisible") == "True") and
+      (parameterNode.GetNodeReference("mandibleSurgicalGuidePrototypeModel") is not None)
+    )
+
+  def isNeomandibleVisible(self):
+    """
+    The neomandible is visible if it exists and its visibility button is checked.
+    While it is visible its components (transformed fibula pieces, resected mandible and intercondylar beam)
+    are hidden and they, and the virtual surgical plan they come from, can't be modified.
+    """
+    parameterNode = self.getParameterNode()
+    return (
+      (parameterNode.GetParameter("neomandibleVisible") == "True") and
+      (parameterNode.GetNodeReference("mandibleReconstructionModel") is not None)
+    )
 
   def getMandibularCurve(self, startPlacementMode = False):
     parameterNode = self.getParameterNode()
@@ -4106,6 +4276,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   @saveExecutedMethodWithTelemetry
   def onGenerateFibulaPlanesTimerTimeout(self):
     parameterNode = self.getParameterNode()
+    if self.isNeomandibleVisible():
+      # the neomandible is made from the plan results, so they are kept as they are while it is visible
+      logging.info('VSP updates are frozen while the neomandible is visible. Please hide the neomandible to update the plan.')
+      return
     parameterNode.SetParameter("virtualPlanWasSuccessful", str(False))
     parameterNode.SetParameter("currentlyProcessing", str(True))
     lockVSPChecked = parameterNode.GetParameter("lockVSP") == "True"
@@ -6890,7 +7064,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.util.errorDisplay("ERROR: Boolean operations to make fibula surgical guide failed")
       return
     
-    parameterNode.SetParameter("fibulaSurgicalGuideElementsVisible", str(False))
+    # the guide elements are hidden while the guide is visible, and they come back when the guide is hidden
     parameterNode.SetParameter("fibulaSurgicalGuideVisible", str(False)) # hide earlier one
     parameterNode.SetNodeReferenceID("fibulaSurgicalGuidePrototypeModel", surgicalGuideModel.GetID())
     parameterNode.SetParameter("fibulaSurgicalGuideVisible", str(True))
@@ -7177,7 +7351,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     removeFolder(intersectionsFolder)
     removeFolder(pointsIntersectionsFolder)
 
-    mandibleSurgicalGuideElementsVisible = parameterNode.GetParameter("mandibleSurgicalGuideElementsVisible") == "True"
+    mandibleSurgicalGuideElementsVisible = (
+      (parameterNode.GetParameter("mandibleSurgicalGuideElementsVisible") == "True") and
+      (not self.isMandibleSurgicalGuideVisible())
+    )
     setFolderItemVisibility(getFolder("sawBoxes Planes"), mandibleSurgicalGuideElementsVisible)
     setFolderItemVisibility(getFolder("previewSawBoxes Models"), mandibleSurgicalGuideElementsVisible)
     setFolderItemVisibility(getFolder("sawBoxTextLabels Models"), mandibleSurgicalGuideElementsVisible)
@@ -7394,7 +7571,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       slicer.util.errorDisplay("ERROR: Boolean operations to make mandible surgical failed")
       return
 
-    parameterNode.SetParameter("mandibleSurgicalGuideElementsVisible", str(False))
+    # the guide elements are hidden while the guide is visible, and they come back when the guide is hidden
     parameterNode.SetParameter("mandibleSurgicalGuideVisible", str(False)) # hide earlier one
     parameterNode.SetNodeReferenceID("mandibleSurgicalGuidePrototypeModel", surgicalGuideModel.GetID())
     parameterNode.SetParameter("mandibleSurgicalGuideVisible", str(True))
@@ -8344,6 +8521,32 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.delayDisplay('Test data imported correctly')
 
     self.section_VerifyLoadedPlanParametersAreKeptWithEmptySettings()
+    self.section_VerifyLoadedPlanHidesLockedAndFrozenObjects()
+
+  def section_VerifyLoadedPlanHidesLockedAndFrozenObjects(self):
+    """
+    TestPlanBRP was saved with the plan locked, the fibula surgical guide and the neomandible shown, and the
+    mandible surgical guide elements shown instead of the guide. So the mandibular curve, the fibula line,
+    the fibula segments lengths, the fibula guide elements and the neomandible components are hidden and
+    can't be modified, while the mandible guide elements are shown and can be modified.
+    """
+    self.delayDisplay('Checking loaded plan hides the objects of the locked plan and the components of the shown models')
+
+    self.assertParameterNodeHasParameterValues({
+      "lockVSP": "True",
+      "fibulaSurgicalGuideElementsVisible": "False",
+      "fibulaSurgicalGuideVisible": "True",
+      "mandibleSurgicalGuideElementsVisible": "True",
+      "mandibleSurgicalGuideVisible": "False",
+      "neomandibleVisible": "True",
+      "showInterCondylarBeamBox": "False",
+    })
+    self.assertPlanningObjectsVisibilityAndLockedStateWithPlanLocked(True)
+    self.assertFibulaSurgicalGuideElementsVisibilityAndLockedStateWithGuideVisible(True)
+    self.assertMandibleSurgicalGuideElementsVisibilityAndLockedStateWithGuideVisible(False)
+    self.assertNeomandibleComponentsVisibilityAndLockedStateWithNeomandibleVisible(True)
+
+    self.delayDisplay('Loaded plan hides the objects of the locked plan and the components of the shown models')
 
   def section_VerifyLoadedPlanParametersAreKeptWithEmptySettings(self):
     """
@@ -9327,21 +9530,89 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       "lockVSP": "True",
     })
 
-    planningObjectsList = (
-      createListFromFolderName("Mandibular planes") +
-      [self.logicBRP.getFibulaLine(), self.logicBRP.getMandibularCurve()]
-    )
-    for planningObject in planningObjectsList:
-      self.assertTrue(
-        planningObject.GetLocked(),
-        msg=planningObject.GetName()
-      )
-    self.assertFalse(self.widgetBRP.ui.parametersOfVSPFrame.enabled)
-    self.assertFalse(self.widgetBRP.ui.updateVSPButtonsFrame.enabled)
+    self.assertPlanningObjectsVisibilityAndLockedStateWithPlanLocked(True)
     # the animation can only be played while the plan is locked
     self.assertTrue(self.widgetBRP.ui.playVSPAnimationButton.enabled)
 
+    # entering the module again keeps the plan locked
+    slicer.util.selectModule('Data')
+    slicer.util.selectModule('BoneReconstructionPlanner')
+    slicer.app.processEvents()
+    self.assertPlanningObjectsVisibilityAndLockedStateWithPlanLocked(True)
+
+    # unlocking brings back the hidden planning objects, then the plan is locked again
+    slicer.app.processEvents()
+    self.widgetBRP.ui.lockVSPButton.checked = False
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "lockVSP": "False",
+    })
+    self.assertPlanningObjectsVisibilityAndLockedStateWithPlanLocked(False)
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.lockVSPButton.checked = True
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "lockVSP": "True",
+    })
+    self.assertPlanningObjectsVisibilityAndLockedStateWithPlanLocked(True)
+
     self.delayDisplay("LockVirtualSurgicalPlan test successful")
+
+  def assertPlanningObjectsVisibilityAndLockedStateWithPlanLocked(self, planLocked):
+    """While the plan is locked the planning objects are locked and hidden, and the VSP parameters and update buttons are disabled.
+    The fibula segments lengths are hidden too, and the lengths checkbox is disabled and shown unchecked,
+    but its parameter is kept so the lengths come back when the plan is unlocked.
+    """
+    self.assertPlanningObjectsVisibilityAndLockedStateWithPlanEditable(not planLocked)
+
+    self.assertParameterNodeHasParameterValues({
+      "showFibulaSegmentsLengths": "True",
+    })
+    self.assertEqual(self.widgetBRP.ui.showFibulaSegmentsLengthsCheckBox.checked, not planLocked)
+    self.assertEqual(self.widgetBRP.ui.showFibulaSegmentsLengthsCheckBox.enabled, not planLocked)
+    self.assertEqual(self.widgetBRP.ui.fibulaSegmentsMeasurementModeComboBox.enabled, not planLocked)
+    fibulaSegmentsMeasurementMode = self.logicBRP.getParameterNode().GetParameter("fibulaSegmentsMeasurementMode")
+    for mode in slicer.FIBULA_SEGMENTS_MEASUREMENT_MODES:
+      fibulaSegmentsLengthsList = createListFromFolderName(f"Fibula Segments Lengths {mode}")
+      self.assertGreater(len(fibulaSegmentsLengthsList), 0, msg=mode)
+      for lineNode in fibulaSegmentsLengthsList:
+        self.assertEqual(
+          bool(lineNode.GetDisplayNode().GetVisibility()),
+          (not planLocked) and (mode == fibulaSegmentsMeasurementMode),
+          msg=f"{mode} {lineNode.GetName()}"
+        )
+
+  def assertPlanningObjectsVisibilityAndLockedStateWithPlanEditable(self, vspCanBeEdited):
+    """The plan can't be edited while it is locked or while the neomandible made from it is visible.
+    Meanwhile the planning objects (mandible planes, mandibular curve and fibula line) are locked and hidden,
+    and the VSP parameters and update buttons are disabled. The mandible planes button is disabled and
+    shown unchecked, but its parameter is kept so the planes come back when the plan can be edited again.
+    """
+    ui = self.widgetBRP.ui
+    showMandiblePlanesChecked = self.logicBRP.getParameterNode().GetParameter("showMandiblePlanes") == "True"
+    self.assertEqual(ui.parametersOfVSPFrame.enabled, vspCanBeEdited)
+    self.assertEqual(ui.updateVSPButtonsFrame.enabled, vspCanBeEdited)
+    self.assertEqual(ui.showMandiblePlanesToolButton.enabled, vspCanBeEdited)
+    self.assertEqual(ui.showMandiblePlanesToolButton.checked, showMandiblePlanesChecked and vspCanBeEdited)
+
+    mandibularPlanesList = createListFromFolderName("Mandibular planes")
+    self.assertGreater(len(mandibularPlanesList), 0)
+    for mandibularPlane in mandibularPlanesList:
+      self.assertEqual(mandibularPlane.GetLocked(), not vspCanBeEdited, msg=mandibularPlane.GetName())
+      self.assertEqual(
+        bool(mandibularPlane.GetDisplayNode().GetVisibility()),
+        showMandiblePlanesChecked and vspCanBeEdited,
+        msg=mandibularPlane.GetName()
+      )
+
+    for planningMarkupsNode in [self.logicBRP.getFibulaLine(), self.logicBRP.getMandibularCurve()]:
+      self.assertEqual(planningMarkupsNode.GetLocked(), not vspCanBeEdited, msg=planningMarkupsNode.GetName())
+      self.assertEqual(
+        bool(planningMarkupsNode.GetDisplayNode().GetVisibility()),
+        vspCanBeEdited,
+        msg=planningMarkupsNode.GetName()
+      )
 
   def section_CreateMiterBoxes(self):
     self.delayDisplay("Starting the CreateMiterBoxes test")
@@ -9786,12 +10057,13 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       "FibulaSurgicalGuidePrototype"
     )
     self.assertNodeIsInsideFolder(fibulaSurgicalGuide, "Mandible reconstruction")
+    # the guide is shown and its elements are hidden, but the elements parameter is kept
     self.assertParameterNodeHasParameterValues({
-      "fibulaSurgicalGuideElementsVisible": "False",
+      "fibulaSurgicalGuideElementsVisible": "True",
       "fibulaSurgicalGuideVisible": "True",
     })
-    self.assertFalse(self.widgetBRP.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked)
-    self.assertTrue(self.widgetBRP.ui.fibulaSurgicalGuideVisibleCheckBox.checked)
+    self.assertFibulaSurgicalGuideElementsVisibilityAndLockedStateWithGuideVisible(True)
+    self.assertFalse(self.widgetBRP.ui.clearanceFitPrintingToleranceSpinBox.enabled)
 
     # FibulaSurgicalGuidePrototype of TestPlanBRP
     import SampleData
@@ -9799,7 +10071,87 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.assertModelsAreGeometricallyEqual(fibulaSurgicalGuide, exampleFibulaSurgicalGuide)
     slicer.mrmlScene.RemoveNode(exampleFibulaSurgicalGuide)
 
+    # hiding the guide brings back its elements
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaSurgicalGuideVisibleCheckBox.checked = False
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaSurgicalGuideElementsVisible": "True",
+      "fibulaSurgicalGuideVisible": "False",
+    })
+    self.assertFibulaSurgicalGuideElementsVisibilityAndLockedStateWithGuideVisible(False)
+    self.assertTrue(self.widgetBRP.ui.clearanceFitPrintingToleranceSpinBox.enabled)
+
+    # TestPlanBRP was saved showing the guide with its elements unchecked
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked = False
+    self.widgetBRP.ui.fibulaSurgicalGuideVisibleCheckBox.checked = True
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaSurgicalGuideElementsVisible": "False",
+      "fibulaSurgicalGuideVisible": "True",
+    })
+    self.assertFibulaSurgicalGuideElementsVisibilityAndLockedStateWithGuideVisible(True)
+    self.assertFalse(self.widgetBRP.ui.clearanceFitPrintingToleranceSpinBox.enabled)
+
     self.delayDisplay("CreateFibulaSurgicalGuide test successful")
+
+  def assertFibulaSurgicalGuideElementsVisibilityAndLockedStateWithGuideVisible(self, guideVisible):
+    """While the fibula surgical guide is visible its elements are hidden, the widgets that modify them (and the one
+    that creates the guide) are disabled and its markups are locked and hidden. The elements checkbox is disabled and shown
+    unchecked, but its parameter is kept so the elements come back when the guide is hidden.
+    """
+    parameterNode = self.logicBRP.getParameterNode()
+    ui = self.widgetBRP.ui
+    fibulaSurgicalGuideElementsChecked = parameterNode.GetParameter("fibulaSurgicalGuideElementsVisible") == "True"
+    fibulaSurgicalGuideElementsVisible = fibulaSurgicalGuideElementsChecked and (not guideVisible)
+
+    fibulaSurgicalGuide = parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel")
+    self.assertEqual(bool(fibulaSurgicalGuide.GetDisplayNode().GetVisibility()), guideVisible)
+    self.assertEqual(ui.fibulaSurgicalGuideVisibleCheckBox.checked, guideVisible)
+    self.assertTrue(ui.fibulaSurgicalGuideVisibleCheckBox.enabled)
+
+    self.assertEqual(ui.fibulaSurgicalGuideElementsVisibleCheckBox.checked, fibulaSurgicalGuideElementsVisible)
+    self.assertEqual(ui.fibulaSurgicalGuideElementsVisibleCheckBox.enabled, not guideVisible)
+    fibulaSurgicalGuideBase = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
+    self.assertEqual(
+      bool(fibulaSurgicalGuideBase.GetDisplayNode().GetVisibility()),
+      fibulaSurgicalGuideElementsVisible
+    )
+    for folderName in ["previewMiterBoxes Models", "Fibula Cylinders Models", "fibulaTextLabels Models"]:
+      self.assertEqual(
+        self.getFolderDisplayVisibility(folderName),
+        fibulaSurgicalGuideElementsVisible,
+        msg=folderName
+      )
+
+    for markupsNode in [self.logicBRP.getFibulaFiducials(), self.logicBRP.getMiterBoxDirectionLine()]:
+      self.assertEqual(markupsNode.GetLocked(), guideVisible, msg=markupsNode.GetName())
+      self.assertEqual(bool(markupsNode.GetDisplayNode().GetVisibility()), not guideVisible, msg=markupsNode.GetName())
+
+    fibulaSurgicalGuideElementsWidgetsList = [
+      ui.securityMarginOfFibulaPiecesFrame,
+      ui.miterBoxSlotWidthSpinBox,
+      ui.biggerMiterBoxDistanceToFibulaSpinBox,
+      ui.miterBoxDirectionLinePlaceWidget,
+      ui.fibulaTextLabelsModeComboBox,
+      ui.fibulaSurgicalGuideBaseSelector,
+      ui.generateFibulaGuidebaseButton,
+      ui.fibulaScrewHoleCylinderRadiusSpinBox,
+      ui.fibulaFiducialsPlaceWidget,
+      ui.makeBooleanOperationsToFibulaSurgicalGuideBaseButton,
+    ]
+    for widget in fibulaSurgicalGuideElementsWidgetsList:
+      self.assertEqual(widget.enabled, not guideVisible, msg=widget.objectName)
+
+  def getFolderDisplayVisibility(self, folderName):
+    """Visibility of the folder itself (its children are hidden when it is hidden), as the Data module eye button shows it
+    """
+    shNode = slicer.mrmlScene.GetSubjectHierarchyNode()
+    folderItemID = shNode.GetItemByName(folderName)
+    self.assertNotEqual(folderItemID, shNode.GetInvalidItemID(), msg=folderName)
+    folderPlugin = slicer.qSlicerSubjectHierarchyPluginHandler().instance().pluginByName("Folder")
+    return bool(folderPlugin.getDisplayVisibility(folderItemID))
 
   def section_CreateSawBoxes(self):
     self.delayDisplay("Starting the CreateSawBoxes test")
@@ -10405,10 +10757,13 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       "MandibleSurgicalGuidePrototype"
     )
     self.assertNodeIsInsideFolder(mandibleSurgicalGuide, "Mandible reconstruction")
+    # the guide is shown and its elements are hidden, but the elements parameter is kept
     self.assertParameterNodeHasParameterValues({
-      "mandibleSurgicalGuideElementsVisible": "False",
+      "mandibleSurgicalGuideElementsVisible": "True",
       "mandibleSurgicalGuideVisible": "True",
     })
+    self.assertMandibleSurgicalGuideElementsVisibilityAndLockedStateWithGuideVisible(True)
+    self.assertFalse(self.widgetBRP.ui.clearanceFitPrintingToleranceSpinBox.enabled)
 
     # MandibleSurgicalGuidePrototype of TestPlanBRP
     import SampleData
@@ -10416,9 +10771,9 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.assertModelsAreGeometricallyEqual(mandibleSurgicalGuide, exampleMandibleSurgicalGuide)
     slicer.mrmlScene.RemoveNode(exampleMandibleSurgicalGuide)
 
-    # TestPlanBRP was saved showing the guide elements instead of the guide
+    # TestPlanBRP was saved showing the guide elements instead of the guide,
+    #   hiding the guide brings back its elements
     slicer.app.processEvents()
-    self.widgetBRP.ui.mandibleSurgicalGuideElementsVisibleCheckBox.checked = True
     self.widgetBRP.ui.mandibleSurgicalGuideVisibleCheckBox.checked = False
     slicer.app.processEvents()
     self.assertParameterNodeHasParameterValues({
@@ -10426,8 +10781,82 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       "mandibleSurgicalGuideVisible": "False",
     })
     self.assertFalse(mandibleSurgicalGuide.GetDisplayNode().GetVisibility())
+    self.assertMandibleSurgicalGuideElementsVisibilityAndLockedStateWithGuideVisible(False)
+    # the fibula surgical guide is still visible
+    self.assertFalse(self.widgetBRP.ui.clearanceFitPrintingToleranceSpinBox.enabled)
 
     self.delayDisplay("CreateMandibleSurgicalGuide test successful")
+
+  def assertMandibleSurgicalGuideElementsVisibilityAndLockedStateWithGuideVisible(self, guideVisible):
+    """While the mandible surgical guide is visible its elements are hidden, the widgets that modify them (and the one
+    that creates the guide) are disabled and its markups are locked and hidden (the sawBoxes planes with their folder).
+    The elements checkbox is disabled and shown unchecked, but its parameter is kept so the elements come back when
+    the guide is hidden.
+    """
+    parameterNode = self.logicBRP.getParameterNode()
+    ui = self.widgetBRP.ui
+    mandibleSurgicalGuideElementsChecked = parameterNode.GetParameter("mandibleSurgicalGuideElementsVisible") == "True"
+    mandibleSurgicalGuideElementsVisible = mandibleSurgicalGuideElementsChecked and (not guideVisible)
+
+    mandibleSurgicalGuide = parameterNode.GetNodeReference("mandibleSurgicalGuidePrototypeModel")
+    self.assertEqual(bool(mandibleSurgicalGuide.GetDisplayNode().GetVisibility()), guideVisible)
+    self.assertEqual(ui.mandibleSurgicalGuideVisibleCheckBox.checked, guideVisible)
+    self.assertTrue(ui.mandibleSurgicalGuideVisibleCheckBox.enabled)
+
+    self.assertEqual(ui.mandibleSurgicalGuideElementsVisibleCheckBox.checked, mandibleSurgicalGuideElementsVisible)
+    self.assertEqual(ui.mandibleSurgicalGuideElementsVisibleCheckBox.enabled, not guideVisible)
+    for referenceRole in ["bothSidesMandibleGuideBaseModel", "mandibleBridgeTube"]:
+      mandibleSurgicalGuideElement = parameterNode.GetNodeReference(referenceRole)
+      self.assertEqual(
+        bool(mandibleSurgicalGuideElement.GetDisplayNode().GetVisibility()),
+        mandibleSurgicalGuideElementsVisible,
+        msg=referenceRole
+      )
+    for folderName in [
+      "previewSawBoxes Models",
+      "biggerSawBoxes Models",
+      "Mandible Cylinders Models",
+      "sawBoxes Planes",
+      "sawBoxTextLabels Models"
+    ]:
+      self.assertEqual(
+        self.getFolderDisplayVisibility(folderName),
+        mandibleSurgicalGuideElementsVisible,
+        msg=folderName
+      )
+
+    sawBoxesPlanesList = createListFromFolderName("sawBoxes Planes")
+    self.assertEqual(len(sawBoxesPlanesList), 2)
+    for sawBoxPlane in sawBoxesPlanesList:
+      self.assertEqual(sawBoxPlane.GetLocked(), guideVisible, msg=sawBoxPlane.GetName())
+    for markupsNode in [
+      self.logicBRP.getMandibleFiducials(),
+      self.logicBRP.getMandibleBridgeCurve(),
+      self.logicBRP.getLeftSideMandibleGuideBaseCurve(),
+      self.logicBRP.getRightSideMandibleGuideBaseCurve(),
+    ]:
+      self.assertEqual(markupsNode.GetLocked(), guideVisible, msg=markupsNode.GetName())
+      self.assertEqual(bool(markupsNode.GetDisplayNode().GetVisibility()), not guideVisible, msg=markupsNode.GetName())
+
+    mandibleSurgicalGuideElementsWidgetsList = [
+      ui.sawBoxSlotWidthSpinBox,
+      ui.biggerSawBoxDistanceToMandibleSpinBox,
+      ui.mandibleTextLabelsModeComboBox,
+      ui.createSawBoxesFromFirstAndLastMandiblePlanesButton,
+      ui.mandibleBridgeRadiusSpinBox,
+      ui.mandibleBridgeCurvePlaceWidget,
+      ui.mandibleGuidebaseThicknessSpinBox,
+      ui.leftSideMandibleGuideBaseCurvePlaceWidget,
+      ui.rightSideMandibleGuideBaseCurvePlaceWidget,
+      ui.useMandibleGuideBasesFromCurvesCheckBox,
+      ui.mandibleScrewHoleCylinderRadiusSpinBox,
+      ui.mandibleFiducialsPlaceWidget,
+      ui.makeBooleanOperationsToMandibleSurgicalGuideBaseButton,
+    ]
+    for widget in mandibleSurgicalGuideElementsWidgetsList:
+      self.assertEqual(widget.enabled, not guideVisible, msg=widget.objectName)
+    # the guide base selector is only used when the guide bases are not made from curves
+    self.assertFalse(ui.mandibleSurgicalGuideBaseSelector.enabled)
 
   def section_CreateNeomandible(self):
     self.delayDisplay("Starting the CreateNeomandible test")
@@ -10477,10 +10906,13 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     neomandible = parameterNode.GetNodeReference("mandibleReconstructionModel")
     self.assertIsNotNone(neomandible)
+    # the neomandible is shown and its components are hidden, but the beam parameter is kept
     self.assertParameterNodeHasParameterValues({
       "neomandibleVisible": "True",
+      "showInterCondylarBeamBox": "True",
+      "lockVSP": "True",
     })
-    self.assertTrue(self.widgetBRP.ui.neomandibleVisibilityButton.checked)
+    self.assertNeomandibleComponentsVisibilityAndLockedStateWithNeomandibleVisible(True)
 
     # MandibleReconstructionModel of TestPlanBRP
     import SampleData
@@ -10488,15 +10920,95 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.assertModelsAreGeometricallyEqual(neomandible, exampleNeomandible)
     slicer.mrmlScene.RemoveNode(exampleNeomandible)
 
-    # the beam is part of the neomandible, so it is hidden
+    # the plan can't be edited while the neomandible is visible, even if it is unlocked
+    slicer.app.processEvents()
+    self.widgetBRP.ui.lockVSPButton.checked = False
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "lockVSP": "False",
+    })
+    self.assertNeomandibleComponentsVisibilityAndLockedStateWithNeomandibleVisible(True)
+
+    # hiding the neomandible brings back its components and lets the unlocked plan be edited
+    slicer.app.processEvents()
+    self.widgetBRP.ui.neomandibleVisibilityButton.click()
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "neomandibleVisible": "False",
+    })
+    self.assertNeomandibleComponentsVisibilityAndLockedStateWithNeomandibleVisible(False)
+
+    # TestPlanBRP was saved with the beam and the mandible planes hidden, the locked plan and the neomandible shown,
+    #   the planes button can only be used while the plan can be edited
     slicer.app.processEvents()
     self.widgetBRP.ui.interCondylarBeamVisibilityToolButton.click()
+    if self.widgetBRP.ui.showMandiblePlanesToolButton.checked:
+      self.widgetBRP.ui.showMandiblePlanesToolButton.click()
     slicer.app.processEvents()
     self.assertParameterNodeHasParameterValues({
       "showInterCondylarBeamBox": "False",
+      "showMandiblePlanes": "False",
     })
+    self.assertNeomandibleComponentsVisibilityAndLockedStateWithNeomandibleVisible(False)
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.lockVSPButton.checked = True
+    self.widgetBRP.ui.neomandibleVisibilityButton.click()
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "neomandibleVisible": "True",
+      "showInterCondylarBeamBox": "False",
+      "lockVSP": "True",
+    })
+    self.assertNeomandibleComponentsVisibilityAndLockedStateWithNeomandibleVisible(True)
 
     self.delayDisplay("CreateNeomandible test successful")
+
+  def assertNeomandibleComponentsVisibilityAndLockedStateWithNeomandibleVisible(self, neomandibleVisible):
+    """While the neomandible is visible its components (transformed fibula pieces, resected mandible and intercondylar beam)
+    are hidden, the beam widgets and the create neomandible button are disabled, the beam line is locked, and the plan
+    can't be edited as if it was locked (its planning objects are locked and hidden). The beam line is hidden too.
+    The beam button is disabled and shown unchecked, but its parameter is kept so the beam comes back when the
+    neomandible is hidden.
+    """
+    parameterNode = self.logicBRP.getParameterNode()
+    ui = self.widgetBRP.ui
+    planLocked = parameterNode.GetParameter("lockVSP") == "True"
+    showInterCondylarBeamBoxChecked = parameterNode.GetParameter("showInterCondylarBeamBox") == "True"
+    vspCanBeEdited = (not planLocked) and (not neomandibleVisible)
+
+    neomandible = parameterNode.GetNodeReference("mandibleReconstructionModel")
+    self.assertEqual(bool(neomandible.GetDisplayNode().GetVisibility()), neomandibleVisible)
+    self.assertEqual(ui.neomandibleVisibilityButton.checked, neomandibleVisible)
+    self.assertEqual(ui.create3DModelOfTheReconstructionButton.enabled, not neomandibleVisible)
+
+    transformedFibulaPiecesList = createListFromFolderName("Transformed Fibula Pieces")
+    self.assertEqual(len(transformedFibulaPiecesList), 3)
+    resectedMandible = createListFromFolderName("Cut Bones")[-1]
+    for neomandibleComponent in transformedFibulaPiecesList + [resectedMandible]:
+      self.assertEqual(
+        bool(neomandibleComponent.GetDisplayNode().GetVisibility()),
+        not neomandibleVisible,
+        msg=neomandibleComponent.GetName()
+      )
+
+    interCondylarBeamVisible = showInterCondylarBeamBoxChecked and (not neomandibleVisible)
+    interCondylarBeamBox = parameterNode.GetNodeReference("interCondylarBeamBox")
+    self.assertEqual(bool(interCondylarBeamBox.GetDisplayNode().GetVisibility()), interCondylarBeamVisible)
+    self.assertEqual(ui.interCondylarBeamVisibilityToolButton.checked, interCondylarBeamVisible)
+    for widget in [
+      ui.interCondylarBeamVisibilityToolButton,
+      ui.interCondylarBeamLinePlaceWidget,
+      ui.interCondylarBeamIncreaseSizeButton,
+      ui.interCondylarBeamDecreaseSizeButton,
+    ]:
+      self.assertEqual(widget.enabled, not neomandibleVisible, msg=widget.objectName)
+    interCondylarBeamLine = self.logicBRP.getInterCondylarBeamLine()
+    self.assertEqual(interCondylarBeamLine.GetLocked(), neomandibleVisible)
+    self.assertEqual(bool(interCondylarBeamLine.GetDisplayNode().GetVisibility()), not neomandibleVisible)
+
+    self.assertEqual(ui.lockVSPButton.checked, planLocked)
+    self.assertPlanningObjectsVisibilityAndLockedStateWithPlanEditable(vspCanBeEdited)
 
   def section_SetVisualizationOptionsAndFibulaNormalization(self):
     self.delayDisplay("Starting the SetVisualizationOptionsAndFibulaNormalization test")
@@ -10597,9 +11109,10 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     slicer.app.processEvents()
     self.widgetBRP.ui.showOriginalMandibleCheckBox.checked = False
-    if self.widgetBRP.ui.showMandiblePlanesToolButton.checked:
-      self.widgetBRP.ui.showMandiblePlanesToolButton.click()
     slicer.app.processEvents()
+    # the mandible planes were hidden while the plan could be edited (CreateNeomandible),
+    #   their button is disabled while the plan is locked
+    self.assertFalse(self.widgetBRP.ui.showMandiblePlanesToolButton.enabled)
     self.assertParameterNodeHasParameterValues({
       "showOriginalMandible": "False",
       "showMandiblePlanes": "False",

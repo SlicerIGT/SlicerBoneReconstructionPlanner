@@ -259,7 +259,7 @@ The fibula line will be created automatically from the fibula 3D model but you m
 12. Click "Update virtual plan" again. And repeat as many times as needed.
 If the checkbox of the "Update virtual plan" button is ticked (default) the plan reacts to plane movements and updates automatically.
 13. Check the available "Visualization Options" as sometimes you need to modify the which or how much data is visible at a given moment to ease the work. You'll get explicative tooltips by hovering the mouse over each widget.
-14. When you are happy with the plan, lock it with the padlock button next to the update buttons so it is not changed by accident. 
+14. When you are happy with the plan, lock it with the padlock button next to the update buttons so it is not changed by accident. While the plan is locked, the mandible planes, the mandibular curve, the fibula line and the fibula segments lengths are hidden; they come back when you unlock it.
 15. While locked, you can play the animation of the plan or export it as a video. The animation has two modes: schematic or realistic. Realistic mode needs the CTs to be set in their corresponding selectors. Come back to the animation section when you have finished creating the guides so they are included in the animation.
 
 ## Personalized Fibula Guide Generation
@@ -293,7 +293,7 @@ As soon as the line has its two points the yellow miterBoxes appear, each one wi
 
 ## Finish the Fibula Surgical Guide
 8. Click the place button of the screw holes "Points" and click over the fibula guide base where you want the screw-holes to be (around one point per segment). A cylinder perpendicular to the guide base appears for each point, and they are updated when you move or delete points. "Radius (mm)" sets the radius of the cylinders.
-9. Congratulations: You are ready to execute boolean operations to create the guide. Click on "Create fibula surgical guide". Use the "Guide elements visible" and "Guide visible" checkboxes to see the guide alone. The guide is named "FibulaSurgicalGuidePrototype". If you click this button again after you did some changes to the plan (e.g. changed miterBoxes position) a new prototype will be created ("FibulaSurgicalGuidePrototype_1", "FibulaSurgicalGuidePrototype_2", etc).
+9. Congratulations: You are ready to execute boolean operations to create the guide. Click on "Create fibula surgical guide". The guide is shown alone: while "Guide visible" is checked, its elements (miterBoxes, guide base, screw-hole cylinders and labels) and their markups (screw-hole points and miter box direction line) are hidden and they can't be modified. Uncheck "Guide visible" to see and edit them again. The guide is named "FibulaSurgicalGuidePrototype". If you click this button again after you did some changes to the plan (e.g. changed miterBoxes position) a new prototype will be created ("FibulaSurgicalGuidePrototype_1", "FibulaSurgicalGuidePrototype_2", etc).
 10. (Infrequently needed) If boolean operations fail or there is a software crash in the step above, then shift by 0.1mm the virtual plan (i.e. "Initial space"), update the virtual plan, update the miterBoxes (e.g. moving a point of the "Miter box direction line") and execute the boolean operations again.
 
 ## Personalized Mandible Surgical Guide
@@ -306,13 +306,13 @@ This part of the workflow has some similarities with the fibula guide creation. 
 - Alternatively, uncheck "Use guide bases from curves" and select a segmented guide base model on the "Mandible surgical guide bases" selector. If you are doing a "Segmental Mandibulectomy", you need to segment two guide bases, one for each planar cut, and copy them together to the same segment. Then export them as a unique model as explained on the earlier section.
 - Optionally, with "Segmental Mandibulectomy", you could create a bridge between both mandible guidebases to achieve a rigid connection between them when the mandible surgical guide is finished: click the place button of "Mandible bridge" and click the pass-by points of the bridge. "Radius (mm)" sets its thickness. If you created the VSP with "Hemimandibulectomy" mode the bridge is not needed nor allowed.
 - Click the place button of the screw holes "Points" and click over the guide bases where you want the screw-holes to be. The cylinders appear automatically.
-- Click "Create mandible surgical guide". The guide is named "MandibleSurgicalGuidePrototype" (and "MandibleSurgicalGuidePrototype_1", etc, if you click the button again).
+- Click "Create mandible surgical guide". The guide is named "MandibleSurgicalGuidePrototype" (and "MandibleSurgicalGuidePrototype_1", etc, if you click the button again). As with the fibula guide, while "Guide visible" is checked its elements (sawBoxes, guide bases, bridge and screw-hole cylinders) and their markups (screw-hole points, bridge curve and guide base curves) are hidden and they can't be modified. Uncheck "Guide visible" to see and edit them again.
 
 ## Mandible Reconstruction Simulation
 This maybe useful for users that want to prebend plates with a 3D printed model.
 1. Do a [Virtual Surgical Plan](#virtual-surgical-planning)
 2. Optionally, you can add an inter-condylar beam to the reconstruction for more rigidity. Click the place button of "Create beam" and click over both condyles. Make the beam thicker or thinner with the "+" and "-" buttons, and show or hide it with the eye button.
-3. Click the "Create neomandible" button. The beam is included if you created it. Show or hide the neomandible with the eye button next to it.
+3. Click the "Create neomandible" button. The beam is included if you created it. Show or hide the neomandible with the eye button next to it. While the neomandible is visible, the models it is made from (the transformed fibula pieces, the resected mandible and the beam) are hidden, and neither the beam nor the virtual surgical plan can be modified, so the beam line, the mandible planes, the mandibular curve and the fibula line are hidden too. Hide the neomandible to edit them again.
 ![Screenshot from 2025-05-02 16-01-49](https://github.com/user-attachments/assets/7e9416be-1df4-49b2-a118-b1ea95e50597)
 
 ## Export the planning outputs
