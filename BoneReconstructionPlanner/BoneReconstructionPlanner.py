@@ -6909,8 +6909,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     sawBoxesGuideType = parameterNode.GetParameter("sawBoxesGuideType")
     mandibleTextLabelsMode = parameterNode.GetParameter("mandibleTextLabelsMode")
     mandibleTextLabelsDepth = float(parameterNode.GetParameter("mandibleTextLabelsDepth_mm"))
-    # side of the sawBox that gets the laterality letter when both resection planes exist
-    mandibleTextLabelSideForSegmentalResection = "Right"
 
     mandibularPlanesList = createListFromFolderName("Mandibular planes")
 
@@ -6921,7 +6919,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       resectionPlanesList = [mandibularPlanesList[0],mandibularPlanesList[-1]]
       rightMandiblePlane, leftMandiblePlane = self.getRightAndLeftMandibleResectionPlanes()
       sawBoxSidesList = ["Right" if plane.GetID() == rightMandiblePlane.GetID() else "Left" for plane in resectionPlanesList]
-      sawBoxGetsTextLabelList = [side == mandibleTextLabelSideForSegmentalResection for side in sawBoxSidesList]
     elif kindOfMandibleResection == "Hemimandibulectomy":
       rightMandiblePlane, leftMandiblePlane = self.getRightAndLeftMandibleResectionPlanes()
       mandibleSideToRemove = parameterNode.GetParameter("mandibleSideToRemove")
@@ -6931,7 +6928,6 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       elif mandibleSideToRemove == "Removing left side":
         resectionPlanesList = [rightMandiblePlane]
         sawBoxSidesList = ["Right"]
-      sawBoxGetsTextLabelList = [True]
 
     biggerSawBoxesModelsFolder = getFolder("biggerSawBoxes Models", reset = True)
     sawBoxTextLabelsModelsFolder = getFolder("sawBoxTextLabels Models", reset = True)
@@ -7138,43 +7134,43 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       observer = sawBoxPlane.AddObserver(slicer.vtkMRMLMarkupsNode.PointModifiedEvent,self.onSawBoxPlaneMoved)
       self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList.append([observer,sawBoxPlane.GetID(),transformNode.GetID()])
 
-      if sawBoxGetsTextLabelList[i]:
-        sawBoxSide = sawBoxSidesList[i]
-        textLabel = "R" if sawBoxSide == "Right" else "L"
-        if sawBoxSide == "Right":
-          sideDirection = np.array([1.0,0.0,0.0])
+      # every sawBox gets the laterality letter of its side ("R" or "L")
+      sawBoxSide = sawBoxSidesList[i]
+      textLabel = "R" if sawBoxSide == "Right" else "L"
+      if sawBoxSide == "Right":
+        sideDirection = np.array([1.0,0.0,0.0])
+      else:
+        sideDirection = np.array([-1.0,0.0,0.0])
+      if np.dot(sawBoxAxisZ, sideDirection) > 0:
+        faceSign = 1.0
+      else:
+        faceSign = -1.0
+      if sawBoxesGuideType == "Border":
+        # the box polydata was shifted along its local Z axis and hardened above
+        if i == 0:
+          sawBoxZCenterOffset = -sawBoxSlotWidth
         else:
-          sideDirection = np.array([-1.0,0.0,0.0])
-        if np.dot(sawBoxAxisZ, sideDirection) > 0:
-          faceSign = 1.0
-        else:
-          faceSign = -1.0
-        if sawBoxesGuideType == "Border":
-          # the box polydata was shifted along its local Z axis and hardened above
-          if i == 0:
-            sawBoxZCenterOffset = -sawBoxSlotWidth
-          else:
-            sawBoxZCenterOffset = sawBoxSlotWidth
-        else:
-          sawBoxZCenterOffset = 0
-        faceCenter = np.array([0.0, 0.0, sawBoxZCenterOffset + faceSign*biggerSawBoxWidth/2])
-        faceNormal = np.array([0.0, 0.0, faceSign])
-        # make the letter upright: world superior direction expressed in the
-        # sawBox local frame, projected onto the label face (perpendicular to
-        # the local Z faceNormal)
-        worldSuperior = np.array([0.0, 0.0, 1.0])
-        textUp = np.array([
-          np.dot(worldSuperior, sawBoxAxisX),
-          np.dot(worldSuperior, sawBoxAxisY),
-          0.0,
-        ])
-        textUp = textUp/np.linalg.norm(textUp)
-        textLabelModel = self.createTextLabelModel(textLabel, mandibleTextLabelsMode, mandibleTextLabelsDepth,
-          faceCenter, faceNormal, textUp, "sawBoxTextLabel_" + textLabel)
-        textLabelModel.SetAndObserveTransformNodeID(transformNode.GetID())
-        textLabelDisplayNode = textLabelModel.GetDisplayNode()
-        textLabelDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
-        moveNodeToFolder(textLabelModel, sawBoxTextLabelsModelsFolder)
+          sawBoxZCenterOffset = sawBoxSlotWidth
+      else:
+        sawBoxZCenterOffset = 0
+      faceCenter = np.array([0.0, 0.0, sawBoxZCenterOffset + faceSign*biggerSawBoxWidth/2])
+      faceNormal = np.array([0.0, 0.0, faceSign])
+      # make the letter upright: world superior direction expressed in the
+      # sawBox local frame, projected onto the label face (perpendicular to
+      # the local Z faceNormal)
+      worldSuperior = np.array([0.0, 0.0, 1.0])
+      textUp = np.array([
+        np.dot(worldSuperior, sawBoxAxisX),
+        np.dot(worldSuperior, sawBoxAxisY),
+        0.0,
+      ])
+      textUp = textUp/np.linalg.norm(textUp)
+      textLabelModel = self.createTextLabelModel(textLabel, mandibleTextLabelsMode, mandibleTextLabelsDepth,
+        faceCenter, faceNormal, textUp, "sawBoxTextLabel_" + textLabel)
+      textLabelModel.SetAndObserveTransformNodeID(transformNode.GetID())
+      textLabelDisplayNode = textLabelModel.GetDisplayNode()
+      textLabelDisplayNode.AddViewNodeID(mandibleViewNode.GetID())
+      moveNodeToFolder(textLabelModel, sawBoxTextLabelsModelsFolder)
 
     removeFolder(intersectionsFolder)
     removeFolder(pointsIntersectionsFolder)
@@ -9922,41 +9918,60 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
           f"{[np.dot(np.array(intersectionPoints.GetPoint(j)) - contactPoint, sawBoxPlaneAxes[:,1]) for j in range(intersectionPoints.GetNumberOfPoints())]} mm"
       )
 
-    # the laterality label goes over the saw box of the right resection plane (the patient's right is +X in RAS)
+    # each saw box has the laterality label of its side over the face of its bigger saw box that looks to that side
+    #   (the patient's right is +X in RAS): "R" over the saw box of the right resection plane and "L" over the left one
     sawBoxTextLabelsList = createListFromFolderName("sawBoxTextLabels Models")
     self.assertEqual(
       len(sawBoxTextLabelsList),
-      1,
+      len(resectionPlanesList),
       msg=[textLabel.GetName() for textLabel in sawBoxTextLabelsList]
     )
-    sawBoxTextLabel = sawBoxTextLabelsList[0]
     # index of plane most to the right (largest X coordinate)
     rightResectionPlaneIndex = int(np.argmax([resectionPlane.GetNthControlPointPosition(0)[0] for resectionPlane in resectionPlanesList]))
-    self.assertEqual(
-      sawBoxTextLabel.GetTransformNodeID(),
-      sawBoxesTransformsList[rightResectionPlaneIndex].GetID(),
-      msg=sawBoxTextLabel.GetName()
-    )
-    self.assertEqual(
-      set(sawBoxTextLabel.GetDisplayNode().GetViewNodeIDs()),
-      {slicer.MANDIBLE_VIEW_ID},
-      msg=sawBoxTextLabel.GetName()
-    )
-    self.assertModelIsClosedSurfaceWithEulerCharacteristic(sawBoxTextLabel, 0) # the R has a hole
-    self.assertTextLabelIsEmbossedOnBiggerSawBoxFaceLookingToSide(
-      sawBoxTextLabel,
-      sawBoxesPlanesList[rightResectionPlaneIndex],
-      biggerSawBoxDimensions,
-      np.array([1.0, 0.0, 0.0]),
-      mandibleTextLabelsDepth
-    )
-    self.assertTextLabelIsUprightOnBiggerSawBoxFaceLookingToSide(
-      sawBoxTextLabel,
-      "R",
-      sawBoxesPlanesList[rightResectionPlaneIndex],
-      biggerSawBoxDimensions,
-      np.array([1.0, 0.0, 0.0])
-    )
+    sawBoxTextLabelOfResectionPlaneList = []
+    sideDirectionOfResectionPlaneList = []
+    for i in range(len(resectionPlanesList)):
+      if i == rightResectionPlaneIndex:
+        text = "R"
+        sideDirection = np.array([1.0, 0.0, 0.0])
+        expectedEulerCharacteristic = 0 # the R has a hole
+      else:
+        text = "L"
+        sideDirection = np.array([-1.0, 0.0, 0.0])
+        expectedEulerCharacteristic = 2
+      # the label moves with its saw box plane: it observes the transform of the plane
+      sawBoxTextLabelsOfSawBoxList = [
+        textLabel for textLabel in sawBoxTextLabelsList
+        if textLabel.GetTransformNodeID() == sawBoxesTransformsList[i].GetID()
+      ]
+      self.assertEqual(
+        len(sawBoxTextLabelsOfSawBoxList),
+        1,
+        msg=f"text labels observing {sawBoxesTransformsList[i].GetName()}: {[textLabel.GetName() for textLabel in sawBoxTextLabelsOfSawBoxList]}"
+      )
+      sawBoxTextLabel = sawBoxTextLabelsOfSawBoxList[0]
+      sawBoxTextLabelOfResectionPlaneList.append(sawBoxTextLabel)
+      sideDirectionOfResectionPlaneList.append(sideDirection)
+      self.assertEqual(
+        set(sawBoxTextLabel.GetDisplayNode().GetViewNodeIDs()),
+        {slicer.MANDIBLE_VIEW_ID},
+        msg=sawBoxTextLabel.GetName()
+      )
+      self.assertModelIsClosedSurfaceWithEulerCharacteristic(sawBoxTextLabel, expectedEulerCharacteristic)
+      self.assertTextLabelIsEmbossedOnBiggerSawBoxFaceLookingToSide(
+        sawBoxTextLabel,
+        sawBoxesPlanesList[i],
+        biggerSawBoxDimensions,
+        sideDirection,
+        mandibleTextLabelsDepth
+      )
+      self.assertTextLabelIsUprightOnBiggerSawBoxFaceLookingToSide(
+        sawBoxTextLabel,
+        text,
+        sawBoxesPlanesList[i],
+        biggerSawBoxDimensions,
+        sideDirection
+      )
 
     # move the saw boxes inside their cut planes to their TestPlanBRP position
     sawBoxesPlanesPoints = [
@@ -9983,7 +9998,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     slicer.app.processEvents()
 
     # the saw box planes stay over their resection planes (their handles only translate along X and Y and rotate around Z),
-    #   and the saw box models and the label follow their planes
+    #   and the saw box models and the labels follow their planes
     for i in range(len(resectionPlanesList)):
       self.assertSawBoxPlaneIsOverResectionPlaneOnResectedSide(sawBoxesPlanesList[i], resectionPlanesList[i], planesInsideResectedSegmentList[i], sawBoxSlotWidth)
       self.assertSawBoxModelsAreCenteredOnSawBoxPlaneWithDimensions(
@@ -9991,13 +10006,13 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         sawBoxesTransformsList[i],
         [(sawBoxesList[i], sawBoxDimensions), (biggerSawBoxesList[i], biggerSawBoxDimensions), (previewSawBoxesList[i], biggerSawBoxDimensions)]
       )
-    self.assertTextLabelIsEmbossedOnBiggerSawBoxFaceLookingToSide(
-      sawBoxTextLabel,
-      sawBoxesPlanesList[rightResectionPlaneIndex],
-      biggerSawBoxDimensions,
-      np.array([1.0, 0.0, 0.0]),
-      mandibleTextLabelsDepth
-    )
+      self.assertTextLabelIsEmbossedOnBiggerSawBoxFaceLookingToSide(
+        sawBoxTextLabelOfResectionPlaneList[i],
+        sawBoxesPlanesList[i],
+        biggerSawBoxDimensions,
+        sideDirectionOfResectionPlaneList[i],
+        mandibleTextLabelsDepth
+      )
 
     self.delayDisplay("CreateSawBoxes test successful")
 

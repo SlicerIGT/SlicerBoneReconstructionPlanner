@@ -300,7 +300,7 @@ As soon as the line has its two points the yellow miterBoxes appear, each one wi
 
 This part of the workflow has some similarities with the fibula guide creation. On the "Mandible Surgical Guide Generation" section:
 - Set the parameters of the saw boxes (the clearance of the Settings section also applies to them) and click "Create mandible resection boxes". There will be one sawBox per resection cut: two with "Segmental Mandibulectomy" and one with "Hemimandibulectomy".
-- One sawBox will have a label that indicates laterality (i.e. "R" or "L"). You can choose to emboss the label or engrave it on the corresponding sawBox.
+- Each sawBox will have a label that indicates its side ("R" for right, "L" for left). You can choose to emboss the labels or engrave them on the sawBoxes.
 - The sawBoxes are movable and you should only move them inside the cut plane, to correct automatic mispositioning.
 - By default ("Use guide bases from curves" checked) the guide bases are made from curves: click the place button of "Left side base" and "Right side base" and draw a closed curve over the mandible surface next to each resection cut. Each guidebase is the mandible surface enclosed by its curve extruded by the "Guidebase thickness (mm)". With "Hemimandibulectomy" you just need the guide base of the remaining side.
 - Alternatively, uncheck "Use guide bases from curves" and select a segmented guide base model on the "Mandible surgical guide bases" selector. If you are doing a "Segmental Mandibulectomy", you need to segment two guide bases, one for each planar cut, and copy them together to the same segment. Then export them as a unique model as explained on the earlier section.
