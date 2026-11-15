@@ -429,6 +429,8 @@ TEXT_LABEL_OVERLAP_EPSILON = 0.3 # mm, overlap of text labels into the guide box
 
 BIGGER_MITER_BOX_DISTANCE_TO_FIBULA_STEP = 0.5 # mm, the bigger miter boxes move away from the fibula in steps of this size till their bottom face does not touch it
 
+SAW_BOX_PLANE_OUT_OF_PLANE_TOLERANCE = 1e-6 # mm, smaller movements of a saw box plane out of its plane are kept
+
 TEST_DATA_SIZE_MB = 500 # approximate size of CTMandible, CTFibula and their segmentations
 RECOMMENDED_CACHE_SIZE_MB = 1024
 
@@ -7190,9 +7192,62 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       if self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][1] == sourceNode.GetID():
         sawBoxPlane = slicer.mrmlScene.GetNodeByID(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][1])
         transformNode = slicer.mrmlScene.GetNodeByID(self.sawBoxPlaneObserversPlaneNodeIDAndTransformIDList[i][2])
+        self.removeMovementAlongZAxisFromSawBoxPlaneWithTransform(sawBoxPlane, transformNode)
         sawBoxPlaneToWorldMatrix = vtk.vtkMatrix4x4()
         sawBoxPlane.GetObjectToWorldMatrix(sawBoxPlaneToWorldMatrix)
         transformNode.SetMatrixTransformToParent(sawBoxPlaneToWorldMatrix)
+
+  def removeMovementAlongZAxisFromSawBoxPlaneWithTransform(self, sawBoxPlane, sawBoxTransform):
+    """
+    The saw box can only translate along its X and Y axes and rotate around its Z axis (the interaction handles it shows).
+    Some mouse interactions of Slicer also move the plane along its Z axis or tilt it: middle-button drag of the plane,
+    shift + left-button drag of the plane and dragging one of its control points.
+    So the plane is put back over the plane of the saw box transform (its last allowed pose): same Z axis and same
+    position along it, and the movement inside the plane is kept.
+    """
+    previousSawBoxToWorld = slicer.util.arrayFromTransformMatrix(sawBoxTransform, toWorld=True)
+    previousAxisX = previousSawBoxToWorld[:3,0]
+    previousAxisZ = previousSawBoxToWorld[:3,2]/np.linalg.norm(previousSawBoxToWorld[:3,2])
+    previousOrigin = previousSawBoxToWorld[:3,3]
+
+    sawBoxPlaneToWorldMatrix = vtk.vtkMatrix4x4()
+    sawBoxPlane.GetObjectToWorldMatrix(sawBoxPlaneToWorldMatrix)
+    sawBoxPlaneToWorld = slicer.util.arrayFromVTKMatrix(sawBoxPlaneToWorldMatrix)
+    axisX = sawBoxPlaneToWorld[:3,0]
+    axisZ = sawBoxPlaneToWorld[:3,2]/np.linalg.norm(sawBoxPlaneToWorld[:3,2])
+    origin = sawBoxPlaneToWorld[:3,3]
+
+    distanceAlongAxisZ = np.dot(origin - previousOrigin, previousAxisZ)
+    objectToBase = slicer.util.arrayFromVTKMatrix(sawBoxPlane.GetObjectToBaseMatrix())
+    if (
+      abs(distanceAlongAxisZ) < SAW_BOX_PLANE_OUT_OF_PLANE_TOLERANCE and
+      np.linalg.norm(axisZ - previousAxisZ) < SAW_BOX_PLANE_OUT_OF_PLANE_TOLERANCE and
+      np.allclose(objectToBase, np.eye(4), atol=SAW_BOX_PLANE_OUT_OF_PLANE_TOLERANCE)
+    ):
+      return
+
+    allowedAxisX = axisX - np.dot(axisX, previousAxisZ)*previousAxisZ
+    if np.linalg.norm(allowedAxisX) < SAW_BOX_PLANE_OUT_OF_PLANE_TOLERANCE:
+      # the plane was tilted till its X axis is along the previous Z axis
+      allowedAxisX = previousAxisX - np.dot(previousAxisX, previousAxisZ)*previousAxisZ
+    allowedAxisX = allowedAxisX/np.linalg.norm(allowedAxisX)
+    allowedAxisY = np.cross(previousAxisZ, allowedAxisX)
+    allowedSawBoxPlaneToWorld = np.eye(4)
+    allowedSawBoxPlaneToWorld[:3,0] = allowedAxisX
+    allowedSawBoxPlaneToWorld[:3,1] = allowedAxisY
+    allowedSawBoxPlaneToWorld[:3,2] = previousAxisZ
+    allowedSawBoxPlaneToWorld[:3,3] = origin - distanceAlongAxisZ*previousAxisZ
+
+    # shift + left-button drag moves the plane with its ObjectToBase matrix instead of its control points,
+    #   that movement is given to the control points so they keep defining the frame of the saw box
+    sawBoxPlane.GetObjectToBaseMatrix().Identity()
+    baseToWorldMatrix = vtk.vtkMatrix4x4()
+    sawBoxPlane.GetBaseToWorldMatrix(baseToWorldMatrix)
+    baseToWorld = slicer.util.arrayFromVTKMatrix(baseToWorldMatrix)
+    correctionTransform = vtk.vtkTransform()
+    correctionTransform.SetMatrix(slicer.util.vtkMatrixFromArray(allowedSawBoxPlaneToWorld @ np.linalg.inv(baseToWorld)))
+    # the interaction handles move the plane with ApplyTransform too
+    sawBoxPlane.ApplyTransform(correctionTransform, False)
 
   def onDentalImplantPlaneMoved(self,sourceNode,event):
     parameterNode = self.getParameterNode()
@@ -8200,6 +8255,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_AddFibulaScrewHoles()
     self.section_CreateFibulaSurgicalGuide()
     self.section_CreateSawBoxes()
+    self.section_MoveSawBoxesOverTheirPlanes()
     self.section_CreateMandibleGuideBasesFromCurves()
     self.section_AddMandibleBridge()
     self.section_AddMandibleScrewHoles()
@@ -10016,6 +10072,115 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("CreateSawBoxes test successful")
 
+  def section_MoveSawBoxesOverTheirPlanes(self):
+    self.delayDisplay("Starting the MoveSawBoxesOverTheirPlanes test")
+
+    parameterNode = self.logicBRP.getParameterNode()
+    sawBoxSlotWidth = float(parameterNode.GetParameter("sawBoxSlotWidth_mm"))
+    sawBoxSlotLength = float(parameterNode.GetParameter("sawBoxSlotLength_mm"))
+    sawBoxSlotHeight = float(parameterNode.GetParameter("sawBoxSlotHeight_mm"))
+    sawBoxSlotWall = float(parameterNode.GetParameter("sawBoxSlotWall_mm"))
+    clearanceFitPrintingTolerance = float(parameterNode.GetParameter("clearanceFitPrintingTolerance_mm"))
+    sawBoxDimensions = np.array([
+      sawBoxSlotLength,
+      70.0,
+      sawBoxSlotWidth + 2*clearanceFitPrintingTolerance,
+    ])
+    biggerSawBoxDimensions = np.array([
+      sawBoxSlotLength + 2*sawBoxSlotWall,
+      sawBoxSlotHeight,
+      sawBoxSlotWidth + 2*clearanceFitPrintingTolerance + 2*sawBoxSlotWall,
+    ])
+
+    mandiblePlanesList = createListFromFolderName("Mandibular planes")
+    resectionPlanesList = [mandiblePlanesList[0], mandiblePlanesList[-1]]
+    planesInsideResectedSegmentList = [mandiblePlanesList[1], mandiblePlanesList[-2]]
+    sawBoxesList = createListFromFolderName("sawBoxes Models")
+    biggerSawBoxesList = createListFromFolderName("biggerSawBoxes Models")
+    previewSawBoxesList = createListFromFolderName("previewSawBoxes Models")
+    sawBoxesPlanesList = createListFromFolderName("sawBoxes Planes")
+    sawBoxesTransformsList = createListFromFolderName("sawBoxes Transforms")
+
+    # the saw boxes can only move over their planes: their handles only translate along X and Y and rotate around Z.
+    #   These mouse interactions of Slicer also move the plane along Z or tilt it, each movement below changes the plane
+    #   node as the interaction does and only the movement inside the saw box plane must be kept:
+    #   - middle-button drag of the plane translates its control points along the view plane
+    #   - shift + left-button drag of the plane translates it with its ObjectToBase matrix
+    #   - left-button drag of a control point moves only that point
+    #   The movement is given in the axes of the saw box plane before the movement
+    movementsList = [
+      ("middle-button drag along X, Y and Z", np.array([3.0, 2.0, 5.0])),
+      ("middle-button drag along Z", np.array([0.0, 0.0, 5.0])),
+      ("shift + left-button drag along X, Y and Z", np.array([-1.0, 4.0, -6.0])),
+      ("left-button drag of control point 2 along Z", np.array([0.0, 0.0, 5.0])),
+      ("left-button drag of control point 1 along Z", np.array([0.0, 0.0, 5.0])),
+      ("translation handles along X and Y", np.array([-2.0, -6.0, 0.0])),
+    ]
+
+    for i in range(len(resectionPlanesList)):
+      sawBoxPlane = sawBoxesPlanesList[i]
+      sawBoxTransform = sawBoxesTransformsList[i]
+      modelsAndDimensionsList = [
+        (sawBoxesList[i], sawBoxDimensions),
+        (biggerSawBoxesList[i], biggerSawBoxDimensions),
+        (previewSawBoxesList[i], biggerSawBoxDimensions),
+      ]
+      sawBoxPlanePointsBeforeMovements = self.getControlPointsOfMandiblePlane(sawBoxPlane)
+      sawBoxTransformMatrixBeforeMovements = slicer.util.arrayFromTransformMatrix(sawBoxTransform, toWorld=True)
+
+      for movementName, movementAlongSawBoxPlaneAxes in movementsList:
+        sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
+        movement = sawBoxPlaneAxes @ movementAlongSawBoxPlaneAxes
+        if movementName.startswith("middle-button drag"):
+          self.translateSawBoxPlaneAsMiddleButtonDragDoes(sawBoxPlane, movement)
+        elif movementName.startswith("shift + left-button drag"):
+          self.translateSawBoxPlaneAsShiftLeftButtonDragDoes(sawBoxPlane, movement)
+        elif movementName.startswith("left-button drag of control point 2"):
+          self.moveControlPointOfSawBoxPlaneAsLeftButtonDragDoes(sawBoxPlane, 2, movement)
+        elif movementName.startswith("left-button drag of control point 1"):
+          self.moveControlPointOfSawBoxPlaneAsLeftButtonDragDoes(sawBoxPlane, 1, movement)
+        elif movementName.startswith("translation handles"):
+          self.translateMandiblePlaneWithInteractionHandles(sawBoxPlane, sawBoxPlaneOrigin + movement)
+
+        # the movement along Z is removed and the movement along X and Y is kept,
+        #   the control points (point 0 is the origin) don't move along Z so the plane doesn't tilt
+        expectedOrigin = sawBoxPlaneOrigin + sawBoxPlaneAxes[:,:2] @ movementAlongSawBoxPlaneAxes[:2]
+        self.assertSawBoxPlaneHasAxesAndOrigin(sawBoxPlane, sawBoxPlaneAxes, expectedOrigin, movementName)
+        self.assertSawBoxPlaneIsOverResectionPlaneOnResectedSide(sawBoxPlane, resectionPlanesList[i], planesInsideResectedSegmentList[i], sawBoxSlotWidth)
+        self.assertSawBoxModelsAreCenteredOnSawBoxPlaneWithDimensions(sawBoxPlane, sawBoxTransform, modelsAndDimensionsList)
+
+      # the rotation handle around Z still works
+      sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
+      rotationAngleRadians = vtk.vtkMath.RadiansFromDegrees(30.0)
+      rotationTransform = vtk.vtkTransform()
+      rotationTransform.PostMultiply()
+      rotationTransform.Translate((-sawBoxPlaneOrigin).tolist())
+      rotationTransform.RotateWXYZ(30.0, sawBoxPlaneAxes[:,2].tolist())
+      rotationTransform.Translate(sawBoxPlaneOrigin.tolist())
+      self.moveMandiblePlaneWithInteractionHandle(sawBoxPlane, rotationTransform)
+      expectedAxes = np.column_stack([
+        np.cos(rotationAngleRadians)*sawBoxPlaneAxes[:,0] + np.sin(rotationAngleRadians)*sawBoxPlaneAxes[:,1],
+        -np.sin(rotationAngleRadians)*sawBoxPlaneAxes[:,0] + np.cos(rotationAngleRadians)*sawBoxPlaneAxes[:,1],
+        sawBoxPlaneAxes[:,2],
+      ])
+      self.assertSawBoxPlaneHasAxesAndOrigin(sawBoxPlane, expectedAxes, sawBoxPlaneOrigin, "rotation handle around Z")
+      self.assertSawBoxPlaneIsOverResectionPlaneOnResectedSide(sawBoxPlane, resectionPlanesList[i], planesInsideResectedSegmentList[i], sawBoxSlotWidth)
+      self.assertSawBoxModelsAreCenteredOnSawBoxPlaneWithDimensions(sawBoxPlane, sawBoxTransform, modelsAndDimensionsList)
+
+      # put the saw box back where it was so the next sections get the TestPlanBRP saw boxes
+      wasModified = sawBoxPlane.StartModify()
+      for j in range(3):
+        sawBoxPlane.SetNthControlPointPosition(j, sawBoxPlanePointsBeforeMovements[j])
+      sawBoxPlane.EndModify(wasModified)
+      slicer.app.processEvents()
+      sawBoxTransformMatrix = slicer.util.arrayFromTransformMatrix(sawBoxTransform, toWorld=True)
+      self.assertTrue(
+        np.allclose(sawBoxTransformMatrix, sawBoxTransformMatrixBeforeMovements, atol=1e-9),
+        msg=f"{sawBoxTransform.GetName()} {sawBoxTransformMatrix.tolist()} before the movements {sawBoxTransformMatrixBeforeMovements.tolist()}"
+      )
+
+    self.delayDisplay("MoveSawBoxesOverTheirPlanes test successful")
+
   def section_CreateMandibleGuideBasesFromCurves(self):
     self.delayDisplay("Starting the CreateMandibleGuideBasesFromCurves test")
 
@@ -11000,6 +11165,58 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         np.allclose(modelRanges, np.column_stack([-dimensions/2, dimensions/2]), atol=1e-3),
         msg=f"{model.GetName()} ranges {np.round(modelRanges, 4).tolist()} along the axes of {sawBoxPlane.GetName()}, expected dimensions {dimensions.tolist()}"
       )
+
+  def translateSawBoxPlaneAsMiddleButtonDragDoes(self, sawBoxPlane, translationVector):
+    """Move the plane as a middle-button drag of the plane in a view does (vtkSlicerMarkupsWidget::TranslateWidget):
+    all its control points are translated by the movement of the mouse along the view plane
+    """
+    translatedPoints = vtk.vtkPoints()
+    for point in self.getControlPointsOfMandiblePlane(sawBoxPlane):
+      translatedPoints.InsertNextPoint((point + translationVector).tolist())
+    sawBoxPlane.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointStartInteractionEvent)
+    sawBoxPlane.SetControlPointPositionsWorld(translatedPoints, False)
+    sawBoxPlane.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent)
+    slicer.app.processEvents()
+
+  def translateSawBoxPlaneAsShiftLeftButtonDragDoes(self, sawBoxPlane, translationVector):
+    """Move the plane as a shift + left-button drag of the plane outline in a view does (vtkSlicerPlaneWidget::ProcessPlaneTranslate):
+    the translation, in plane coordinates, goes to the ObjectToBase matrix of the plane instead of its control points
+    """
+    sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
+    translationVectorAlongSawBoxPlaneAxes = sawBoxPlaneAxes.T @ translationVector
+    objectToBaseTransform = vtk.vtkTransform()
+    objectToBaseTransform.PostMultiply()
+    objectToBaseTransform.SetMatrix(sawBoxPlane.GetObjectToBaseMatrix())
+    objectToBaseTransform.Translate(translationVectorAlongSawBoxPlaneAxes.tolist())
+    sawBoxPlane.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointStartInteractionEvent)
+    sawBoxPlane.GetObjectToBaseMatrix().DeepCopy(objectToBaseTransform.GetMatrix())
+    sawBoxPlane.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointModifiedEvent)
+    sawBoxPlane.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent)
+    slicer.app.processEvents()
+
+  def moveControlPointOfSawBoxPlaneAsLeftButtonDragDoes(self, sawBoxPlane, pointIndex, translationVector):
+    """Move the plane as a left-button drag of one of its control points in a view does (vtkSlicerMarkupsWidget::TranslatePoint):
+    only that control point moves
+    """
+    point = np.array(sawBoxPlane.GetNthControlPointPositionWorld(pointIndex))
+    sawBoxPlane.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointStartInteractionEvent)
+    sawBoxPlane.SetNthControlPointPositionWorld(pointIndex, (point + translationVector).tolist())
+    sawBoxPlane.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent)
+    slicer.app.processEvents()
+
+  def assertSawBoxPlaneHasAxesAndOrigin(self, sawBoxPlane, expectedAxes, expectedOrigin, movementName):
+    """The frame of the saw box plane from its control points is the expected one after the movement, and no movement is
+    left in its ObjectToBase matrix (it would move the saw box away from the frame of the control points)
+    """
+    sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
+    objectToBase = slicer.util.arrayFromVTKMatrix(sawBoxPlane.GetObjectToBaseMatrix())
+    message = (
+      f"{sawBoxPlane.GetName()} after {movementName}: axes {np.round(sawBoxPlaneAxes, 6).tolist()} origin {np.round(sawBoxPlaneOrigin, 6).tolist()}, " +
+      f"expected axes {np.round(expectedAxes, 6).tolist()} origin {np.round(expectedOrigin, 6).tolist()}, ObjectToBase {np.round(objectToBase, 6).tolist()}"
+    )
+    self.assertTrue(np.allclose(sawBoxPlaneAxes, expectedAxes, atol=1e-6), msg=message)
+    self.assertTrue(np.allclose(sawBoxPlaneOrigin, expectedOrigin, atol=1e-6), msg=message)
+    self.assertTrue(np.allclose(objectToBase, np.eye(4), atol=1e-9), msg=message)
 
   def getBiggerSawBoxFaceLookingToSide(self, sawBoxPlane, biggerSawBoxDimensions, sideDirection):
     """Sign along the Z axis of the saw box plane, outward normal and center (in world coordinates) of the face of the bigger
