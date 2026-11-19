@@ -3476,6 +3476,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       moveNodeToFolder(fibulaFiducialList, getFolder("BoneReconstructionPlanner"))
       fibulaFiducialList.SetName(slicer.mrmlScene.GetUniqueNameByString("fibulaFiducialList"))
       parameterNode.SetNodeReferenceID("fibulaFiducialList",fibulaFiducialList.GetID())
+      # the fiducials are placed over the fibula side, so they are kept in its coordinates (without the fibula normalization)
+      fibulaNormalizationTransformNode = parameterNode.GetNodeReference("fibulaNormalizationTransformNode")
+      if fibulaNormalizationTransformNode is not None:
+        fibulaFiducialList.SetAndObserveTransformNodeID(fibulaNormalizationTransformNode.GetID())
 
       displayNode = fibulaFiducialList.GetDisplayNode()
       displayNode.AddViewNodeID(slicer.FIBULA_VIEW_ID)
@@ -5191,6 +5195,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       parameterNode.SetParameter("useNonDecimatedModelsForPreview", "True")
 
     self.createAndUpdateDynamicModelerNodes()
+
+    # the plane cuts are made in world coordinates, so the fibula planes (hardened by transformFibulaPlanes) and the
+    #   cut bones and vessels (they may be new) get the fibula normalization of the fibula model before the cuts
+    self.updateNormalizationFibulaLineTransform(None)
   
     self.updateFibulaPieces()
     
@@ -5787,18 +5795,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
   def tranformFibulaPiecesToMandible(self):
     parameterNode = self.getParameterNode()
-    fibulaLine = parameterNode.GetNodeReference("fibulaLine")
     planeList = createListFromFolderName("Mandibular planes")
 
     bonePiecesTransformFolder = getFolder("Bone Pieces Transforms", reset = True)
     transformedFibulaPiecesFolder = getFolder("Transformed Fibula Pieces", reset = True)
-
-    lineStartPos = np.zeros(3)
-    lineEndPos = np.zeros(3)
-    fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
-    fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
-    fibulaOrigin = lineStartPos
-    fibulaZ = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
 
     cutBonesList = createListFromFolderName("Cut Bones")
     for i in range(len(cutBonesList)-1):
@@ -5951,10 +5951,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     planeNode.SetNthControlPointPosition(2,mandiblePlaneStraightOrigin + mandiblePlaneStraightY*dy)
 
   def createFibulaAxisFromFibulaLineAndRightSideLegChecked(self,fibulaLine,rightSideLegIsDonor):
+    # in the coordinates of the fibula model (the fibula normalization is not applied), so the fibula axis does not depend on it
     lineStartPos = np.zeros(3)
     lineEndPos = np.zeros(3)
-    fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
-    fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+    fibulaLine.GetNthControlPointPosition(0, lineStartPos)
+    fibulaLine.GetNthControlPointPosition(1, lineEndPos)
     fibulaOrigin = lineStartPos
     fibulaZLineNorm = np.linalg.norm(lineEndPos-lineStartPos)
     fibulaZ = (lineEndPos-lineStartPos)/fibulaZLineNorm
@@ -5996,6 +5997,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
   
   @saveExecutedMethodWithTelemetry
   def createMiterBoxesFromFibulaPlanes(self):
+    """
+    The fibula planes and lines are read in the coordinates of the fibula model (their local coordinates, the fibula
+    normalization is not applied to them), so the miter boxes are made in those coordinates and they do not depend on
+    the normalization. At the end the miter boxes are transformed by the normalization like the rest of the fibula side
+    """
     __unusedVar = None
 
     parameterNode = self.getParameterNode()
@@ -6157,14 +6163,14 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         biggerMiterBoxLength = miterBoxSlotLength
       
       fibulaPlaneMatrix = vtk.vtkMatrix4x4()
-      fibulaPlanesList[i].GetObjectToWorldMatrix(fibulaPlaneMatrix)
+      fibulaPlanesList[i].GetObjectToNodeMatrix(fibulaPlaneMatrix)
       fibulaPlaneZ = np.array([fibulaPlaneMatrix.GetElement(0,2),fibulaPlaneMatrix.GetElement(1,2),fibulaPlaneMatrix.GetElement(2,2)])
       fibulaPlaneOrigin = np.array([fibulaPlaneMatrix.GetElement(0,3),fibulaPlaneMatrix.GetElement(1,3),fibulaPlaneMatrix.GetElement(2,3)])
 
       lineStartPos = np.zeros(3)
       lineEndPos = np.zeros(3)
-      miterBoxDirectionLine.GetNthControlPointPositionWorld(0, lineStartPos)
-      miterBoxDirectionLine.GetNthControlPointPositionWorld(1, lineEndPos)
+      miterBoxDirectionLine.GetNthControlPointPosition(0, lineStartPos)
+      miterBoxDirectionLine.GetNthControlPointPosition(1, lineEndPos)
       miterBoxDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
 
       miterBoxAxisX = [0,0,0]
@@ -6406,8 +6412,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     if len(biggerMiterBoxInfoList) > 0:
       lineStartPos = np.zeros(3)
       lineEndPos = np.zeros(3)
-      fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
-      fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+      fibulaLine.GetNthControlPointPosition(0, lineStartPos)
+      fibulaLine.GetNthControlPointPosition(1, lineEndPos)
       # the fibula line is drawn from distal to proximal
       proximalDirection = (lineEndPos-lineStartPos)/np.linalg.norm(lineEndPos-lineStartPos)
       boxProjectionsList = [info["miterBoxOrigin"] @ proximalDirection for info in biggerMiterBoxInfoList]
@@ -6716,6 +6722,9 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       moveNodeToFolder(cylinderToWorldChangeOfFrameTransformNode, cylindersTransformsFolder)
     
     removeFolder(cylindersTransformsFolder)
+
+    # the cylinders are shown with the fibula normalization like the guide base they go through
+    self.updateNormalizationFibulaLineTransform(None)
   
   @saveExecutedMethodWithTelemetry
   def createCylindersFromFiducialListAndMandibleSurgicalGuideBase(self):
@@ -7051,6 +7060,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       modelsToSubtract += fibulaDentalImplantsCylindersModelsList
     if fibulaTextLabelsMode == "Engrave":
       modelsToSubtract += fibulaTextLabelsModelsList
+
+    # the boolean operations are made in the coordinates of the guide, so it gets the transform of the guide base
+    #   (the fibula normalization) like the models united to it or subtracted from it
+    self.updateNormalizationFibulaLineTransform(None)
+    surgicalGuideModel.SetAndObserveTransformNodeID(fibulaSurgicalGuideBaseModel.GetTransformNodeID())
 
     combineModelsRobustLogic.makeMultiStepBooleanOperation(
       [surgicalGuideModel] + modelsToUnite + modelsToSubtract,
@@ -7620,10 +7634,11 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     intersectionsFolder = getFolder("Intersections")
 
+    # in the coordinates of the fibula model (the fibula normalization is not applied), like the intersections below
     lineStartPos = np.zeros(3)
     lineEndPos = np.zeros(3)
-    fibulaLine.GetNthControlPointPositionWorld(0, lineStartPos)
-    fibulaLine.GetNthControlPointPositionWorld(1, lineEndPos)
+    fibulaLine.GetNthControlPointPosition(0, lineStartPos)
+    fibulaLine.GetNthControlPointPosition(1, lineEndPos)
 
     numberOfRepetitionsOfPositioningAlgorithm = 5
     for i in range(numberOfRepetitionsOfPositioningAlgorithm):
@@ -7660,7 +7675,8 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
 
     for refKey in ["fibulaModelNode", "decimatedFibulaModelNode", "fibulaLine",
                    "fibulaSurgicalGuidePrototypeModel", "miterBoxDirectionLine",
-                   "fibulaSurgicalGuideBaseModel", "vesselsModelNode", "decimatedVesselsModelNode"]:
+                   "fibulaSurgicalGuideBaseModel", "vesselsModelNode", "decimatedVesselsModelNode",
+                   "fibulaFiducialList"]:
       node = parameterNode.GetNodeReference(refKey)
       if node is not None:
         nodes.append(node)
@@ -8426,11 +8442,16 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_AddMandiblePlanes()
     self.section_MoveMandiblePlanesAndUpdateVirtualSurgicalPlan()
     self.section_LastVirtualSurgicalPlanUpdate()
+    self.section_CenterFibulaLineWithAndWithoutFibulaNormalizationAndVerifyTheyMatch()
+    self.section_UpdateVirtualSurgicalPlanWithFibulaNormalizationAndVerifyItDoesNotChange()
     self.section_LockVirtualSurgicalPlan()
     self.section_CreateMiterBoxes()
+    self.section_RebuildMiterBoxesWithFibulaNormalizationAndVerifyTheyDoNotMove()
+    self.section_TurnOnFibulaNormalizationToMakeTheFibulaSurgicalGuideWithIt()
     self.section_GenerateFibulaGuideBase()
     self.section_AddFibulaScrewHoles()
     self.section_CreateFibulaSurgicalGuide()
+    self.section_TurnOffFibulaNormalizationAfterMakingTheFibulaSurgicalGuide()
     self.section_CreateSawBoxes()
     self.section_MoveSawBoxesOverTheirPlanes()
     self.section_CreateMandibleGuideBasesFromCurves()
@@ -9519,6 +9540,177 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("UpdateVirtualSurgicalPlan test successful")
 
+  def section_CenterFibulaLineWithAndWithoutFibulaNormalizationAndVerifyTheyMatch(self):
+    """
+    The fibula line is centered over the fibula model in the coordinates of the model, so the fibula normalization
+    does not change where it is centered
+    """
+    self.delayDisplay("Starting the CenterFibulaLineWithAndWithoutFibulaNormalizationAndVerifyTheyMatch test")
+
+    parameterNode = self.logicBRP.getParameterNode()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "False",
+    })
+    fibulaNormalizationTransform = parameterNode.GetNodeReference("fibulaNormalizationTransformNode")
+    self.assertIsNotNone(fibulaNormalizationTransform)
+
+    fibulaLine = self.logicBRP.getFibulaLine()
+    self.assertEqual(fibulaLine.GetTransformNodeID(), fibulaNormalizationTransform.GetID())
+    fibulaLinePoints = np.array([fibulaLine.GetNthControlPointPosition(i) for i in range(2)])
+    fibulaLineDirection = (fibulaLinePoints[1] - fibulaLinePoints[0])/np.linalg.norm(fibulaLinePoints[1] - fibulaLinePoints[0])
+    # the user drags the distal point of the fibula line 2mm away from the center of the fibula
+    sidewaysDirection = np.cross(fibulaLineDirection, [0.0, 1.0, 0.0])
+    sidewaysDirection = sidewaysDirection/np.linalg.norm(sidewaysDirection)
+    draggedFibulaLineStartPoint = fibulaLinePoints[0] + 2.0*sidewaysDirection
+
+    centeredFibulaLinePointsDict = {}
+    for fibulaNormalizationTransformChecked in [False, True]:
+      slicer.app.processEvents()
+      self.widgetBRP.ui.fibulaNormalizationTransformButton.checked = fibulaNormalizationTransformChecked
+      slicer.app.processEvents()
+      self.assertParameterNodeHasParameterValues({
+        "fibulaNormalizationTransform": str(fibulaNormalizationTransformChecked),
+      })
+      fibulaLine.SetNthControlPointPosition(0, draggedFibulaLineStartPoint)
+      fibulaLine.SetNthControlPointPosition(1, fibulaLinePoints[1])
+      # the fibula line is centered when the user stops dragging its point
+      fibulaLine.InvokeEvent(slicer.vtkMRMLMarkupsNode.PointEndInteractionEvent)
+      slicer.app.processEvents()
+      centeredFibulaLinePointsDict[fibulaNormalizationTransformChecked] = np.array(
+        [fibulaLine.GetNthControlPointPosition(i) for i in range(2)]
+      )
+      if fibulaNormalizationTransformChecked:
+        # otherwise the check would pass even if the centering depended on the normalization
+        self.assertFalse(np.allclose(slicer.util.arrayFromTransformMatrix(fibulaNormalizationTransform), np.eye(4)))
+
+    # the dragged point went back to the center of the fibula
+    self.assertGreater(np.linalg.norm(centeredFibulaLinePointsDict[False][0] - draggedFibulaLineStartPoint), 1.0)
+    centeredPointsDistances = np.linalg.norm(centeredFibulaLinePointsDict[True] - centeredFibulaLinePointsDict[False], axis=1)
+    self.assertTrue(
+      np.allclose(centeredFibulaLinePointsDict[True], centeredFibulaLinePointsDict[False], rtol=0.0, atol=1e-6),
+      msg=f"the fibula line centered with the fibula normalization moved {centeredPointsDistances.tolist()}mm"
+    )
+
+    # the fibula line of the plan is restored and the rest of the workflow is made without the normalization
+    fibulaLine.SetNthControlPointPosition(0, fibulaLinePoints[0])
+    fibulaLine.SetNthControlPointPosition(1, fibulaLinePoints[1])
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaNormalizationTransformButton.checked = False
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "False",
+    })
+    self.assertTrue(np.allclose(slicer.util.arrayFromTransformMatrix(fibulaNormalizationTransform), np.eye(4)))
+    self.assertTrue(np.array_equal(np.array([fibulaLine.GetNthControlPointPosition(i) for i in range(2)]), fibulaLinePoints))
+
+    self.delayDisplay(
+      f"CenterFibulaLineWithAndWithoutFibulaNormalizationAndVerifyTheyMatch test successful "
+      f"(centered points distances {centeredPointsDistances.tolist()}mm)"
+    )
+
+  def section_UpdateVirtualSurgicalPlanWithFibulaNormalizationAndVerifyItDoesNotChange(self):
+    """
+    The virtual surgical plan is made in the coordinates of the fibula model, so updating it while the fibula
+    normalization is on gives the same fibula planes, fibula pieces and neomandible pieces as without it
+    """
+    self.delayDisplay("Starting the UpdateVirtualSurgicalPlanWithFibulaNormalizationAndVerifyItDoesNotChange test")
+
+    parameterNode = self.logicBRP.getParameterNode()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "False",
+      "lockVSP": "False",
+    })
+
+    markupsFoldersNames = ["Fibula planes"] + [
+      "Fibula Segments Lengths %s" % mode for mode in slicer.FIBULA_SEGMENTS_MEASUREMENT_MODES
+    ]
+    # the last cut bone is the resected mandible
+    modelsFoldersNames = ["Cut Bones", "Cut Vessels", "Transformed Fibula Pieces", "Transformed Vessels Pieces"]
+    fibulaSideFoldersNames = ["Fibula planes", "Cut Vessels"] + markupsFoldersNames[1:]
+
+    # the virtual surgical plan of section_LastVirtualSurgicalPlanUpdate was made while the fibula normalization was off
+    namesAndPointsWithoutNormalizationDict = {
+      folderName: self.getNamesAndPointsOfNodesInFolder(folderName) for folderName in markupsFoldersNames + modelsFoldersNames
+    }
+    for folderName in ["Fibula planes", "Cut Bones", "Cut Vessels", "Transformed Fibula Pieces"]:
+      self.assertGreater(len(namesAndPointsWithoutNormalizationDict[folderName]), 0, folderName)
+    mandibularPlanesPointsWithoutNormalization = [
+      self.getControlPointsOfMandiblePlane(planeNode) for planeNode in createListFromFolderName("Mandibular planes")
+    ]
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaNormalizationTransformButton.checked = True
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "True",
+    })
+    fibulaNormalizationTransform = parameterNode.GetNodeReference("fibulaNormalizationTransformNode")
+    # otherwise the check would pass even if the virtual surgical plan depended on the normalization
+    self.assertFalse(np.allclose(slicer.util.arrayFromTransformMatrix(fibulaNormalizationTransform), np.eye(4)))
+
+    self.updateVirtualSurgicalPlanWithButtonAndCheckMandiblePlanes()
+
+    # the mandibular planes were already where the update puts them
+    for planeNode, planePointsWithoutNormalization in zip(createListFromFolderName("Mandibular planes"), mandibularPlanesPointsWithoutNormalization):
+      self.assertTrue(
+        np.allclose(self.getControlPointsOfMandiblePlane(planeNode), planePointsWithoutNormalization, rtol=0.0, atol=1e-6),
+        msg=planeNode.GetName()
+      )
+
+    import re
+    maximumPointsDistance = 0.0
+    for folderName, namesAndPointsWithoutNormalization in namesAndPointsWithoutNormalizationDict.items():
+      namesAndPointsWithNormalization = self.getNamesAndPointsOfNodesInFolder(folderName)
+      # the nodes made again get a unique name (e.g. Transformed Fibula Segment 0A-0B_1), the scene keeps counting the names of the removed ones
+      self.assertEqual(
+        [re.sub(r"_[0-9]+$", "", nodeName) for nodeName, points in namesAndPointsWithNormalization],
+        [re.sub(r"_[0-9]+$", "", nodeName) for nodeName, points in namesAndPointsWithoutNormalization],
+        folderName
+      )
+      for (nodeName, pointsWithNormalization), (nodeNameWithoutNormalization, points) in zip(namesAndPointsWithNormalization, namesAndPointsWithoutNormalization):
+        self.assertEqual(pointsWithNormalization.shape, points.shape, nodeName)
+        pointsDistance = np.max(np.linalg.norm(pointsWithNormalization - points, axis=1)) if len(points) > 0 else 0.0
+        maximumPointsDistance = max(maximumPointsDistance, pointsDistance)
+        self.assertTrue(
+          np.allclose(pointsWithNormalization, points, rtol=0.0, atol=1e-6),
+          msg=f"{folderName}: {nodeName} made with the fibula normalization moved up to {pointsDistance:.4f}mm"
+        )
+
+    # the fibula side is shown with the normalization, the neomandible pieces are on the mandible side
+    fibulaSideNodesList = [node for folderName in fibulaSideFoldersNames for node in createListFromFolderName(folderName)]
+    fibulaSideNodesList += createListFromFolderName("Cut Bones")[:-1]
+    for node in fibulaSideNodesList:
+      self.assertEqual(node.GetTransformNodeID(), fibulaNormalizationTransform.GetID(), node.GetName())
+    for node in createListFromFolderName("Transformed Fibula Pieces") + createListFromFolderName("Transformed Vessels Pieces"):
+      self.assertIsNone(node.GetTransformNodeID(), node.GetName())
+
+    # the rest of the workflow is made without the normalization, section_SetVisualizationOptionsAndFibulaNormalization turns it on
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaNormalizationTransformButton.checked = False
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "False",
+    })
+    self.assertTrue(np.allclose(slicer.util.arrayFromTransformMatrix(fibulaNormalizationTransform), np.eye(4)))
+
+    self.delayDisplay(
+      f"UpdateVirtualSurgicalPlanWithFibulaNormalizationAndVerifyItDoesNotChange test successful "
+      f"(maximum points distance {maximumPointsDistance:.2e}mm)"
+    )
+
+  def getNamesAndPointsOfNodesInFolder(self, folderName):
+    """Names and copies of the points of the models (or of the control points of the markups) of the folder,
+    in the coordinates of each node (without its parent transform)
+    """
+    namesAndPointsList = []
+    for node in createListFromFolderName(folderName):
+      if node.IsA("vtkMRMLMarkupsNode"):
+        points = slicer.util.arrayFromMarkupsControlPoints(node).copy()
+      else:
+        points = slicer.util.arrayFromModelPoints(node).copy()
+      namesAndPointsList.append((node.GetName(), points))
+    return namesAndPointsList
+
   def section_LockVirtualSurgicalPlan(self):
     self.delayDisplay("Starting the LockVirtualSurgicalPlan test")
 
@@ -9935,6 +10127,149 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("CreateMiterBoxes test successful")
 
+  def section_RebuildMiterBoxesWithFibulaNormalizationAndVerifyTheyDoNotMove(self):
+    """
+    The fibula normalization only changes how the fibula side is shown. So the miter boxes rebuilt while it is on
+    are the same as the ones built while it was off
+    """
+    self.delayDisplay("Starting the RebuildMiterBoxesWithFibulaNormalizationAndVerifyTheyDoNotMove test")
+
+    parameterNode = self.logicBRP.getParameterNode()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "False",
+    })
+
+    miterBoxesFoldersNames = [
+      "miterBoxes Models",
+      "biggerMiterBoxes Models",
+      "previewMiterBoxes Models",
+      "lowResolutionBiggerMiterBoxes Models",
+      "rectanglet Models",
+      "fibulaTextLabels Models",
+    ]
+    # the miter boxes of section_CreateMiterBoxes were built while the fibula normalization was off
+    modelsNamesCellsAndPointsBuiltWithoutNormalizationDict = {
+      folderName: [
+        (model.GetName(), model.GetPolyData().GetNumberOfCells(), slicer.util.arrayFromModelPoints(model).copy())
+        for model in createListFromFolderName(folderName)
+      ]
+      for folderName in miterBoxesFoldersNames
+    }
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaNormalizationTransformButton.checked = True
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "True",
+    })
+    fibulaNormalizationTransform = parameterNode.GetNodeReference("fibulaNormalizationTransformNode")
+    self.assertIsNotNone(fibulaNormalizationTransform)
+    # otherwise the check would pass even if the miter boxes depended on the normalization
+    self.assertFalse(np.allclose(slicer.util.arrayFromTransformMatrix(fibulaNormalizationTransform), np.eye(4)))
+
+    # rebuild the miter boxes as the user does, the last rebuild has the former slot width
+    miterBoxSlotWidth = self.widgetBRP.ui.miterBoxSlotWidthSpinBox.value
+    self.widgetBRP.ui.miterBoxSlotWidthSpinBox.value = miterBoxSlotWidth + 0.5
+    slicer.app.processEvents()
+    self.widgetBRP.ui.miterBoxSlotWidthSpinBox.value = miterBoxSlotWidth
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "miterBoxSlotWidth_mm": str(miterBoxSlotWidth),
+    })
+
+    import re
+    maximumPointsDistance = 0.0
+    for folderName, modelsNamesCellsAndPointsBuiltWithoutNormalization in modelsNamesCellsAndPointsBuiltWithoutNormalizationDict.items():
+      modelsList = createListFromFolderName(folderName)
+      # the rebuilt models get a unique name (e.g. miterBox0_A_2), the scene keeps counting the names of the removed ones
+      self.assertEqual(
+        [re.sub(r"_[0-9]+$", "", model.GetName()) for model in modelsList],
+        [modelName for modelName, numberOfCells, points in modelsNamesCellsAndPointsBuiltWithoutNormalization]
+      )
+      for model, (modelName, numberOfCells, points) in zip(modelsList, modelsNamesCellsAndPointsBuiltWithoutNormalization):
+        # the miter boxes are shown with the normalization like the rest of the fibula side
+        self.assertEqual(model.GetTransformNodeID(), fibulaNormalizationTransform.GetID(), modelName)
+        self.assertEqual(model.GetPolyData().GetNumberOfCells(), numberOfCells, modelName)
+        pointsRebuiltWithNormalization = slicer.util.arrayFromModelPoints(model)
+        self.assertEqual(pointsRebuiltWithNormalization.shape, points.shape, modelName)
+        # the boolean backend gives the points of the preview miter boxes in a different order on each rebuild,
+        #   so the points are compared sorted by their coordinates
+        sortedPoints = points[np.lexsort(points.T[::-1])]
+        sortedPointsRebuiltWithNormalization = pointsRebuiltWithNormalization[np.lexsort(pointsRebuiltWithNormalization.T[::-1])]
+        pointsDistance = np.max(np.abs(sortedPointsRebuiltWithNormalization - sortedPoints))
+        maximumPointsDistance = max(maximumPointsDistance, pointsDistance)
+        self.assertTrue(
+          np.allclose(sortedPointsRebuiltWithNormalization, sortedPoints, rtol=0.0, atol=1e-6),
+          msg=f"{modelName} rebuilt with the fibula normalization differs up to {pointsDistance:.4f}mm in the coordinates of its sorted points"
+        )
+
+    # the rest of the workflow is made without the normalization, section_SetVisualizationOptionsAndFibulaNormalization turns it on
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaNormalizationTransformButton.checked = False
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "False",
+    })
+    self.assertTrue(np.allclose(slicer.util.arrayFromTransformMatrix(fibulaNormalizationTransform), np.eye(4)))
+
+    self.delayDisplay(
+      f"RebuildMiterBoxesWithFibulaNormalizationAndVerifyTheyDoNotMove test successful "
+      f"(maximum difference of the coordinates of the sorted points {maximumPointsDistance:.2e}mm)"
+    )
+
+  def section_TurnOnFibulaNormalizationToMakeTheFibulaSurgicalGuideWithIt(self):
+    """
+    The fibula normalization only changes how the fibula side is shown, so the fibula guide base, its screw holes and the
+    fibula surgical guide made while it is on are the ones of TestPlanBRP (made while it was off)
+    """
+    self.delayDisplay("Starting the TurnOnFibulaNormalizationToMakeTheFibulaSurgicalGuideWithIt test")
+
+    parameterNode = self.logicBRP.getParameterNode()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "False",
+    })
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaNormalizationTransformButton.checked = True
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "True",
+    })
+    fibulaNormalizationTransform = parameterNode.GetNodeReference("fibulaNormalizationTransformNode")
+    # otherwise the checks of the fibula surgical guide would pass even if it depended on the normalization
+    self.assertFalse(np.allclose(slicer.util.arrayFromTransformMatrix(fibulaNormalizationTransform), np.eye(4)))
+
+    self.delayDisplay("TurnOnFibulaNormalizationToMakeTheFibulaSurgicalGuideWithIt test successful")
+
+  def section_TurnOffFibulaNormalizationAfterMakingTheFibulaSurgicalGuide(self):
+    """
+    The fibula guide base, its screw holes and the fibula surgical guide are shown with the fibula normalization like the
+    rest of the fibula side. The rest of the workflow is made without it, section_SetVisualizationOptionsAndFibulaNormalization turns it on
+    """
+    self.delayDisplay("Starting the TurnOffFibulaNormalizationAfterMakingTheFibulaSurgicalGuide test")
+
+    parameterNode = self.logicBRP.getParameterNode()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "True",
+    })
+    fibulaNormalizationTransform = parameterNode.GetNodeReference("fibulaNormalizationTransformNode")
+    fibulaSideNodesList = [
+      parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel"),
+      parameterNode.GetNodeReference("fibulaSurgicalGuidePrototypeModel"),
+      self.logicBRP.getFibulaFiducials(),
+    ] + createListFromFolderName("Fibula Cylinders Models")
+    for node in fibulaSideNodesList:
+      self.assertEqual(node.GetTransformNodeID(), fibulaNormalizationTransform.GetID(), node.GetName())
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaNormalizationTransformButton.checked = False
+    slicer.app.processEvents()
+    self.assertParameterNodeHasParameterValues({
+      "fibulaNormalizationTransform": "False",
+    })
+    self.assertTrue(np.allclose(slicer.util.arrayFromTransformMatrix(fibulaNormalizationTransform), np.eye(4)))
+
+    self.delayDisplay("TurnOffFibulaNormalizationAfterMakingTheFibulaSurgicalGuide test successful")
+
   def section_GenerateFibulaGuideBase(self):
     self.delayDisplay("Starting the GenerateFibulaGuideBase test")
 
@@ -9985,8 +10320,14 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       [-103.43215942382812, -3.046214818954468, -18.31334114074707],
     ]
 
-    # a cylinder perpendicular to the guide base is created for each point
+    # the user clicks the points over the guide base as it is shown (with the fibula normalization when it is on), so the
+    #   fiducials already have the transform of the guide base, otherwise the clicked points would be kept away from it
+    parameterNode = self.logicBRP.getParameterNode()
+    fibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
     fibulaFiducialList = self.logicBRP.getFibulaFiducials()
+    self.assertEqual(fibulaFiducialList.GetTransformNodeID(), fibulaSurgicalGuideBaseModel.GetTransformNodeID())
+
+    # a cylinder perpendicular to the guide base is created for each point
     for point in fibulaScrewHolesPoints:
       fibulaFiducialList.AddControlPoint(*point)
     interactionNode = slicer.app.applicationLogic().GetInteractionNode()
@@ -10010,8 +10351,6 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     )
 
     # the cylinders are in the order of their points
-    parameterNode = self.logicBRP.getParameterNode()
-    fibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
     fibulaScrewHoleCylinderRadius = float(parameterNode.GetParameter("fibulaScrewHoleCylinderRadius_mm"))
     for i in range(len(fibulaCylindersList)):
       self.assertScrewHoleCylinderGoesThroughGuideBaseAlongNormalOfModelAtPoint(
@@ -11586,12 +11925,12 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.assertEqual(topologyDict["eulerCharacteristic"], expectedEulerCharacteristic, msg=message)
 
   def assertScrewHoleCylinderGoesThroughGuideBaseAlongNormalOfModelAtPoint(self, cylinderModel, guideBaseModel, normalsModel, point, expectedRadius, viewNodeID):
-    """The cylinder is a closed surface of the expected radius, shown only in the view and without transform (its polydata is
-    subtracted from the guide base). It is centered at the point and its axis is the normal of the normals model at its closest point
+    """The cylinder is a closed surface of the expected radius, shown only in the view and with the transform of the guide base
+    (its polydata is subtracted from the guide base). It is centered at the point and its axis is the normal of the normals model at its closest point
     to the point (the 'Normals' point data of the normals model, the guide base itself or the bone when there is no guide base model to read it from).
     Both ends are outside the guide base and the axis crosses it, so the screw hole goes through it.
     """
-    self.assertIsNone(cylinderModel.GetParentTransformNode(), msg=cylinderModel.GetName())
+    self.assertEqual(cylinderModel.GetTransformNodeID(), guideBaseModel.GetTransformNodeID(), msg=cylinderModel.GetName())
     cylinderDisplayNode = cylinderModel.GetDisplayNode()
     self.assertTrue(cylinderDisplayNode.GetVisibility(), msg=cylinderModel.GetName())
     self.assertEqual(cylinderDisplayNode.GetViewNodeIDs(), (viewNodeID,), msg=cylinderModel.GetName())
