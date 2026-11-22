@@ -189,7 +189,7 @@ def registerSampleData():
     # Download URL and target file name
     uris="https://github.com/SlicerIGT/SlicerBoneReconstructionPlanner/releases/download/TestingData/example_MandibleSurgicalGuidePrototype.stl",
     fileNames='example_MandibleSurgicalGuidePrototype.stl',
-    checksums = 'SHA256:6fd8d2af393eaea704fe2f1c092db5d5d8727ec1169b8440b50756abf077f9d1',
+    checksums = 'SHA256:1dca98df1c3d0b409daeaf08acf659ac503056b58e155939ba1e6e07c0f48200',
     # This node name will be used when the data set is loaded
     nodeNames='personalizedMandibleGuide'
   )
