@@ -22,73 +22,121 @@ def getIntersectionBetweenModelAnd1Plane(modelNode,planeNode,intersectionModel):
 
   intersectionModel.SetAndObservePolyData(cutter.GetOutput())
 
-def getFurthestIntersectionBetweenModelAnd1Plane(modelNode,planeNode,intersectionModel):
+def getOuterLoopAtPlaneOriginOfIntersectionBetweenModelAnd1Plane(modelNode,planeNode,intersectionModel):
   origin = [0,0,0]
   normal = [0,0,0]
   planeNode.GetOrigin(origin)
   planeNode.GetNormal(normal)
   getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(modelNode, normal, origin, intersectionModel)
 
-  furthestRegionPD = extractFurthestRegion(intersectionModel.GetPolyData(),origin)
+  outerLoopPolyData = getOuterLoopAtPointFromIntersectionPolyData(intersectionModel.GetPolyData(),origin,normal)
 
-  intersectionModel.SetAndObservePolyData(furthestRegionPD)
+  intersectionModel.SetAndObservePolyData(outerLoopPolyData)
 
-def extractFurthestRegion(polyData, point):
-    # Label all connected regions
-    connectivity = vtk.vtkConnectivityFilter()
-    connectivity.SetInputData(polyData)
-    connectivity.SetExtractionModeToAllRegions()
-    connectivity.ColorRegionsOn()
-    connectivity.Update()
+def getOuterLoopAtPointFromIntersectionPolyData(polyData, point, normal):
+  # The intersection of a bone with a plane can have several loops:
+  #   - the outer loop of the bone section at the point and, if the bone model is hollow, its inner loops
+  #   - the loops of other parts of the bone that the plane also goes through (e.g. the other side of the mandible arch)
+  # The outer loop of the bone section at the point is:
+  #   - if the point is inside some loops, the outermost of them. These loops are nested because they all contain the point
+  #     and the loops of an intersection do not cross each other
+  #   - if the point is outside every loop, the nearest loop. To reach an inner loop from the point you cross its outer loop first
+  loopsList = getLoopsFromIntersectionPolyData(polyData)
+  if len(loopsList) == 0:
+    return vtk.vtkPolyData()
 
-    numRegions = connectivity.GetNumberOfExtractedRegions()
+  unitNormal = np.array(normal, dtype=float)/np.linalg.norm(normal)
+  axisU = [0,0,0]
+  axisV = [0,0,0]
+  vtk.vtkMath.Perpendiculars(unitNormal, axisU, axisV, 0)
 
-    maxDist = -1
-    furthestRegionId = 0
+  loopsAroundPointList = [
+    loop for loop in loopsList
+    if isPointInsideLoopOverPlane(point, loop, axisU, axisV)
+  ]
+  for loop in loopsAroundPointList:
+    isLoopInsideOtherLoopAroundPoint = any(
+      isPointInsideLoopOverPlane(loop.GetPoint(0), otherLoop, axisU, axisV)
+      for otherLoop in loopsAroundPointList
+      if otherLoop is not loop
+    )
+    if not isLoopInsideOtherLoopAroundPoint:
+      return loop
 
-    for regionId in range(numRegions):
-        # Extract each region individually
-        regionExtractor = vtk.vtkConnectivityFilter()
-        regionExtractor.SetInputData(polyData)
-        regionExtractor.SetExtractionModeToSpecifiedRegions()
-        regionExtractor.AddSpecifiedRegion(regionId)
-        regionExtractor.Update()
+  distancesFromPointToLoopsList = [getDistanceFromPointToLoop(point, loop) for loop in loopsList]
+  return loopsList[int(np.argmin(distancesFromPointToLoopsList))]
 
-        # Convert to polydata (vtkConnectivityFilter outputs vtkUnstructuredGrid)
-        surfaceFilter = vtk.vtkDataSetSurfaceFilter()
-        surfaceFilter.SetInputConnection(regionExtractor.GetOutputPort())
-        surfaceFilter.Update()
+def getLoopsFromIntersectionPolyData(polyData):
+  connectivityFilter = vtk.vtkPolyDataConnectivityFilter()
+  connectivityFilter.SetInputData(polyData)
+  connectivityFilter.SetExtractionModeToAllRegions()
+  connectivityFilter.Update()
+  numberOfLoops = connectivityFilter.GetNumberOfExtractedRegions()
 
-        regionPolyData = surfaceFilter.GetOutput()
-        if regionPolyData.GetNumberOfPoints() == 0:
-            continue
+  loopsList = []
+  for loopId in range(numberOfLoops):
+    loopExtractor = vtk.vtkPolyDataConnectivityFilter()
+    loopExtractor.SetInputData(polyData)
+    loopExtractor.SetExtractionModeToSpecifiedRegions()
+    loopExtractor.AddSpecifiedRegion(loopId)
+    # the connectivity filter visits every region to number them, so its output keeps the points of all the loops
+    #   and only the lines of the specified one: remove the points that its lines do not use (and do not merge any point)
+    unusedPointsRemover = vtk.vtkCleanPolyData()
+    unusedPointsRemover.SetInputConnection(loopExtractor.GetOutputPort())
+    unusedPointsRemover.PointMergingOff()
+    unusedPointsRemover.Update()
+    loopPolyData = vtk.vtkPolyData()
+    loopPolyData.DeepCopy(unusedPointsRemover.GetOutput())
+    if loopPolyData.GetNumberOfPoints() > 1 and loopPolyData.GetNumberOfLines() > 0:
+      loopsList.append(loopPolyData)
 
-        # Find closest point in this region to the reference point
-        pointLocator = vtk.vtkPointLocator()
-        pointLocator.SetDataSet(regionPolyData)
-        pointLocator.BuildLocator()
-        closestPointId = pointLocator.FindClosestPoint(point)
-        closestPoint = regionPolyData.GetPoint(closestPointId)
+  return loopsList
 
-        import math
-        dist = math.sqrt(vtk.vtkMath.Distance2BetweenPoints(point, closestPoint))
+def getSegmentsOfLoop(loopPolyData):
+  from vtk.util.numpy_support import vtk_to_numpy
+  points = vtk_to_numpy(loopPolyData.GetPoints().GetData()).astype(float)
+  lines = loopPolyData.GetLines()
+  connectivity = vtk_to_numpy(lines.GetConnectivityArray())
+  offsets = vtk_to_numpy(lines.GetOffsetsArray())
+  # a segment starts at every point of a line except at its last one
+  isLastPointOfLine = np.zeros(len(connectivity), dtype=bool)
+  isLastPointOfLine[offsets[1:] - 1] = True
+  segmentStartIndices = np.flatnonzero(~isLastPointOfLine)
+  return points[connectivity[segmentStartIndices]], points[connectivity[segmentStartIndices + 1]]
 
-        if dist > maxDist:
-            maxDist = dist
-            furthestRegionId = regionId
+def isPointInsideLoopOverPlane(point, loopPolyData, axisU, axisV):
+  # crossing number test over the plane of the loop: the point is inside the loop
+  #   if the ray from the point along axisU crosses the loop an odd number of times
+  segmentStartPoints, segmentEndPoints = getSegmentsOfLoop(loopPolyData)
+  axesUVMatrix = np.array([axisU, axisV], dtype=float).T
+  segmentStartPointsUV = (segmentStartPoints - np.array(point, dtype=float)) @ axesUVMatrix
+  segmentEndPointsUV = (segmentEndPoints - np.array(point, dtype=float)) @ axesUVMatrix
+  # segments that go from one side of the line of the ray to the other one,
+  #   a segment end over the line counts as below it so a ray through a loop point counts one crossing
+  isSegmentCrossingLineOfRay = (segmentStartPointsUV[:,1] > 0) != (segmentEndPointsUV[:,1] > 0)
+  crossingStartPointsUV = segmentStartPointsUV[isSegmentCrossingLineOfRay]
+  crossingEndPointsUV = segmentEndPointsUV[isSegmentCrossingLineOfRay]
+  crossingPositionsU = (
+    crossingStartPointsUV[:,0]
+    - crossingStartPointsUV[:,1]*(crossingEndPointsUV[:,0] - crossingStartPointsUV[:,0])/(crossingEndPointsUV[:,1] - crossingStartPointsUV[:,1])
+  )
+  return bool(np.count_nonzero(crossingPositionsU > 0) % 2 == 1)
 
-    # Extract the furthest region
-    finalExtractor = vtk.vtkConnectivityFilter()
-    finalExtractor.SetInputData(polyData)
-    finalExtractor.SetExtractionModeToSpecifiedRegions()
-    finalExtractor.AddSpecifiedRegion(furthestRegionId)
-    finalExtractor.Update()
-
-    toPolyData = vtk.vtkDataSetSurfaceFilter()
-    toPolyData.SetInputConnection(finalExtractor.GetOutputPort())
-    toPolyData.Update()
-
-    return toPolyData.GetOutput()
+def getDistanceFromPointToLoop(point, loopPolyData):
+  segmentStartPoints, segmentEndPoints = getSegmentsOfLoop(loopPolyData)
+  point = np.array(point, dtype=float)
+  segmentVectors = segmentEndPoints - segmentStartPoints
+  squaredSegmentLengths = np.sum(segmentVectors**2, axis=1)
+  # position of the closest point over each segment, the closest point of a zero length segment is its start point
+  closestPointPositions = np.divide(
+    np.sum((point - segmentStartPoints)*segmentVectors, axis=1),
+    squaredSegmentLengths,
+    out=np.zeros(len(squaredSegmentLengths)),
+    where=squaredSegmentLengths > 0
+  )
+  closestPointPositions = np.clip(closestPointPositions, 0, 1)
+  closestPoints = segmentStartPoints + closestPointPositions[:,np.newaxis]*segmentVectors
+  return float(np.min(np.linalg.norm(closestPoints - point, axis=1)))
 
 def getIntersectionBetweenModelAnd1PlaneWithNormalAndOrigin(modelNode,normal,origin,intersectionModel):
   plane = vtk.vtkPlane()

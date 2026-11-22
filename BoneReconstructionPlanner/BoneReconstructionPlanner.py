@@ -7244,7 +7244,7 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
       else:
         intersectionModel = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode','Intersection%d' % (len(mandibularPlanesList)-1))
       intersectionModel.CreateDefaultDisplayNodes()
-      getFurthestIntersectionBetweenModelAnd1Plane(mandibleModelNode,resectionPlanesList[i],intersectionModel)
+      getOuterLoopAtPlaneOriginOfIntersectionBetweenModelAnd1Plane(mandibleModelNode,resectionPlanesList[i],intersectionModel)
       
       curvePlanarConvexityDirection = [0,0,0]
       vtk.vtkMath.Cross(mandiblePlaneZ, bestFittingPlaneNormalOfCurvePoints, curvePlanarConvexityDirection)
@@ -7260,6 +7260,10 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
         if pointsIntersectionModel.GetPolyData().GetNumberOfPoints() != 0:
           pointOfIntersection = nearestPointOverLineWithTheVectorDirection(pointsIntersectionModel,curvePlanarConvexityDirection)
         else:
+          logging.warning(
+            f"The saw box of {resectionPlanesList[i].GetName()} is placed from the centroid of its intersection with the mandible "
+            "because the line through the centroid does not cross the intersection, the saw box may not be over the mandible"
+          )
           pointOfIntersection = intersectionModelCentroid
       else:
         pointOfIntersection = [0,0,0]
@@ -8425,6 +8429,131 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         if attributeOwner is None:
           missingAttributesList.append(f"{pythonModuleName}.{attributeName}")
     return missingAttributesList
+
+  def test_GetOuterLoopAtPlaneOriginOfIntersection(self):
+    """CDash test that checks the intersection loop the saw boxes are placed from: the outer loop of the bone section at the resection plane origin.
+    The intersection of the bone with the plane can have inner loops (a hollow bone model) and loops of other parts of the bone
+    the plane also goes through (e.g. the other side of the mandible arch), also both at the same time.
+    Tubes are used instead of a mandible: the plane y = 0 cuts each of their cylinders in a circle.
+    """
+    cylinderResolution = 64
+    tubeACenter = np.array([0.0, 0.0, 0.0])
+    tubeAOuterRadius = 10.0
+    tubeAInnerRadius = 6.0
+    # tube B is bigger than tube A so the biggest loop or the furthest loop is not the expected one
+    tubeBCenter = np.array([40.0, 0.0, 0.0])
+    tubeBOuterRadius = 15.0
+    tubeBInnerRadius = 9.0
+
+    hollowTubeAModel = self.createTubesModelFromCylinders(
+      "hollowTubeA",
+      [(tubeACenter, tubeAOuterRadius), (tubeACenter, tubeAInnerRadius)],
+      cylinderResolution
+    )
+    solidTubesModel = self.createTubesModelFromCylinders(
+      "solidTubes",
+      [(tubeACenter, tubeAOuterRadius), (tubeBCenter, tubeBOuterRadius)],
+      cylinderResolution
+    )
+    hollowTubesModel = self.createTubesModelFromCylinders(
+      "hollowTubes",
+      [
+        (tubeACenter, tubeAOuterRadius),
+        (tubeACenter, tubeAInnerRadius),
+        (tubeBCenter, tubeBOuterRadius),
+        (tubeBCenter, tubeBInnerRadius),
+      ],
+      cylinderResolution
+    )
+
+    # model, plane origin, center and radius of the expected loop
+    casesList = [
+      # inner and outer loops of the bone section: origin in the hole, in the wall and outside
+      (hollowTubeAModel, [3.0, 0.0, 0.0], tubeACenter, tubeAOuterRadius),
+      (hollowTubeAModel, [8.0, 0.0, 0.0], tubeACenter, tubeAOuterRadius),
+      (hollowTubeAModel, [-12.0, 0.0, 0.0], tubeACenter, tubeAOuterRadius),
+      # the plane also cuts another part of the bone: origin inside, outside and between both bone sections
+      (solidTubesModel, [0.0, 0.0, 5.0], tubeACenter, tubeAOuterRadius),
+      (solidTubesModel, [-12.0, 0.0, 0.0], tubeACenter, tubeAOuterRadius),
+      (solidTubesModel, [12.0, 0.0, 0.0], tubeACenter, tubeAOuterRadius),
+      (solidTubesModel, [23.0, 0.0, 0.0], tubeBCenter, tubeBOuterRadius),
+      # both at the same time
+      (hollowTubesModel, [3.0, 0.0, 0.0], tubeACenter, tubeAOuterRadius),
+      (hollowTubesModel, [0.0, 0.0, -8.0], tubeACenter, tubeAOuterRadius),
+      (hollowTubesModel, [-12.0, 0.0, 0.0], tubeACenter, tubeAOuterRadius),
+      (hollowTubesModel, [12.0, 0.0, 0.0], tubeACenter, tubeAOuterRadius),
+      (hollowTubesModel, [43.0, 0.0, 0.0], tubeBCenter, tubeBOuterRadius),
+      (hollowTubesModel, [50.0, 0.0, 0.0], tubeBCenter, tubeBOuterRadius),
+    ]
+    for model, planeOrigin, expectedLoopCenter, expectedLoopRadius in casesList:
+      plane = self.createPlaneOverYZeroWithOrigin(planeOrigin)
+      intersectionModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
+      getOuterLoopAtPlaneOriginOfIntersectionBetweenModelAnd1Plane(model, plane, intersectionModel)
+      self.assertLoopIsCircleOfCylinder(
+        intersectionModel,
+        expectedLoopCenter,
+        expectedLoopRadius,
+        cylinderResolution,
+        msg=f"{model.GetName()} with plane origin {planeOrigin}"
+      )
+
+    # a plane that does not cut the bone gives an empty intersection
+    plane = self.createPlaneOverYZeroWithOrigin([0.0, 1000.0, 0.0])
+    intersectionModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode")
+    getOuterLoopAtPlaneOriginOfIntersectionBetweenModelAnd1Plane(hollowTubesModel, plane, intersectionModel)
+    self.assertEqual(intersectionModel.GetPolyData().GetNumberOfPoints(), 0)
+
+  def createTubesModelFromCylinders(self, name, centerAndRadiusOfCylindersList, cylinderResolution):
+    """Closed cylinders along Y from y = -10 to y = 10, two cylinders with the same center make a hollow tube"""
+    appendFilter = vtk.vtkAppendPolyData()
+    for center, radius in centerAndRadiusOfCylindersList:
+      cylinderSource = vtk.vtkCylinderSource()
+      cylinderSource.SetCenter(center.tolist())
+      cylinderSource.SetRadius(radius)
+      cylinderSource.SetHeight(20.0)
+      cylinderSource.SetResolution(cylinderResolution)
+      cylinderSource.CappingOn()
+      appendFilter.AddInputConnection(cylinderSource.GetOutputPort())
+    appendFilter.Update()
+    tubesModel = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", name)
+    tubesModel.CreateDefaultDisplayNodes()
+    tubesModel.SetAndObservePolyData(appendFilter.GetOutput())
+    return tubesModel
+
+  def createPlaneOverYZeroWithOrigin(self, origin):
+    """Plane of type PlaneType3Points with normal along Y, its first control point is its origin"""
+    plane = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsPlaneNode")
+    plane.SetPlaneType(slicer.vtkMRMLMarkupsPlaneNode.PlaneType3Points)
+    origin = np.array(origin, dtype=float)
+    for point in [origin, origin + [1.0, 0.0, 0.0], origin + [0.0, 0.0, 1.0]]:
+      plane.AddControlPoint(point.tolist())
+    return plane
+
+  def assertLoopIsCircleOfCylinder(self, loopModel, center, radius, cylinderResolution, msg):
+    """The loop is one closed loop with only the points of the circle of the cylinder:
+    a plane perpendicular to a cylinder cuts its vertical edges, so every point is at the radius
+    """
+    loopPolyData = loopModel.GetPolyData()
+    self.assertEqual(
+      loopPolyData.GetNumberOfPoints(),
+      cylinderResolution,
+      msg=f"{msg}: number of points"
+    )
+    loopPoints = slicer.util.arrayFromModelPoints(loopModel)
+    distancesToCenter = np.linalg.norm(loopPoints - center, axis=1)
+    self.assertTrue(
+      np.allclose(distancesToCenter, radius, atol=1e-4),
+      msg=f"{msg}: distances to {center.tolist()} from {distancesToCenter.min():.6f} to {distancesToCenter.max():.6f}, expected {radius}"
+    )
+    # every point is the end of 2 of the line segments the cutter makes
+    from vtk.util.numpy_support import vtk_to_numpy
+    lineConnectivity = vtk_to_numpy(loopPolyData.GetLines().GetConnectivityArray())
+    self.assertEqual(loopPolyData.GetNumberOfLines(), cylinderResolution, msg=f"{msg}: number of lines")
+    self.assertEqual(
+      np.bincount(lineConnectivity, minlength=cylinderResolution).tolist(),
+      [2]*cylinderResolution,
+      msg=f"{msg}: segments of each point"
+    )
 
   def test_FullWorkflow(self):
     """CDash test that checks full workflow from data loading, going through virtual surgical plan till getting neomandible and surgical guides 3D models.
@@ -10791,6 +10920,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     previewSawBoxesList = createListFromFolderName("previewSawBoxes Models")
     sawBoxesPlanesList = createListFromFolderName("sawBoxes Planes")
     sawBoxesTransformsList = createListFromFolderName("sawBoxes Transforms")
+    sawBoxTextLabelsList = createListFromFolderName("sawBoxTextLabels Models")
 
     # the saw boxes can only move over their planes: their handles only translate along X and Y and rotate around Z.
     #   These mouse interactions of Slicer also move the plane along Z or tilt it, each movement below changes the plane
@@ -10819,6 +10949,26 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       sawBoxPlanePointsBeforeMovements = self.getControlPointsOfMandiblePlane(sawBoxPlane)
       sawBoxTransformMatrixBeforeMovements = slicer.util.arrayFromTransformMatrix(sawBoxTransform, toWorld=True)
 
+      # every movement keeps the saw box inside the plane defined by the normal and origin of its saw box plane when it was created
+      #   (not only the plane before each movement): the saw box models and its text label, that follow the saw box transform,
+      #   keep the distance of each of their points to that plane
+      sawBoxTextLabelsOfSawBoxList = [
+        textLabel for textLabel in sawBoxTextLabelsList
+        if textLabel.GetTransformNodeID() == sawBoxTransform.GetID()
+      ]
+      self.assertEqual(
+        len(sawBoxTextLabelsOfSawBoxList),
+        1,
+        msg=f"text labels observing {sawBoxTransform.GetName()}: {[textLabel.GetName() for textLabel in sawBoxTextLabelsOfSawBoxList]}"
+      )
+      sawBoxPlaneAxesWhenCreated, sawBoxPlaneOriginWhenCreated = self.getAxesAndOriginOfPlaneFromControlPoints(sawBoxPlanePointsBeforeMovements)
+      sawBoxPlaneNormalWhenCreated = sawBoxPlaneAxesWhenCreated[:,2]
+      modelsFollowingSawBoxTransformList = [model for model, dimensions in modelsAndDimensionsList] + sawBoxTextLabelsOfSawBoxList
+      distancesToPlaneWhenCreatedOfModelsPointsList = [
+        self.getDistancesToPlaneWithNormalAndOriginOfModelPoints(model, sawBoxPlaneNormalWhenCreated, sawBoxPlaneOriginWhenCreated)
+        for model in modelsFollowingSawBoxTransformList
+      ]
+
       for movementName, movementAlongSawBoxPlaneAxes in movementsList:
         sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
         movement = sawBoxPlaneAxes @ movementAlongSawBoxPlaneAxes
@@ -10839,6 +10989,15 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
         self.assertSawBoxPlaneHasAxesAndOrigin(sawBoxPlane, sawBoxPlaneAxes, expectedOrigin, movementName)
         self.assertSawBoxPlaneIsOverResectionPlaneOnResectedSide(sawBoxPlane, resectionPlanesList[i], planesInsideResectedSegmentList[i], sawBoxSlotWidth)
         self.assertSawBoxModelsAreCenteredOnSawBoxPlaneWithDimensions(sawBoxPlane, sawBoxTransform, modelsAndDimensionsList)
+        self.assertSawBoxIsInsidePlaneWithNormalAndOrigin(
+          sawBoxPlane,
+          sawBoxTransform,
+          modelsFollowingSawBoxTransformList,
+          distancesToPlaneWhenCreatedOfModelsPointsList,
+          sawBoxPlaneNormalWhenCreated,
+          sawBoxPlaneOriginWhenCreated,
+          movementName
+        )
 
       # the rotation handle around Z still works
       sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
@@ -10857,6 +11016,15 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       self.assertSawBoxPlaneHasAxesAndOrigin(sawBoxPlane, expectedAxes, sawBoxPlaneOrigin, "rotation handle around Z")
       self.assertSawBoxPlaneIsOverResectionPlaneOnResectedSide(sawBoxPlane, resectionPlanesList[i], planesInsideResectedSegmentList[i], sawBoxSlotWidth)
       self.assertSawBoxModelsAreCenteredOnSawBoxPlaneWithDimensions(sawBoxPlane, sawBoxTransform, modelsAndDimensionsList)
+      self.assertSawBoxIsInsidePlaneWithNormalAndOrigin(
+        sawBoxPlane,
+        sawBoxTransform,
+        modelsFollowingSawBoxTransformList,
+        distancesToPlaneWhenCreatedOfModelsPointsList,
+        sawBoxPlaneNormalWhenCreated,
+        sawBoxPlaneOriginWhenCreated,
+        "rotation handle around Z"
+      )
 
       # put the saw box back where it was so the next sections get the TestPlanBRP saw boxes
       wasModified = sawBoxPlane.StartModify()
@@ -12069,6 +12237,48 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.assertTrue(np.allclose(sawBoxPlaneAxes, expectedAxes, atol=1e-6), msg=message)
     self.assertTrue(np.allclose(sawBoxPlaneOrigin, expectedOrigin, atol=1e-6), msg=message)
     self.assertTrue(np.allclose(objectToBase, np.eye(4), atol=1e-9), msg=message)
+
+  def getDistancesToPlaneWithNormalAndOriginOfModelPoints(self, modelNode, planeNormal, planeOrigin):
+    """Signed distance of each point of the model in world coordinates (its linear parent transform applied) to the plane
+    with the normal and origin
+    """
+    return self.getWorldCoordinatesOfModelPointsAlongAxes(modelNode, np.array(planeNormal).reshape(3,1), planeOrigin)[:,0]
+
+  def assertSawBoxIsInsidePlaneWithNormalAndOrigin(self, sawBoxPlane, sawBoxTransform, modelsList, distancesToPlaneOfModelsPointsList, planeNormal, planeOrigin, movementName):
+    """The saw box only moved inside the plane with the normal and origin: the control points of the saw box plane stay over the plane,
+    the saw box plane and its transform keep the normal, the origin of the transform stays over the plane, and every point of the models
+    that follow the transform keeps its distance to the plane
+    """
+    distancesToPlaneOfControlPoints = np.array([
+      np.dot(point - planeOrigin, planeNormal) for point in self.getControlPointsOfMandiblePlane(sawBoxPlane)
+    ])
+    sawBoxPlaneAxes, sawBoxPlaneOrigin = self.getAxesAndOriginOfPlaneFromControlPoints(self.getControlPointsOfMandiblePlane(sawBoxPlane))
+    sawBoxTransformMatrix = slicer.util.arrayFromTransformMatrix(sawBoxTransform, toWorld=True)
+    distanceToPlaneOfTransformOrigin = np.dot(sawBoxTransformMatrix[:3,3] - planeOrigin, planeNormal)
+    message = (
+      f"{sawBoxPlane.GetName()} after {movementName}: distances of its control points to the plane {distancesToPlaneOfControlPoints.tolist()}, " +
+      f"normal {sawBoxPlaneAxes[:,2].tolist()}, {sawBoxTransform.GetName()} Z axis {sawBoxTransformMatrix[:3,2].tolist()} " +
+      f"and distance of its origin to the plane {distanceToPlaneOfTransformOrigin}, the plane has normal {np.array(planeNormal).tolist()} " +
+      f"and origin {np.array(planeOrigin).tolist()}"
+    )
+    self.assertTrue(np.allclose(distancesToPlaneOfControlPoints, 0.0, rtol=0.0, atol=1e-6), msg=message)
+    self.assertTrue(np.allclose(sawBoxPlaneAxes[:,2], planeNormal, rtol=0.0, atol=1e-6), msg=message)
+    self.assertTrue(np.allclose(sawBoxTransformMatrix[:3,2], planeNormal, rtol=0.0, atol=1e-6), msg=message)
+    self.assertAlmostEqual(distanceToPlaneOfTransformOrigin, 0.0, delta=1e-6, msg=message)
+    for model, distancesToPlaneOfModelPoints in zip(modelsList, distancesToPlaneOfModelsPointsList):
+      self.assertEqual(model.GetTransformNodeID(), sawBoxTransform.GetID(), msg=f"{model.GetName()} after {movementName}")
+      distancesToPlaneOfModelPointsAfterMovement = self.getDistancesToPlaneWithNormalAndOriginOfModelPoints(model, planeNormal, planeOrigin)
+      self.assertEqual(
+        len(distancesToPlaneOfModelPointsAfterMovement),
+        len(distancesToPlaneOfModelPoints),
+        msg=f"{model.GetName()} after {movementName}: number of points"
+      )
+      maximumMovementAlongNormal = np.abs(distancesToPlaneOfModelPointsAfterMovement - distancesToPlaneOfModelPoints).max()
+      self.assertLess(
+        maximumMovementAlongNormal,
+        1e-6,
+        msg=f"{model.GetName()} after {movementName}: its points moved up to {maximumMovementAlongNormal} along the normal of the plane"
+      )
 
   def getBiggerSawBoxFaceLookingToSide(self, sawBoxPlane, biggerSawBoxDimensions, sideDirection):
     """Sign along the Z axis of the saw box plane, outward normal and center (in world coordinates) of the face of the bigger
