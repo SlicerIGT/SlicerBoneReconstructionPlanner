@@ -6593,14 +6593,19 @@ class BoneReconstructionPlannerLogic(ScriptedLoadableModuleLogic):
     clipper.Update()
 
     # drop the guide base model from a previous run so repeated executions
-    # don't accumulate duplicate fibulaSurgicalGuideBaseModel nodes
+    #   don't accumulate duplicate fibulaSurgicalGuideBaseModel nodes. Only a model generated here is dropped,
+    #   the selector accepts any model and one picked by the user may be their only copy of it
     previousFibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
-    if previousFibulaSurgicalGuideBaseModel:
+    if (
+      previousFibulaSurgicalGuideBaseModel is not None and
+      previousFibulaSurgicalGuideBaseModel.GetAttribute("isGeneratedFibulaSurgicalGuideBase") == "True"
+    ):
       slicer.mrmlScene.RemoveNode(previousFibulaSurgicalGuideBaseModel)
 
     modelsLogic = slicer.modules.models.logic()
     fibulaSurgicalGuideBaseModel = modelsLogic.AddModel(calculateNormals(clipper.GetOutput()))
     fibulaSurgicalGuideBaseModel.SetName(slicer.mrmlScene.GetUniqueNameByString('fibulaSurgicalGuideBaseModel'))
+    fibulaSurgicalGuideBaseModel.SetAttribute("isGeneratedFibulaSurgicalGuideBase","True")
     parameterNode.SetNodeReferenceID("fibulaSurgicalGuideBaseModel", fibulaSurgicalGuideBaseModel.GetID())
     fibulaViewNode = slicer.mrmlScene.GetSingletonNode(slicer.FIBULA_VIEW_SINGLETON_TAG, "vtkMRMLViewNode")
     fibulaSurgicalGuideBaseModel.GetDisplayNode().AddViewNodeID(fibulaViewNode.GetID())
@@ -8577,6 +8582,7 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
     self.section_CreateMiterBoxes()
     self.section_RebuildMiterBoxesWithFibulaNormalizationAndVerifyTheyDoNotMove()
     self.section_TurnOnFibulaNormalizationToMakeTheFibulaSurgicalGuideWithIt()
+    self.section_GenerateFibulaGuideBaseWithAModelChosenByTheUserAndVerifyItIsKept()
     self.section_GenerateFibulaGuideBase()
     self.section_AddFibulaScrewHoles()
     self.section_CreateFibulaSurgicalGuide()
@@ -10399,6 +10405,59 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
 
     self.delayDisplay("TurnOffFibulaNormalizationAfterMakingTheFibulaSurgicalGuide test successful")
 
+  def section_GenerateFibulaGuideBaseWithAModelChosenByTheUserAndVerifyItIsKept(self):
+    """
+    The fibula guide base selector accepts any model (e.g. a guide base the user edited elsewhere and loaded back),
+    generating the guide base must not delete it, only a guide base generated before is replaced
+    """
+    self.delayDisplay("Starting the GenerateFibulaGuideBaseWithAModelChosenByTheUserAndVerifyItIsKept test")
+
+    parameterNode = self.logicBRP.getParameterNode()
+    sphereSource = vtk.vtkSphereSource()
+    sphereSource.Update()
+    userFibulaSurgicalGuideBaseModel = slicer.modules.models.logic().AddModel(sphereSource.GetOutput())
+    userFibulaSurgicalGuideBaseModel.SetName("userFibulaSurgicalGuideBaseModel")
+    numberOfPointsOfUserFibulaSurgicalGuideBase = userFibulaSurgicalGuideBaseModel.GetPolyData().GetNumberOfPoints()
+
+    slicer.app.processEvents()
+    self.widgetBRP.ui.fibulaSurgicalGuideBaseSelector.setCurrentNode(userFibulaSurgicalGuideBaseModel)
+    slicer.app.processEvents()
+    self.assertEqual(
+      parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel"),
+      userFibulaSurgicalGuideBaseModel
+    )
+
+    numberOfModelsBeforeGeneration = slicer.mrmlScene.GetNumberOfNodesByClass("vtkMRMLModelNode")
+    slicer.app.processEvents()
+    self.widgetBRP.ui.generateFibulaGuidebaseButton.click()
+    slicer.app.processEvents()
+
+    # the model chosen by the user is kept untouched and the generated guide base is added and selected instead
+    self.assertTrue(slicer.mrmlScene.IsNodePresent(userFibulaSurgicalGuideBaseModel))
+    self.assertEqual(
+      userFibulaSurgicalGuideBaseModel.GetPolyData().GetNumberOfPoints(),
+      numberOfPointsOfUserFibulaSurgicalGuideBase
+    )
+    self.assertIsNone(userFibulaSurgicalGuideBaseModel.GetAttribute("isGeneratedFibulaSurgicalGuideBase"))
+    self.assertEqual(
+      slicer.mrmlScene.GetNumberOfNodesByClass("vtkMRMLModelNode"),
+      numberOfModelsBeforeGeneration + 1
+    )
+    generatedFibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
+    self.assertIsNotNone(generatedFibulaSurgicalGuideBaseModel)
+    self.assertNotEqual(generatedFibulaSurgicalGuideBaseModel, userFibulaSurgicalGuideBaseModel)
+    self.assertEqual(generatedFibulaSurgicalGuideBaseModel.GetAttribute("isGeneratedFibulaSurgicalGuideBase"), "True")
+    self.assertEqual(
+      generatedFibulaSurgicalGuideBaseModel.GetID(),
+      self.widgetBRP.ui.fibulaSurgicalGuideBaseSelector.currentNodeID
+    )
+
+    # the user model is not part of the plan, section_GenerateFibulaGuideBase replaces the generated guide base
+    slicer.mrmlScene.RemoveNode(userFibulaSurgicalGuideBaseModel)
+    slicer.app.processEvents()
+
+    self.delayDisplay("GenerateFibulaGuideBaseWithAModelChosenByTheUserAndVerifyItIsKept test successful")
+
   def section_GenerateFibulaGuideBase(self):
     self.delayDisplay("Starting the GenerateFibulaGuideBase test")
 
@@ -10413,13 +10472,25 @@ class BoneReconstructionPlannerTest(ScriptedLoadableModuleTest):
       "fibulaGuidebaseMargin_mm": "0.5",
     })
 
+    # generating again replaces the guide base generated before instead of accumulating duplicates
+    parameterNode = self.logicBRP.getParameterNode()
+    previousFibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
+    self.assertIsNotNone(previousFibulaSurgicalGuideBaseModel)
+    self.assertEqual(previousFibulaSurgicalGuideBaseModel.GetAttribute("isGeneratedFibulaSurgicalGuideBase"), "True")
+    numberOfModelsBeforeGeneration = slicer.mrmlScene.GetNumberOfNodesByClass("vtkMRMLModelNode")
+
     slicer.app.processEvents()
     self.widgetBRP.ui.generateFibulaGuidebaseButton.click()
     slicer.app.processEvents()
 
-    parameterNode = self.logicBRP.getParameterNode()
     fibulaSurgicalGuideBaseModel = parameterNode.GetNodeReference("fibulaSurgicalGuideBaseModel")
     self.assertIsNotNone(fibulaSurgicalGuideBaseModel)
+    self.assertFalse(slicer.mrmlScene.IsNodePresent(previousFibulaSurgicalGuideBaseModel))
+    self.assertEqual(
+      slicer.mrmlScene.GetNumberOfNodesByClass("vtkMRMLModelNode"),
+      numberOfModelsBeforeGeneration
+    )
+    self.assertEqual(fibulaSurgicalGuideBaseModel.GetAttribute("isGeneratedFibulaSurgicalGuideBase"), "True")
     self.assertEqual(
       fibulaSurgicalGuideBaseModel.GetID(),
       self.widgetBRP.ui.fibulaSurgicalGuideBaseSelector.currentNodeID
